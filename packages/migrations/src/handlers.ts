@@ -1,4 +1,4 @@
-import { type Result, ok } from "@noblackbox/result";
+import { type Result, ok } from "nomo/result";
 import {
   Column,
   ForeignKey,
@@ -7,7 +7,7 @@ import {
   Constraint,
   VirtualTableBuilder,
 } from "./index";
-import { sql, Statement, SqlPart, DialectStrategy } from "@noblackbox/sql";
+import { sql, Statement, SqlPart, DialectStrategy } from "nomo/sql";
 
 export type HandlerFunc = (
   action: unknown,

@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/rpc",
+  "name": "nomo/rpc",
   "version": "1.0.0",
-  "description": "RPC for Noblackbox applications",
+  "description": "RPC for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -19,10 +19,10 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",
-    "@noblackbox/result": "workspace:*",
-    "@noblackbox/logger": "workspace:*",
-    "@noblackbox/router": "workspace:*",
-    "@noblackbox/controllers": "workspace:*"
+    "nomo/result": "workspace:*",
+    "nomo/logger": "workspace:*",
+    "nomo/router": "workspace:*",
+    "nomo/controllers": "workspace:*"
   },
   "peerDependencies": {
     "capnweb": "^0.5.0"

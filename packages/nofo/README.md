@@ -1,4 +1,4 @@
-# @noblackbox/nofo
+# nomo/nofo
 
 The Definitive "No-Transpiler" DSL for building Web Components.
 
@@ -7,13 +7,13 @@ NofoElement is a lightweight base class for creating vanilla HTML Web Components
 ## Installation
 
 ```bash
-npm install @noblackbox/nofo
+npm install nomo/nofo
 ```
 
 ## Quick Start
 
 ```javascript
-import { NofoElement } from '@noblackbox/nofo';
+import { NofoElement } from 'nomo/nofo';
 
 class MyCounter extends NofoElement {
   static props = { count: 0 };
@@ -583,7 +583,7 @@ Nofo ships with sensible defaults that can be overridden at the app level or per
 ### Global Configuration (App Entry Point)
 
 ```javascript
-import { Nofo } from '@noblackbox/nofo';
+import { Nofo } from 'nomo/nofo';
 
 Nofo.configure({
   rpc: {
@@ -843,7 +843,7 @@ Test mode exposes additional state, methods, and emits events for testing. Enabl
 
 ```javascript
 // Option 1: Class-level (all instances of a component)
-import { NofoElement } from '@noblackbox/nofo';
+import { NofoElement } from 'nomo/nofo';
 NofoElement.testMode = true;
 
 // Option 2: Per-instance attribute
@@ -1043,7 +1043,7 @@ element
 ### Global Theme System
 
 ```javascript
-import { setTheme, setNofoTheme, getTheme } from '@noblackbox/nofo';
+import { setTheme, setNofoTheme, getTheme } from 'nomo/nofo';
 
 // Set custom theme variables
 setTheme({
@@ -1067,7 +1067,7 @@ const theme = getTheme();
 ## Full Example: Todo App
 
 ```javascript
-import { NofoElement } from '@noblackbox/nofo';
+import { NofoElement } from 'nomo/nofo';
 
 class TodoApp extends NofoElement {
   static props = { todos: [] };
@@ -1327,7 +1327,7 @@ Nofo provides a set of composable functions for common patterns. These are reusa
 ### Usage
 
 ```javascript
-import { NofoElement, useClickOutside, useTimeout } from '@noblackbox/nofo';
+import { NofoElement, useClickOutside, useTimeout } from 'nomo/nofo';
 
 class MyComponent extends NofoElement {
   #clickCleanup = null;
@@ -1463,7 +1463,7 @@ NofoElement includes built-in support for [Cap'n Web](https://github.com/cloudfl
 ### Quick Start
 
 ```javascript
-import { NofoElement, createNofoRpc } from '@noblackbox/nofo';
+import { NofoElement, createNofoRpc } from 'nomo/nofo';
 
 class UserList extends NofoElement {
   static props = { users: [] };
@@ -1599,7 +1599,7 @@ Nofo includes a comprehensive library of pre-built UI components organized into 
 Low-level building blocks (`nofo-button`, `nofo-dialog`, `nofo-input`, etc.):
 
 ```javascript
-import '@noblackbox/nofo/components';
+import 'nomo/nofo/components';
 ```
 
 ```html
@@ -1618,9 +1618,9 @@ import '@noblackbox/nofo/components';
 Styled wrappers with theme integration (`nofo-ui-button`, `nofo-ui-dialog`, etc.):
 
 ```javascript
-import '@noblackbox/nofo/components';
+import 'nomo/nofo/components';
 // or specifically
-import '@noblackbox/nofo/components/library';
+import 'nomo/nofo/components/library';
 ```
 
 ```html
@@ -1687,7 +1687,7 @@ readonly
 Use NofoElement to build your own components:
 
 ```javascript
-import { NofoElement } from '@noblackbox/nofo';
+import { NofoElement } from 'nomo/nofo';
 
 class MyCard extends NofoElement {
   static props = {

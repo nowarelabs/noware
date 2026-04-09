@@ -1,6 +1,6 @@
-import { type Result, ok, safe } from "@noblackbox/result";
-import { sql, Statement, getDialectStrategy } from "@noblackbox/sql";
-import { Logger } from "@noblackbox/logger";
+import { type Result, ok, safe } from "nomo/result";
+import { sql, Statement, getDialectStrategy } from "nomo/sql";
+import { Logger } from "nomo/logger";
 
 /**
  * Utility for running SQL migrations within a Cloudflare Durable Object using ctx.storage.sql.

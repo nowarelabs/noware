@@ -1,7 +1,7 @@
-import { RouterContext } from "@noblackbox/router";
+import { RouterContext } from "nomo/router";
 import status from "http-status";
-import { Logger, LogLevel } from "@noblackbox/logger";
-import { BaseModel } from "@noblackbox/models";
+import { Logger, LogLevel } from "nomo/logger";
+import { BaseModel } from "nomo/models";
 
 export interface INormalizer<T = unknown> {
   normalize(): T;
@@ -291,7 +291,7 @@ export abstract class BaseController<
       const viewData = data || this.params || {};
 
       // Initialize Asset Pipeline
-      const { AssetPipeline } = await import("@noblackbox/assets");
+      const { AssetPipeline } = await import("nomo/assets");
       const envRecord = this.env as Record<string, unknown>;
       const ctxRecord = this.ctx as Record<string, unknown>;
 
@@ -303,7 +303,7 @@ export abstract class BaseController<
       });
 
       if (LayoutClass) {
-        const { BaseLayout } = await import("@noblackbox/views");
+        const { BaseLayout } = await import("nomo/views");
         const renderedHtml = BaseLayout.withLayout(
           LayoutClass as never,
           view as never,
@@ -312,7 +312,7 @@ export abstract class BaseController<
         );
         return this.html(renderedHtml, init);
       }
-      const { BaseView } = await import("@noblackbox/views");
+      const { BaseView } = await import("nomo/views");
       const renderedHtml = (view as typeof BaseView).render(viewData, assets);
       return this.html(renderedHtml, init);
     }
@@ -695,7 +695,7 @@ export abstract class BaseResourceController<
 		// XML with DTO
 		if (wantsXml) {
 			if (DtoComponent) {
-				const { BaseDtoView } = await import("@noblackbox/views");
+				const { BaseDtoView } = await import("nomo/views");
 				return this.xml((DtoComponent as typeof BaseDtoView).renderXml(data), { status: options.status });
 			}
 			return this.xml(JSON.stringify(data), { status: options.status });
@@ -713,7 +713,7 @@ export abstract class BaseResourceController<
 
 		// JSON (Default)
 		if (DtoComponent) {
-			const { BaseDtoView } = await import("@noblackbox/views");
+			const { BaseDtoView } = await import("nomo/views");
 			return this.json((DtoComponent as typeof BaseDtoView).renderJson(data), { status: options.status });
 		}
 		return this.json(data, { status: options.status });

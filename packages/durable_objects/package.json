@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/durable-objects",
+  "name": "nomo/durable-objects",
   "version": "1.0.0",
-  "description": "Traceable Durable Objects for Noblackbox applications",
+  "description": "Traceable Durable Objects for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",
-    "@noblackbox/logger": "workspace:*",
-    "@noblackbox/router": "workspace:*",
+    "nomo/logger": "workspace:*",
+    "nomo/router": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "typescript": "^5.9.3"
   }

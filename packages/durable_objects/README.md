@@ -1,4 +1,4 @@
-# @noblackbox/durable-objects
+# nomo/durable-objects
 
 Production-ready Durable Objects with a Rails-like DSL and composition via the Delegate Pattern.
 
@@ -12,7 +12,7 @@ Production-ready Durable Objects with a Rails-like DSL and composition via the D
 ## Installation
 
 ```bash
-pnpm add @noblackbox/durable-objects
+pnpm add nomo/durable-objects
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ pnpm add @noblackbox/durable-objects
 Extend `BaseDurableObject` and use the DSL in your constructor to add behaviors.
 
 ```typescript
-import { BaseDurableObject } from "@noblackbox/durable-objects";
+import { BaseDurableObject } from "nomo/durable-objects";
 import { matches } from "./schema";
 
 export class MatchViewDO extends BaseDurableObject {
@@ -91,7 +91,7 @@ const match = await stub.view.find("match_123"); // Calls the ViewDelegate.find
 You can create your own delegates by extending `DurableObjectBaseDelegate`:
 
 ```typescript
-import { DurableObjectBaseDelegate } from "@noblackbox/durable-objects";
+import { DurableObjectBaseDelegate } from "nomo/durable-objects";
 
 export class CustomDelegate extends DurableObjectBaseDelegate {
   async handle(data: any) {

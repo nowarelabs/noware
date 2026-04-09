@@ -14,9 +14,9 @@ import { resetCommand } from "./reset";
 
 const main = defineCommand({
   meta: {
-    name: "noblackbox-migrate",
+    name: "nomo-migrate",
     version: "1.0.0",
-    description: "Migrations DSL for Noblackbox applications",
+    description: "Migrations DSL for nomo applications",
   },
   subCommands: {
     init: initCommand,

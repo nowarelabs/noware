@@ -1,4 +1,4 @@
-import { type Result, ok, safe, all, tagged } from "@noblackbox/result";
+import { type Result, ok, safe, all, tagged } from "nomo/result";
 import { DialectStrategy } from "./dialects";
 
 /**

@@ -1,9 +1,9 @@
-import { type Result, ok, safeAsync } from "@noblackbox/result";
+import { type Result, ok, safeAsync } from "nomo/result";
 import { consola } from "consola";
 import { hash } from "ohash";
 import { sql as sqlTag } from "./index";
 import type { Migration } from "./index";
-import { sql as sqlBuilder, getDialectStrategy } from "@noblackbox/sql";
+import { sql as sqlBuilder, getDialectStrategy } from "nomo/sql";
 
 /**
  * Migration Runner for Cloudflare environment (D1/DO)

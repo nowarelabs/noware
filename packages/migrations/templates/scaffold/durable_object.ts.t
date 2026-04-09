@@ -1,7 +1,7 @@
-import { BaseDurableObject } from '@noblackbox/durable-objects';
+import { BaseDurableObject } from 'nomo/durable-objects';
 import { drizzle, type DrizzleSqliteDODatabase } from 'drizzle-orm/durable-sqlite';
-import { Logger } from '@noblackbox/logger';
-import { migrateDO } from '@noblackbox/migrations';
+import { Logger } from 'nomo/logger';
+import { migrateDO } from 'nomo/migrations';
 
 import { {{tableName}} } from '../db/schema/schema';
 import { migrations } from '../db/migrations/migrations';

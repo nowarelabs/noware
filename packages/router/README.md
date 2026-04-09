@@ -1,11 +1,11 @@
-# @noblackbox/router
+# nomo/router
 
 A robust, type-safe, and class-based routing DSL for Cloudflare Workers. It provides a clean, declarative way to define routes with built-in Zod validation, OpenAPI generation, and resourceful routing.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/router
+pnpm add nomo/router
 ```
 
 ---
@@ -17,7 +17,7 @@ The `RouteDrawer` is the primary interface for defining routes. It supports a va
 ### 1.1. Basic HTTP Methods
 
 ```typescript
-import { RouteDrawer } from "@noblackbox/router";
+import { RouteDrawer } from "nomo/router";
 
 export const routes = new RouteDrawer((r) => {
   r.get("/", "Home#index");

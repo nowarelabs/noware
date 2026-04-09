@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/router",
+  "name": "nomo/router",
   "version": "1.0.0",
-  "description": "Rails-adjacent router for Noblackbox applications",
+  "description": "Rails-adjacent router for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.4.0",
-    "@noblackbox/logger": "workspace:*",
+    "nomo/logger": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-async-hooks": "^1.30.0",
     "@opentelemetry/sdk-trace-base": "^1.30.0",

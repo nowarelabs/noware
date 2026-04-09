@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/validators",
+  "name": "nomo/validators",
   "version": "1.0.0",
-  "description": "Validators for Noblackbox applications",
+  "description": "Validators for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

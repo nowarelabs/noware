@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { Migration, TableBuilder, sql, ForeignKey } from "../index";
 import { SqlGenerator } from "../sql";
-import { ok } from "@noblackbox/result";
+import { ok } from "nomo/result";
 
 class CompositePkMigration extends Migration {
   readonly version = "20260211000001";

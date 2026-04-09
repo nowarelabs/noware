@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/entrypoints",
+  "name": "nomo/entrypoints",
   "version": "1.0.0",
-  "description": "Rails-adjacent entrypoints for Noblackbox applications",
+  "description": "Rails-adjacent entrypoints for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -10,8 +10,8 @@
     "dev": "tsup src/index.ts --format cjs,esm --external cloudflare:workers --watch"
   },
   "dependencies": {
-    "@noblackbox/jobs": "workspace:*",
-    "@noblackbox/router": "workspace:*"
+    "nomo/jobs": "workspace:*",
+    "nomo/router": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",

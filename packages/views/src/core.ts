@@ -158,7 +158,7 @@ export abstract class AssetHelpers {
       imports: {
         "capnweb": "/assets/vendor/capnweb/index.js",
         "signal-polyfill": "/assets/vendor/signal-polyfill/index.js",
-        "@noblackbox/nofo": "/assets/vendor/@noblackbox/nofo/index.js"
+        "nomo/nofo": "/assets/vendor/nomo/nofo/index.js"
       }
     }));
     return jsx("script", { type: "importmap", dangerouslySetInnerHTML: { __html: mapRaw } });

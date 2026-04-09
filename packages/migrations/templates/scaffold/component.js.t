@@ -1,4 +1,4 @@
-import { NofoElement } from '@noblackbox/nofo';
+import { NofoElement } from 'nomo/nofo';
 
 class {{componentClassName}}Table extends NofoElement {
   static props = { 

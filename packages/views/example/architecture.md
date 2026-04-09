@@ -1,13 +1,13 @@
-# @noblackbox — Architecture & Gotcha Reference
+# nomo — Architecture & Gotcha Reference
 
 ## Package Map
 
 | Package | Where it runs | What it does |
 |---|---|---|
-| `@noblackbox/build` | Build time (Vite plugin) | Compiles components, copies vendors, emits manifest |
-| `@noblackbox/worker` | Cloudflare Worker (server) | JSX → HTML, per-request registry, content_for/yield |
-| `@noblackbox/runtime` | Cloudflare Worker (server) | Asset path resolution, CSP, import maps, PropsIsland |
-| `@noblackbox/element` | Browser (web component) | Base class: DSD, prop coercion, RPC loops, XSS safety |
+| `nomo/build` | Build time (Vite plugin) | Compiles components, copies vendors, emits manifest |
+| `nomo/worker` | Cloudflare Worker (server) | JSX → HTML, per-request registry, content_for/yield |
+| `nomo/runtime` | Cloudflare Worker (server) | Asset path resolution, CSP, import maps, PropsIsland |
+| `nomo/element` | Browser (web component) | Base class: DSD, prop coercion, RPC loops, XSS safety |
 
 ---
 
@@ -118,7 +118,7 @@ const data = await batch.getSystemStatus().get();
 
 **Problem:** `this.shadowRoot.innerHTML = \`<span>${status}</span>\`` is XSS if `status` comes from RPC data (which comes from the network).
 
-**Fix:** The `html` tagged template literal from `NoBlackBoxElement` escapes all interpolated values:
+**Fix:** The `html` tagged template literal from `nomoElement` escapes all interpolated values:
 
 ```ts
 this.shadowRoot.innerHTML = this.html`<span>${status}</span>`;
@@ -171,7 +171,7 @@ this.shadowRoot.querySelector('user-dashboard')
 ### "Import map isn't working / capnweb can't be resolved"
 - The `<script type="importmap">` must be before your `<script type="module">` tags
 - Check the layout: `{this.import_map()}` must come before `{this.yield_content('scripts')}`
-- Verify the vendor was added to `noBlackBox({ vendors: [{ package: 'capnweb' }] })`
+- Verify the vendor was added to `nomo({ vendors: [{ package: 'capnweb' }] })`
 
 ### "My props are all strings / objects are [object Object]"
 - You're passing complex props as HTML attributes

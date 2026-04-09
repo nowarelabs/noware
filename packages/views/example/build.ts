@@ -1,5 +1,5 @@
 /**
- * @noblackbox/build
+ * nomo/build
  *
  * Vite plugin that handles:
  * 1. Building React apps into self-contained web component wrappers
@@ -55,7 +55,7 @@ export interface VendorEntry {
   entry?: string;
 }
 
-export interface NoBlackBoxOptions {
+export interface nomoOptions {
   /**
    * Web component entries to build.
    */
@@ -115,7 +115,7 @@ export interface VendorManifestEntry {
 
 // ─── Plugin ───────────────────────────────────────────────────────────────────
 
-export function noBlackBox(options: NoBlackBoxOptions): Plugin[] {
+export function nomo(options: nomoOptions): Plugin[] {
   const {
     components,
     vendors = [],
@@ -135,7 +135,7 @@ export function noBlackBox(options: NoBlackBoxOptions): Plugin[] {
 
   // ── Validation plugin ───────────────────────────────────────────────────────
   const validatePlugin: Plugin = {
-    name: 'noblackbox:validate',
+    name: 'nomo:validate',
     enforce: 'pre',
     configResolved(config) {
       resolvedConfig = config;
@@ -145,13 +145,13 @@ export function noBlackBox(options: NoBlackBoxOptions): Plugin[] {
       for (const component of components) {
         if (!component.tag.includes('-')) {
           this.error(
-            `[noblackbox] Component tag "${component.tag}" must contain a hyphen. ` +
+            `[nomo] Component tag "${component.tag}" must contain a hyphen. ` +
             `Custom element spec requires it. Use e.g. "${component.tag}-element".`
           );
         }
         if (!fs.existsSync(path.resolve(component.src))) {
           this.error(
-            `[noblackbox] Component src "${component.src}" does not exist.`
+            `[nomo] Component src "${component.src}" does not exist.`
           );
         }
       }
@@ -160,7 +160,7 @@ export function noBlackBox(options: NoBlackBoxOptions): Plugin[] {
       const tags = components.map(c => c.tag);
       const duplicates = tags.filter((t, i) => tags.indexOf(t) !== i);
       if (duplicates.length > 0) {
-        this.error(`[noblackbox] Duplicate component tags: ${duplicates.join(', ')}`);
+        this.error(`[nomo] Duplicate component tags: ${duplicates.join(', ')}`);
       }
 
       // Validate vendor packages exist in node_modules
@@ -169,7 +169,7 @@ export function noBlackBox(options: NoBlackBoxOptions): Plugin[] {
           require.resolve(vendor.package);
         } catch {
           this.warn(
-            `[noblackbox] Vendor package "${vendor.package}" not found in node_modules. ` +
+            `[nomo] Vendor package "${vendor.package}" not found in node_modules. ` +
             `Run: npm install ${vendor.package}`
           );
         }
@@ -179,18 +179,18 @@ export function noBlackBox(options: NoBlackBoxOptions): Plugin[] {
 
   // ── React wrapper code generation ─────────────────────────────────────────
   const reactWrapPlugin: Plugin = {
-    name: 'noblackbox:react-wrap',
+    name: 'nomo:react-wrap',
     enforce: 'pre',
     resolveId(id) {
       // Virtual module for each react-wrapped component
-      if (id.startsWith('virtual:noblackbox-react-wrap:')) {
+      if (id.startsWith('virtual:nomo-react-wrap:')) {
         return '\0' + id;
       }
     },
     load(id) {
-      if (!id.startsWith('\0virtual:noblackbox-react-wrap:')) return;
+      if (!id.startsWith('\0virtual:nomo-react-wrap:')) return;
 
-      const tag = id.replace('\0virtual:noblackbox-react-wrap:', '');
+      const tag = id.replace('\0virtual:nomo-react-wrap:', '');
       const component = components.find(c => c.tag === tag);
       if (!component || !component.react) return;
 
@@ -303,7 +303,7 @@ if (!customElements.get('${tag}')) {
 
   // ── Vendor copy plugin ─────────────────────────────────────────────────────
   const vendorPlugin: Plugin = {
-    name: 'noblackbox:vendor',
+    name: 'nomo:vendor',
     async writeBundle() {
       for (const vendor of vendors) {
         try {
@@ -322,7 +322,7 @@ if (!customElements.get('${tag}')) {
 
           const entryPath = path.resolve(pkgDir, entryFile);
           if (!fs.existsSync(entryPath)) {
-            console.warn(`[noblackbox] Vendor entry not found: ${entryPath}`);
+            console.warn(`[nomo] Vendor entry not found: ${entryPath}`);
             continue;
           }
 
@@ -350,9 +350,9 @@ if (!customElements.get('${tag}')) {
             package: vendor.package,
           };
 
-          console.log(`[noblackbox] Vendored ${vendor.package} → ${hashedName}`);
+          console.log(`[nomo] Vendored ${vendor.package} → ${hashedName}`);
         } catch (e) {
-          console.error(`[noblackbox] Failed to vendor ${vendor.package}:`, e);
+          console.error(`[nomo] Failed to vendor ${vendor.package}:`, e);
         }
       }
     },
@@ -360,7 +360,7 @@ if (!customElements.get('${tag}')) {
 
   // ── Manifest emitter plugin ────────────────────────────────────────────────
   const manifestPlugin: Plugin = {
-    name: 'noblackbox:manifest',
+    name: 'nomo:manifest',
     generateBundle(_options, bundle) {
       // Record component entries from the bundle
       for (const [fileName, chunk] of Object.entries(bundle)) {
@@ -389,7 +389,7 @@ if (!customElements.get('${tag}')) {
       const manifestPath = path.resolve(assetsDir, 'manifest.json');
       fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-      console.log(`[noblackbox] Manifest written to ${manifestPath}`);
+      console.log(`[nomo] Manifest written to ${manifestPath}`);
     },
   };
 

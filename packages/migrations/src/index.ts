@@ -440,8 +440,8 @@ export interface MigrationCommand {
   down: string | object;
 }
 
-import { type Result, ok, safeAsync } from "@noblackbox/result";
-import { sql as sqlBuilder, Dialect } from "@noblackbox/sql";
+import { type Result, ok, safeAsync } from "nomo/result";
+import { sql as sqlBuilder, Dialect } from "nomo/sql";
 
 /**
  * Interface for migrations that can be altered
@@ -1199,4 +1199,4 @@ export {
   Keyword,
   Raw,
   sql as sqlBuilder,
-} from "@noblackbox/sql";
+} from "nomo/sql";

@@ -1,13 +1,13 @@
 {
-  "name": "@noblackbox/controllers",
+  "name": "nomo/controllers",
   "version": "1.0.0",
-  "description": "Rails-adjacent controllers for Noblackbox applications",
+  "description": "Rails-adjacent controllers for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --external @noblackbox/views",
-    "dev": "tsup src/index.ts --watch --format esm,cjs --external @noblackbox/views"
+    "build": "tsup src/index.ts --format esm,cjs --dts --external nomo/views",
+    "dev": "tsup src/index.ts --watch --format esm,cjs --external nomo/views"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",
@@ -16,11 +16,11 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@noblackbox/assets": "workspace:*",
-    "@noblackbox/logger": "workspace:*",
-    "@noblackbox/models": "workspace:*",
-    "@noblackbox/router": "workspace:*",
-    "@noblackbox/views": "workspace:*",
+    "nomo/assets": "workspace:*",
+    "nomo/logger": "workspace:*",
+    "nomo/models": "workspace:*",
+    "nomo/router": "workspace:*",
+    "nomo/views": "workspace:*",
     "http-status": "^2.1.0"
   }
 }

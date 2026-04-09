@@ -1,6 +1,6 @@
 # Migration-Based Scaffolding
 
-The noblackbox framework uses migration files as the **single source of truth** for generating the entire project structure. From files in `src/db/migrate/`, the scaffold system generates:
+The nomo framework uses migration files as the **single source of truth** for generating the entire project structure. From files in `src/db/migrate/`, the scaffold system generates:
 
 - **Routes** - HTTP resource routes and RPC endpoints
 - **Schema** - Drizzle ORM table definitions
@@ -39,7 +39,7 @@ pnpm db:scaffold
 ### D1 Tables (Standard CRUD Resources)
 
 ```typescript
-import { Migration } from "@noblackbox/migrations";
+import { Migration } from "nomo/migrations";
 
 export default class CreateTournaments extends Migration {
   readonly version = "20260313001702";
@@ -75,7 +75,7 @@ export default class CreateTournaments extends Migration {
 ### Durable Object Views
 
 ```typescript
-import { Migration } from "@noblackbox/migrations";
+import { Migration } from "nomo/migrations";
 
 export default class CreateSingleEliminationViewDurableObject extends Migration {
   readonly version = "20260313002014";

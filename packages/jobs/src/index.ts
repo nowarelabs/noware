@@ -1,4 +1,4 @@
-import { Logger, LogLevel } from "@noblackbox/logger";
+import { Logger, LogLevel } from "nomo/logger";
 import { context, propagation } from "@opentelemetry/api";
 
 export abstract class BaseJob<T = any> {

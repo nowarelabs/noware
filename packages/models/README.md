@@ -1,11 +1,11 @@
-# @noblackbox/models
+# nomo/models
 
 An ActiveRecord-inspired ORM for Cloudflare's database landscape. It provides a type-safe, fluent DSL for interacting with D1 and Durable Objects SQL while maintaining a clean, class-based interface.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/models
+pnpm add nomo/models
 ```
 
 ---
@@ -17,7 +17,7 @@ pnpm add @noblackbox/models
 All models should extend `BaseModel`. This provides built-in CRUD operations and lifecycle management.
 
 ```typescript
-import { BaseModel } from "@noblackbox/models";
+import { BaseModel } from "nomo/models";
 import { accounts } from "./schema";
 
 export class Account extends BaseModel<typeof accounts> {
@@ -29,7 +29,7 @@ export class Account extends BaseModel<typeof accounts> {
 
 ### 1.2. The Capture & Sync Workflow
 
-Models are typically generated or updated using the `@noblackbox/migrations` `sync` command, ensuring that your TypeScript classes always match your database schema.
+Models are typically generated or updated using the `nomo/migrations` `sync` command, ensuring that your TypeScript classes always match your database schema.
 
 ---
 
@@ -102,7 +102,7 @@ Available hooks: `_beforeCreate`, `_afterCreate`, `_beforeUpdate`, `_afterUpdate
 
 ## 5. Multi-Driver Support
 
-`@noblackbox/models` works natively with:
+`nomo/models` works natively with:
 
 - **Cloudflare D1**: Uses the standard D1 binding (`db.all`, `db.insert`, etc.).
 - **Durable Objects**: Uses the `storage.sql` interface (`db.exec`).

@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/migrations",
+  "name": "nomo/migrations",
   "version": "1.0.0",
-  "description": "Rails-adjacent migrations DSL for Noblackbox applications",
+  "description": "Rails-adjacent migrations DSL for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -23,9 +23,9 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@noblackbox/logger": "workspace:*",
-    "@noblackbox/result": "workspace:*",
-    "@noblackbox/sql": "workspace:*",
+    "nomo/logger": "workspace:*",
+    "nomo/result": "workspace:*",
+    "nomo/sql": "workspace:*",
     "citty": "^0.2.2",
     "consola": "^3.4.2",
     "drizzle-orm": "^0.45.1",

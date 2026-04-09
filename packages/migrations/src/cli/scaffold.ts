@@ -81,7 +81,7 @@ class RemoteTemplateLoader implements ITemplateLoader {
   private downloadPromise: Promise<void>;
 
   constructor(templateUrl: string) {
-    const tempPath = path.join(tmpdir(), `noblackbox-scaffold-${hash(templateUrl)}`);
+    const tempPath = path.join(tmpdir(), `nomo-scaffold-${hash(templateUrl)}`);
     
     this.downloadPromise = downloadTemplate(templateUrl, { 
       dir: tempPath, 

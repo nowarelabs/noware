@@ -1,6 +1,6 @@
 import type { ExecutionContext } from '@cloudflare/workers-types';
-import type { RouterContext } from '@noblackbox/router';
-import { BaseService } from '@noblackbox/services';
+import type { RouterContext } from 'nomo/router';
+import { BaseService } from 'nomo/services';
 import { {{typeName}}Model } from '../models/{{modelFileName}}';
 
 export class {{serviceClassName}} extends BaseService<Env, ExecutionContext> {

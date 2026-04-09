@@ -1,11 +1,11 @@
-# @noblackbox/shared
+# nomo/shared
 
-A collection of common middlewares and utilities used throughout the Noblackbox ecosystem. This package ensures that standard concerns like CORS and logging are handled consistently across all your Workers.
+A collection of common middlewares and utilities used throughout the nomo ecosystem. This package ensures that standard concerns like CORS and logging are handled consistently across all your Workers.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/shared
+pnpm add nomo/shared
 ```
 
 ---
@@ -17,8 +17,8 @@ pnpm add @noblackbox/shared
 Standard CORS implementation for Cloudflare Workers.
 
 ```typescript
-import { corsMiddleware } from "@noblackbox/shared";
-import { Router } from "@noblackbox/router";
+import { corsMiddleware } from "nomo/shared";
+import { Router } from "nomo/router";
 
 const router = new Router();
 router.use(
@@ -35,7 +35,7 @@ router.use(
 Provides request logging for visibility and debugging.
 
 ```typescript
-import { loggerMiddleware } from "@noblackbox/shared";
+import { loggerMiddleware } from "nomo/shared";
 
 router.use(loggerMiddleware());
 ```
@@ -44,7 +44,7 @@ router.use(loggerMiddleware());
 
 ## 2. Utility Collections
 
-While primary logic resides in specialized packages, `@noblackbox/shared` provides small, cross-cutting helpers that don't warrant their own package.
+While primary logic resides in specialized packages, `nomo/shared` provides small, cross-cutting helpers that don't warrant their own package.
 
 - **String Helpers**: Trimming, capitalization, and case conversion.
 - **Object Utilities**: Deep merge, picking, and omitting keys.
@@ -54,7 +54,7 @@ While primary logic resides in specialized packages, `@noblackbox/shared` provid
 
 ## 3. Contributing
 
-When adding to `@noblackbox/shared`, ensure that the utility is truly general-purpose and used by at least two other packages or applications in the workspace.
+When adding to `nomo/shared`, ensure that the utility is truly general-purpose and used by at least two other packages or applications in the workspace.
 
 ---
 

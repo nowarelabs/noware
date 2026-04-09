@@ -1,11 +1,11 @@
-# @noblackbox/jobs
+# nomo/jobs
 
 A unified, Rails-inspired background processing system for Cloudflare Workers. It provides a simple, class-based DSL for managing asynchronous tasks through Cloudflare Queues and stateful workflows through Cloudflare Workflows.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/jobs
+pnpm add nomo/jobs
 ```
 
 ---
@@ -15,7 +15,7 @@ pnpm add @noblackbox/jobs
 All background units extend `BaseJob`. The `perform` method is where the actual work happens.
 
 ```typescript
-import { BaseJob } from "@noblackbox/jobs";
+import { BaseJob } from "nomo/jobs";
 
 export class WelcomeEmailJob extends BaseJob<{ email: string }> {
   async perform(ctx: any) {
@@ -33,7 +33,7 @@ export class WelcomeEmailJob extends BaseJob<{ email: string }> {
 Uses Cloudflare Queues for standard single-pass background work.
 
 ```typescript
-import { QueueJob } from "@noblackbox/jobs";
+import { QueueJob } from "nomo/jobs";
 
 export class ProcessDataJob extends QueueJob {
   // ... implement perform
@@ -48,7 +48,7 @@ await ProcessDataJob.performLater(env.QUEUE, { id: 123 });
 Uses Cloudflare Workflows for complex, multi-step processes that require sleep, retries, and state persistence.
 
 ```typescript
-import { WorkflowJob } from "@noblackbox/jobs";
+import { WorkflowJob } from "nomo/jobs";
 
 export class OnboardingWorkflow extends WorkflowJob {
   async perform(ctx: any) {
@@ -70,7 +70,7 @@ The `JobDispatcher` is the glue that runs your jobs when an event (Queue message
 
 ```typescript
 // worker.ts
-import { JobDispatcher } from "@noblackbox/jobs";
+import { JobDispatcher } from "nomo/jobs";
 
 const dispatcher = new JobDispatcher([WelcomeEmailJob, OnboardingWorkflow]);
 

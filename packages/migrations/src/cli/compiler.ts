@@ -1,4 +1,4 @@
-import { type Result, ok, err, safeAsync } from "@noblackbox/result";
+import { type Result, ok, err, safeAsync } from "nomo/result";
 import { Migration } from "../index";
 import * as fs from "node:fs/promises";
 import * as path from "pathe";
@@ -35,8 +35,8 @@ export class MigrationCompiler {
     return await safeAsync(async () => {
       await fs.mkdir(this.outDir, { recursive: true });
 
-      const tempDbPath = path.resolve(process.cwd(), ".noblackbox/temp_compile.db");
-      const metadataPath = path.resolve(process.cwd(), ".noblackbox/temp_metadata.json");
+      const tempDbPath = path.resolve(process.cwd(), ".nomo/temp_compile.db");
+      const metadataPath = path.resolve(process.cwd(), ".nomo/temp_metadata.json");
       const { execSync } = await import("node:child_process");
 
       // Clean up any existing temp files

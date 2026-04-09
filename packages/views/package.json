@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/views",
+  "name": "nomo/views",
   "version": "1.0.0",
-  "description": "Rails-adjacent views (UI/Components) for Noblackbox applications",
+  "description": "Rails-adjacent views (UI/Components) for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

@@ -7,8 +7,8 @@ import {
   newWorkersRpcResponse,
   newMessagePortRpcSession,
 } from "capnweb";
-import { Logger } from "@noblackbox/logger";
-import { RouterContext } from "@noblackbox/router";
+import { Logger } from "nomo/logger";
+import { RouterContext } from "nomo/router";
 
 // ============================================================================
 // ACTION TYPES

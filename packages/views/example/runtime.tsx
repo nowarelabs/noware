@@ -1,5 +1,5 @@
 /**
- * @noblackbox/runtime
+ * nomo/runtime
  *
  * Reads the asset manifest at request time and provides:
  * - Content-hashed path resolution (no stale cache bugs)
@@ -10,7 +10,7 @@
  * This runs inside the Cloudflare Worker on every request.
  */
 
-import type { AssetManifest, AssetManifestEntry, VendorManifestEntry } from '@noblackbox/build';
+import type { AssetManifest, AssetManifestEntry, VendorManifestEntry } from 'nomo/build';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,9 +57,9 @@ export class AssetPipeline {
     const entry = this.manifest.entries[tag];
     if (!entry) {
       throw new Error(
-        `[noblackbox] Unknown component "${tag}". ` +
+        `[nomo] Unknown component "${tag}". ` +
         `Available: ${Object.keys(this.manifest.entries).join(', ')}. ` +
-        `Did you forget to add it to noBlackBox({ components: [...] })?`
+        `Did you forget to add it to nomo({ components: [...] })?`
       );
     }
     return entry.src;
@@ -76,9 +76,9 @@ export class AssetPipeline {
     const entry = this.manifest.vendors[pkg];
     if (!entry) {
       throw new Error(
-        `[noblackbox] Unknown vendor "${pkg}". ` +
+        `[nomo] Unknown vendor "${pkg}". ` +
         `Available: ${Object.keys(this.manifest.vendors).join(', ')}. ` +
-        `Did you add it to noBlackBox({ vendors: [...] })?`
+        `Did you add it to nomo({ vendors: [...] })?`
       );
     }
     return entry.src;
@@ -109,7 +109,7 @@ export class AssetPipeline {
    */
   componentEntry(tag: string): AssetManifestEntry {
     const entry = this.manifest.entries[tag];
-    if (!entry) throw new Error(`[noblackbox] Unknown component "${tag}"`);
+    if (!entry) throw new Error(`[nomo] Unknown component "${tag}"`);
     return entry;
   }
 
@@ -118,7 +118,7 @@ export class AssetPipeline {
    */
   vendorEntry(pkg: string): VendorManifestEntry {
     const entry = this.manifest.vendors[pkg];
-    if (!entry) throw new Error(`[noblackbox] Unknown vendor "${pkg}"`);
+    if (!entry) throw new Error(`[nomo] Unknown vendor "${pkg}"`);
     return entry;
   }
 }
@@ -216,7 +216,7 @@ export function propsIsland(props: Record<string, unknown>): string {
  *
  * @example
  * import React from 'react';
- * import { PropsIsland } from '@noblackbox/runtime';
+ * import { PropsIsland } from 'nomo/runtime';
  *
  * <status-badge status="loading">
  *   <PropsIsland props={{ user, config }} />

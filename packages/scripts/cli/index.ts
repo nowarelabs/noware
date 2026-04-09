@@ -7,7 +7,7 @@ const program = new Command();
 
 program
   .name("nbb")
-  .description("Rails-like generators for Noblackbox applications")
+  .description("Rails-like generators for nomo applications")
   .version("1.0.0");
 
 program.addCommand(workflowCommand);

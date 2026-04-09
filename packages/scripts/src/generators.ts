@@ -1,8 +1,8 @@
 export const WORKFLOW_TEMPLATE = (
   name: string,
-) => `import { BaseWorkflow } from "@noblackbox/entrypoints";
+) => `import { BaseWorkflow } from "nomo/entrypoints";
 import { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
-import { JobDispatcher } from "@noblackbox/jobs";
+import { JobDispatcher } from "nomo/jobs";
 import { JobRegistry } from "../jobs";
 
 const dispatcher = new JobDispatcher(JobRegistry);

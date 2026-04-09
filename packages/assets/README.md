@@ -1,6 +1,6 @@
-# @noblackbox/assets
+# nomo/assets
 
-Advanced asset pipeline for Noblackbox applications.
+Advanced asset pipeline for nomo applications.
 
 ## Features
 
@@ -14,7 +14,7 @@ Advanced asset pipeline for Noblackbox applications.
 ### Basic Path Resolution
 
 ```typescript
-import { AssetPipeline } from "@noblackbox/assets";
+import { AssetPipeline } from "nomo/assets";
 
 const assets = new AssetPipeline({
   manifest: { "application.css": "application-abc123.css" },
@@ -40,7 +40,7 @@ assets.image_tag("logo.png", { alt: "Logo", className: "h-8" });
 ### HTMLRewriter Injection
 
 ```typescript
-import { AssetInjector } from "@noblackbox/assets";
+import { AssetInjector } from "nomo/assets";
 
 const injector = new AssetInjector(assets, {
   styles: ["application.css"],

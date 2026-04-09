@@ -1,5 +1,5 @@
-import { RouteDrawer } from '@noblackbox/router';
-import type { AppExecutionContext } from '@noblackbox/router';
+import { RouteDrawer } from 'nomo/router';
+import type { AppExecutionContext } from 'nomo/router';
 
 import { htmlRewriterMiddleware, importMapMiddleware } from './middlewares';
 

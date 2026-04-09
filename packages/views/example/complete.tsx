@@ -1,5 +1,5 @@
 /**
- * COMPLETE EXAMPLE — @noblackbox
+ * COMPLETE EXAMPLE — nomo
  *
  * This file shows the full pattern from build → deploy → request.
  * It is annotated heavily to explain every decision.
@@ -24,11 +24,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { defineConfig } from 'vite';
-import { noBlackBox } from '@noblackbox/build';
+import { nomo } from 'nomo/build';
 
 export const buildConfig = defineConfig({
   plugins: [
-    noBlackBox({
+    nomo({
       components: [
         {
           // A vanilla web component (no React)
@@ -141,13 +141,13 @@ export default UserDashboard;
 // 3. BUILD TIME — A vanilla web component (status-badge)
 //    src/elements/StatusBadge.ts
 //
-// Extends NoBlackBoxElement which handles all the gotchas.
+// Extends nomoElement which handles all the gotchas.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { NoBlackBoxElement, safeCssColor } from '@noblackbox/element';
+import { nomoElement, safeCssColor } from 'nomo/element';
 import { newHttpBatchRpcSession } from 'capnweb'; // resolved by import map at runtime
 
-class StatusBadge extends NoBlackBoxElement {
+class StatusBadge extends nomoElement {
   // Declare which attributes exist and their types.
   // Coercion, observedAttributes(), and DOM sync happen automatically.
   static propSchema = {
@@ -207,8 +207,8 @@ if (!customElements.get('status-badge')) {
 // Loaded ONCE per isolate init (not per request).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { BaseLayout, BaseView, custom_element } from '@noblackbox/worker';
-import { AssetPipeline, generateNonce, buildCSP, PropsIsland } from '@noblackbox/runtime';
+import { BaseLayout, BaseView, custom_element } from 'nomo/worker';
+import { AssetPipeline, generateNonce, buildCSP, PropsIsland } from 'nomo/runtime';
 
 // Import manifest at module init time — it's static and built at deploy time.
 // This is the right place: module-level, not per-request.

@@ -6,9 +6,9 @@ import {
   DialectStrategy,
   getDialectStrategy,
   SqlPart,
-} from "@noblackbox/sql";
-import { Logger } from "@noblackbox/logger";
-import { ConflictError, ConstraintError, BadRequestError, RouterContext } from "@noblackbox/router";
+} from "nomo/sql";
+import { Logger } from "nomo/logger";
+import { ConflictError, ConstraintError, BadRequestError, RouterContext } from "nomo/router";
 
 import type {
   ExecutionContext,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MigrationRunner } from "../runner";
 import { Migration } from "../index";
-import { ok } from "@noblackbox/result";
+import { ok } from "nomo/result";
 
 vi.mock("drizzle-orm", () => {
   const sqlMock = (chunks: any, ...vals: any[]) => ({

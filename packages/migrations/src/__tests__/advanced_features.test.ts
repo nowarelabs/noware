@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sql, getDialectStrategy } from "@noblackbox/sql";
+import { sql, getDialectStrategy } from "nomo/sql";
 import { TableBuilder, VirtualTableBuilder } from "../index";
 import { STANDARD_HANDLERS } from "../handlers";
 describe("Advanced SQLite Features", () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Migration } from "../index";
 import { SqlGenerator } from "../sql";
-import { ok } from "@noblackbox/result";
+import { ok } from "nomo/result";
 
 class MockMigration extends Migration {
   readonly version = "20260205120000";

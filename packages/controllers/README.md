@@ -1,11 +1,11 @@
-# @noblackbox/controllers
+# nomo/controllers
 
-An action-oriented controller framework for Noblackbox applications. It introduces a Rails-inspired flow with lifecycle hooks, automated data processing, and a flexible rendering system.
+An action-oriented controller framework for nomo applications. It introduces a Rails-inspired flow with lifecycle hooks, automated data processing, and a flexible rendering system.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/controllers
+pnpm add nomo/controllers
 ```
 
 ---
@@ -17,7 +17,7 @@ pnpm add @noblackbox/controllers
 All controllers must extend `BaseController`. It provides a structured environment for handling requests, interacting with services, and rendering responses.
 
 ```typescript
-import { BaseController } from "@noblackbox/controllers";
+import { BaseController } from "nomo/controllers";
 
 export class UsersController extends BaseController {
   async index() {
@@ -83,7 +83,7 @@ The `render` method is a unified interface for responding to clients.
 - **Text**: `this.render({ text: 'Hello' })`
 - **HTML**: `this.render({ html: '<h1>Title</h1>' })`
 - **Views**: `this.render({ view: AccountShowView, layout: ApplicationLayout })`
-  - _Note: `render` automatically initializes the `@noblackbox/assets` pipeline from the environment and injects it into views/layouts._
+  - _Note: `render` automatically initializes the `nomo/assets` pipeline from the environment and injects it into views/layouts._
 - **Custom Types**: XML, CSV, and XLSX are also supported via specific keys.
 
 ---

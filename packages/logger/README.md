@@ -1,6 +1,6 @@
-# @noblackbox/logger
+# nomo/logger
 
-Production-ready logger for Noblackbox applications with OpenTelemetry and SIEM support.
+Production-ready logger for nomo applications with OpenTelemetry and SIEM support.
 
 ## Features
 
@@ -13,7 +13,7 @@ Production-ready logger for Noblackbox applications with OpenTelemetry and SIEM 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/logger
+pnpm add nomo/logger
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ pnpm add @noblackbox/logger
 ### Basic Logging
 
 ```typescript
-import { Logger, LogLevel } from "@noblackbox/logger";
+import { Logger, LogLevel } from "nomo/logger";
 
 const logger = new Logger({
   service: "my-service",

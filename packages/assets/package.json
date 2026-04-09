@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/assets",
+  "name": "nomo/assets",
   "version": "1.0.0",
-  "description": "Asset pipeline for Noblackbox applications with HTMLRewriter support",
+  "description": "Asset pipeline for nomo applications with HTMLRewriter support",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

@@ -1,5 +1,5 @@
-import { BaseResourceInstanceRpcTarget } from '@noblackbox/rpc';
-import { RouterContext } from '@noblackbox/router';
+import { BaseResourceInstanceRpcTarget } from 'nomo/rpc';
+import { RouterContext } from 'nomo/router';
 import { {{pluralTypeName}}Controller } from '../../controllers/{{tableName}}_controller';
 
 export class {{pluralTypeName}}RpcInstance extends BaseResourceInstanceRpcTarget<

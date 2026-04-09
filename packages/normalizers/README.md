@@ -1,11 +1,11 @@
-# @noblackbox/normalizers
+# nomo/normalizers
 
-A specialized layer for sanitizing and cleaning incoming data in Noblackbox applications. Normalizers ensure that your models receive data in a consistent format (e.g., lowercase emails, trimmed strings) before validation or persistence.
+A specialized layer for sanitizing and cleaning incoming data in nomo applications. Normalizers ensure that your models receive data in a consistent format (e.g., lowercase emails, trimmed strings) before validation or persistence.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/normalizers
+pnpm add nomo/normalizers
 ```
 
 ---
@@ -15,7 +15,7 @@ pnpm add @noblackbox/normalizers
 Extend `BaseNormalizer` to define the "cleaning" logic for a specific data payload.
 
 ```typescript
-import { BaseNormalizer } from "@noblackbox/normalizers";
+import { BaseNormalizer } from "nomo/normalizers";
 
 export class UserNormalizer extends BaseNormalizer {
   normalize() {
@@ -43,7 +43,7 @@ const cleanData = UserNormalizer.normalize(rawInput);
 
 ### 2.2. Framework Integration
 
-Normalizers work seamlessly with `@noblackbox/controllers` semantic hooks to clean request bodies automatically.
+Normalizers work seamlessly with `nomo/controllers` semantic hooks to clean request bodies automatically.
 
 ```typescript
 // UsersController.ts

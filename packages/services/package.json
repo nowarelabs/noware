@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/services",
+  "name": "nomo/services",
   "version": "1.0.0",
-  "description": "Rails-adjacent services for Noblackbox applications",
+  "description": "Rails-adjacent services for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260219.0",
-    "@noblackbox/logger": "workspace:*",
-    "@noblackbox/router": "workspace:*"
+    "nomo/logger": "workspace:*",
+    "nomo/router": "workspace:*"
   }
 }

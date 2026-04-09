@@ -1,4 +1,4 @@
-import { Migration } from "@noblackbox/migrations";
+import { Migration } from "nomo/migrations";
 
 export default class {{className}} extends Migration {
   readonly version = "{{timestamp}}";

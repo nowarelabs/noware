@@ -1,18 +1,18 @@
-# @noblackbox/services
+# nomo/services
 
-The business logic orchestration layer for Noblackbox applications. Services provide a centralized location for complex domain logic, coordinating between models, external APIs, and background jobs.
+The business logic orchestration layer for nomo applications. Services provide a centralized location for complex domain logic, coordinating between models, external APIs, and background jobs.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/services
+pnpm add nomo/services
 ```
 
 ---
 
 ## 1. Philosophy
 
-In the Noblackbox architecture, Controllers handle request/response flow while Models handle data persistence. **Services** bridge the gap, containing the "brain" of your application.
+In the nomo architecture, Controllers handle request/response flow while Models handle data persistence. **Services** bridge the gap, containing the "brain" of your application.
 
 Rules of Thumb:
 
@@ -27,8 +27,8 @@ Rules of Thumb:
 Extend `BaseService` to create a new business logic unit. Services have access to the Cloudflare `env` and can be easily injected into controllers or jobs.
 
 ```typescript
-import { BaseService } from "@noblackbox/services";
-import { Account } from "@noblackbox/models";
+import { BaseService } from "nomo/services";
+import { Account } from "nomo/models";
 
 export class RegistrationService extends BaseService {
   async register(params: any) {
@@ -67,7 +67,7 @@ export class AccountsController extends BaseController {
 ## 4. Best Practices
 
 - **One Responsibility**: Create focused services (e.g., `BillingService`, `NotificationService`) rather than a single monolithic `AppService`.
-- **Result-Oriented**: Services should ideally return `Result` types from `@noblackbox/result` to ensure type-safe error handling at the controller level.
+- **Result-Oriented**: Services should ideally return `Result` types from `nomo/result` to ensure type-safe error handling at the controller level.
 - **Environment Awareness**: Always use `this.env` to access bindings (DB, Queues, KV) instead of importing globals.
 
 ---

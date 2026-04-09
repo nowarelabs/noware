@@ -1,11 +1,11 @@
-# @noblackbox/validators
+# nomo/validators
 
-A class-based validation layer for Noblackbox applications, leveraging the power of [Zod](https://zod.dev/). `@noblackbox/validators` allows you to define complex validation logic as reusable objects.
+A class-based validation layer for nomo applications, leveraging the power of [Zod](https://zod.dev/). `nomo/validators` allows you to define complex validation logic as reusable objects.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/validators
+pnpm add nomo/validators
 ```
 
 ---
@@ -15,7 +15,7 @@ pnpm add @noblackbox/validators
 Extend `BaseValidator` to create a dedicated validator for a resource or action. You must define a `schema` using Zod.
 
 ```typescript
-import { BaseValidator } from "@noblackbox/validators";
+import { BaseValidator } from "nomo/validators";
 import { z } from "zod";
 
 export class UserRegistrationValidator extends BaseValidator {
@@ -55,7 +55,7 @@ const data = UserRegistrationValidator.validate(input);
 
 ## 3. Framework Integration
 
-Validators are a key part of the `@noblackbox/controllers` semantic hook system.
+Validators are a key part of the `nomo/controllers` semantic hook system.
 
 ```typescript
 // UsersController.ts

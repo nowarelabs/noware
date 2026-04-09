@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/jobs",
+  "name": "nomo/jobs",
   "version": "1.0.0",
-  "description": "Rails-adjacent jobs (Queues) for Noblackbox applications",
+  "description": "Rails-adjacent jobs (Queues) for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@noblackbox/logger": "workspace:*",
+    "nomo/logger": "workspace:*",
     "@opentelemetry/api": "^1.9.0"
   }
 }

@@ -26,7 +26,7 @@ import type {
   MessageBatch
 } from "@cloudflare/workers-types";
 
-import { Logger, LogLevel } from "@noblackbox/logger";
+import { Logger, LogLevel } from "nomo/logger";
 
 interface MiddlewareEntry<Env = unknown, Ctx = ExecutionContext> {
   path: string;
@@ -648,7 +648,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       throw new Error(`RPC method ${method} not found`);
     }
 
-    const tracer = trace.getTracer("noblackbox-rpc");
+    const tracer = trace.getTracer("nomo-rpc");
     return tracer.startActiveSpan(`rpc ${method}`, async (span) => {
       try {
         return await handler(args, { env, executionCtx });
@@ -1141,7 +1141,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       }
     }
 
-    const tracer = trace.getTracer("noblackbox-router");
+    const tracer = trace.getTracer("nomo-router");
 
     const parentContext = propagation.extract(
       context.active(),

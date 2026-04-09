@@ -1,11 +1,11 @@
-# @noblackbox/formatters
+# nomo/formatters
 
-The presentation-layer transformation engine for Noblackbox. Formatters take raw data (usually from models or services) and transform it into a UI-optimized structure or string, keeping your views and controllers clean.
+The presentation-layer transformation engine for nomo. Formatters take raw data (usually from models or services) and transform it into a UI-optimized structure or string, keeping your views and controllers clean.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/formatters
+pnpm add nomo/formatters
 ```
 
 ---
@@ -15,7 +15,7 @@ pnpm add @noblackbox/formatters
 Extend `BaseFormatter` to encapsulate presentation logic. This is ideal for things like "Full Name" construction, currency formatting, or date localization.
 
 ```typescript
-import { BaseFormatter } from "@noblackbox/formatters";
+import { BaseFormatter } from "nomo/formatters";
 
 export class UserFormatter extends BaseFormatter {
   format() {

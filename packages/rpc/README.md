@@ -1,6 +1,6 @@
-# @noblackbox/rpc
+# nomo/rpc
 
-A thin wrapper around `capnweb` for RPC in Noblackbox applications.
+A thin wrapper around `capnweb` for RPC in nomo applications.
 
 ## Features
 
@@ -11,7 +11,7 @@ A thin wrapper around `capnweb` for RPC in Noblackbox applications.
 ## Installation
 
 ```bash
-pnpm add @noblackbox/rpc
+pnpm add nomo/rpc
 ```
 
 ## Usage
@@ -19,7 +19,7 @@ pnpm add @noblackbox/rpc
 ### 1. Define an Interface
 
 ```typescript
-import { RpcTarget } from "@noblackbox/rpc";
+import { RpcTarget } from "nomo/rpc";
 
 interface MyApi extends RpcTarget {
   greet(name: string): string;
@@ -29,7 +29,7 @@ interface MyApi extends RpcTarget {
 ### 2. Implementation (Server)
 
 ```typescript
-import { BaseRpcTarget, newWorkersRpcResponse } from "@noblackbox/rpc";
+import { BaseRpcTarget, newWorkersRpcResponse } from "nomo/rpc";
 
 class MyApiImpl extends BaseRpcTarget implements MyApi {
   greet(name: string): string {
@@ -48,7 +48,7 @@ export default {
 ### 3. Usage (Client - Batch)
 
 ```typescript
-import { RpcStub, newHttpBatchRpcSession } from "@noblackbox/rpc";
+import { RpcStub, newHttpBatchRpcSession } from "nomo/rpc";
 
 using stub: RpcStub<MyApi> = newHttpBatchRpcSession<MyApi>(
   "https://example.com/api",
@@ -65,7 +65,7 @@ import {
   BaseRpcTarget,
   RpcStub,
   newMessagePortRpcSession,
-} from "@noblackbox/rpc";
+} from "nomo/rpc";
 
 class Greeter extends BaseRpcTarget {
   greet(name: string): string {

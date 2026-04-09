@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { Migration } from "../index";
 import { SqlGenerator } from "../sql";
-import { type Result, ok } from "@noblackbox/result";
+import { type Result, ok } from "nomo/result";
 
 class ReversibleMigration extends Migration {
   readonly version = "20260205130000";

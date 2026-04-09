@@ -1,4 +1,4 @@
-# @noblackbox/views
+# nomo/views
 
 The ultimate, **zero-dependency** direct JSX-to-String engine for Cloudflare Workers (Edge).
 
@@ -15,7 +15,7 @@ This engine does away with intermediate VNode structures, DOM diffing, and compl
 ## 1. Installation
 
 ```bash
-pnpm add @noblackbox/views
+pnpm add nomo/views
 ```
 
 ---
@@ -24,7 +24,7 @@ pnpm add @noblackbox/views
 
 ### The View (`src/views/welcome.tsx`)
 ```typescript
-import { BaseView } from "@noblackbox/views";
+import { BaseView } from "nomo/views";
 
 export class WelcomeView extends BaseView<{ name: string }> {
   render() {
@@ -40,7 +40,7 @@ export class WelcomeView extends BaseView<{ name: string }> {
 
 ### The Layout (`src/layouts/application.tsx`)
 ```typescript
-import { BaseLayout } from "@noblackbox/views";
+import { BaseLayout } from "nomo/views";
 
 export class ApplicationLayout extends BaseLayout {
   render() {
@@ -61,7 +61,7 @@ export class ApplicationLayout extends BaseLayout {
 
 ### Rendering
 ```typescript
-import { BaseLayout } from "@noblackbox/views";
+import { BaseLayout } from "nomo/views";
 
 const html = BaseLayout.withLayout(ApplicationLayout, WelcomeView, {
   name: "Vance"
@@ -89,13 +89,13 @@ const html = <MyComponent title="Hello" />;
 
 ## 4. Nofo Web Components Integration
 
-Noblackbox Views are designed to work seamlessly with **Nofo Web Components**. Since every component renders to a string, it's perfect for custom elements with shadow DOM.
+nomo Views are designed to work seamlessly with **Nofo Web Components**. Since every component renders to a string, it's perfect for custom elements with shadow DOM.
 
 ### Nofo Web Components
 You can use Nofo custom elements directly in your views. They are loaded via the import map and provide reactive state management using the Signal Polyfill.
 
 ```typescript
-import { NofoElement } from "@noblackbox/nofo";
+import { NofoElement } from "nomo/nofo";
 ```
 
 ### Custom Elements
@@ -155,7 +155,7 @@ const html = <UserBadge name="Vance" />;
 `BaseElement` is a specialized class for building Web Components with SSR. It automatically wraps your output in its assigned `static tag`.
 
 ```typescript
-import { BaseElement } from "@noblackbox/views";
+import { BaseElement } from "nomo/views";
 
 export class CounterElement extends BaseElement<{ count: number }> {
   static tag = "my-counter";
@@ -179,7 +179,7 @@ const html = <CounterElement count={5} />;
 
 ## 6. Web Components Synergy (The Main Use Case)
 
-The primary goal of Noblackbox is the synergy between **Capnweb** (Web Components & RPC), **Hotwired** (Fast SSR Navigation), and **BaseView** (JSX SSR).
+The primary goal of nomo is the synergy between **Capnweb** (Web Components & RPC), **Hotwired** (Fast SSR Navigation), and **BaseView** (JSX SSR).
 
 ### The Pattern
 1.  **Define** your logic-heavy UI as a Web Component using `capnweb`.
@@ -190,7 +190,7 @@ The primary goal of Noblackbox is the synergy between **Capnweb** (Web Component
 
 **1. The Component (`status-badge.ts`)**
 ```typescript
-import { BaseElement, safeCss } from "@noblackbox/views";
+import { BaseElement, safeCss } from "nomo/views";
 
 class StatusBadge extends BaseElement {
   static tag = "status-badge";
@@ -295,7 +295,7 @@ export class TournamentListView extends BaseView {
             {this.import_map_tag({
               imports: {
                 ...this.a?.importMap?.imports || {},
-                "@noblackbox/nofo": "/assets/vendor/@noblackbox/nofo.js"
+                "nomo/nofo": "/assets/vendor/nomo/nofo.js"
               }
             })}
           </>
@@ -311,7 +311,7 @@ export class TournamentListView extends BaseView {
 By default, the following mappings are included:
 - `capnweb`: `/assets/vendor/capnweb.js`
 - `signal-polyfill`: `/assets/vendor/signal-polyfill.js`
-- `@noblackbox/nofo`: `/assets/vendor/@noblackbox/nofo.js`
+- `nomo/nofo`: `/assets/vendor/nomo/nofo.js`
 
 ---
 

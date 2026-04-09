@@ -1,6 +1,6 @@
 import type { ExecutionContext } from "@cloudflare/workers-types";
 import { BaseJob } from "./index";
-import { Logger, LogLevel } from "@noblackbox/logger";
+import { Logger, LogLevel } from "nomo/logger";
 import {
   trace,
   context,
@@ -63,7 +63,7 @@ export class JobDispatcher implements IJobDispatcher {
     const parentContext = traceContext
       ? propagation.extract(context.active(), traceContext)
       : context.active();
-    const tracer = trace.getTracer("noblackbox-jobs");
+    const tracer = trace.getTracer("nomo-jobs");
 
     return await context.with(parentContext, async () => {
       return await tracer.startActiveSpan(`job ${jobName}`, async (span) => {
@@ -119,7 +119,7 @@ export class JobDispatcher implements IJobDispatcher {
     const parentContext = traceContext
       ? propagation.extract(context.active(), traceContext)
       : context.active();
-    const tracer = trace.getTracer("noblackbox-workflows");
+    const tracer = trace.getTracer("nomo-workflows");
 
     return await context.with(parentContext, async () => {
       return await tracer.startActiveSpan(

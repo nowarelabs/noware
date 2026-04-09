@@ -144,4 +144,4 @@ vite.config.ts.timestamp-*
 node_modules
 .wrangler/
 dist/*
-.noblackbox/
+.nomo/

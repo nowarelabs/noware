@@ -1,5 +1,5 @@
 /**
- * @noblackbox/worker
+ * nomo/worker
  *
  * JSX-based HTML rendering for Cloudflare Workers.
  *
@@ -14,7 +14,7 @@
 
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server.browser';
-import type { AssetPipeline } from '@noblackbox/runtime';
+import type { AssetPipeline } from 'nomo/runtime';
 
 // ─── Per-Request Registry ─────────────────────────────────────────────────────
 

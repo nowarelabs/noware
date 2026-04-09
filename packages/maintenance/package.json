@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/maintenance",
+  "name": "nomo/maintenance",
   "version": "1.0.0",
-  "description": "Rails-adjacent maintenance tasks for Noblackbox applications",
+  "description": "Rails-adjacent maintenance tasks for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

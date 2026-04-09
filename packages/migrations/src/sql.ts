@@ -1,10 +1,10 @@
-import { type Result, ok } from "@noblackbox/result";
+import { type Result, ok } from "nomo/result";
 import {
   Dialect,
   Statement,
   DialectStrategy,
   getDialectStrategy,
-} from "@noblackbox/sql";
+} from "nomo/sql";
 import { HandlerFunc, STANDARD_HANDLERS } from "./handlers";
 
 /**

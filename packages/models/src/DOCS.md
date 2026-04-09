@@ -1,4 +1,4 @@
-# @noblackbox/models Documentation
+# nomo/models Documentation
 
 A Rails-inspired ORM layer for Cloudflare Workers (D1, Durable Objects) and other SQL databases. This package provides a fluent query builder, relationship management, lifecycle callbacks, and soft-delete patterns.
 

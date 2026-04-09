@@ -1,11 +1,11 @@
-# @noblackbox/entrypoints
+# nomo/entrypoints
 
-The adapter layer for Cloudflare's serverless infrastructure. `@noblackbox/entrypoints` provides base classes that wrap standard Cloudflare primitives (Workers, Durable Objects, and Workflows), bridging them into the Noblackbox framework.
+The adapter layer for Cloudflare's serverless infrastructure. `nomo/entrypoints` provides base classes that wrap standard Cloudflare primitives (Workers, Durable Objects, and Workflows), bridging them into the nomo framework.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/entrypoints
+pnpm add nomo/entrypoints
 ```
 
 ---
@@ -17,7 +17,7 @@ pnpm add @noblackbox/entrypoints
 Simple wrapper for standard Cloudflare Workers.
 
 ```typescript
-import { BaseWorker } from "@noblackbox/entrypoints";
+import { BaseWorker } from "nomo/entrypoints";
 
 export default class MainWorker extends BaseWorker {
   async fetch(request, env, ctx) {
@@ -38,7 +38,7 @@ export default class MainWorker extends BaseWorker {
 Extends the standard Cloudflare `DurableObject` class, providing a clean foundation for stateful actors.
 
 ```typescript
-import { BaseDurableObject } from "@noblackbox/entrypoints";
+import { BaseDurableObject } from "nomo/entrypoints";
 
 export class AccountSession extends BaseDurableObject {
   // state and env are automatically managed
@@ -50,7 +50,7 @@ export class AccountSession extends BaseDurableObject {
 Adapter for Cloudflare Workflows, implementing the `WorkflowEntrypoint`.
 
 ```typescript
-import { BaseWorkflow } from "@noblackbox/entrypoints";
+import { BaseWorkflow } from "nomo/entrypoints";
 
 export class SignupWorkflow extends BaseWorkflow {
   async run(event, step) {
@@ -63,10 +63,10 @@ export class SignupWorkflow extends BaseWorkflow {
 
 ## 2. Why Use Entrypoints?
 
-While you can use standard Cloudflare classes, using `@noblackbox/entrypoints` ensures:
+While you can use standard Cloudflare classes, using `nomo/entrypoints` ensures:
 
 - **Consistency**: All entrypoints share a similar constructor and initialization pattern.
-- **Framework Integration**: Future enhancements to the Noblackbox framework will leverage these base classes for automatic instrumentation, logging, and error handling.
+- **Framework Integration**: Future enhancements to the nomo framework will leverage these base classes for automatic instrumentation, logging, and error handling.
 - **Type Safety**: Provides reinforced type definitions for Cloudflare bindings and context.
 
 ---

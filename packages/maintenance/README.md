@@ -1,11 +1,11 @@
-# @noblackbox/maintenance
+# nomo/maintenance
 
-A framework for defining and running maintenance tasks in Noblackbox applications. Inspired by Rake tasks, it provides a structured way to perform one-off database updates, data migrations, or system cleanup.
+A framework for defining and running maintenance tasks in nomo applications. Inspired by Rake tasks, it provides a structured way to perform one-off database updates, data migrations, or system cleanup.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/maintenance
+pnpm add nomo/maintenance
 ```
 
 ---
@@ -15,7 +15,7 @@ pnpm add @noblackbox/maintenance
 Maintenance tasks are encapsulated in classes. This makes them reusable, testable, and allows for shared setup/teardown logic.
 
 ```typescript
-import { BaseTask } from "@noblackbox/maintenance";
+import { BaseTask } from "nomo/maintenance";
 
 export class CleanupOrphanedRecords extends BaseTask {
   async perform() {

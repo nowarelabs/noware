@@ -94,7 +94,7 @@ function generateMigrationTemplate(
   const doClassName = options.doClass || className;
   const populateFrom = options.populateFrom || [];
 
-  let content = `import { Migration } from "@noblackbox/migrations";\n\n`;
+  let content = `import { Migration } from "nomo/migrations";\n\n`;
   content += `export default class ${className} extends Migration {\n`;
   content += `  readonly version = "${version}";\n`;
 

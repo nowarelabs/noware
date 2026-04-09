@@ -1,11 +1,11 @@
-# @noblackbox/scripts
+# nomo/scripts
 
-A collection of scripts for Noblackbox applications.
+A collection of scripts for nomo applications.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/scripts
+pnpm add nomo/scripts
 ```
 
 ---

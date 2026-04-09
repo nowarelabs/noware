@@ -1,8 +1,8 @@
-# @noblackbox/migrations
+# nomo/migrations
 
 A production-ready, Rails-inspired migration DSL and runner for Cloudflare D1 and Durable Objects SQL.
 
-Migrations are a feature of `@noblackbox/migrations` that allow you to evolve your database schema over time. Rather than write schema modifications in pure SQL, migrations allow you to use a TypeScript Domain Specific Language (DSL) to describe changes to your tables.
+Migrations are a feature of `nomo/migrations` that allow you to evolve your database schema over time. Rather than write schema modifications in pure SQL, migrations allow you to use a TypeScript Domain Specific Language (DSL) to describe changes to your tables.
 
 After reading this guide, you will know:
 
@@ -19,7 +19,7 @@ After reading this guide, you will know:
 Install the package via pnpm:
 
 ```bash
-pnpm add @noblackbox/migrations
+pnpm add nomo/migrations
 ```
 
 Configure your `package.json` with the following scripts to enable the migration workflow:
@@ -45,7 +45,7 @@ You can think of each migration as being a new 'version' of the database. A sche
 
 ### The Capture & Sync Workflow
 
-Unlike traditional migration tools, `@noblackbox/migrations` is tightly integrated with the `@noblackbox` ecosystem:
+Unlike traditional migration tools, `nomo/migrations` is tightly integrated with the `nomo` ecosystem:
 
 1.  **Define**: You write a migration using the DSL.
 2.  **Sync**: Running `db:migrate:sync` "captures" your schema changes.
@@ -586,7 +586,7 @@ pnpm db:migrate:reset
 
 ## 6. Cloudflare Specifics
 
-`@noblackbox/migrations` is built for Cloudflare's unique database landscape, supporting both D1 (global) and Durable Objects SQL (local/distributed).
+`nomo/migrations` is built for Cloudflare's unique database landscape, supporting both D1 (global) and Durable Objects SQL (local/distributed).
 
 ### 6.1. D1 vs. Durable Objects
 
@@ -688,7 +688,7 @@ Commands like `migrate` and `rollback` require a connection to D1 or a local Dur
 
 ### SQLite Limits
 
-Remember that SQLite has limited `ALTER TABLE` support. `@noblackbox/migrations` handles this by recreating tables for complex changes (like `changeColumn`), but be aware of this for very large tables as it may take time.
+Remember that SQLite has limited `ALTER TABLE` support. `nomo/migrations` handles this by recreating tables for complex changes (like `changeColumn`), but be aware of this for very large tables as it may take time.
 
 ### Sync Failures
 

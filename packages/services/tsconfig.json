@@ -7,11 +7,17 @@
     "strict": true,
     "declaration": true,
     "skipLibCheck": true,
-    "types": ["@cloudflare/workers-types"],
+    "types": [
+      "@cloudflare/workers-types"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@noblackbox/router": ["../router/src"]
+      "nomo/router": [
+        "../router/src"
+      ]
     }
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

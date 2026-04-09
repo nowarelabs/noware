@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/logger",
+  "name": "nomo/logger",
   "version": "1.0.0",
-  "description": "Logger for Noblackbox applications",
+  "description": "Logger for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

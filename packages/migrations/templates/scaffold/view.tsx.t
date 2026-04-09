@@ -1,4 +1,4 @@
-import { BaseView, content_for, yield_content, JSX } from '@noblackbox/views';
+import { BaseView, content_for, yield_content, JSX } from 'nomo/views';
 
 export class {{viewClassName}}View extends BaseView {
 	render(): JSX.Element {

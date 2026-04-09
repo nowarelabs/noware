@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/scripts",
+  "name": "nomo/scripts",
   "version": "1.0.0",
-  "description": "Scripts for Noblackbox applications",
+  "description": "Scripts for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

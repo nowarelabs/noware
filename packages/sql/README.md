@@ -1,11 +1,11 @@
-# @noblackbox/sql
+# nomo/sql
 
-The core SQL construction engine for the Noblackbox ecosystem. It provides a declarative, type-safe DSL for building complex SQL statements that work seamlessly across SQLite (D1/Durable Objects), Postgres, and MySQL.
+The core SQL construction engine for the nomo ecosystem. It provides a declarative, type-safe DSL for building complex SQL statements that work seamlessly across SQLite (D1/Durable Objects), Postgres, and MySQL.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/sql
+pnpm add nomo/sql
 ```
 
 ---
@@ -46,7 +46,7 @@ The `sql` object provides a rich set of helpers for constructing SQL components.
 Statements are chainable and composable.
 
 ```typescript
-import { sql, getDialectStrategy } from "@noblackbox/sql";
+import { sql, getDialectStrategy } from "nomo/sql";
 
 const stmt = sql
   .statement()
@@ -69,10 +69,10 @@ if (res.success) {
 
 ## 4. Multi-Dialect Support
 
-`@noblackbox/sql` handles the nuances between different SQL engines automatically through strategies.
+`nomo/sql` handles the nuances between different SQL engines automatically through strategies.
 
 ```typescript
-import { getDialectStrategy } from "@noblackbox/sql";
+import { getDialectStrategy } from "nomo/sql";
 
 const sqlite = getDialectStrategy("sqlite");
 const postgres = getDialectStrategy("postgres");
@@ -86,10 +86,10 @@ const postgres = getDialectStrategy("postgres");
 
 This package serves as the foundation for:
 
-- **`@noblackbox/migrations`**: Driving the database evolution DSL.
-- **`@noblackbox/models`**: Powering the `FluentQuery` Active Record-style DSL.
+- **`nomo/migrations`**: Driving the database evolution DSL.
+- **`nomo/models`**: Powering the `FluentQuery` Active Record-style DSL.
 
-By sharing this core, Noblackbox ensures that SQL generation is consistent, secure, and easily extensible.
+By sharing this core, nomo ensures that SQL generation is consistent, secure, and easily extensible.
 
 ---
 

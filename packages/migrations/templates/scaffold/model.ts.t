@@ -1,5 +1,5 @@
-import { BaseModel, type DatabaseInstance } from '@noblackbox/models';
-import { RouterContext } from '@noblackbox/router';
+import { BaseModel, type DatabaseInstance } from 'nomo/models';
+import { RouterContext } from 'nomo/router';
 import { {{tableName}} } from '../db/schema/schema';
 import type { {{typeName}}, New{{typeName}} } from '../models/types/{{modelFileName}}';
 

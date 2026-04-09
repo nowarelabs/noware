@@ -1,18 +1,18 @@
-# @noblackbox/result
+# nomo/result
 
 A type-safe, functional error handling library for TypeScript. It provides a robust alternative to `try/catch` and `null` checks, ensuring that errors are handled as first-class values.
 
 ## Installation
 
 ```bash
-pnpm add @noblackbox/result
+pnpm add nomo/result
 ```
 
 ---
 
 ## 1. Core Concepts
 
-The `@noblackbox/result` package is built around the `Result<T>` type, which represents the outcome of an operation that can either succeed or fail.
+The `nomo/result` package is built around the `Result<T>` type, which represents the outcome of an operation that can either succeed or fail.
 
 - **`SuccessResult<T>`**: Contains the successful payload (`data`).
 - **`ErrorResult`**: Contains error details (`error`, `message`, `status`, `code`).
@@ -28,7 +28,7 @@ By returning a `Result`, you force the consumer to explicitly handle both succes
 Use `ok` and `err` to create results directly.
 
 ```typescript
-import { ok, err } from "@noblackbox/result";
+import { ok, err } from "nomo/result";
 
 // Success
 const result = ok({ id: 1, name: "Project" });
@@ -42,7 +42,7 @@ const failure = err("NOT_FOUND", "Project not found", 404);
 Use `safe` and `safeAsync` to wrap code that might throw exceptions. They automatically catch errors and return an `ErrorResult`.
 
 ```typescript
-import { safe, safeAsync } from "@noblackbox/result";
+import { safe, safeAsync } from "nomo/result";
 
 // Synchronous
 const res = safe(() => JSON.parse(input));
@@ -107,7 +107,7 @@ result.match(
 The `match` helper allows for powerful pattern matching based on "tags" within the data or error details.
 
 ```typescript
-import { match, tagged } from "@noblackbox/result";
+import { match, tagged } from "nomo/result";
 
 const res = ok(tagged("created", { id: 1 }));
 
@@ -143,7 +143,7 @@ const { data, errors } = allSettled(results).data;
 ## 6. Type Checking Utilities
 
 ```typescript
-import { isOk, isErr, isResult } from "@noblackbox/result";
+import { isOk, isErr, isResult } from "nomo/result";
 
 if (isOk(res)) {
   // res is narrowed to SuccessResult

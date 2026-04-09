@@ -1,9 +1,9 @@
-import { Logger } from "@noblackbox/logger";
+import { Logger } from "nomo/logger";
 import type {
   ExecutionContext,
   D1Database,
 } from "@cloudflare/workers-types";
-import type { RouterContext, RouterContextSource } from "@noblackbox/router";
+import type { RouterContext, RouterContextSource } from "nomo/router";
 
 export type { RouterContextSource };
 

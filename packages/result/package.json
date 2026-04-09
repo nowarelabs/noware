@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/result",
+  "name": "nomo/result",
   "version": "1.0.0",
-  "description": "Result pattern for Noblackbox applications",
+  "description": "Result pattern for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

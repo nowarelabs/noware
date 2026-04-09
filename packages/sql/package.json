@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/sql",
+  "name": "nomo/sql",
   "version": "1.0.0",
-  "description": "Core SQL construction DSL for Noblackbox applications",
+  "description": "Core SQL construction DSL for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -17,6 +17,6 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@noblackbox/result": "workspace:*"
+    "nomo/result": "workspace:*"
   }
 }

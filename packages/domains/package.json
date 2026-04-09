@@ -1,7 +1,7 @@
 {
-  "name": "@noblackbox/domains",
+  "name": "nomo/domains",
   "version": "1.0.0",
-  "description": "Rails-adjacent domains (Workflows) for Noblackbox applications",
+  "description": "Rails-adjacent domains (Workflows) for nomo applications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

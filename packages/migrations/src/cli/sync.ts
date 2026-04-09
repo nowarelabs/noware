@@ -46,7 +46,7 @@ export const syncCommand = defineCommand({
     consola.info("Reflecting schema to Drizzle/Zod...");
 
     // Read metadata if it exists
-    const metadataPath = path.resolve(process.cwd(), ".noblackbox/temp_metadata.json");
+    const metadataPath = path.resolve(process.cwd(), ".nomo/temp_metadata.json");
     let metadata: Record<string, any[]> = {};
     try {
       const content = await fs.readFile(metadataPath, "utf-8");
