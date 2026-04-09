@@ -1,6 +1,6 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
-export type ExecutionMode = 'sequential' | 'parallel' | 'sequential_realtime' | 'parallel_realtime';
+export type ExecutionMode = "sequential" | "parallel" | "sequential_realtime" | "parallel_realtime";
 
 export interface ExecutionConfig {
   mode: ExecutionMode;
@@ -15,7 +15,7 @@ export class ExecutionDelegate extends DurableObjectBaseDelegate<ExecutionConfig
     const { mode, onItem } = this.config;
     if (!onItem) return items;
 
-    if (mode.startsWith('sequential')) {
+    if (mode.startsWith("sequential")) {
       const results = [];
       for (const item of items) {
         results.push(await onItem(this.durableObject, item));

@@ -1,32 +1,36 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoTextArea extends NofoElement {
   static props = {
-    value: '',
-    defaultValue: '',
-    placeholder: '',
-    size: '2',
-    variant: 'surface',
-    color: 'accent',
-    resize: 'vertical',
-    rows: '4',
-    cols: '',
+    value: "",
+    defaultValue: "",
+    placeholder: "",
+    size: "2",
+    variant: "surface",
+    color: "accent",
+    resize: "vertical",
+    rows: "4",
+    cols: "",
     minLength: null,
     maxLength: null,
     disabled: false,
     readOnly: false,
     required: false,
-    name: '',
-    autoComplete: 'off',
-    spellCheck: false
+    name: "",
+    autoComplete: "off",
+    spellCheck: false,
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('disabled').toDataAttr('disabled');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("disabled")
+      .toDataAttr("disabled");
 
     if (this.defaultValue && !this.value) {
       this.state.value = this.defaultValue;
@@ -35,17 +39,30 @@ class NofoTextArea extends NofoElement {
 
   handleInput(e) {
     this.state.value = e.target.value;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: this.state.value },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: this.state.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
-    const { 
-      name, autoComplete, rows, cols, minLength, maxLength,
-      disabled, readOnly, required, placeholder, spellCheck, value, resize
+    const {
+      name,
+      autoComplete,
+      rows,
+      cols,
+      minLength,
+      maxLength,
+      disabled,
+      readOnly,
+      required,
+      placeholder,
+      spellCheck,
+      value,
+      resize,
     } = this.state;
 
     return `
@@ -53,9 +70,9 @@ class NofoTextArea extends NofoElement {
         name="${name}"
         autocomplete="${autoComplete}"
         rows="${rows}"
-        cols="${cols || ''}"
-        minlength="${minLength || ''}"
-        maxlength="${maxLength || ''}"
+        cols="${cols || ""}"
+        minlength="${minLength || ""}"
+        maxlength="${maxLength || ""}"
         ?disabled="${disabled}"
         ?readonly="${readOnly}"
         ?required="${required}"
@@ -96,5 +113,5 @@ class NofoTextArea extends NofoElement {
   }
 }
 
-customElements.define('nofo-text-area', NofoTextArea);
+customElements.define("nofo-text-area", NofoTextArea);
 export { NofoTextArea };

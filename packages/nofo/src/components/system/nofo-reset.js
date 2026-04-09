@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoReset extends NofoElement {
   static props = {};
@@ -42,5 +42,5 @@ class NofoReset extends NofoElement {
   }
 }
 
-customElements.define('nofo-reset', NofoReset);
+customElements.define("nofo-reset", NofoReset);
 export { NofoReset };

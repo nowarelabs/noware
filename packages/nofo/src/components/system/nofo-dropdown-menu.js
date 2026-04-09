@@ -1,31 +1,33 @@
-import { NofoElement, useClickOutside } from '../../index.js';
+import { NofoElement, useClickOutside } from "../../index.js";
 
 class NofoDropdownMenu extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   #clickOutsideCleanup = null;
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (val) => val ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (val) => (val ? "open" : "closed"));
 
-    this.addEventListener('nofo-dropdown-toggle', () => {
+    this.addEventListener("nofo-dropdown-toggle", () => {
       this.state.open = !this.state.open;
     });
 
-    this.addEventListener('nofo-dropdown-close', () => {
+    this.addEventListener("nofo-dropdown-close", () => {
       this.state.open = false;
     });
 
-    this.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.state.open) {
+    this.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.state.open) {
         this.state.open = false;
       }
     });
 
     this.effect(() => {
-      const content = this.querySelector('nofo-dropdown-menu-content');
+      const content = this.querySelector("nofo-dropdown-menu-content");
       if (content) {
         if (this.state.open) {
           const { bind } = useClickOutside();
@@ -48,40 +50,48 @@ class NofoDropdownMenu extends NofoElement {
     }
   }
 
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: contents; box-sizing: border-box; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: contents; box-sizing: border-box; }`;
+  }
 }
 
 class NofoDropdownMenuTrigger extends NofoElement {
   handleClick(e) {
     e.stopPropagation();
-    this.dispatchEvent(new CustomEvent('nofo-dropdown-toggle', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nofo-dropdown-toggle", { bubbles: true, composed: true }));
   }
-  template() { return `<div on-click="handleClick"><slot></slot></div>`; }
-  styles() { return `:host { display: contents; box-sizing: border-box; } div { display: contents; }`; }
+  template() {
+    return `<div on-click="handleClick"><slot></slot></div>`;
+  }
+  styles() {
+    return `:host { display: contents; box-sizing: border-box; } div { display: contents; }`;
+  }
 }
 
 class NofoDropdownMenuContent extends NofoElement {
   static props = {
-    align: 'start',
-    side: 'bottom',
-    'side-offset': 5
+    align: "start",
+    side: "bottom",
+    "side-offset": 5,
   };
 
   onMount() {
-    this.sync()
-      .attr('align').toDataAttr('align')
-      .attr('side').toDataAttr('side');
+    this.sync().attr("align").toDataAttr("align").attr("side").toDataAttr("side");
 
-    const root = this.closest('nofo-dropdown-menu');
+    const root = this.closest("nofo-dropdown-menu");
     if (root) {
       this.effect(() => {
-        this.setAttribute('data-state', root.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", root.state.open ? "open" : "closed");
       });
     }
   }
 
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -112,18 +122,18 @@ class NofoDropdownMenuContent extends NofoElement {
 
 class NofoDropdownMenuItem extends NofoElement {
   static props = {
-    shortcut: ''
+    shortcut: "",
   };
 
   handleClick() {
-    this.dispatchEvent(new CustomEvent('nofo-dropdown-close', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nofo-dropdown-close", { bubbles: true, composed: true }));
   }
 
   template() {
     return `
       <div class="item-inner" on-click="handleClick">
         <slot></slot>
-        ${this.state.shortcut ? `<span class="shortcut">${this.state.shortcut}</span>` : ''}
+        ${this.state.shortcut ? `<span class="shortcut">${this.state.shortcut}</span>` : ""}
       </div>
     `;
   }
@@ -150,7 +160,9 @@ class NofoDropdownMenuItem extends NofoElement {
 }
 
 class NofoDropdownMenuSeparator extends NofoElement {
-  template() { return ``; }
+  template() {
+    return ``;
+  }
   styles() {
     return `
       :host {
@@ -165,7 +177,9 @@ class NofoDropdownMenuSeparator extends NofoElement {
 }
 
 class NofoDropdownMenuLabel extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -184,30 +198,38 @@ class NofoDropdownMenuLabel extends NofoElement {
 
 class NofoDropdownMenuSub extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (val) => val ? 'open' : 'closed');
-    
-    this.addEventListener('nofo-dropdown-sub-toggle', (e) => {
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (val) => (val ? "open" : "closed"));
+
+    this.addEventListener("nofo-dropdown-sub-toggle", (e) => {
       e.stopPropagation();
       this.state.open = !this.state.open;
     });
 
-    this.addEventListener('nofo-dropdown-sub-close', (e) => {
+    this.addEventListener("nofo-dropdown-sub-close", (e) => {
       e.stopPropagation();
       this.state.open = false;
     });
   }
 
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: contents; position: relative; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: contents; position: relative; }`;
+  }
 }
 
 class NofoDropdownMenuSubTrigger extends NofoElement {
   handleMouseEnter() {
-    this.dispatchEvent(new CustomEvent('nofo-dropdown-sub-toggle', { bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("nofo-dropdown-sub-toggle", { bubbles: true, composed: true }),
+    );
   }
 
   template() {
@@ -241,15 +263,17 @@ class NofoDropdownMenuSubTrigger extends NofoElement {
 
 class NofoDropdownMenuSubContent extends NofoElement {
   onMount() {
-    const sub = this.closest('nofo-dropdown-menu-sub');
+    const sub = this.closest("nofo-dropdown-menu-sub");
     if (sub) {
       this.effect(() => {
-        this.setAttribute('data-state', sub.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", sub.state.open ? "open" : "closed");
       });
     }
   }
 
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -273,21 +297,25 @@ class NofoDropdownMenuSubContent extends NofoElement {
 
 class NofoDropdownMenuCheckboxItem extends NofoElement {
   static props = {
-    checked: false
+    checked: false,
   };
 
   onMount() {
-    this.sync().attr('checked').toDataAttr('state', (val) => val ? 'checked' : 'unchecked');
+    this.sync()
+      .attr("checked")
+      .toDataAttr("state", (val) => (val ? "checked" : "unchecked"));
   }
 
   handleClick(e) {
     e.stopPropagation();
     this.state.checked = !this.state.checked;
-    this.dispatchEvent(new CustomEvent('checked-change', {
-      detail: { checked: this.state.checked },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("checked-change", {
+        detail: { checked: this.state.checked },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -323,47 +351,55 @@ class NofoDropdownMenuCheckboxItem extends NofoElement {
 
 class NofoDropdownMenuRadioGroup extends NofoElement {
   static props = {
-    value: null
+    value: null,
   };
 
   onMount() {
-    this.addEventListener('nofo-dropdown-radio-select', (e) => {
+    this.addEventListener("nofo-dropdown-radio-select", (e) => {
       e.stopPropagation();
       this.state.value = e.detail.value;
-      this.dispatchEvent(new CustomEvent('value-change', {
-        detail: { value: this.state.value },
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("value-change", {
+          detail: { value: this.state.value },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     });
   }
 
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: contents; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
 class NofoDropdownMenuRadioItem extends NofoElement {
   static props = {
-    value: null
+    value: null,
   };
 
   onMount() {
-    const group = this.closest('nofo-dropdown-menu-radio-group');
+    const group = this.closest("nofo-dropdown-menu-radio-group");
     if (group) {
       this.effect(() => {
         const isSelected = group.state.value === this.state.value;
-        this.setAttribute('data-state', isSelected ? 'checked' : 'unchecked');
+        this.setAttribute("data-state", isSelected ? "checked" : "unchecked");
       });
     }
   }
 
   handleClick(e) {
     e.stopPropagation();
-    this.dispatchEvent(new CustomEvent('nofo-dropdown-radio-select', {
-      detail: { value: this.state.value },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("nofo-dropdown-radio-select", {
+        detail: { value: this.state.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -398,23 +434,27 @@ class NofoDropdownMenuRadioItem extends NofoElement {
 }
 
 class NofoDropdownMenuItemIndicator extends NofoElement {
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: flex; align-items: center; box-sizing: border-box; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: flex; align-items: center; box-sizing: border-box; }`;
+  }
 }
 
-customElements.define('nofo-dropdown-menu', NofoDropdownMenu);
-customElements.define('nofo-dropdown-menu-trigger', NofoDropdownMenuTrigger);
-customElements.define('nofo-dropdown-menu-content', NofoDropdownMenuContent);
-customElements.define('nofo-dropdown-menu-item', NofoDropdownMenuItem);
-customElements.define('nofo-dropdown-menu-separator', NofoDropdownMenuSeparator);
-customElements.define('nofo-dropdown-menu-label', NofoDropdownMenuLabel);
-customElements.define('nofo-dropdown-menu-sub', NofoDropdownMenuSub);
-customElements.define('nofo-dropdown-menu-sub-trigger', NofoDropdownMenuSubTrigger);
-customElements.define('nofo-dropdown-menu-sub-content', NofoDropdownMenuSubContent);
-customElements.define('nofo-dropdown-menu-checkbox-item', NofoDropdownMenuCheckboxItem);
-customElements.define('nofo-dropdown-menu-radio-group', NofoDropdownMenuRadioGroup);
-customElements.define('nofo-dropdown-menu-radio-item', NofoDropdownMenuRadioItem);
-customElements.define('nofo-dropdown-menu-item-indicator', NofoDropdownMenuItemIndicator);
+customElements.define("nofo-dropdown-menu", NofoDropdownMenu);
+customElements.define("nofo-dropdown-menu-trigger", NofoDropdownMenuTrigger);
+customElements.define("nofo-dropdown-menu-content", NofoDropdownMenuContent);
+customElements.define("nofo-dropdown-menu-item", NofoDropdownMenuItem);
+customElements.define("nofo-dropdown-menu-separator", NofoDropdownMenuSeparator);
+customElements.define("nofo-dropdown-menu-label", NofoDropdownMenuLabel);
+customElements.define("nofo-dropdown-menu-sub", NofoDropdownMenuSub);
+customElements.define("nofo-dropdown-menu-sub-trigger", NofoDropdownMenuSubTrigger);
+customElements.define("nofo-dropdown-menu-sub-content", NofoDropdownMenuSubContent);
+customElements.define("nofo-dropdown-menu-checkbox-item", NofoDropdownMenuCheckboxItem);
+customElements.define("nofo-dropdown-menu-radio-group", NofoDropdownMenuRadioGroup);
+customElements.define("nofo-dropdown-menu-radio-item", NofoDropdownMenuRadioItem);
+customElements.define("nofo-dropdown-menu-item-indicator", NofoDropdownMenuItemIndicator);
 
 export {
   NofoDropdownMenu,
@@ -429,5 +469,5 @@ export {
   NofoDropdownMenuCheckboxItem,
   NofoDropdownMenuRadioGroup,
   NofoDropdownMenuRadioItem,
-  NofoDropdownMenuItemIndicator
+  NofoDropdownMenuItemIndicator,
 };

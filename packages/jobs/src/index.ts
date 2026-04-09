@@ -1,5 +1,5 @@
-import { Logger, LogLevel } from 'nomo/logger';
-import { context, propagation } from '@opentelemetry/api';
+import { Logger, LogLevel } from "nomo/logger";
+import { context, propagation } from "@opentelemetry/api";
 
 export abstract class BaseJob<T = any> {
   constructor(protected params: T) {}
@@ -10,16 +10,16 @@ export abstract class QueueJob<T = any> extends BaseJob<T> {
   static async performLater<T extends { new (...args: any[]): any }>(
     this: T,
     queue: any,
-    params: any
+    params: any,
   ) {
-    const logger = new Logger({ service: 'jobs', level: LogLevel.DEBUG });
+    const logger = new Logger({ service: "jobs", level: LogLevel.DEBUG });
     logger.info(`Enqueuing job ${this.name}`, { params });
 
     const traceContext: Record<string, string> = {};
     propagation.inject(context.active(), traceContext);
 
     await queue.send({
-      type: 'job',
+      type: "job",
       jobName: this.name,
       params,
       traceContext,
@@ -37,9 +37,9 @@ export abstract class WorkflowJob<T = any> extends BaseJob<T> {
     this: T,
     workflow: any,
     params: any,
-    options?: any
+    options?: any,
   ) {
-    const logger = new Logger({ service: 'jobs', level: LogLevel.DEBUG });
+    const logger = new Logger({ service: "jobs", level: LogLevel.DEBUG });
     logger.info(`Creating workflow ${this.name}`, { params, options });
 
     const traceContext: Record<string, string> = {};
@@ -64,4 +64,4 @@ export abstract class WorkflowJob<T = any> extends BaseJob<T> {
   }
 }
 
-export * from './handler';
+export * from "./handler";

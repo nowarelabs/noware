@@ -1,11 +1,7 @@
 import { Command } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "pathe";
-import {
-  DO_TEMPLATE,
-  patchWranglerConfig,
-  ensureSuffix,
-} from "../src/generators";
+import { DO_TEMPLATE, patchWranglerConfig, ensureSuffix } from "../src/generators";
 
 export const doCommand = new Command("do")
   .description("Generate a new Durable Object")

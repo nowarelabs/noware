@@ -1,19 +1,23 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoCallout extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'soft',
-    color: 'indigo',
-    'high-contrast': false
+    size: "2",
+    variant: "soft",
+    color: "indigo",
+    "high-contrast": false,
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
   }
 
   template() {
@@ -47,7 +51,9 @@ class NofoCallout extends NofoElement {
 }
 
 class NofoCalloutIcon extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -61,7 +67,9 @@ class NofoCalloutIcon extends NofoElement {
 }
 
 class NofoCalloutText extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -72,8 +80,8 @@ class NofoCalloutText extends NofoElement {
   }
 }
 
-customElements.define('nofo-callout', NofoCallout);
-customElements.define('nofo-callout-icon', NofoCalloutIcon);
-customElements.define('nofo-callout-text', NofoCalloutText);
+customElements.define("nofo-callout", NofoCallout);
+customElements.define("nofo-callout-icon", NofoCalloutIcon);
+customElements.define("nofo-callout-text", NofoCalloutText);
 
 export { NofoCallout, NofoCalloutIcon, NofoCalloutText };

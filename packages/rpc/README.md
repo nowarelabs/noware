@@ -50,9 +50,7 @@ export default {
 ```typescript
 import { RpcStub, newHttpBatchRpcSession } from "nomo/rpc";
 
-using stub: RpcStub<MyApi> = newHttpBatchRpcSession<MyApi>(
-  "https://example.com/api",
-);
+using stub: RpcStub<MyApi> = newHttpBatchRpcSession<MyApi>("https://example.com/api");
 
 const result = await stub.greet("Alice");
 console.log(result);
@@ -61,11 +59,7 @@ console.log(result);
 ### 4. MessagePort RPC
 
 ```typescript
-import {
-  BaseRpcTarget,
-  RpcStub,
-  newMessagePortRpcSession,
-} from "nomo/rpc";
+import { BaseRpcTarget, RpcStub, newMessagePortRpcSession } from "nomo/rpc";
 
 class Greeter extends BaseRpcTarget {
   greet(name: string): string {

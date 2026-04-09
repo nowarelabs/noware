@@ -1,29 +1,33 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIAccordion extends NofoElement {
   static props = {
-    type: 'single',
+    type: "single",
     value: null,
     defaultValue: null,
-    collapsible: false
+    collapsible: false,
   };
 
   onMount() {
     this.sync()
-      .attr('type').toDataAttr('type')
-      .attr('value').toDataAttr('value')
-      .attr('defaultValue').toDataAttr('defaultValue')
-      .attr('collapsible').toDataAttr('collapsible');
+      .attr("type")
+      .toDataAttr("type")
+      .attr("value")
+      .toDataAttr("value")
+      .attr("defaultValue")
+      .toDataAttr("defaultValue")
+      .attr("collapsible")
+      .toDataAttr("collapsible");
   }
 
   template() {
     return `
       <nofo-accordion 
         type="${this.state.type}" 
-        value="${this.state.value || ''}" 
-        defaultValue="${this.state.defaultValue || ''}"
-        ${this.state.collapsible ? 'collapsible' : ''}
+        value="${this.state.value || ""}" 
+        defaultValue="${this.state.defaultValue || ""}"
+        ${this.state.collapsible ? "collapsible" : ""}
       >
         <slot></slot>
       </nofo-accordion>
@@ -41,19 +45,17 @@ class NofoUIAccordion extends NofoElement {
 
 class NofoUIAccordionItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
     return `
-      <nofo-accordion-item value="${this.state.value}" ${this.state.disabled ? 'disabled' : ''}>
+      <nofo-accordion-item value="${this.state.value}" ${this.state.disabled ? "disabled" : ""}>
         <slot></slot>
       </nofo-accordion-item>
     `;
@@ -132,16 +134,9 @@ class NofoUIAccordionContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-accordion', NofoUIAccordion);
-customElements.define('nofo-ui-accordion-item', NofoUIAccordionItem);
-customElements.define('nofo-ui-accordion-trigger', NofoUIAccordionTrigger);
-customElements.define('nofo-ui-accordion-content', NofoUIAccordionContent);
+customElements.define("nofo-ui-accordion", NofoUIAccordion);
+customElements.define("nofo-ui-accordion-item", NofoUIAccordionItem);
+customElements.define("nofo-ui-accordion-trigger", NofoUIAccordionTrigger);
+customElements.define("nofo-ui-accordion-content", NofoUIAccordionContent);
 
-export {
-  NofoUIAccordion,
-  NofoUIAccordionItem,
-  NofoUIAccordionTrigger,
-  NofoUIAccordionContent
-};
-
-
+export { NofoUIAccordion, NofoUIAccordionItem, NofoUIAccordionTrigger, NofoUIAccordionContent };

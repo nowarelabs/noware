@@ -21,6 +21,6 @@ export function useInterval() {
   return {
     set,
     clear,
-    isActive
+    isActive,
   };
 }

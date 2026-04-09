@@ -1,22 +1,25 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIChart extends NofoElement {
   static props = {
-    type: 'line',
-    data: '[]',
-    options: null
+    type: "line",
+    data: "[]",
+    options: null,
   };
 
   onMount() {
     this.sync()
-      .attr('type').toDataAttr('type')
-      .attr('data').toDataAttr('data')
-      .attr('options').toDataAttr('options');
+      .attr("type")
+      .toDataAttr("type")
+      .attr("data")
+      .toDataAttr("data")
+      .attr("options")
+      .toDataAttr("options");
   }
 
   template() {
-    const type = this.state.type || 'line';
+    const type = this.state.type || "line";
 
     return `
       <div class="chart-container">
@@ -62,5 +65,5 @@ class NofoUIChart extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-chart', NofoUIChart);
+customElements.define("nofo-ui-chart", NofoUIChart);
 export { NofoUIChart };

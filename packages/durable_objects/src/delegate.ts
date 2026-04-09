@@ -1,9 +1,9 @@
-import { BaseDurableObject } from './index';
+import { BaseDurableObject } from "./index";
 
 export abstract class DurableObjectBaseDelegate<Config = any> {
   constructor(
     protected durableObject: BaseDurableObject,
-    protected config: Config
+    protected config: Config,
   ) {}
 
   /**

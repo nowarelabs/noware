@@ -1,10 +1,10 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoSticky extends NofoElement {
   static props = {
-    top: { type: String, default: '0' },
-    bottom: { type: String, default: 'auto' },
-    zIndex: { type: String, default: '10' }
+    top: { type: String, default: "0" },
+    bottom: { type: String, default: "auto" },
+    zIndex: { type: String, default: "10" },
   };
 
   _observer = null;
@@ -25,23 +25,23 @@ class NofoSticky extends NofoElement {
   }
 
   updateDataAttributes() {
-    this.setAttribute('data-top', this.props.top);
-    this.setAttribute('data-bottom', this.props.bottom);
+    this.setAttribute("data-top", this.props.top);
+    this.setAttribute("data-bottom", this.props.bottom);
   }
 
   setupIntersectionObserver() {
     const options = {
       root: null,
-      rootMargin: '0px',
-      threshold: 0
+      rootMargin: "0px",
+      threshold: 0,
     };
 
     this._observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          this.setAttribute('data-stuck', 'false');
+          this.setAttribute("data-stuck", "false");
         } else {
-          this.setAttribute('data-stuck', 'true');
+          this.setAttribute("data-stuck", "true");
         }
       });
     }, options);
@@ -67,5 +67,5 @@ class NofoSticky extends NofoElement {
   }
 }
 
-customElements.define('nofo-sticky', NofoSticky);
+customElements.define("nofo-sticky", NofoSticky);
 export { NofoSticky };

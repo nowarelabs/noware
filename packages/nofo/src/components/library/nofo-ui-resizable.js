@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIResizable extends NofoElement {
   static template() {
@@ -27,7 +27,7 @@ class NofoUIResizable extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -36,16 +36,16 @@ class NofoUIResizable extends NofoElement {
 class NofoUIResizablePanel extends NofoElement {
   static props() {
     return {
-      defaultSize: { type: Number, attribute: 'defaultSize' },
-      minSize: { type: Number, attribute: 'minSize' },
-      maxSize: { type: Number, attribute: 'maxSize' }
+      defaultSize: { type: Number, attribute: "defaultSize" },
+      minSize: { type: Number, attribute: "minSize" },
+      maxSize: { type: Number, attribute: "maxSize" },
     };
   }
 
   static template() {
     const minSize = this.minSize || 10;
     const maxSize = this.maxSize || 90;
-    
+
     return `
       <style>
         ${nofoUIStyles}
@@ -70,11 +70,11 @@ class NofoUIResizablePanel extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
-    this._panel = this.shadowRoot.querySelector('.panel');
+    this._panel = this.shadowRoot.querySelector(".panel");
     this.sync();
   }
 
@@ -115,35 +115,35 @@ class NofoUIResizableHandle extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
     this._isDragging = false;
-    
+
     this.handleDrag = (e) => {
       if (!this._isDragging) return;
-      
-      const resizable = this.closest('nofo-ui-resizable');
+
+      const resizable = this.closest("nofo-ui-resizable");
       if (!resizable) return;
-      
-      const panels = resizable.querySelectorAll('nofo-ui-resizable-panel');
+
+      const panels = resizable.querySelectorAll("nofo-ui-resizable-panel");
     };
 
     this.handleDragEnd = () => {
       this._isDragging = false;
-      document.removeEventListener('mousemove', this.handleDrag);
-      document.removeEventListener('mouseup', this.handleDragEnd);
+      document.removeEventListener("mousemove", this.handleDrag);
+      document.removeEventListener("mouseup", this.handleDragEnd);
     };
 
-    this.addEventListener('mousedown', (e) => {
+    this.addEventListener("mousedown", (e) => {
       this._isDragging = true;
-      document.addEventListener('mousemove', this.handleDrag);
-      document.addEventListener('mouseup', this.handleDragEnd);
+      document.addEventListener("mousemove", this.handleDrag);
+      document.addEventListener("mouseup", this.handleDragEnd);
     });
   }
 }
 
-customElements.define('nofo-ui-resizable', NofoUIResizable);
-customElements.define('nofo-ui-resizable-panel', NofoUIResizablePanel);
-customElements.define('nofo-ui-resizable-handle', NofoUIResizableHandle);
+customElements.define("nofo-ui-resizable", NofoUIResizable);
+customElements.define("nofo-ui-resizable-panel", NofoUIResizablePanel);
+customElements.define("nofo-ui-resizable-handle", NofoUIResizableHandle);

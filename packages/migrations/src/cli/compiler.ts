@@ -1,15 +1,15 @@
-import { type Result, ok, err, safeAsync } from 'nomo/result';
-import { Migration } from '../index';
-import * as fs from 'node:fs/promises';
-import * as path from 'pathe';
+import { type Result, ok, err, safeAsync } from "nomo/result";
+import { Migration } from "../index";
+import * as fs from "node:fs/promises";
+import * as path from "pathe";
 
 export class MigrationCompiler {
   private migrationsDir: string;
   private outDir: string;
 
   constructor() {
-    this.migrationsDir = path.resolve(process.cwd(), 'src/db/migrate');
-    this.outDir = path.resolve(process.cwd(), 'src/db/migrations');
+    this.migrationsDir = path.resolve(process.cwd(), "src/db/migrate");
+    this.outDir = path.resolve(process.cwd(), "src/db/migrations");
   }
 
   /**
@@ -35,9 +35,9 @@ export class MigrationCompiler {
     return await safeAsync(async () => {
       await fs.mkdir(this.outDir, { recursive: true });
 
-      const tempDbPath = path.resolve(process.cwd(), '.nomo/temp_compile.db');
-      const metadataPath = path.resolve(process.cwd(), '.nomo/temp_metadata.json');
-      const { execSync } = await import('node:child_process');
+      const tempDbPath = path.resolve(process.cwd(), ".nomo/temp_compile.db");
+      const metadataPath = path.resolve(process.cwd(), ".nomo/temp_metadata.json");
+      const { execSync } = await import("node:child_process");
 
       // Clean up any existing temp files
       await fs.rm(path.dirname(metadataPath), { force: true }).catch(() => {});
@@ -45,10 +45,10 @@ export class MigrationCompiler {
 
       const allMetadata: Record<string, any[]> = {};
 
-      const files = (await fs.readdir(this.migrationsDir)).filter((f) => f.endsWith('.ts')).sort();
+      const files = (await fs.readdir(this.migrationsDir)).filter((f) => f.endsWith(".ts")).sort();
 
       console.log(
-        `🔍 Found ${files.length} migrations in ${path.relative(process.cwd(), this.migrationsDir)}`
+        `🔍 Found ${files.length} migrations in ${path.relative(process.cwd(), this.migrationsDir)}`,
       );
 
       for (const [index, file] of files.entries()) {
@@ -67,7 +67,7 @@ export class MigrationCompiler {
           all: async () => ok([]),
         }) as Migration;
 
-        const sqlResArr = await migration.toSql('up');
+        const sqlResArr = await migration.toSql("up");
         if (!sqlResArr.success) return sqlResArr as Result<never>;
         const upSql = sqlResArr.data;
 
@@ -77,12 +77,12 @@ export class MigrationCompiler {
           allMetadata[table] = [...(allMetadata[table] || []), ...relationships];
         }
 
-        const { spawnSync } = await import('node:child_process');
+        const { spawnSync } = await import("node:child_process");
         // Execute SQL against temp DB to evolve schema
         for (const statement of upSql) {
-          const res = spawnSync('sqlite3', [tempDbPath], {
+          const res = spawnSync("sqlite3", [tempDbPath], {
             input: statement,
-            encoding: 'utf-8',
+            encoding: "utf-8",
           });
           if (res.status !== 0) {
             return err(`Error evolving schema in temp DB while compiling ${file}: ${res.stderr}`);
@@ -90,12 +90,12 @@ export class MigrationCompiler {
         }
 
         // D1 format: 0001_name.sql
-        const prefix = (index + 1).toString().padStart(4, '0');
-        const name = file.replace(/^\d+_/, '').replace('.ts', '');
+        const prefix = (index + 1).toString().padStart(4, "0");
+        const name = file.replace(/^\d+_/, "").replace(".ts", "");
         const sqlFileName = `${prefix}_${name}.sql`;
         const sqlFilePath = path.join(this.outDir, sqlFileName);
 
-        let finalSql = upSql.join('\n');
+        let finalSql = upSql.join("\n");
         if (migration.durableObjectClass) {
           finalSql = `-- @durableObjectClass: ${migration.durableObjectClass}\n` + finalSql;
         }

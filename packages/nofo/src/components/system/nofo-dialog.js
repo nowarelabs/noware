@@ -1,50 +1,68 @@
-import { NofoElement, useClickOutside } from '../../index.js';
+import { NofoElement, useClickOutside } from "../../index.js";
 
 class NofoDialog extends NofoElement {
   static props = {
     open: false,
     closeOnOverlayClick: true,
-    closeOnEscape: true
+    closeOnEscape: true,
   };
 
   #clickOutsideCleanup = null;
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
-    
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
+
     this.handleOpenChange(this.state.open);
 
-    this.addEventListener('dialog-open', () => {
+    this.addEventListener("dialog-open", () => {
       this.state.open = true;
-      this.dispatchEvent(new CustomEvent('open-change', { detail: { open: true }, bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent("open-change", { detail: { open: true }, bubbles: true, composed: true }),
+      );
     });
-    
-    this.addEventListener('dialog-close', () => {
+
+    this.addEventListener("dialog-close", () => {
       this.state.open = false;
-      this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent("open-change", { detail: { open: false }, bubbles: true, composed: true }),
+      );
     });
 
     if (this.state.closeOnEscape) {
       this._handleEscape = (e) => {
-        if (e.key === 'Escape' && this.state.open) {
+        if (e.key === "Escape" && this.state.open) {
           this.state.open = false;
-          this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent("open-change", {
+              detail: { open: false },
+              bubbles: true,
+              composed: true,
+            }),
+          );
         }
       };
-      document.addEventListener('keydown', this._handleEscape);
+      document.addEventListener("keydown", this._handleEscape);
     }
 
     this.effect(() => {
       this.handleOpenChange(this.state.open);
-      
-      const content = this.querySelector('[dialog-content]');
+
+      const content = this.querySelector("[dialog-content]");
       if (content) {
         if (this.state.open && this.state.closeOnOverlayClick) {
           const { bind } = useClickOutside();
           this.#clickOutsideCleanup = bind(content, () => {
             if (this.state.open) {
               this.state.open = false;
-              this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+              this.dispatchEvent(
+                new CustomEvent("open-change", {
+                  detail: { open: false },
+                  bubbles: true,
+                  composed: true,
+                }),
+              );
             }
           });
         } else if (this.#clickOutsideCleanup) {
@@ -57,19 +75,19 @@ class NofoDialog extends NofoElement {
 
   handleOpenChange(isOpen) {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
   }
 
   onUnmount() {
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
     if (this.#clickOutsideCleanup) {
       this.#clickOutsideCleanup();
     }
     if (this._handleEscape) {
-      document.removeEventListener('keydown', this._handleEscape);
+      document.removeEventListener("keydown", this._handleEscape);
     }
   }
 
@@ -84,9 +102,9 @@ class NofoDialog extends NofoElement {
 
 class NofoDialogTrigger extends NofoElement {
   onMount() {
-    this.addEventListener('click', (e) => {
+    this.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.dispatchEvent(new CustomEvent('dialog-open', { bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("dialog-open", { bubbles: true, composed: true }));
     });
   }
 
@@ -111,8 +129,8 @@ class NofoDialogPortal extends NofoElement {
 
 class NofoDialogOverlay extends NofoElement {
   onMount() {
-    this.addEventListener('click', () => {
-      this.dispatchEvent(new CustomEvent('dialog-close', { bubbles: true, composed: true }));
+    this.addEventListener("click", () => {
+      this.dispatchEvent(new CustomEvent("dialog-close", { bubbles: true, composed: true }));
     });
   }
 
@@ -140,22 +158,22 @@ class NofoDialogOverlay extends NofoElement {
 
 class NofoDialogContent extends NofoElement {
   static props = {
-    size: '3'
+    size: "3",
   };
 
   onMount() {
-    this.sync().attr('size').toDataAttr('size');
-    this.setAttribute('dialog-content', '');
+    this.sync().attr("size").toDataAttr("size");
+    this.setAttribute("dialog-content", "");
   }
 
   getSizeStyles(size) {
     const sizes = {
-      '1': { padding: '1rem', maxWidth: '300px' },
-      '2': { padding: '1.5rem', maxWidth: '400px' },
-      '3': { padding: '2rem', maxWidth: '500px' },
-      '4': { padding: '2.5rem', maxWidth: '600px' }
+      1: { padding: "1rem", maxWidth: "300px" },
+      2: { padding: "1.5rem", maxWidth: "400px" },
+      3: { padding: "2rem", maxWidth: "500px" },
+      4: { padding: "2.5rem", maxWidth: "600px" },
     };
-    return sizes[size] || sizes['3'];
+    return sizes[size] || sizes["3"];
   }
 
   template() {
@@ -220,9 +238,9 @@ class NofoDialogDescription extends NofoElement {
 
 class NofoDialogClose extends NofoElement {
   onMount() {
-    this.addEventListener('click', (e) => {
+    this.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.dispatchEvent(new CustomEvent('dialog-close', { bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("dialog-close", { bubbles: true, composed: true }));
     });
   }
 
@@ -235,14 +253,14 @@ class NofoDialogClose extends NofoElement {
   }
 }
 
-customElements.define('nofo-dialog', NofoDialog);
-customElements.define('nofo-dialog-trigger', NofoDialogTrigger);
-customElements.define('nofo-dialog-portal', NofoDialogPortal);
-customElements.define('nofo-dialog-overlay', NofoDialogOverlay);
-customElements.define('nofo-dialog-content', NofoDialogContent);
-customElements.define('nofo-dialog-title', NofoDialogTitle);
-customElements.define('nofo-dialog-description', NofoDialogDescription);
-customElements.define('nofo-dialog-close', NofoDialogClose);
+customElements.define("nofo-dialog", NofoDialog);
+customElements.define("nofo-dialog-trigger", NofoDialogTrigger);
+customElements.define("nofo-dialog-portal", NofoDialogPortal);
+customElements.define("nofo-dialog-overlay", NofoDialogOverlay);
+customElements.define("nofo-dialog-content", NofoDialogContent);
+customElements.define("nofo-dialog-title", NofoDialogTitle);
+customElements.define("nofo-dialog-description", NofoDialogDescription);
+customElements.define("nofo-dialog-close", NofoDialogClose);
 
 export {
   NofoDialog,
@@ -252,5 +270,5 @@ export {
   NofoDialogContent,
   NofoDialogTitle,
   NofoDialogDescription,
-  NofoDialogClose
+  NofoDialogClose,
 };

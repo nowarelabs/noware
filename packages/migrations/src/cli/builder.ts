@@ -16,7 +16,7 @@ export class CodeBuilder {
    * Append a newline
    */
   nl(): this {
-    this.content.push('\n');
+    this.content.push("\n");
     return this;
   }
 
@@ -27,7 +27,7 @@ export class CodeBuilder {
   render(template: string, vars: Record<string, any>): this {
     let rendered = template;
     for (const [key, value] of Object.entries(vars)) {
-      const regex = new RegExp(`{{${key}}}`, 'g');
+      const regex = new RegExp(`{{${key}}}`, "g");
       rendered = rendered.replace(regex, String(value));
     }
     this.content.push(rendered);
@@ -46,6 +46,6 @@ export class CodeBuilder {
    * Finalize the built code
    */
   toString(): string {
-    return this.content.join('');
+    return this.content.join("");
   }
 }

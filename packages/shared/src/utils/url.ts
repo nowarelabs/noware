@@ -14,7 +14,7 @@ export function tryDecode(str: string): string {
  * Ensures NFC normalization for consistent matching.
  */
 export function isValidPath(path: string): boolean {
-  const normalized = path.normalize('NFC');
+  const normalized = path.normalize("NFC");
 
   // Block Null Bytes and Control Characters (0-31, 127, 128-159)
   for (let i = 0; i < normalized.length; i++) {
@@ -25,7 +25,7 @@ export function isValidPath(path: string): boolean {
   }
 
   // Whitelist of strictly forbidden characters
-  const forbidden = '<>"\'`\\^|[]{}';
+  const forbidden = "<>\"'`\\^|[]{}";
   for (let i = 0; i < normalized.length; i++) {
     if (forbidden.indexOf(normalized[i]) !== -1) {
       return false;
@@ -39,10 +39,10 @@ export function isValidPath(path: string): boolean {
  * Splits a path into segments. Handles leading slash and enforces a depth limit.
  */
 export function splitPath(path: string, maxDepth = 32): string[] {
-  const normalized = path.normalize('NFC');
-  const segments = normalized.split('/');
+  const normalized = path.normalize("NFC");
+  const segments = normalized.split("/");
 
-  if (segments[0] === '') segments.shift();
+  if (segments[0] === "") segments.shift();
 
   if (segments.length > maxDepth) {
     throw new Error(`Path depth exceeded limit (${maxDepth}).`);

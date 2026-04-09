@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoPagination extends NofoElement {
   static props = {
@@ -6,36 +6,37 @@ class NofoPagination extends NofoElement {
     page: 1,
     pageSize: 10,
     siblingCount: 1,
-    showFirstLast: false
+    showFirstLast: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('page').toDataAttr('page');
+    this.sync().attr("page").toDataAttr("page");
   }
 
   handlePageClick(e) {
-    const button = e.target.closest('button');
+    const button = e.target.closest("button");
     if (!button || button.disabled) return;
 
     const action = button.dataset.action;
     const totalPages = Math.ceil(this.state.total / this.state.pageSize);
     let newPage = this.state.page;
 
-    if (action === 'first') newPage = 1;
-    else if (action === 'prev') newPage = Math.max(1, this.state.page - 1);
-    else if (action === 'next') newPage = Math.min(totalPages, this.state.page + 1);
-    else if (action === 'last') newPage = totalPages;
-    else if (action === 'page') newPage = parseInt(button.dataset.page);
+    if (action === "first") newPage = 1;
+    else if (action === "prev") newPage = Math.max(1, this.state.page - 1);
+    else if (action === "next") newPage = Math.min(totalPages, this.state.page + 1);
+    else if (action === "last") newPage = totalPages;
+    else if (action === "page") newPage = parseInt(button.dataset.page);
 
     if (newPage === this.state.page) return;
 
     this.state.page = newPage;
-    this.dispatchEvent(new CustomEvent('page-change', {
-      detail: { page: newPage },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("page-change", {
+        detail: { page: newPage },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   getPageNumbers() {
@@ -52,11 +53,11 @@ class NofoPagination extends NofoElement {
     const leftSiblingIndex = Math.max(1, currentPage - siblingCount);
     const rightSiblingIndex = Math.min(totalPages, currentPage + siblingCount);
 
-    if (leftSiblingIndex > 2) pages.push('ellipsis-left');
+    if (leftSiblingIndex > 2) pages.push("ellipsis-left");
     for (let i = leftSiblingIndex; i <= rightSiblingIndex; i++) {
-        if (i !== 1 && i !== totalPages) pages.push(i);
+      if (i !== 1 && i !== totalPages) pages.push(i);
     }
-    if (rightSiblingIndex < totalPages - 1) pages.push('ellipsis-right');
+    if (rightSiblingIndex < totalPages - 1) pages.push("ellipsis-right");
     if (totalPages > 1) pages.push(totalPages);
 
     return pages;
@@ -70,34 +71,44 @@ class NofoPagination extends NofoElement {
     return `
       <nav aria-label="Pagination" on-click="handlePageClick">
         <div class="root">
-          ${showFirstLast ? `
-            <button type="button" class="btn" data-action="first" ${page === 1 ? 'disabled' : ''}>
+          ${
+            showFirstLast
+              ? `
+            <button type="button" class="btn" data-action="first" ${page === 1 ? "disabled" : ""}>
               <nofo-icon name="chevron-double-left" size="sm"></nofo-icon>
             </button>
-          ` : ''}
+          `
+              : ""
+          }
           
-          <button type="button" class="btn" data-action="prev" ${page === 1 ? 'disabled' : ''}>
+          <button type="button" class="btn" data-action="prev" ${page === 1 ? "disabled" : ""}>
             <nofo-icon name="chevron-left" size="sm"></nofo-icon>
           </button>
 
-          ${pageNumbers.map(n => {
-            if (typeof n === 'string') return `<span class="ellipsis">...</span>`;
-            return `
-              <button type="button" class="btn" data-action="page" data-page="${n}" ${n === page ? 'data-active' : ''}>
+          ${pageNumbers
+            .map((n) => {
+              if (typeof n === "string") return `<span class="ellipsis">...</span>`;
+              return `
+              <button type="button" class="btn" data-action="page" data-page="${n}" ${n === page ? "data-active" : ""}>
                 ${n}
               </button>
             `;
-          }).join('')}
+            })
+            .join("")}
 
-          <button type="button" class="btn" data-action="next" ${page === totalPages ? 'disabled' : ''}>
+          <button type="button" class="btn" data-action="next" ${page === totalPages ? "disabled" : ""}>
             <nofo-icon name="chevron-right" size="sm"></nofo-icon>
           </button>
 
-          ${showFirstLast ? `
-            <button type="button" class="btn" data-action="last" ${page === totalPages ? 'disabled' : ''}>
+          ${
+            showFirstLast
+              ? `
+            <button type="button" class="btn" data-action="last" ${page === totalPages ? "disabled" : ""}>
               <nofo-icon name="chevron-double-right" size="sm"></nofo-icon>
             </button>
-          ` : ''}
+          `
+              : ""
+          }
         </div>
       </nav>
     `;
@@ -141,7 +152,5 @@ class NofoPagination extends NofoElement {
   }
 }
 
-customElements.define('nofo-pagination', NofoPagination);
+customElements.define("nofo-pagination", NofoPagination);
 export { NofoPagination };
-
-

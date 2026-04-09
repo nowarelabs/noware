@@ -1,44 +1,44 @@
-import { describe, it, expect, vi } from 'vitest';
-import { Migration } from '../index';
-import { SqlGenerator } from '../sql';
-import { type Result, ok } from 'nomo/result';
+import { describe, it, expect, vi } from "vitest";
+import { Migration } from "../index";
+import { SqlGenerator } from "../sql";
+import { type Result, ok } from "nomo/result";
 
 class ReversibleMigration extends Migration {
-  readonly version = '20260205130000';
+  readonly version = "20260205130000";
   async change() {
-    await this.createTable('tags', (t) => {
-      t.string('name');
+    await this.createTable("tags", (t) => {
+      t.string("name");
     });
-    await this.addColumn('users', 'tag_id', 'integer');
+    await this.addColumn("users", "tag_id", "integer");
 
     await (this as any).reversible({
       up: async () => {
-        await this.execute('CREATE VIEW user_tags AS SELECT * FROM users');
+        await this.execute("CREATE VIEW user_tags AS SELECT * FROM users");
       },
       down: async () => {
-        await this.execute('DROP VIEW user_tags');
+        await this.execute("DROP VIEW user_tags");
       },
     });
   }
 }
 
 class ExplicitMigration extends Migration {
-  readonly version = '20260205130001';
+  readonly version = "20260205130001";
   async change() {}
   async up(): Promise<Result<void>> {
-    return await this.createTable('legacy', (t) => {
+    return await this.createTable("legacy", (t) => {
       t.id();
     });
   }
   async down(): Promise<Result<void>> {
-    return await this.dropTable('legacy');
+    return await this.dropTable("legacy");
   }
 }
 
-describe('Migration Reversibility', () => {
+describe("Migration Reversibility", () => {
   const sql = new SqlGenerator();
 
-  it('automatically reverses standard commands in the correct order', async () => {
+  it("automatically reverses standard commands in the correct order", async () => {
     const mockDb = {
       run: vi.fn().mockResolvedValue(ok({})),
       all: vi.fn().mockResolvedValue(ok([])),
@@ -53,19 +53,19 @@ describe('Migration Reversibility', () => {
       1,
       expect.objectContaining({
         sql: expect.stringContaining('CREATE TABLE IF NOT EXISTS "tags"'),
-      })
+      }),
     );
     expect(mockDb.run).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         sql: expect.stringContaining('ALTER TABLE "users" ADD COLUMN "tag_id" INTEGER;'),
-      })
+      }),
     );
     expect(mockDb.run).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        sql: 'CREATE VIEW user_tags AS SELECT * FROM users',
-      })
+        sql: "CREATE VIEW user_tags AS SELECT * FROM users",
+      }),
     );
 
     vi.clearAllMocks();
@@ -77,23 +77,23 @@ describe('Migration Reversibility', () => {
     // Should be in REVERSE order
     expect(mockDb.run).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ sql: 'DROP VIEW user_tags' })
+      expect.objectContaining({ sql: "DROP VIEW user_tags" }),
     );
     expect(mockDb.run).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         sql: expect.stringContaining('ALTER TABLE "users" DROP COLUMN "tag_id";'),
-      })
+      }),
     );
     expect(mockDb.run).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
         sql: expect.stringContaining('DROP TABLE IF EXISTS "tags";'),
-      })
+      }),
     );
   });
 
-  it('handles explicit up and down methods', async () => {
+  it("handles explicit up and down methods", async () => {
     const mockDb = {
       run: vi.fn().mockResolvedValue(ok({})),
       all: vi.fn().mockResolvedValue(ok([])),
@@ -105,7 +105,7 @@ describe('Migration Reversibility', () => {
     expect(mockDb.run).toHaveBeenCalledWith(
       expect.objectContaining({
         sql: expect.stringContaining('CREATE TABLE IF NOT EXISTS "legacy"'),
-      })
+      }),
     );
 
     vi.clearAllMocks();
@@ -115,7 +115,7 @@ describe('Migration Reversibility', () => {
     expect(mockDb.run).toHaveBeenCalledWith(
       expect.objectContaining({
         sql: expect.stringContaining('DROP TABLE IF EXISTS "legacy"'),
-      })
+      }),
     );
   });
 });

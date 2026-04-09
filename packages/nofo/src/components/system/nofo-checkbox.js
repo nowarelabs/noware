@@ -1,26 +1,31 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoCheckbox extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    'high-contrast': false,
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    "high-contrast": false,
     checked: false,
     defaultChecked: false,
     disabled: false,
     required: false,
-    name: '',
-    value: ''
+    name: "",
+    value: "",
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
 
     if (this.defaultChecked && this.checked === false) {
       this.state.checked = true;
@@ -30,16 +35,18 @@ class NofoCheckbox extends NofoElement {
   handleChange(e) {
     if (this.disabled) return;
     this.state.checked = e.target.checked;
-    this.dispatchEvent(new CustomEvent('checked-change', {
-      detail: { checked: this.state.checked },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("checked-change", {
+        detail: { checked: this.state.checked },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
     const { name, value, disabled, required, checked } = this.state;
-    const isIndeterminate = checked === 'indeterminate';
+    const isIndeterminate = checked === "indeterminate";
 
     return `
       <label class="root">
@@ -101,7 +108,5 @@ class NofoCheckbox extends NofoElement {
   }
 }
 
-customElements.define('nofo-checkbox', NofoCheckbox);
+customElements.define("nofo-checkbox", NofoCheckbox);
 export { NofoCheckbox };
-
-

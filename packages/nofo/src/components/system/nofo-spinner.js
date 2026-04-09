@@ -1,15 +1,13 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoSpinner extends NofoElement {
   static props = {
-    size: '2',
-    loading: true
+    size: "2",
+    loading: true,
   };
 
   onMount() {
-    this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('loading').toDataAttr('loading');
+    this.sync().attr("size").toDataAttr("size").attr("loading").toDataAttr("loading");
   }
 
   template() {
@@ -42,7 +40,5 @@ class NofoSpinner extends NofoElement {
   }
 }
 
-customElements.define('nofo-spinner', NofoSpinner);
+customElements.define("nofo-spinner", NofoSpinner);
 export { NofoSpinner };
-
-

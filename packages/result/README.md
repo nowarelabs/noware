@@ -82,9 +82,7 @@ const user = await findUser(id)
 Allows falling back to a successful result if the current result is an error.
 
 ```typescript
-const settings = await getCustomSettings().recover((error) =>
-  ok(DEFAULT_SETTINGS),
-);
+const settings = await getCustomSettings().recover((error) => ok(DEFAULT_SETTINGS));
 ```
 
 ---

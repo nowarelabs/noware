@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISlider extends NofoElement {
   static props = {
@@ -9,18 +9,17 @@ class NofoUISlider extends NofoElement {
     max: 100,
     step: 1,
     disabled: false,
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    orientation: 'horizontal'
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    orientation: "horizontal",
   };
 
   onMount() {
-    this.sync()
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("disabled").toDataAttr("disabled");
 
-    this.effect(['value'], () => {
-      if (typeof this.state.value === 'string') {
+    this.effect(["value"], () => {
+      if (typeof this.state.value === "string") {
         try {
           this.state.value = JSON.parse(this.state.value);
         } catch (e) {
@@ -33,15 +32,18 @@ class NofoUISlider extends NofoElement {
   handleValueChange(e) {
     const newValue = e.detail.value;
     this.state.value = newValue;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: newValue },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: newValue },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
-    const { value, defaultValue, min, max, step, disabled, size, variant, color, orientation } = this.state;
+    const { value, defaultValue, min, max, step, disabled, size, variant, color, orientation } =
+      this.state;
     const valueArray = Array.isArray(value) ? value : [value];
     const defaultValueArray = Array.isArray(defaultValue) ? defaultValue : [defaultValue];
 
@@ -77,5 +79,5 @@ class NofoUISlider extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-slider', NofoUISlider);
+customElements.define("nofo-ui-slider", NofoUISlider);
 export { NofoUISlider };

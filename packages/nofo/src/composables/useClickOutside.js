@@ -1,15 +1,15 @@
 export function useClickOutside(options = {}) {
-  const { eventName = 'click', excludeSelectors = [] } = options;
-  
+  const { eventName = "click", excludeSelectors = [] } = options;
+
   const isClickedOutside = (target, element) => {
     if (!element) return true;
-    
+
     for (const selector of excludeSelectors) {
       if (target.closest(selector)) {
         return false;
       }
     }
-    
+
     return !element.contains(target) && element !== target;
   };
 

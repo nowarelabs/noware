@@ -4,7 +4,7 @@
 export interface TaskProgress {
   current: number;
   total?: number;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'interrupted';
+  status: "pending" | "running" | "completed" | "failed" | "interrupted";
   error?: string;
   metadata?: Record<string, unknown>;
 }
@@ -23,7 +23,7 @@ export abstract class MaintenanceTask<TParams = Record<string, unknown>> {
    */
   abstract run(
     params: TParams,
-    onProgress: (progress: TaskProgress) => void | Promise<void>
+    onProgress: (progress: TaskProgress) => void | Promise<void>,
   ): Promise<void>;
 
   /**
@@ -32,7 +32,7 @@ export abstract class MaintenanceTask<TParams = Record<string, unknown>> {
   async resume(
     params: TParams,
     progress: TaskProgress,
-    onProgress: (progress: TaskProgress) => void | Promise<void>
+    onProgress: (progress: TaskProgress) => void | Promise<void>,
   ): Promise<void> {
     return this.run(params, onProgress);
   }

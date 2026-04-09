@@ -80,8 +80,8 @@ All packages must export their public API from `src/index.ts`:
 
 ```typescript
 // src/index.ts
-export { Router } from './router';
-export type { RouterOptions, RouteConfig } from './types';
+export { Router } from "./router";
+export type { RouterOptions, RouteConfig } from "./types";
 ```
 
 ## Directory Structure

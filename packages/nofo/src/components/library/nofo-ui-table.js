@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUITable extends NofoElement {
   template() {
@@ -151,12 +151,12 @@ class NofoUITableCell extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-table', NofoUITable);
-customElements.define('nofo-ui-table-header', NofoUITableHeader);
-customElements.define('nofo-ui-table-body', NofoUITableBody);
-customElements.define('nofo-ui-table-row', NofoUITableRow);
-customElements.define('nofo-ui-table-head', NofoUITableHead);
-customElements.define('nofo-ui-table-cell', NofoUITableCell);
+customElements.define("nofo-ui-table", NofoUITable);
+customElements.define("nofo-ui-table-header", NofoUITableHeader);
+customElements.define("nofo-ui-table-body", NofoUITableBody);
+customElements.define("nofo-ui-table-row", NofoUITableRow);
+customElements.define("nofo-ui-table-head", NofoUITableHead);
+customElements.define("nofo-ui-table-cell", NofoUITableCell);
 
 export {
   NofoUITable,
@@ -164,5 +164,5 @@ export {
   NofoUITableBody,
   NofoUITableRow,
   NofoUITableHead,
-  NofoUITableCell
+  NofoUITableCell,
 };

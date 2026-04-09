@@ -1,25 +1,29 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoCollapsible extends NofoElement {
   static props = {
     open: false,
-    defaultOpen: false
+    defaultOpen: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (val) => val ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (val) => (val ? "open" : "closed"));
 
     if (this.state.open === false && this.state.defaultOpen === true) {
       this.state.open = true;
     }
-    
-    this.addEventListener('nofo-collapsible-toggle', () => {
+
+    this.addEventListener("nofo-collapsible-toggle", () => {
       this.state.open = !this.state.open;
-      this.dispatchEvent(new CustomEvent('open-change', {
-        detail: { open: this.state.open },
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("open-change", {
+          detail: { open: this.state.open },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     });
   }
 
@@ -40,19 +44,21 @@ class NofoCollapsible extends NofoElement {
 
 class NofoCollapsibleTrigger extends NofoElement {
   onMount() {
-    const parent = this.closest('nofo-collapsible');
+    const parent = this.closest("nofo-collapsible");
     if (parent) {
       this.effect(() => {
-        this.setAttribute('data-state', parent.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", parent.state.open ? "open" : "closed");
       });
     }
   }
 
   handleClick() {
-    this.dispatchEvent(new CustomEvent('nofo-collapsible-toggle', {
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("nofo-collapsible-toggle", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -98,10 +104,10 @@ class NofoCollapsibleTrigger extends NofoElement {
 
 class NofoCollapsibleContent extends NofoElement {
   onMount() {
-    const parent = this.closest('nofo-collapsible');
+    const parent = this.closest("nofo-collapsible");
     if (parent) {
       this.effect(() => {
-        this.setAttribute('data-state', parent.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", parent.state.open ? "open" : "closed");
       });
     }
   }
@@ -131,14 +137,8 @@ class NofoCollapsibleContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-collapsible', NofoCollapsible);
-customElements.define('nofo-collapsible-trigger', NofoCollapsibleTrigger);
-customElements.define('nofo-collapsible-content', NofoCollapsibleContent);
+customElements.define("nofo-collapsible", NofoCollapsible);
+customElements.define("nofo-collapsible-trigger", NofoCollapsibleTrigger);
+customElements.define("nofo-collapsible-content", NofoCollapsibleContent);
 
-export {
-  NofoCollapsible,
-  NofoCollapsibleTrigger,
-  NofoCollapsibleContent
-};
-
-
+export { NofoCollapsible, NofoCollapsibleTrigger, NofoCollapsibleContent };

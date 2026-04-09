@@ -1,24 +1,24 @@
-import { defineCommand } from 'citty';
-import { consola } from 'consola';
-import { MigrationBundler } from './bundler';
+import { defineCommand } from "citty";
+import { consola } from "consola";
+import { MigrationBundler } from "./bundler";
 
 export const bundleCommand = defineCommand({
   meta: {
-    name: 'bundle',
-    description: 'Bundle SQL migrations into a TypeScript module for Durable Objects',
+    name: "bundle",
+    description: "Bundle SQL migrations into a TypeScript module for Durable Objects",
   },
   args: {
     input: {
-      type: 'string',
-      alias: 'i',
-      description: 'Input directory containing .sql migrations',
-      default: 'src/db/migrations',
+      type: "string",
+      alias: "i",
+      description: "Input directory containing .sql migrations",
+      default: "src/db/migrations",
     },
     output: {
-      type: 'string',
-      alias: 'o',
-      description: 'Output TypeScript file path',
-      default: 'src/db/migrations/migrations.ts',
+      type: "string",
+      alias: "o",
+      description: "Output TypeScript file path",
+      default: "src/db/migrations/migrations.ts",
     },
   },
   async run({ args }) {

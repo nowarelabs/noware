@@ -1,4 +1,4 @@
-import { createSignal } from './signals.js';
+import { createSignal } from "./signals.js";
 
 export function useMounted() {
   const mounted = createSignal(false);
@@ -6,8 +6,12 @@ export function useMounted() {
   const setMounted = (value) => mounted.set(value);
 
   return {
-    mounted: { get value() { return mounted.get(); } },
+    mounted: {
+      get value() {
+        return mounted.get();
+      },
+    },
     isMounted: () => mounted.get(),
-    setMounted
+    setMounted,
   };
 }

@@ -2,12 +2,12 @@
 
 ## Package Map
 
-| Package | Where it runs | What it does |
-|---|---|---|
-| `nomo/build` | Build time (Vite plugin) | Compiles components, copies vendors, emits manifest |
-| `nomo/worker` | Cloudflare Worker (server) | JSX → HTML, per-request registry, content_for/yield |
-| `nomo/runtime` | Cloudflare Worker (server) | Asset path resolution, CSP, import maps, PropsIsland |
-| `nomo/element` | Browser (web component) | Base class: DSD, prop coercion, RPC loops, XSS safety |
+| Package        | Where it runs              | What it does                                          |
+| -------------- | -------------------------- | ----------------------------------------------------- |
+| `nomo/build`   | Build time (Vite plugin)   | Compiles components, copies vendors, emits manifest   |
+| `nomo/worker`  | Cloudflare Worker (server) | JSX → HTML, per-request registry, content_for/yield   |
+| `nomo/runtime` | Cloudflare Worker (server) | Asset path resolution, CSP, import maps, PropsIsland  |
+| `nomo/element` | Browser (web component)    | Base class: DSD, prop coercion, RPC loops, XSS safety |
 
 ---
 
@@ -85,7 +85,9 @@ The HTML shell can be cached for 10-60 seconds with `stale-while-revalidate`. Th
 
 ```html
 <user-dashboard initial-tab="overview">
-  <script type="application/json">{"user":{"id":1,"name":"Alice"}}</script>
+  <script type="application/json">
+    { "user": { "id": 1, "name": "Alice" } }
+  </script>
 </user-dashboard>
 ```
 
@@ -109,14 +111,14 @@ Use string attributes only for simple values the web component needs to `observe
 **Fix:** Use `using` (explicit resource management, standard JS since 2025):
 
 ```ts
-using batch = newHttpBatchRpcSession('/api');
+using batch = newHttpBatchRpcSession("/api");
 const data = await batch.getSystemStatus().get();
 // batch[Symbol.dispose]() called automatically when scope exits
 ```
 
 ### 7. `this.html` tagged template literal (not bare innerHTML)
 
-**Problem:** `this.shadowRoot.innerHTML = \`<span>${status}</span>\`` is XSS if `status` comes from RPC data (which comes from the network).
+**Problem:** `this.shadowRoot.innerHTML = \`<span>${status}</span>\``is XSS if`status` comes from RPC data (which comes from the network).
 
 **Fix:** The `html` tagged template literal from `nomoElement` escapes all interpolated values:
 
@@ -140,13 +142,12 @@ this.shadowRoot.innerHTML = this.html`<span>${status}</span>`;
 
 ```ts
 // React app:
-emit('tab:changed', { tab: 'stats' });
+emit("tab:changed", { tab: "stats" });
 
 // Enclosing web component:
-this.shadowRoot.querySelector('user-dashboard')
-  .addEventListener('tab:changed', (e) => {
-    // respond to tab change
-  });
+this.shadowRoot.querySelector("user-dashboard").addEventListener("tab:changed", (e) => {
+  // respond to tab change
+});
 ```
 
 ### 10. Exponential backoff in the update loop
@@ -160,35 +161,42 @@ this.shadowRoot.querySelector('user-dashboard')
 ## Common Gotchas for Developers
 
 ### "My content_for head tags aren't showing up"
+
 - Check your layout calls `{this.yield_content('head')}` in `<head>`
 - The block name must match exactly (case-sensitive)
 - `yield_content` returns `null` if nothing was registered — not an error
 
 ### "My web component script loads twice"
+
 - You're calling `component_script('my-tag')` in two views that both render
 - It's deduplicated by tag name automatically — only one `<script>` tag will appear
 
 ### "Import map isn't working / capnweb can't be resolved"
+
 - The `<script type="importmap">` must be before your `<script type="module">` tags
 - Check the layout: `{this.import_map()}` must come before `{this.yield_content('scripts')}`
 - Verify the vendor was added to `nomo({ vendors: [{ package: 'capnweb' }] })`
 
 ### "My props are all strings / objects are [object Object]"
+
 - You're passing complex props as HTML attributes
 - Use `<PropsIsland props={...} />` inside the custom element instead
 - The web component reads it via `this.querySelector('script[type="application/json"]')`
 
 ### "Status badge flickers on load"
+
 - Your DSD template (the `shadow: true` content) should match what the JS renders
 - The web component's first `render()` call runs before RPC completes
 - Set a meaningful initial `status` attribute in the Worker view, not `'loading'`
 
 ### "RPC data is leaking between users"
+
 - You have shared state somewhere — check for module-level variables
 - The Cap'n Web batch session should be created inside `startUpdateLoop`, not outside it
 - `using batch = newHttpBatchRpcSession(...)` must be inside the async function
 
 ### "TypeScript says my tag isn't in the manifest"
+
 - The component wasn't built — check `vite.config.ts` `rollupOptions.input`
 - The manifest was regenerated but the Worker wasn't redeployed
 - The tag name has a typo (tag names are case-sensitive)

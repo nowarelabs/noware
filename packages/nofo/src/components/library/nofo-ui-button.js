@@ -1,35 +1,35 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIButton extends NofoElement {
   static props = {
-    variant: 'default',
-    size: 'md',
+    variant: "default",
+    size: "md",
     disabled: false,
     loading: false,
-    type: 'button'
+    type: "button",
   };
 
   #getVariantProps(variant) {
     const map = {
-      default: { variant: 'solid', color: 'accent' },
-      destructive: { variant: 'solid', color: 'red' },
-      outline: { variant: 'outline', color: 'accent' },
-      ghost: { variant: 'ghost', color: 'accent' },
-      link: { variant: 'ghost', color: 'accent' }
+      default: { variant: "solid", color: "accent" },
+      destructive: { variant: "solid", color: "red" },
+      outline: { variant: "outline", color: "accent" },
+      ghost: { variant: "ghost", color: "accent" },
+      link: { variant: "ghost", color: "accent" },
     };
     return map[variant] || map.default;
   }
 
   #getSizeValue(size) {
-    const map = { sm: '1', md: '2', lg: '3', icon: '2' };
-    return map[size] || '2';
+    const map = { sm: "1", md: "2", lg: "3", icon: "2" };
+    return map[size] || "2";
   }
 
   template() {
     const { variant, color } = this.#getVariantProps(this.state.variant);
     const size = this.#getSizeValue(this.state.size);
-    
+
     return `
       <nofo-button
         variant="${variant}"
@@ -55,7 +55,5 @@ class NofoUIButton extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-button', NofoUIButton);
+customElements.define("nofo-ui-button", NofoUIButton);
 export { NofoUIButton };
-
-

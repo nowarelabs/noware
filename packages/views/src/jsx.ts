@@ -1,4 +1,4 @@
-import { ComponentChild } from './types';
+import { ComponentChild } from "./types";
 
 export declare namespace JSX {
   interface IntrinsicElements {

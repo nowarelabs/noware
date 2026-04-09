@@ -1,9 +1,9 @@
-import { NofoElement, useClickOutside } from '../../index.js';
+import { NofoElement, useClickOutside } from "../../index.js";
 
 class NofoCommandMenu extends NofoElement {
   static props = {
     open: false,
-    defaultOpen: false
+    defaultOpen: false,
   };
 
   #clickOutsideCleanup = null;
@@ -23,62 +23,62 @@ class NofoCommandMenu extends NofoElement {
 
   onMount() {
     if (this.defaultOpen) {
-      this.attr('open', '');
+      this.attr("open", "");
     }
     this.updateMenu();
     this.setupEventListeners();
   }
 
   setupEventListeners() {
-    const trigger = this.querySelector('nofo-command-menu-trigger');
+    const trigger = this.querySelector("nofo-command-menu-trigger");
     if (trigger) {
-      trigger.addEventListener('click', () => {
+      trigger.addEventListener("click", () => {
         this.toggle();
       });
     }
 
-    document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    document.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        this.attr('open', '');
+        this.attr("open", "");
       }
 
-      if (e.key === 'Escape' && this.has('open')) {
-        this.removeAttribute('open');
+      if (e.key === "Escape" && this.has("open")) {
+        this.removeAttribute("open");
       }
 
-      if (this.has('open')) {
-        const items = this.querySelectorAll('nofo-command-menu-item:not([disabled])');
-        if (e.key === 'ArrowDown') {
+      if (this.has("open")) {
+        const items = this.querySelectorAll("nofo-command-menu-item:not([disabled])");
+        if (e.key === "ArrowDown") {
           e.preventDefault();
           this._selectedIndex = Math.min(this._selectedIndex + 1, items.length - 1);
           this.updateSelection();
-        } else if (e.key === 'ArrowUp') {
+        } else if (e.key === "ArrowUp") {
           e.preventDefault();
           this._selectedIndex = Math.max(this._selectedIndex - 1, -1);
           this.updateSelection();
-        } else if (e.key === 'Enter' && this._selectedIndex >= 0) {
+        } else if (e.key === "Enter" && this._selectedIndex >= 0) {
           e.preventDefault();
           items[this._selectedIndex].click();
         }
       }
     });
 
-    const input = this.querySelector('nofo-command-menu-input');
+    const input = this.querySelector("nofo-command-menu-input");
     if (input) {
-      input.addEventListener('input', (e) => {
+      input.addEventListener("input", (e) => {
         this.filterItems(e.target.value);
       });
     }
 
     this.effect(() => {
-      const content = this.querySelector('nofo-command-menu-content');
+      const content = this.querySelector("nofo-command-menu-content");
       if (content) {
-        if (this.has('open')) {
+        if (this.has("open")) {
           const { bind } = useClickOutside();
           this.#clickOutsideCleanup = bind(content, () => {
-            if (this.has('open')) {
-              this.removeAttribute('open');
+            if (this.has("open")) {
+              this.removeAttribute("open");
             }
           });
         } else if (this.#clickOutsideCleanup) {
@@ -96,56 +96,56 @@ class NofoCommandMenu extends NofoElement {
   }
 
   toggle() {
-    if (this.has('open')) {
-      this.removeAttribute('open');
+    if (this.has("open")) {
+      this.removeAttribute("open");
     } else {
-      this.attr('open', '');
+      this.attr("open", "");
     }
   }
 
   updateSelection() {
-    const items = this.querySelectorAll('nofo-command-menu-item');
+    const items = this.querySelectorAll("nofo-command-menu-item");
     items.forEach((item, index) => {
       if (index === this._selectedIndex) {
-        item.setAttribute('data-selected', '');
-        item.scrollIntoView({ block: 'nearest' });
+        item.setAttribute("data-selected", "");
+        item.scrollIntoView({ block: "nearest" });
       } else {
-        item.removeAttribute('data-selected');
+        item.removeAttribute("data-selected");
       }
     });
   }
 
   filterItems(query) {
-    const items = this.querySelectorAll('nofo-command-menu-item');
+    const items = this.querySelectorAll("nofo-command-menu-item");
     const queryLower = query.toLowerCase();
 
-    items.forEach(item => {
+    items.forEach((item) => {
       const text = item.textContent.toLowerCase();
       if (text.includes(queryLower)) {
-        item.style.display = '';
+        item.style.display = "";
       } else {
-        item.style.display = 'none';
+        item.style.display = "none";
       }
     });
 
-    const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-    const empty = this.querySelector('nofo-command-menu-empty');
+    const visibleItems = Array.from(items).filter((item) => item.style.display !== "none");
+    const empty = this.querySelector("nofo-command-menu-empty");
     if (empty) {
-      empty.style.display = visibleItems.length === 0 ? 'block' : 'none';
+      empty.style.display = visibleItems.length === 0 ? "block" : "none";
     }
   }
 
   updateMenu() {
-    const content = this.querySelector('nofo-command-menu-content');
+    const content = this.querySelector("nofo-command-menu-content");
     if (content) {
       if (this.open) {
-        content.setAttribute('open', '');
-        const input = this.querySelector('nofo-command-menu-input');
+        content.setAttribute("open", "");
+        const input = this.querySelector("nofo-command-menu-input");
         if (input) {
           setTimeout(() => input.focus(), 0);
         }
       } else {
-        content.removeAttribute('open');
+        content.removeAttribute("open");
       }
     }
   }
@@ -181,7 +181,7 @@ class NofoCommandMenuTrigger extends NofoElement {
 
 class NofoCommandMenuContent extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
@@ -189,34 +189,34 @@ class NofoCommandMenuContent extends NofoElement {
   }
 
   updateDataAttributes() {
-    const isOpen = this.has('open');
-    this.dataset.state = isOpen ? 'open' : 'closed';
+    const isOpen = this.has("open");
+    this.dataset.state = isOpen ? "open" : "closed";
   }
 
   template() {
-    const isOpen = this.has('open') || this.open;
+    const isOpen = this.has("open") || this.open;
 
     const styles = {
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: '90vw',
-      maxWidth: '640px',
-      maxHeight: '85vh',
-      backgroundColor: 'var(--color-panel-solid)',
-      borderRadius: 'var(--radius)',
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-      border: '1px solid var(--gray-6)',
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      width: "90vw",
+      maxWidth: "640px",
+      maxHeight: "85vh",
+      backgroundColor: "var(--color-panel-solid)",
+      borderRadius: "var(--radius)",
+      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+      border: "1px solid var(--gray-6)",
       zIndex: 1000,
-      display: isOpen ? 'flex' : 'none',
-      flexDirection: 'column',
-      overflow: 'hidden'
+      display: isOpen ? "flex" : "none",
+      flexDirection: "column",
+      overflow: "hidden",
     };
 
     const styleString = Object.entries(styles)
-      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-      .join(' ');
+      .map(([key, value]) => `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value};`)
+      .join(" ");
 
     return `<slot></slot>`;
   }
@@ -250,7 +250,7 @@ class NofoCommandMenuContent extends NofoElement {
 
 class NofoCommandMenuInput extends NofoElement {
   static props = {
-    placeholder: 'Type a command...'
+    placeholder: "Type a command...",
   };
 
   template() {
@@ -297,12 +297,12 @@ class NofoCommandMenuList extends NofoElement {
 
 class NofoCommandMenuGroup extends NofoElement {
   static props = {
-    heading: ''
+    heading: "",
   };
 
   template() {
     return `
-      ${this.heading ? `<div style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 600; color: var(--gray-10); text-transform: uppercase;">${this.heading}</div>` : ''}
+      ${this.heading ? `<div style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 600; color: var(--gray-10); text-transform: uppercase;">${this.heading}</div>` : ""}
       <slot></slot>
     `;
   }
@@ -321,8 +321,8 @@ class NofoCommandMenuGroup extends NofoElement {
 
 class NofoCommandMenuItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
@@ -331,18 +331,18 @@ class NofoCommandMenuItem extends NofoElement {
   }
 
   setupEventListeners() {
-    this.addEventListener('click', () => {
+    this.addEventListener("click", () => {
       if (this.disabled) return;
 
-      const commandMenu = this.closest('nofo-command-menu');
+      const commandMenu = this.closest("nofo-command-menu");
       if (commandMenu) {
-        commandMenu.removeAttribute('open');
+        commandMenu.removeAttribute("open");
       }
 
-      const event = new CustomEvent('select', {
+      const event = new CustomEvent("select", {
         detail: { value: this.value },
         bubbles: true,
-        composed: true
+        composed: true,
       });
       this.dispatchEvent(event);
     });
@@ -350,7 +350,7 @@ class NofoCommandMenuItem extends NofoElement {
 
   updateDataAttributes() {
     if (this.disabled) {
-      this.dataset.disabled = '';
+      this.dataset.disabled = "";
     } else {
       delete this.dataset.disabled;
     }
@@ -425,14 +425,24 @@ class NofoCommandMenuEmpty extends NofoElement {
   }
 }
 
-customElements.define('nofo-command-menu', NofoCommandMenu);
-customElements.define('nofo-command-menu-trigger', NofoCommandMenuTrigger);
-customElements.define('nofo-command-menu-content', NofoCommandMenuContent);
-customElements.define('nofo-command-menu-input', NofoCommandMenuInput);
-customElements.define('nofo-command-menu-list', NofoCommandMenuList);
-customElements.define('nofo-command-menu-group', NofoCommandMenuGroup);
-customElements.define('nofo-command-menu-item', NofoCommandMenuItem);
-customElements.define('nofo-command-menu-separator', NofoCommandMenuSeparator);
-customElements.define('nofo-command-menu-empty', NofoCommandMenuEmpty);
+customElements.define("nofo-command-menu", NofoCommandMenu);
+customElements.define("nofo-command-menu-trigger", NofoCommandMenuTrigger);
+customElements.define("nofo-command-menu-content", NofoCommandMenuContent);
+customElements.define("nofo-command-menu-input", NofoCommandMenuInput);
+customElements.define("nofo-command-menu-list", NofoCommandMenuList);
+customElements.define("nofo-command-menu-group", NofoCommandMenuGroup);
+customElements.define("nofo-command-menu-item", NofoCommandMenuItem);
+customElements.define("nofo-command-menu-separator", NofoCommandMenuSeparator);
+customElements.define("nofo-command-menu-empty", NofoCommandMenuEmpty);
 
-export { NofoCommandMenu, NofoCommandMenuTrigger, NofoCommandMenuContent, NofoCommandMenuInput, NofoCommandMenuList, NofoCommandMenuGroup, NofoCommandMenuItem, NofoCommandMenuSeparator, NofoCommandMenuEmpty };
+export {
+  NofoCommandMenu,
+  NofoCommandMenuTrigger,
+  NofoCommandMenuContent,
+  NofoCommandMenuInput,
+  NofoCommandMenuList,
+  NofoCommandMenuGroup,
+  NofoCommandMenuItem,
+  NofoCommandMenuSeparator,
+  NofoCommandMenuEmpty,
+};

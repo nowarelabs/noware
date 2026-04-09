@@ -1,10 +1,10 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISkeleton extends NofoElement {
   static props = {
-    width: '100%',
-    height: '1rem'
+    width: "100%",
+    height: "1rem",
   };
 
   template() {
@@ -48,13 +48,13 @@ class NofoUISkeleton extends NofoElement {
   }
 
   updateSkeletonStyles() {
-    const skeleton = this.shadowRoot.querySelector('nofo-skeleton');
+    const skeleton = this.shadowRoot.querySelector("nofo-skeleton");
     if (skeleton) {
-      skeleton.style.setProperty('--skeleton-width', this.state.width);
-      skeleton.style.setProperty('--skeleton-height', this.state.height);
+      skeleton.style.setProperty("--skeleton-width", this.state.width);
+      skeleton.style.setProperty("--skeleton-height", this.state.height);
     }
   }
 }
 
-customElements.define('nofo-ui-skeleton', NofoUISkeleton);
+customElements.define("nofo-ui-skeleton", NofoUISkeleton);
 export { NofoUISkeleton };

@@ -1,10 +1,10 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIItem extends NofoElement {
   static props = {
     selected: false,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
@@ -48,5 +48,5 @@ class NofoUIItem extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-item', NofoUIItem);
+customElements.define("nofo-ui-item", NofoUIItem);
 export { NofoUIItem };

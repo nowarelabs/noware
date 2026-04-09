@@ -1,24 +1,24 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoIcon extends NofoElement {
   static props = {
-    name: { type: String, default: '' },
-    size: { type: String, default: 'md' }
+    name: { type: String, default: "" },
+    size: { type: String, default: "md" },
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('name', 'data-icon');
-    s.attr('size', 'data-size');
+    s.attr("name", "data-icon");
+    s.attr("size", "data-size");
   }
 
   getSizeStyles(size) {
     const sizes = {
-      'sm': '0.875rem',
-      'md': '1rem',
-      'lg': '1.25rem'
+      sm: "0.875rem",
+      md: "1rem",
+      lg: "1.25rem",
     };
-    return sizes[size] || sizes['md'];
+    return sizes[size] || sizes["md"];
   }
 
   template() {
@@ -52,5 +52,5 @@ class NofoIcon extends NofoElement {
   }
 }
 
-customElements.define('nofo-icon', NofoIcon);
+customElements.define("nofo-icon", NofoIcon);
 export { NofoIcon };

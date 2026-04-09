@@ -1,19 +1,19 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICarousel extends NofoElement {
   static props = {
-    value: '',
-    defaultValue: '',
+    value: "",
+    defaultValue: "",
     loop: false,
     autoplay: false,
-    interval: '5000',
-    orientation: 'horizontal'
+    interval: "5000",
+    orientation: "horizontal",
   };
 
   template() {
     const { value, defaultValue, loop, autoplay, interval, orientation } = this.state;
-    
+
     return `
       <nofo-carousel
         value="${value}"
@@ -168,13 +168,13 @@ class NofoUICarouselIndicators extends NofoElement {
 
 class NofoUICarouselIndicator extends NofoElement {
   static props = {
-    value: '',
-    dataActive: false
+    value: "",
+    dataActive: false,
   };
 
   template() {
     const { value, dataActive } = this.state;
-    
+
     return `
       <nofo-carousel-indicator 
         value="${value}" 
@@ -186,7 +186,7 @@ class NofoUICarouselIndicator extends NofoElement {
   styles() {
     const { dataActive } = this.state;
     const isActive = dataActive;
-    
+
     return `
       ${nofoUIStyles}
       
@@ -195,10 +195,10 @@ class NofoUICarouselIndicator extends NofoElement {
       }
       
       nofo-carousel-indicator {
-        width: ${isActive ? '2rem' : '0.5rem'};
+        width: ${isActive ? "2rem" : "0.5rem"};
         height: 0.5rem;
         border-radius: 9999px;
-        background-color: ${isActive ? 'var(--nofo-ui-accent-primary)' : 'var(--nofo-ui-border)'};
+        background-color: ${isActive ? "var(--nofo-ui-accent-primary)" : "var(--nofo-ui-border)"};
         cursor: pointer;
         transition: all 0.2s ease;
       }
@@ -210,11 +210,11 @@ class NofoUICarouselIndicator extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-carousel', NofoUICarousel);
-customElements.define('nofo-ui-carousel-viewport', NofoUICarouselViewport);
-customElements.define('nofo-ui-carousel-content', NofoUICarouselContent);
-customElements.define('nofo-ui-carousel-item', NofoUICarouselItem);
-customElements.define('nofo-ui-carousel-previous', NofoUICarouselPrevious);
-customElements.define('nofo-ui-carousel-next', NofoUICarouselNext);
-customElements.define('nofo-ui-carousel-indicators', NofoUICarouselIndicators);
-customElements.define('nofo-ui-carousel-indicator', NofoUICarouselIndicator);
+customElements.define("nofo-ui-carousel", NofoUICarousel);
+customElements.define("nofo-ui-carousel-viewport", NofoUICarouselViewport);
+customElements.define("nofo-ui-carousel-content", NofoUICarouselContent);
+customElements.define("nofo-ui-carousel-item", NofoUICarouselItem);
+customElements.define("nofo-ui-carousel-previous", NofoUICarouselPrevious);
+customElements.define("nofo-ui-carousel-next", NofoUICarouselNext);
+customElements.define("nofo-ui-carousel-indicators", NofoUICarouselIndicators);
+customElements.define("nofo-ui-carousel-indicator", NofoUICarouselIndicator);

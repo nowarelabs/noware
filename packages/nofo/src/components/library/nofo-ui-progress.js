@@ -1,15 +1,15 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIProgress extends NofoElement {
   static props = {
     value: null,
-    max: 100
+    max: 100,
   };
 
   template() {
     const { value, max } = this.state;
-    
+
     return `
       <nofo-progress
         .value="${value}"
@@ -33,5 +33,5 @@ class NofoUIProgress extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-progress', NofoUIProgress);
+customElements.define("nofo-ui-progress", NofoUIProgress);
 export { NofoUIProgress };

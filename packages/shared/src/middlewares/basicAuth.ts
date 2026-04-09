@@ -1,27 +1,27 @@
-import { Middleware, Next, RouterContext } from '../router';
+import { Middleware, Next, RouterContext } from "../router";
 
 export const basicAuth = (
   options: {
     username?: string;
     password?: string;
     realm?: string;
-  } = {}
+  } = {},
 ): Middleware => {
   return async (req: Request, env: any, ctx: RouterContext, next: Next) => {
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
 
-    if (!authHeader || !authHeader.startsWith('Basic ')) {
-      return new Response('Unauthorized', {
+    if (!authHeader || !authHeader.startsWith("Basic ")) {
+      return new Response("Unauthorized", {
         status: 401,
         headers: {
-          'WWW-Authenticate': `Basic realm="${options.realm || 'Secure Area'}"`,
+          "WWW-Authenticate": `Basic realm="${options.realm || "Secure Area"}"`,
         },
       });
     }
 
-    const base64 = authHeader.split(' ')[1];
+    const base64 = authHeader.split(" ")[1];
     const decoded = atob(base64);
-    const [username, password] = decoded.split(':');
+    const [username, password] = decoded.split(":");
 
     // Constant-time comparison to prevent timing attacks
     const compare = (a: string, b: string) => {
@@ -37,7 +37,7 @@ export const basicAuth = (
     const passOk = options.password ? compare(password, options.password) : true;
 
     if (!userOk || !passOk) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response("Unauthorized", { status: 401 });
     }
 
     return await next();

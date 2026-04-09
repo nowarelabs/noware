@@ -1,18 +1,18 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISpinner extends NofoElement {
   static props = {
-    size: 'md'
+    size: "md",
   };
 
   template() {
     const { size } = this.state;
-    const sizeMap = { 'sm': '1', 'md': '2', 'lg': '3' };
-    
+    const sizeMap = { sm: "1", md: "2", lg: "3" };
+
     return `
       <nofo-spinner
-        size="${sizeMap[size] || '2'}"
+        size="${sizeMap[size] || "2"}"
         loading="true"
       ></nofo-spinner>
     `;
@@ -29,5 +29,5 @@ class NofoUISpinner extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-spinner', NofoUISpinner);
+customElements.define("nofo-ui-spinner", NofoUISpinner);
 export { NofoUISpinner };

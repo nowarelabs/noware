@@ -1,17 +1,17 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class MyParagraph extends NofoElement {
   static props = {
-    color: '',
-    size: '',
-    'data-provider': ''
+    color: "",
+    size: "",
+    "data-provider": "",
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('color').toCSSVar('--background-color');
-    s.attr('size').toCSSVar('--font-size');
-    
+    s.attr("color").toCSSVar("--background-color");
+    s.attr("size").toCSSVar("--font-size");
+
     console.log("Custom element added to page.");
     this.connectToDataProvider();
   }
@@ -29,26 +29,26 @@ class MyParagraph extends NofoElement {
 
   connectToDataProvider() {
     const storeName = this.getAttribute("data-provider");
-    
+
     if (!storeName) return;
-    
+
     const store = window.__dataStores?.[storeName];
-    
+
     if (store) {
       const dataStore = store.select("data");
       const loadingStore = store.select("loading");
       const errorStore = store.select("error");
-      
+
       if (dataStore && dataStore.select) {
         const titleStore = dataStore.select("title");
         const metaStore = dataStore.select("meta");
-        
+
         if (titleStore && metaStore) {
           this.effect(() => {
             this._title = titleStore.get();
             this.updateContent();
           });
-          
+
           const tagsStore = metaStore.select("tags");
           if (tagsStore) {
             this.effect(() => {
@@ -58,12 +58,12 @@ class MyParagraph extends NofoElement {
           }
         }
       }
-      
+
       this.effect(() => {
         this._loading = loadingStore.get();
         this.updateStates();
       });
-      
+
       this.effect(() => {
         this._error = errorStore.get();
         this.updateStates();
@@ -75,9 +75,9 @@ class MyParagraph extends NofoElement {
   }
 
   updateContent() {
-    const title = this._title || '';
+    const title = this._title || "";
     const tags = this._tags || [];
-    const text = title ? `${title} ${tags.join(", ")}` : '';
+    const text = title ? `${title} ${tags.join(", ")}` : "";
     this.dataset.storeContent = text;
   }
 
@@ -88,7 +88,7 @@ class MyParagraph extends NofoElement {
 
   updateError() {
     if (this._error) {
-      this.style.setProperty('--error-message', `"${this._error}"`);
+      this.style.setProperty("--error-message", `"${this._error}"`);
     }
   }
 

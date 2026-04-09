@@ -1,19 +1,19 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoButtonGroup extends NofoElement {
   static props = {
-    orientation: 'horizontal',
+    orientation: "horizontal",
     attached: false,
-    size: '2',
-    variant: 'solid'
+    size: "2",
+    variant: "solid",
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('orientation').toDataAttr('orientation');
-    s.attr('size').toDataAttr('size');
-    s.attr('variant').toDataAttr('variant');
-    s.attr('attached').toDataAttr('attached');
+    s.attr("orientation").toDataAttr("orientation");
+    s.attr("size").toDataAttr("size");
+    s.attr("variant").toDataAttr("variant");
+    s.attr("attached").toDataAttr("attached");
   }
 
   template() {
@@ -25,11 +25,13 @@ class NofoButtonGroup extends NofoElement {
     return `
       :host {
         display: inline-flex;
-        flex-direction: ${orientation === 'vertical' ? 'column' : 'row'};
-        gap: ${attached ? '0' : 'var(--space-1)'};
+        flex-direction: ${orientation === "vertical" ? "column" : "row"};
+        gap: ${attached ? "0" : "var(--space-1)"};
         box-sizing: border-box;
       }
-      ${attached ? `
+      ${
+        attached
+          ? `
         ::slotted(nofo-button),
         ::slotted(nofo-icon-button) {
           border-radius: 0;
@@ -48,10 +50,12 @@ class NofoButtonGroup extends NofoElement {
         ::slotted(nofo-icon-button:not(:last-child)) {
           border-right: none;
         }
-      ` : ''}
+      `
+          : ""
+      }
     `;
   }
 }
 
-customElements.define('nofo-button-group', NofoButtonGroup);
+customElements.define("nofo-button-group", NofoButtonGroup);
 export { NofoButtonGroup };

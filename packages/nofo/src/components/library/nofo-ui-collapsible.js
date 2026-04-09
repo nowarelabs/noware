@@ -1,23 +1,21 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICollapsible extends NofoElement {
   static props = {
     open: false,
-    defaultOpen: false
+    defaultOpen: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('open').toDataAttr('open')
-      .attr('defaultOpen').toDataAttr('defaultOpen');
+    this.sync().attr("open").toDataAttr("open").attr("defaultOpen").toDataAttr("defaultOpen");
   }
 
   template() {
     return `
       <nofo-collapsible 
-        ${this.state.open ? 'open' : ''} 
-        ${this.state.defaultOpen ? 'defaultOpen' : ''}
+        ${this.state.open ? "open" : ""} 
+        ${this.state.defaultOpen ? "defaultOpen" : ""}
       >
         <slot></slot>
       </nofo-collapsible>
@@ -88,14 +86,8 @@ class NofoUICollapsibleContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-collapsible', NofoUICollapsible);
-customElements.define('nofo-ui-collapsible-trigger', NofoUICollapsibleTrigger);
-customElements.define('nofo-ui-collapsible-content', NofoUICollapsibleContent);
+customElements.define("nofo-ui-collapsible", NofoUICollapsible);
+customElements.define("nofo-ui-collapsible-trigger", NofoUICollapsibleTrigger);
+customElements.define("nofo-ui-collapsible-content", NofoUICollapsibleContent);
 
-export {
-  NofoUICollapsible,
-  NofoUICollapsibleTrigger,
-  NofoUICollapsibleContent
-};
-
-
+export { NofoUICollapsible, NofoUICollapsibleTrigger, NofoUICollapsibleContent };

@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIInputGroup extends NofoElement {
   template() {
@@ -70,10 +70,7 @@ class NofoUIInputGroupAddon extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-input-group', NofoUIInputGroup);
-customElements.define('nofo-ui-input-group-addon', NofoUIInputGroupAddon);
+customElements.define("nofo-ui-input-group", NofoUIInputGroup);
+customElements.define("nofo-ui-input-group-addon", NofoUIInputGroupAddon);
 
-export {
-  NofoUIInputGroup,
-  NofoUIInputGroupAddon
-};
+export { NofoUIInputGroup, NofoUIInputGroupAddon };

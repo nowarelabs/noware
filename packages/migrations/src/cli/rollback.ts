@@ -1,38 +1,38 @@
-import { defineCommand } from 'citty';
-import { consola } from 'consola';
+import { defineCommand } from "citty";
+import { consola } from "consola";
 
 export const rollbackCommand = defineCommand({
   meta: {
-    name: 'rollback',
-    description: 'Rollback the last migration(s) in the D1 database',
+    name: "rollback",
+    description: "Rollback the last migration(s) in the D1 database",
   },
   args: {
     steps: {
-      type: 'positional',
-      description: 'Number of migrations to rollback',
-      default: '1',
+      type: "positional",
+      description: "Number of migrations to rollback",
+      default: "1",
     },
     database: {
-      type: 'string',
-      alias: 'd',
-      description: 'D1 database binding or name',
-      default: 'DB',
+      type: "string",
+      alias: "d",
+      description: "D1 database binding or name",
+      default: "DB",
     },
     remote: {
-      type: 'boolean',
-      description: 'Rollback migrations in the remote database',
+      type: "boolean",
+      description: "Rollback migrations in the remote database",
       default: false,
     },
     local: {
-      type: 'boolean',
-      description: 'Rollback migrations in the local database',
+      type: "boolean",
+      description: "Rollback migrations in the local database",
       default: true,
     },
   },
   async run({ args }) {
     try {
       const database = args.database;
-      const scope = args.remote ? '--remote' : '--local';
+      const scope = args.remote ? "--remote" : "--local";
 
       consola.info(`Rolling back ${args.steps} migration(s) in D1 (${database})...`);
 
@@ -45,8 +45,8 @@ export const rollbackCommand = defineCommand({
       // For now, we'll assume the user wants to use wrangler's migration management
       // if possible, but wrangler doesn't have a built-in step-based rollback.
 
-      consola.warn('Wrangler does not support step-based rollback natively for D1 yet.');
-      consola.info('💡 You may need to manually run the down SQL or use a custom runner.');
+      consola.warn("Wrangler does not support step-based rollback natively for D1 yet.");
+      consola.info("💡 You may need to manually run the down SQL or use a custom runner.");
 
       // If we wanted to support it, we'd need to:
       // 1. Read the list of applied migrations from D1.

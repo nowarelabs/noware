@@ -1,18 +1,21 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISheet extends NofoElement {
   static props = {
     open: false,
-    side: 'right',
-    size: 'md'
+    side: "right",
+    size: "md",
   };
 
   onMount() {
     this.sync()
-      .attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed')
-      .attr('side').toDataAttr('side')
-      .attr('size').toDataAttr('size');
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"))
+      .attr("side")
+      .toDataAttr("side")
+      .attr("size")
+      .toDataAttr("size");
   }
 
   template() {
@@ -164,13 +167,13 @@ class NofoUISheetClose extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-sheet', NofoUISheet);
-customElements.define('nofo-ui-sheet-trigger', NofoUISheetTrigger);
-customElements.define('nofo-ui-sheet-content', NofoUISheetContent);
-customElements.define('nofo-ui-sheet-header', NofoUISheetHeader);
-customElements.define('nofo-ui-sheet-title', NofoUISheetTitle);
-customElements.define('nofo-ui-sheet-body', NofoUISheetBody);
-customElements.define('nofo-ui-sheet-close', NofoUISheetClose);
+customElements.define("nofo-ui-sheet", NofoUISheet);
+customElements.define("nofo-ui-sheet-trigger", NofoUISheetTrigger);
+customElements.define("nofo-ui-sheet-content", NofoUISheetContent);
+customElements.define("nofo-ui-sheet-header", NofoUISheetHeader);
+customElements.define("nofo-ui-sheet-title", NofoUISheetTitle);
+customElements.define("nofo-ui-sheet-body", NofoUISheetBody);
+customElements.define("nofo-ui-sheet-close", NofoUISheetClose);
 
 export {
   NofoUISheet,
@@ -179,7 +182,5 @@ export {
   NofoUISheetHeader,
   NofoUISheetTitle,
   NofoUISheetBody,
-  NofoUISheetClose
+  NofoUISheetClose,
 };
-
-

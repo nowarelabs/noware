@@ -12,9 +12,9 @@
  * - Full TypeScript types throughout
  */
 
-import * as React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server.browser';
-import type { AssetPipeline } from 'nomo/runtime';
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server.browser";
+import type { AssetPipeline } from "nomo/runtime";
 
 // ─── Per-Request Registry ─────────────────────────────────────────────────────
 
@@ -97,11 +97,7 @@ export abstract class BaseView<P = Record<string, unknown>> {
    * this.content_for('head', <title>{this.props.title}</title>);
    * this.content_for('scripts', <script src={...} />, 'my-component-loader');
    */
-  protected content_for(
-    name: string,
-    content: React.ReactNode,
-    dedupeKey?: string
-  ): null {
+  protected content_for(name: string, content: React.ReactNode, dedupeKey?: string): null {
     this.ctx.registry.push(name, content, dedupeKey);
     return null;
   }
@@ -129,16 +125,16 @@ export abstract class BaseView<P = Record<string, unknown>> {
   protected component_script(tag: string): null {
     const src = this.component_url(tag);
     return this.content_for(
-      'scripts',
+      "scripts",
       <script key={src} src={src} type="module" nonce={this.ctx.nonce} />,
-      `component:${tag}` // dedupe key
+      `component:${tag}`, // dedupe key
     );
   }
 
   static _render<P>(
     this: new (props: P) => BaseView<P>,
     props: P,
-    ctx: RenderContext
+    ctx: RenderContext,
   ): React.ReactElement {
     const instance = new this(props);
     instance.ctx = ctx;
@@ -151,7 +147,7 @@ export abstract class BaseLayout<P = Record<string, unknown>> {
 
   constructor(
     protected content: React.ReactElement,
-    protected props: P
+    protected props: P,
   ) {}
 
   abstract render(): React.ReactElement;
@@ -181,8 +177,8 @@ export abstract class BaseLayout<P = Record<string, unknown>> {
           ? React.cloneElement(item as React.ReactElement, {
               key: (item as React.ReactElement).key ?? `${name}-${i}`,
             })
-          : item
-      )
+          : item,
+      ),
     );
   }
 
@@ -198,24 +194,15 @@ export abstract class BaseLayout<P = Record<string, unknown>> {
    */
   protected import_map(): React.ReactElement {
     return (
-      <script
-        type="importmap"
-        dangerouslySetInnerHTML={{ __html: this.ctx.assets.importMap() }}
-      />
+      <script type="importmap" dangerouslySetInnerHTML={{ __html: this.ctx.assets.importMap() }} />
     );
   }
 
   static withLayout<
     L extends typeof BaseLayout,
     V extends typeof BaseView,
-    P = Record<string, unknown>
-  >(
-    LayoutClass: L,
-    ViewClass: V,
-    props: P,
-    assets: AssetPipeline,
-    request?: Request
-  ): string {
+    P = Record<string, unknown>,
+  >(LayoutClass: L, ViewClass: V, props: P, assets: AssetPipeline, request?: Request): string {
     // Fresh registry per render — the critical fix for CF Workers
     const ctx: RenderContext = {
       registry: new ContentRegistry(),
@@ -232,7 +219,7 @@ export abstract class BaseLayout<P = Record<string, unknown>> {
     layout.ctx = ctx;
     const element = layout.render();
 
-    return '<!DOCTYPE html>' + renderToStaticMarkup(element);
+    return "<!DOCTYPE html>" + renderToStaticMarkup(element);
   }
 }
 
@@ -274,7 +261,7 @@ export function custom_element(
   tag: string,
   attrs: Record<string, string | number | boolean | null | undefined> = {},
   children: React.ReactNode = null,
-  options: { shadow?: boolean } = {}
+  options: { shadow?: boolean } = {},
 ): React.ReactElement {
   // Coerce all attribute values to strings (or omit if null/undefined)
   const safeAttrs: Record<string, string> = {};
@@ -285,10 +272,10 @@ export function custom_element(
 
   const innerContent = options.shadow
     ? React.createElement(
-        'template',
+        "template",
         // @ts-ignore — shadowrootmode is valid HTML but not in React's types
-        { shadowrootmode: 'open' },
-        children
+        { shadowrootmode: "open" },
+        children,
       )
     : children;
 

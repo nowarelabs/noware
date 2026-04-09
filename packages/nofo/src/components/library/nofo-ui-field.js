@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIField extends NofoElement {
   template() {
@@ -50,12 +50,8 @@ class NofoUIFieldError extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-field', NofoUIField);
-customElements.define('nofo-ui-field-description', NofoUIFieldDescription);
-customElements.define('nofo-ui-field-error', NofoUIFieldError);
+customElements.define("nofo-ui-field", NofoUIField);
+customElements.define("nofo-ui-field-description", NofoUIFieldDescription);
+customElements.define("nofo-ui-field-error", NofoUIFieldError);
 
-export {
-  NofoUIField,
-  NofoUIFieldDescription,
-  NofoUIFieldError
-};
+export { NofoUIField, NofoUIFieldDescription, NofoUIFieldError };

@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIPopover extends NofoElement {
   template() {
@@ -132,12 +132,12 @@ class NofoUIPopoverBody extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-popover', NofoUIPopover);
-customElements.define('nofo-ui-popover-trigger', NofoUIPopoverTrigger);
-customElements.define('nofo-ui-popover-content', NofoUIPopoverContent);
-customElements.define('nofo-ui-popover-header', NofoUIPopoverHeader);
-customElements.define('nofo-ui-popover-title', NofoUIPopoverTitle);
-customElements.define('nofo-ui-popover-body', NofoUIPopoverBody);
+customElements.define("nofo-ui-popover", NofoUIPopover);
+customElements.define("nofo-ui-popover-trigger", NofoUIPopoverTrigger);
+customElements.define("nofo-ui-popover-content", NofoUIPopoverContent);
+customElements.define("nofo-ui-popover-header", NofoUIPopoverHeader);
+customElements.define("nofo-ui-popover-title", NofoUIPopoverTitle);
+customElements.define("nofo-ui-popover-body", NofoUIPopoverBody);
 
 export {
   NofoUIPopover,
@@ -145,7 +145,5 @@ export {
   NofoUIPopoverContent,
   NofoUIPopoverHeader,
   NofoUIPopoverTitle,
-  NofoUIPopoverBody
+  NofoUIPopoverBody,
 };
-
-

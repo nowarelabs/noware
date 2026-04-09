@@ -10,7 +10,7 @@
  * This runs inside the Cloudflare Worker on every request.
  */
 
-import type { AssetManifest, AssetManifestEntry, VendorManifestEntry } from 'nomo/build';
+import type { AssetManifest, AssetManifestEntry, VendorManifestEntry } from "nomo/build";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,8 +58,8 @@ export class AssetPipeline {
     if (!entry) {
       throw new Error(
         `[nomo] Unknown component "${tag}". ` +
-        `Available: ${Object.keys(this.manifest.entries).join(', ')}. ` +
-        `Did you forget to add it to nomo({ components: [...] })?`
+          `Available: ${Object.keys(this.manifest.entries).join(", ")}. ` +
+          `Did you forget to add it to nomo({ components: [...] })?`,
       );
     }
     return entry.src;
@@ -77,8 +77,8 @@ export class AssetPipeline {
     if (!entry) {
       throw new Error(
         `[nomo] Unknown vendor "${pkg}". ` +
-        `Available: ${Object.keys(this.manifest.vendors).join(', ')}. ` +
-        `Did you add it to nomo({ vendors: [...] })?`
+          `Available: ${Object.keys(this.manifest.vendors).join(", ")}. ` +
+          `Did you add it to nomo({ vendors: [...] })?`,
       );
     }
     return entry.src;
@@ -166,19 +166,19 @@ export function buildCSP(options: {
     scriptSrc = ["'self'"],
     styleSrc = ["'self'", "'unsafe-inline'"],
     connectSrc = ["'self'"],
-    imgSrc = ["'self'", 'data:'],
+    imgSrc = ["'self'", "data:"],
     defaultSrc = ["'self'"],
   } = options;
 
   const directives = [
-    `default-src ${defaultSrc.join(' ')}`,
-    `script-src ${[...scriptSrc, `'nonce-${nonce}'`].join(' ')}`,
-    `style-src ${styleSrc.join(' ')}`,
-    `connect-src ${connectSrc.join(' ')}`,
-    `img-src ${imgSrc.join(' ')}`,
+    `default-src ${defaultSrc.join(" ")}`,
+    `script-src ${[...scriptSrc, `'nonce-${nonce}'`].join(" ")}`,
+    `style-src ${styleSrc.join(" ")}`,
+    `connect-src ${connectSrc.join(" ")}`,
+    `img-src ${imgSrc.join(" ")}`,
   ];
 
-  return directives.join('; ');
+  return directives.join("; ");
 }
 
 // ─── Props Island ─────────────────────────────────────────────────────────────
@@ -206,7 +206,7 @@ export function buildCSP(options: {
 export function propsIsland(props: Record<string, unknown>): string {
   // Escape </script> to prevent breaking out of the script tag.
   // This is the only XSS vector in a data island.
-  const json = JSON.stringify(props).replace(/<\/script>/gi, '<\\/script>');
+  const json = JSON.stringify(props).replace(/<\/script>/gi, "<\\/script>");
   return `<script type="application/json">${json}</script>`;
 }
 
@@ -223,13 +223,8 @@ export function propsIsland(props: Record<string, unknown>): string {
  * </status-badge>
  */
 export function PropsIsland({ props }: { props: Record<string, unknown> }) {
-  const json = JSON.stringify(props).replace(/<\/script>/gi, '<\\/script>');
+  const json = JSON.stringify(props).replace(/<\/script>/gi, "<\\/script>");
   // dangerouslySetInnerHTML is safe here: we control the serialization
   // and have escaped the only injection vector.
-  return (
-    <script
-      type="application/json"
-      dangerouslySetInnerHTML={{ __html: json }}
-    />
-  );
+  return <script type="application/json" dangerouslySetInnerHTML={{ __html: json }} />;
 }

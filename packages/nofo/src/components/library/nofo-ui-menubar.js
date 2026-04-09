@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIMenubar extends NofoElement {
   template() {
@@ -90,16 +90,16 @@ class NofoUIMenubarContent extends NofoElement {
 
 class NofoUIMenubarItem extends NofoElement {
   static props = {
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync().attr('disabled').toDataAttr('disabled');
+    this.sync().attr("disabled").toDataAttr("disabled");
   }
 
   template() {
     return `
-      <nofo-dropdown-menu-item ${this.state.disabled ? 'disabled' : ''}>
+      <nofo-dropdown-menu-item ${this.state.disabled ? "disabled" : ""}>
         <slot></slot>
       </nofo-dropdown-menu-item>
     `;
@@ -113,16 +113,16 @@ class NofoUIMenubarItem extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-menubar', NofoUIMenubar);
-customElements.define('nofo-ui-menubar-menu', NofoUIMenubarMenu);
-customElements.define('nofo-ui-menubar-trigger', NofoUIMenubarTrigger);
-customElements.define('nofo-ui-menubar-content', NofoUIMenubarContent);
-customElements.define('nofo-ui-menubar-item', NofoUIMenubarItem);
+customElements.define("nofo-ui-menubar", NofoUIMenubar);
+customElements.define("nofo-ui-menubar-menu", NofoUIMenubarMenu);
+customElements.define("nofo-ui-menubar-trigger", NofoUIMenubarTrigger);
+customElements.define("nofo-ui-menubar-content", NofoUIMenubarContent);
+customElements.define("nofo-ui-menubar-item", NofoUIMenubarItem);
 
 export {
   NofoUIMenubar,
   NofoUIMenubarMenu,
   NofoUIMenubarTrigger,
   NofoUIMenubarContent,
-  NofoUIMenubarItem
+  NofoUIMenubarItem,
 };

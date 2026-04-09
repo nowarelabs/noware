@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIScrollArea extends NofoElement {
   static template() {
@@ -47,10 +47,10 @@ class NofoUIScrollArea extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
 }
 
-customElements.define('nofo-ui-scroll-area', NofoUIScrollArea);
+customElements.define("nofo-ui-scroll-area", NofoUIScrollArea);

@@ -1,18 +1,18 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoEmptyState extends NofoElement {
   onMount() {
-    this.setAttribute('data-empty-state', 'true');
-    
+    this.setAttribute("data-empty-state", "true");
+
     const styles = {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '3rem 1rem',
-      textAlign: 'center',
-      gap: '1rem',
-      boxSizing: 'border-box'
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "3rem 1rem",
+      textAlign: "center",
+      gap: "1rem",
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -40,11 +40,11 @@ class NofoEmptyState extends NofoElement {
 class NofoEmptyStateTitle extends NofoElement {
   onMount() {
     const styles = {
-      fontSize: '1.25rem',
-      fontWeight: '600',
-      color: 'var(--gray-11)',
+      fontSize: "1.25rem",
+      fontWeight: "600",
+      color: "var(--gray-11)",
       margin: 0,
-      boxSizing: 'border-box'
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -70,11 +70,11 @@ class NofoEmptyStateTitle extends NofoElement {
 class NofoEmptyStateDescription extends NofoElement {
   onMount() {
     const styles = {
-      fontSize: '0.875rem',
-      color: 'var(--gray-10)',
-      maxWidth: '400px',
+      fontSize: "0.875rem",
+      color: "var(--gray-10)",
+      maxWidth: "400px",
       margin: 0,
-      boxSizing: 'border-box'
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -97,8 +97,8 @@ class NofoEmptyStateDescription extends NofoElement {
   }
 }
 
-customElements.define('nofo-empty-state', NofoEmptyState);
-customElements.define('nofo-empty-state-title', NofoEmptyStateTitle);
-customElements.define('nofo-empty-state-description', NofoEmptyStateDescription);
+customElements.define("nofo-empty-state", NofoEmptyState);
+customElements.define("nofo-empty-state-title", NofoEmptyStateTitle);
+customElements.define("nofo-empty-state-description", NofoEmptyStateDescription);
 
 export { NofoEmptyState, NofoEmptyStateTitle, NofoEmptyStateDescription };

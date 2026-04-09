@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIEmpty extends NofoElement {
   template() {
@@ -89,16 +89,16 @@ class NofoUIEmptyAction extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-empty', NofoUIEmpty);
-customElements.define('nofo-ui-empty-icon', NofoUIEmptyIcon);
-customElements.define('nofo-ui-empty-title', NofoUIEmptyTitle);
-customElements.define('nofo-ui-empty-description', NofoUIEmptyDescription);
-customElements.define('nofo-ui-empty-action', NofoUIEmptyAction);
+customElements.define("nofo-ui-empty", NofoUIEmpty);
+customElements.define("nofo-ui-empty-icon", NofoUIEmptyIcon);
+customElements.define("nofo-ui-empty-title", NofoUIEmptyTitle);
+customElements.define("nofo-ui-empty-description", NofoUIEmptyDescription);
+customElements.define("nofo-ui-empty-action", NofoUIEmptyAction);
 
 export {
   NofoUIEmpty,
   NofoUIEmptyIcon,
   NofoUIEmptyTitle,
   NofoUIEmptyDescription,
-  NofoUIEmptyAction
+  NofoUIEmptyAction,
 };

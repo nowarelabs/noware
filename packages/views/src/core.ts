@@ -1,4 +1,4 @@
-import { ComponentChild, FC } from './types';
+import { ComponentChild, FC } from "./types";
 
 export type { ComponentChild, FC };
 
@@ -6,12 +6,12 @@ const isArray = Array.isArray;
 const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 
 function renderChild(c: ComponentChild): string {
-  if (c == null || typeof c === 'boolean') return '';
-  if (isArray(c)) return c.map(renderChild).join('');
+  if (c == null || typeof c === "boolean") return "";
+  if (isArray(c)) return c.map(renderChild).join("");
   return String(c);
 }
 
@@ -22,45 +22,45 @@ export const Fragment = ({ children }: { children?: ComponentChild }): any => re
 function renderTag<P extends Record<string, any>>(tag: string, props: P | null): string {
   const p = (props || {}) as any;
   let h = `<${tag}`;
-  let children = '';
+  let children = "";
 
   for (const k in p) {
-    if (k === 'children' || k === 'key' || p[k] == null || p[k] === false) continue;
-    if (k === 'dangerouslySetInnerHTML') continue;
+    if (k === "children" || k === "key" || p[k] == null || p[k] === false) continue;
+    if (k === "dangerouslySetInnerHTML") continue;
 
-    const attr = k === 'className' || k === 'class' ? 'class' : k === 'htmlFor' ? 'for' : k;
+    const attr = k === "className" || k === "class" ? "class" : k === "htmlFor" ? "for" : k;
     let val = p[k];
 
-    if (attr === 'style' && typeof val === 'object' && val !== null) {
+    if (attr === "style" && typeof val === "object" && val !== null) {
       val =
         Object.entries(val)
           .map(([sk, sv]) => `${sk.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}:${sv}`)
-          .join(';') + ';';
+          .join(";") + ";";
     }
 
-    h += ` ${attr}="${val === true ? '' : esc(String(val))}"`;
+    h += ` ${attr}="${val === true ? "" : esc(String(val))}"`;
   }
 
   const selfClosing = [
-    'area',
-    'base',
-    'br',
-    'col',
-    'embed',
-    'hr',
-    'img',
-    'input',
-    'link',
-    'meta',
-    'param',
-    'source',
-    'track',
-    'wbr',
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
   ].includes(tag);
 
-  if (selfClosing) return h + ' />';
+  if (selfClosing) return h + " />";
 
-  h += '>';
+  h += ">";
   if (p.dangerouslySetInnerHTML?.__html) {
     children = p.dangerouslySetInnerHTML.__html;
   } else {
@@ -73,11 +73,11 @@ function renderTag<P extends Record<string, any>>(tag: string, props: P | null):
 export function jsx<P extends Record<string, any>>(
   tag: string | FC<P> | (new (...args: any[]) => any),
   props: P | null,
-  _key?: string | number
+  _key?: string | number,
 ): string {
   const p = (props || {}) as any;
 
-  if (typeof tag === 'function') {
+  if (typeof tag === "function") {
     // If it's a class component (BaseView descendant)
     if (tag.prototype && tag.prototype.render && (tag as any).render) {
       const ctx = _ctx();
@@ -117,19 +117,19 @@ export function html(strings: TemplateStringsArray, ...values: any[]): string {
   const e = (s: any) =>
     String(s).replace(
       /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
     );
-  return strings.reduce((acc, str, i) => acc + str + (i < values.length ? e(values[i]) : ''), '');
+  return strings.reduce((acc, str, i) => acc + str + (i < values.length ? e(values[i]) : ""), "");
 }
 
 // --- CONTEXT TRACKING ---
 
 const getGlobal = () =>
-  typeof globalThis !== 'undefined'
+  typeof globalThis !== "undefined"
     ? globalThis
-    : typeof self !== 'undefined'
+    : typeof self !== "undefined"
       ? self
-      : typeof window !== 'undefined'
+      : typeof window !== "undefined"
         ? window
         : ({} as any);
 const _g = getGlobal();
@@ -154,17 +154,17 @@ export class ContentRegistry {
     (this.b.get(n) || this.b.set(n, []).get(n)!).push(c);
   }
   yield(n: string) {
-    return (this.b.get(n) || []).join('');
+    return (this.b.get(n) || []).join("");
   }
 }
 
 export function content_for(n: string, c: ComponentChild) {
   const ctx = _ctx();
   if (ctx) ctx.r.push(n, renderChild(c));
-  return '';
+  return "";
 }
 export function yield_content(n: string) {
-  return _ctx()?.r.yield(n) || '';
+  return _ctx()?.r.yield(n) || "";
 }
 
 /**
@@ -174,10 +174,10 @@ export function custom_element(
   tag: string,
   attrs: Record<string, any> = {},
   children: ComponentChild = null,
-  options: { shadow?: boolean } = {}
+  options: { shadow?: boolean } = {},
 ): string {
   const innerContent = options.shadow
-    ? jsx('template', { shadowrootmode: 'open', children })
+    ? jsx("template", { shadowrootmode: "open", children })
     : renderChild(children);
 
   return renderTag(tag, { ...attrs, dangerouslySetInnerHTML: { __html: innerContent } });
@@ -186,11 +186,11 @@ export function custom_element(
 export abstract class AssetHelpers {
   constructor(
     protected r: ContentRegistry,
-    protected a?: any
+    protected a?: any,
   ) {}
   content_for(n: string, c: string) {
     this.r.push(n, c);
-    return '';
+    return "";
   }
   yield_content(n: string) {
     return this.r.yield(n);
@@ -204,26 +204,26 @@ export abstract class AssetHelpers {
         ? ctx.a.import_map_tag()
         : JSON.stringify({
             imports: {
-              capnweb: '/assets/vendor/capnweb/index.js',
-              'signal-polyfill': '/assets/vendor/signal-polyfill/index.js',
-              'nomo/nofo': '/assets/vendor/nomo/nofo/index.js',
+              capnweb: "/assets/vendor/capnweb/index.js",
+              "signal-polyfill": "/assets/vendor/signal-polyfill/index.js",
+              "nomo/nofo": "/assets/vendor/nomo/nofo/index.js",
             },
           });
-    return jsx('script', { type: 'importmap', dangerouslySetInnerHTML: { __html: mapRaw } });
+    return jsx("script", { type: "importmap", dangerouslySetInnerHTML: { __html: mapRaw } });
   }
 
   stylesheet_link_tag(n: string) {
-    return jsx('link', { rel: 'stylesheet', href: this.a?.path(n) || `/${n}` });
+    return jsx("link", { rel: "stylesheet", href: this.a?.path(n) || `/${n}` });
   }
   javascript_include_tag(n: string) {
-    return jsx('script', { src: this.a?.path(n) || `/${n}`, type: 'module' });
+    return jsx("script", { src: this.a?.path(n) || `/${n}`, type: "module" });
   }
 
   custom_element(
     tag: string,
     attrs: Record<string, any> = {},
     children: ComponentChild = null,
-    options: { shadow?: boolean } = {}
+    options: { shadow?: boolean } = {},
   ) {
     return custom_element(tag, attrs, children, options);
   }
@@ -233,7 +233,7 @@ export abstract class BaseView<P = any> extends AssetHelpers {
   constructor(
     protected props: P,
     r: ContentRegistry,
-    a?: any
+    a?: any,
   ) {
     super(r, a);
   }
@@ -242,7 +242,7 @@ export abstract class BaseView<P = any> extends AssetHelpers {
     this: V,
     p: P,
     a?: any,
-    r: ContentRegistry = new ContentRegistry()
+    r: ContentRegistry = new ContentRegistry(),
   ): string {
     return withCtx(r, a, () => {
       const instance = new (this as any)(p, r, a);
@@ -256,7 +256,7 @@ export abstract class BaseLayout<P = any> extends AssetHelpers {
     protected content: string,
     protected props: P,
     r: ContentRegistry,
-    a?: any
+    a?: any,
   ) {
     super(r, a);
   }
@@ -265,7 +265,7 @@ export abstract class BaseLayout<P = any> extends AssetHelpers {
     Layout: L,
     View: V,
     p: P,
-    a?: any
+    a?: any,
   ): string {
     const r = new ContentRegistry();
     const c = View.render(p, a, r);
@@ -278,9 +278,9 @@ export abstract class BaseDtoView<T = any> {
 
   abstract toDto(): any;
 
-  protected filter(data: any, exclude: string[] = ['createdAt', 'updatedAt']): any {
+  protected filter(data: any, exclude: string[] = ["createdAt", "updatedAt"]): any {
     if (Array.isArray(data)) return data.map((v) => this.filter(v, exclude));
-    if (data !== null && typeof data === 'object') {
+    if (data !== null && typeof data === "object") {
       return Object.fromEntries(Object.entries(data).filter(([k]) => !exclude.includes(k)));
     }
     return data;
@@ -293,16 +293,16 @@ export abstract class BaseDtoView<T = any> {
   xml(): string {
     const data = this.toDto();
     const toXml = (obj: any, tag: string): string => {
-      if (Array.isArray(obj)) return obj.map((v) => toXml(v, 'item')).join('');
-      if (obj !== null && typeof obj === 'object') {
+      if (Array.isArray(obj)) return obj.map((v) => toXml(v, "item")).join("");
+      if (obj !== null && typeof obj === "object") {
         const body = Object.entries(obj)
           .map(([k, v]) => toXml(v, k))
-          .join('');
+          .join("");
         return `<${tag}>${body}</${tag}>`;
       }
       return `<${tag}>${esc(String(obj))}</${tag}>`;
     };
-    return `<?xml version="1.0" encoding="UTF-8"?>\n${toXml(data, 'response')}`;
+    return `<?xml version="1.0" encoding="UTF-8"?>\n${toXml(data, "response")}`;
   }
 
   static renderJson<V extends typeof BaseDtoView>(this: V, data: any): any {

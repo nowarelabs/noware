@@ -1,43 +1,43 @@
-import { defineCommand } from 'citty';
-import { consola } from 'consola';
-import { SchemaReflector } from './reflector';
-import * as fs from 'node:fs/promises';
-import * as path from 'pathe';
+import { defineCommand } from "citty";
+import { consola } from "consola";
+import { SchemaReflector } from "./reflector";
+import * as fs from "node:fs/promises";
+import * as path from "pathe";
 
 export const reflectCommand = defineCommand({
   meta: {
-    name: 'reflect',
-    description: 'Generate Drizzle, Zod, and TypeScript schemas from a D1 database or SQL export',
+    name: "reflect",
+    description: "Generate Drizzle, Zod, and TypeScript schemas from a D1 database or SQL export",
   },
   args: {
     file: {
-      type: 'positional',
-      description: 'Optional SQL file to parse',
+      type: "positional",
+      description: "Optional SQL file to parse",
       required: false,
     },
     db: {
-      type: 'string',
-      description: 'D1 database name to export from',
+      type: "string",
+      description: "D1 database name to export from",
     },
     out: {
-      type: 'string',
-      alias: 'o',
-      description: 'Output directory for schemas',
-      default: 'src/db/schema',
+      type: "string",
+      alias: "o",
+      description: "Output directory for schemas",
+      default: "src/db/schema",
     },
     remote: {
-      type: 'boolean',
-      description: 'Force remote export (default is local)',
+      type: "boolean",
+      description: "Force remote export (default is local)",
       default: false,
     },
   },
   async run({ args }) {
     try {
       // Read metadata if it exists
-      const metadataPath = path.resolve(process.cwd(), '.nomo/temp_metadata.json');
+      const metadataPath = path.resolve(process.cwd(), ".nomo/temp_metadata.json");
       let metadata: Record<string, any[]> = {};
       try {
-        const content = await fs.readFile(metadataPath, 'utf-8');
+        const content = await fs.readFile(metadataPath, "utf-8");
         metadata = JSON.parse(content);
       } catch (e) {}
 

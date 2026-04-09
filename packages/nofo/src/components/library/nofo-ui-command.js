@@ -1,13 +1,13 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICommand extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('open');
+    this.sync().attr("open").toDataAttr("open");
   }
 
   template() {
@@ -71,11 +71,11 @@ class NofoUICommandContent extends NofoElement {
 
 class NofoUICommandInput extends NofoElement {
   static props = {
-    placeholder: ''
+    placeholder: "",
   };
 
   onMount() {
-    this.sync().attr('placeholder').toDataAttr('placeholder');
+    this.sync().attr("placeholder").toDataAttr("placeholder");
   }
 
   template() {
@@ -124,11 +124,11 @@ class NofoUICommandList extends NofoElement {
 
 class NofoUICommandGroup extends NofoElement {
   static props = {
-    heading: ''
+    heading: "",
   };
 
   onMount() {
-    this.sync().attr('heading').toDataAttr('heading');
+    this.sync().attr("heading").toDataAttr("heading");
   }
 
   template() {
@@ -154,14 +154,12 @@ class NofoUICommandGroup extends NofoElement {
 
 class NofoUICommandItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
@@ -215,14 +213,14 @@ class NofoUICommandEmpty extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-command', NofoUICommand);
-customElements.define('nofo-ui-command-trigger', NofoUICommandTrigger);
-customElements.define('nofo-ui-command-content', NofoUICommandContent);
-customElements.define('nofo-ui-command-input', NofoUICommandInput);
-customElements.define('nofo-ui-command-list', NofoUICommandList);
-customElements.define('nofo-ui-command-group', NofoUICommandGroup);
-customElements.define('nofo-ui-command-item', NofoUICommandItem);
-customElements.define('nofo-ui-command-empty', NofoUICommandEmpty);
+customElements.define("nofo-ui-command", NofoUICommand);
+customElements.define("nofo-ui-command-trigger", NofoUICommandTrigger);
+customElements.define("nofo-ui-command-content", NofoUICommandContent);
+customElements.define("nofo-ui-command-input", NofoUICommandInput);
+customElements.define("nofo-ui-command-list", NofoUICommandList);
+customElements.define("nofo-ui-command-group", NofoUICommandGroup);
+customElements.define("nofo-ui-command-item", NofoUICommandItem);
+customElements.define("nofo-ui-command-empty", NofoUICommandEmpty);
 
 export {
   NofoUICommand,
@@ -232,5 +230,5 @@ export {
   NofoUICommandList,
   NofoUICommandGroup,
   NofoUICommandItem,
-  NofoUICommandEmpty
+  NofoUICommandEmpty,
 };

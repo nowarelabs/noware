@@ -1,12 +1,12 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIAlert extends NofoElement {
   static props = {
-    variant: 'info',
-    size: '2',
+    variant: "info",
+    size: "2",
     dismissible: false,
-    open: true
+    open: true,
   };
 
   template() {
@@ -91,6 +91,6 @@ class NofoUIAlertDescription extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-alert', NofoUIAlert);
-customElements.define('nofo-ui-alert-title', NofoUIAlertTitle);
-customElements.define('nofo-ui-alert-description', NofoUIAlertDescription);
+customElements.define("nofo-ui-alert", NofoUIAlert);
+customElements.define("nofo-ui-alert-title", NofoUIAlertTitle);
+customElements.define("nofo-ui-alert-description", NofoUIAlertDescription);

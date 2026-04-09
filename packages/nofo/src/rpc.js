@@ -1,6 +1,6 @@
-import { newHttpBatchRpcSession, RpcStub } from 'capnweb';
+import { newHttpBatchRpcSession, RpcStub } from "capnweb";
 
-const MUTATION_METHODS = new Set(['create', 'update', 'delete']);
+const MUTATION_METHODS = new Set(["create", "update", "delete"]);
 const DEFAULT_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 
 export class RpcClient {
@@ -9,7 +9,7 @@ export class RpcClient {
   #pending = new Map();
   #storageKey;
 
-  constructor(baseUrl = '', options = {}) {
+  constructor(baseUrl = "", options = {}) {
     this.baseUrl = baseUrl;
     this.#storageKey = `nofo:rpc:cache:${baseUrl}`;
     this.options = {
@@ -18,7 +18,7 @@ export class RpcClient {
       staleTime: options.staleTime ?? DEFAULT_STALE_TIME,
       persist: options.persist !== false,
       onError: options.onError || (() => {}),
-      ...options
+      ...options,
     };
 
     if (this.options.persist) {
@@ -27,7 +27,7 @@ export class RpcClient {
   }
 
   #cacheKey(op) {
-    return `${op.endpoint}:${op.method}:${JSON.stringify(op.params || op.id || '')}`;
+    return `${op.endpoint}:${op.method}:${JSON.stringify(op.params || op.id || "")}`;
   }
 
   #getCacheEntry(key) {
@@ -88,7 +88,7 @@ export class RpcClient {
       this.#paths.set(name, path);
     }
     const storedPath = this.#paths.get(name) || `/${name}`;
-    const fullPath = String(storedPath).startsWith('/') ? storedPath : `/${storedPath}`;
+    const fullPath = String(storedPath).startsWith("/") ? storedPath : `/${storedPath}`;
     const url = this.baseUrl + fullPath;
     return newHttpBatchRpcSession(url);
   }
@@ -104,13 +104,17 @@ export class RpcClient {
       if (isQuery && cacheKey) {
         const cached = this.#getCacheEntry(cacheKey);
         if (cached) {
-          promises.push(Promise.resolve({ data: cached.data, error: null, operation: op, cached: true }));
+          promises.push(
+            Promise.resolve({ data: cached.data, error: null, operation: op, cached: true }),
+          );
           continue;
         }
 
         const pending = this.#pending.get(cacheKey);
         if (pending) {
-          promises.push(pending.then(data => ({ data, error: null, operation: op, deduped: true })));
+          promises.push(
+            pending.then((data) => ({ data, error: null, operation: op, deduped: true })),
+          );
           continue;
         }
       }
@@ -119,19 +123,19 @@ export class RpcClient {
       let promise;
 
       switch (op.method) {
-        case 'create':
+        case "create":
           promise = session.create(op.data);
           break;
-        case 'get':
+        case "get":
           promise = session.get(op.id);
           break;
-        case 'list':
+        case "list":
           promise = session.list(op.params || {});
           break;
-        case 'update':
+        case "update":
           promise = session.update(op.id, op.data);
           break;
-        case 'delete':
+        case "delete":
           promise = session.delete(op.id);
           break;
         default:
@@ -142,7 +146,10 @@ export class RpcClient {
       promises.push(resultPromise);
 
       if (isQuery && cacheKey) {
-        this.#pending.set(cacheKey, resultPromise.then(r => r.data));
+        this.#pending.set(
+          cacheKey,
+          resultPromise.then((r) => r.data),
+        );
         resultPromise.finally(() => this.#pending.delete(cacheKey));
       }
     }
@@ -166,29 +173,29 @@ export class RpcClient {
   }
 
   create(endpoint, data) {
-    return this.query({ endpoint, method: 'create', data }).then(r => {
+    return this.query({ endpoint, method: "create", data }).then((r) => {
       if (!r.error) this.invalidateCache(endpoint);
       return r;
     });
   }
 
   get(endpoint, id) {
-    return this.query({ endpoint, method: 'get', id });
+    return this.query({ endpoint, method: "get", id });
   }
 
   list(endpoint, params) {
-    return this.query({ endpoint, method: 'list', params });
+    return this.query({ endpoint, method: "list", params });
   }
 
   update(endpoint, id, data) {
-    return this.query({ endpoint, method: 'update', id, data }).then(r => {
+    return this.query({ endpoint, method: "update", id, data }).then((r) => {
       if (!r.error) this.invalidateCache(endpoint);
       return r;
     });
   }
 
   delete(endpoint, id) {
-    return this.query({ endpoint, method: 'delete', id }).then(r => {
+    return this.query({ endpoint, method: "delete", id }).then((r) => {
       if (!r.error) this.invalidateCache(endpoint);
       return r;
     });
@@ -203,7 +210,7 @@ export class NofoRpc {
   #client;
   #endpoints = [];
 
-  constructor(baseUrl = '', options = {}) {
+  constructor(baseUrl = "", options = {}) {
     this.#client = new RpcClient(baseUrl, options);
   }
 
@@ -216,23 +223,29 @@ export class NofoRpc {
   }
 
   get api() {
-    const proxy = new Proxy({}, {
-      get: (_, endpoint) => {
-        return new Proxy({}, {
-          get: (_, method) => {
-            return (dataOrIdOrId, data) => {
-              if (method === 'create' || method === 'list') {
-                return this.#client[method](endpoint, dataOrIdOrId);
-              } else if (method === 'get' || method === 'delete') {
-                return this.#client[method](endpoint, dataOrIdOrId);
-              } else if (method === 'update') {
-                return this.#client[method](endpoint, dataOrIdOrId, data);
-              }
-            };
-          }
-        });
-      }
-    });
+    const proxy = new Proxy(
+      {},
+      {
+        get: (_, endpoint) => {
+          return new Proxy(
+            {},
+            {
+              get: (_, method) => {
+                return (dataOrIdOrId, data) => {
+                  if (method === "create" || method === "list") {
+                    return this.#client[method](endpoint, dataOrIdOrId);
+                  } else if (method === "get" || method === "delete") {
+                    return this.#client[method](endpoint, dataOrIdOrId);
+                  } else if (method === "update") {
+                    return this.#client[method](endpoint, dataOrIdOrId, data);
+                  }
+                };
+              },
+            },
+          );
+        },
+      },
+    );
     return proxy;
   }
 

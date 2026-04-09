@@ -1,7 +1,7 @@
 export abstract class BaseDomain {
   constructor(
     protected env: Record<string, unknown>,
-    protected ctx: Record<string, unknown>
+    protected ctx: Record<string, unknown>,
   ) {}
 
   async perform<R>(callback: () => Promise<R>): Promise<R> {

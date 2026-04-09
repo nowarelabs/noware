@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoBreadcrumbs extends NofoElement {
   template() {
@@ -65,10 +65,8 @@ class NofoBreadcrumbsSeparator extends NofoElement {
   }
 }
 
-customElements.define('nofo-breadcrumbs', NofoBreadcrumbs);
-customElements.define('nofo-breadcrumbs-item', NofoBreadcrumbsItem);
-customElements.define('nofo-breadcrumbs-separator', NofoBreadcrumbsSeparator);
+customElements.define("nofo-breadcrumbs", NofoBreadcrumbs);
+customElements.define("nofo-breadcrumbs-item", NofoBreadcrumbsItem);
+customElements.define("nofo-breadcrumbs-separator", NofoBreadcrumbsSeparator);
 
 export { NofoBreadcrumbs, NofoBreadcrumbsItem, NofoBreadcrumbsSeparator };
-
-

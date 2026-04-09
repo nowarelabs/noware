@@ -1,24 +1,27 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIInputOTP extends NofoElement {
   static props = {
-    value: '',
+    value: "",
     length: 6,
-    disabled: false
+    disabled: false,
   };
 
-  #value = '';
+  #value = "";
 
   onMount() {
     this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('length').toDataAttr('length')
-      .attr('disabled').toDataAttr('disabled');
+      .attr("value")
+      .toDataAttr("value")
+      .attr("length")
+      .toDataAttr("length")
+      .attr("disabled")
+      .toDataAttr("disabled");
 
-    this.addEventListener('value-change', (e) => {
+    this.addEventListener("value-change", (e) => {
       this.#value = e.detail.value;
-      this.setAttribute('value', this.#value);
+      this.setAttribute("value", this.#value);
     });
   }
 
@@ -55,20 +58,23 @@ class NofoUIInputOTPGroup extends NofoElement {
 class NofoUIInputOTPInput extends NofoElement {
   static props = {
     index: 0,
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
     this.sync()
-      .attr('index').toDataAttr('index')
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+      .attr("index")
+      .toDataAttr("index")
+      .attr("value")
+      .toDataAttr("value")
+      .attr("disabled")
+      .toDataAttr("disabled");
   }
 
   template() {
     const { value, disabled } = this.state;
-    const index = this.getAttribute('index') || '0';
+    const index = this.getAttribute("index") || "0";
     return `
       <input 
         type="text" 
@@ -112,12 +118,8 @@ class NofoUIInputOTPInput extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-input-otp', NofoUIInputOTP);
-customElements.define('nofo-ui-input-otp-group', NofoUIInputOTPGroup);
-customElements.define('nofo-ui-input-otp-input', NofoUIInputOTPInput);
+customElements.define("nofo-ui-input-otp", NofoUIInputOTP);
+customElements.define("nofo-ui-input-otp-group", NofoUIInputOTPGroup);
+customElements.define("nofo-ui-input-otp-input", NofoUIInputOTPInput);
 
-export {
-  NofoUIInputOTP,
-  NofoUIInputOTPGroup,
-  NofoUIInputOTPInput
-};
+export { NofoUIInputOTP, NofoUIInputOTPGroup, NofoUIInputOTPInput };

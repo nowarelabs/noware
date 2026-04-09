@@ -1,4 +1,4 @@
-import { Middleware, Next, RouterContext } from '../router';
+import { Middleware, Next, RouterContext } from "../router";
 
 export const logger = (): Middleware => {
   return async (req: Request, env: any, ctx: RouterContext, next: Next) => {

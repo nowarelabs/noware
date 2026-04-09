@@ -1,29 +1,36 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoSwitch extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    'high-contrast': false,
-    radius: 'full',
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    "high-contrast": false,
+    radius: "full",
     checked: false,
     defaultChecked: false,
     disabled: false,
     required: false,
-    name: '',
-    value: ''
+    name: "",
+    value: "",
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('radius').toDataAttr('radius')
-      .attr('checked').toDataAttr('checked')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("radius")
+      .toDataAttr("radius")
+      .attr("checked")
+      .toDataAttr("checked")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
 
     if (!this.state.checked && this.state.defaultChecked) {
       this.state.checked = true;
@@ -32,12 +39,14 @@ class NofoSwitch extends NofoElement {
 
   handleToggle() {
     if (this.state.disabled) return;
-    this.commit('checked', (v) => !v);
-    this.dispatchEvent(new CustomEvent('checked-change', {
-      detail: { checked: this.state.checked },
-      bubbles: true,
-      composed: true
-    }));
+    this.commit("checked", (v) => !v);
+    this.dispatchEvent(
+      new CustomEvent("checked-change", {
+        detail: { checked: this.state.checked },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -106,6 +115,5 @@ class NofoSwitch extends NofoElement {
   }
 }
 
-customElements.define('nofo-switch', NofoSwitch);
+customElements.define("nofo-switch", NofoSwitch);
 export { NofoSwitch };
-

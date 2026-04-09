@@ -1,15 +1,15 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUILabel extends NofoElement {
   static props = {
-    for: ''
+    for: "",
   };
 
   template() {
     const forAttr = this.state.for;
     return `
-      <label ${forAttr ? `for="${forAttr}"` : ''}>
+      <label ${forAttr ? `for="${forAttr}"` : ""}>
         <slot></slot>
       </label>
     `;
@@ -37,5 +37,5 @@ class NofoUILabel extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-label', NofoUILabel);
+customElements.define("nofo-ui-label", NofoUILabel);
 export { NofoUILabel };

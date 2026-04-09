@@ -1,13 +1,15 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIAlertDialog extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
   }
 
   template() {
@@ -165,13 +167,13 @@ class NofoUIAlertDialogFooter extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-alert-dialog', NofoUIAlertDialog);
-customElements.define('nofo-ui-alert-dialog-trigger', NofoUIAlertDialogTrigger);
-customElements.define('nofo-ui-alert-dialog-content', NofoUIAlertDialogContent);
-customElements.define('nofo-ui-alert-dialog-header', NofoUIAlertDialogHeader);
-customElements.define('nofo-ui-alert-dialog-title', NofoUIAlertDialogTitle);
-customElements.define('nofo-ui-alert-dialog-description', NofoUIAlertDialogDescription);
-customElements.define('nofo-ui-alert-dialog-footer', NofoUIAlertDialogFooter);
+customElements.define("nofo-ui-alert-dialog", NofoUIAlertDialog);
+customElements.define("nofo-ui-alert-dialog-trigger", NofoUIAlertDialogTrigger);
+customElements.define("nofo-ui-alert-dialog-content", NofoUIAlertDialogContent);
+customElements.define("nofo-ui-alert-dialog-header", NofoUIAlertDialogHeader);
+customElements.define("nofo-ui-alert-dialog-title", NofoUIAlertDialogTitle);
+customElements.define("nofo-ui-alert-dialog-description", NofoUIAlertDialogDescription);
+customElements.define("nofo-ui-alert-dialog-footer", NofoUIAlertDialogFooter);
 
 export {
   NofoUIAlertDialog,
@@ -180,7 +182,5 @@ export {
   NofoUIAlertDialogHeader,
   NofoUIAlertDialogTitle,
   NofoUIAlertDialogDescription,
-  NofoUIAlertDialogFooter
+  NofoUIAlertDialogFooter,
 };
-
-

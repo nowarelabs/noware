@@ -1,27 +1,27 @@
-import { createSignal } from './signals.js';
+import { createSignal } from "./signals.js";
 
 export function useClipboard(options = {}) {
   const { copiedDuration = 2000 } = options;
-  
+
   const copied = createSignal(false);
   const error = createSignal(null);
   let timeoutId = null;
 
   const copy = async (text) => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      error.set('Clipboard API not supported');
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      error.set("Clipboard API not supported");
       return false;
     }
 
     try {
       await navigator.clipboard.writeText(text);
       copied.set(true);
-      
+
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         copied.set(false);
       }, copiedDuration);
-      
+
       error.set(null);
       return true;
     } catch (e) {
@@ -32,9 +32,9 @@ export function useClipboard(options = {}) {
   };
 
   const read = async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      error.set('Clipboard API not supported');
-      return '';
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      error.set("Clipboard API not supported");
+      return "";
     }
 
     try {
@@ -43,7 +43,7 @@ export function useClipboard(options = {}) {
       return text;
     } catch (e) {
       error.set(e.message);
-      return '';
+      return "";
     }
   };
 
@@ -56,10 +56,18 @@ export function useClipboard(options = {}) {
   };
 
   return {
-    copied: { get value() { return copied.get(); } },
-    error: { get value() { return error.get(); } },
+    copied: {
+      get value() {
+        return copied.get();
+      },
+    },
+    error: {
+      get value() {
+        return error.get();
+      },
+    },
     copy,
     read,
-    clear
+    clear,
   };
 }

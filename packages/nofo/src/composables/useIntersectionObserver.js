@@ -1,14 +1,9 @@
 export function useIntersectionObserver(options = {}) {
-  const {
-    root = null,
-    rootMargin = '0px',
-    threshold = 0,
-    freezeOnceVisible = false
-  } = options;
+  const { root = null, rootMargin = "0px", threshold = 0, freezeOnceVisible = false } = options;
 
   const state = {
     isIntersecting: false,
-    entry: null
+    entry: null,
   };
 
   let observer = null;
@@ -31,13 +26,13 @@ export function useIntersectionObserver(options = {}) {
   };
 
   const bind = (element) => {
-    if (!element || typeof IntersectionObserver === 'undefined') return;
+    if (!element || typeof IntersectionObserver === "undefined") return;
     if (frozen && freezeOnceVisible) return;
 
     observer = new IntersectionObserver(callback, {
       root,
       rootMargin,
-      threshold
+      threshold,
     });
 
     observer.observe(element);
@@ -62,6 +57,6 @@ export function useIntersectionObserver(options = {}) {
     unbind,
     reset,
     isIntersecting: () => state.isIntersecting,
-    getEntry: () => state.entry
+    getEntry: () => state.entry,
   };
 }

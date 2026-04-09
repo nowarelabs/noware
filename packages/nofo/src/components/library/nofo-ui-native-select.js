@@ -1,22 +1,27 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUINativeSelect extends NofoElement {
   static props = {
-    name: '',
+    name: "",
     disabled: false,
     required: false,
     multiple: false,
-    size: ''
+    size: "",
   };
 
   onMount() {
     this.sync()
-      .attr('name').toDataAttr('name')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('required').toDataAttr('required')
-      .attr('multiple').toDataAttr('multiple')
-      .attr('size').toDataAttr('size');
+      .attr("name")
+      .toDataAttr("name")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("required")
+      .toDataAttr("required")
+      .attr("multiple")
+      .toDataAttr("multiple")
+      .attr("size")
+      .toDataAttr("size");
   }
 
   template() {
@@ -67,5 +72,5 @@ class NofoUINativeSelect extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-native-select', NofoUINativeSelect);
+customElements.define("nofo-ui-native-select", NofoUINativeSelect);
 export { NofoUINativeSelect };

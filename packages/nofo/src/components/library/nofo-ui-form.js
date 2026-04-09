@@ -1,18 +1,21 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIForm extends NofoElement {
   static props = {
-    action: '',
-    method: 'POST',
-    enctype: 'application/x-www-form-urlencoded'
+    action: "",
+    method: "POST",
+    enctype: "application/x-www-form-urlencoded",
   };
 
   onMount() {
     this.sync()
-      .attr('action').toDataAttr('action')
-      .attr('method').toDataAttr('method')
-      .attr('enctype').toDataAttr('enctype');
+      .attr("action")
+      .toDataAttr("action")
+      .attr("method")
+      .toDataAttr("method")
+      .attr("enctype")
+      .toDataAttr("enctype");
   }
 
   template() {
@@ -38,6 +41,6 @@ class NofoUIForm extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-form', NofoUIForm);
+customElements.define("nofo-ui-form", NofoUIForm);
 
 export { NofoUIForm };

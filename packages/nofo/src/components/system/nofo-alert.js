@@ -1,43 +1,52 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoAlert extends NofoElement {
   static props = {
-    variant: 'info',
-    size: '2',
+    variant: "info",
+    size: "2",
     dismissible: false,
-    open: true
+    open: true,
   };
 
   onMount() {
     this.sync()
-      .attr('variant').toDataAttr('variant')
-      .attr('size').toDataAttr('size')
-      .attr('open').toDataAttr('state', (val) => val ? 'open' : 'closed');
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("size")
+      .toDataAttr("size")
+      .attr("open")
+      .toDataAttr("state", (val) => (val ? "open" : "closed"));
   }
 
   handleClose() {
     this.state.open = false;
-    this.dispatchEvent(new CustomEvent('open-change', {
-      detail: { open: false },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("open-change", {
+        detail: { open: false },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
     const { dismissible, open } = this.state;
-    if (!open) return '';
+    if (!open) return "";
 
     return `
       <slot name="icon"></slot>
       <div class="alert-content">
         <slot></slot>
       </div>
-      ${dismissible ? `
+      ${
+        dismissible
+          ? `
         <button class="alert-close" aria-label="Close" on-click="handleClose">
           <nofo-icon name="cross"></nofo-icon>
         </button>
-      ` : ''}
+      `
+          : ""
+      }
     `;
   }
 
@@ -80,7 +89,9 @@ class NofoAlert extends NofoElement {
 }
 
 class NofoAlertIcon extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -94,7 +105,9 @@ class NofoAlertIcon extends NofoElement {
 }
 
 class NofoAlertContent extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -106,7 +119,9 @@ class NofoAlertContent extends NofoElement {
 }
 
 class NofoAlertTitle extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -122,7 +137,9 @@ class NofoAlertTitle extends NofoElement {
 }
 
 class NofoAlertDescription extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -138,31 +155,31 @@ class NofoAlertDescription extends NofoElement {
 
 class NofoAlertClose extends NofoElement {
   onMount() {
-    this.addEventListener('click', () => {
-      const alert = this.closest('nofo-alert');
+    this.addEventListener("click", () => {
+      const alert = this.closest("nofo-alert");
       if (alert) alert.state.open = false;
     });
   }
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `:host { display: contents; }`;
   }
 }
 
-customElements.define('nofo-alert', NofoAlert);
-customElements.define('nofo-alert-icon', NofoAlertIcon);
-customElements.define('nofo-alert-content', NofoAlertContent);
-customElements.define('nofo-alert-title', NofoAlertTitle);
-customElements.define('nofo-alert-description', NofoAlertDescription);
-customElements.define('nofo-alert-close', NofoAlertClose);
+customElements.define("nofo-alert", NofoAlert);
+customElements.define("nofo-alert-icon", NofoAlertIcon);
+customElements.define("nofo-alert-content", NofoAlertContent);
+customElements.define("nofo-alert-title", NofoAlertTitle);
+customElements.define("nofo-alert-description", NofoAlertDescription);
+customElements.define("nofo-alert-close", NofoAlertClose);
 
-export { 
-  NofoAlert, 
-  NofoAlertIcon, 
-  NofoAlertContent, 
-  NofoAlertTitle, 
-  NofoAlertDescription, 
-  NofoAlertClose 
+export {
+  NofoAlert,
+  NofoAlertIcon,
+  NofoAlertContent,
+  NofoAlertTitle,
+  NofoAlertDescription,
+  NofoAlertClose,
 };
-
-

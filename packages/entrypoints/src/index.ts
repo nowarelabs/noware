@@ -4,9 +4,9 @@ import {
   WorkflowEntrypoint,
   WorkflowEvent,
   WorkflowStep,
-} from 'cloudflare:workers';
-import { IRouter } from 'nomo/router';
-import { IJobDispatcher } from 'nomo/jobs';
+} from "cloudflare:workers";
+import { IRouter } from "nomo/router";
+import { IJobDispatcher } from "nomo/jobs";
 
 export abstract class BaseWorker<Env = Cloudflare.Env> extends WorkerEntrypoint<Env> {
   router?: IRouter<Env, ExecutionContext>;
@@ -21,7 +21,7 @@ export abstract class BaseWorker<Env = Cloudflare.Env> extends WorkerEntrypoint<
     if (this.router) {
       return this.router.handle(request, runtimeEnv, runtimeCtx);
     }
-    throw new Error('fetch() not implemented and no router provided');
+    throw new Error("fetch() not implemented and no router provided");
   }
 
   /**
@@ -60,7 +60,7 @@ export abstract class BaseWorker<Env = Cloudflare.Env> extends WorkerEntrypoint<
     method: string,
     args: any[],
     env?: Env,
-    ctx?: ExecutionContext
+    ctx?: ExecutionContext,
   ): Promise<any> {
     const runtimeEnv = env ?? this.env;
     const runtimeCtx = ctx ?? this.ctx;

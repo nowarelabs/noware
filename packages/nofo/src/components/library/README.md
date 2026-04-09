@@ -1,9 +1,10 @@
-/**
- * Nofo UI - README
- * 
- * A beautifully styled component library built on top of Nofo System components.
- * Inspired by shadcn/ui, designed for the Nofo universe.
- */
+/\*\*
+
+- Nofo UI - README
+-
+- A beautifully styled component library built on top of Nofo System components.
+- Inspired by shadcn/ui, designed for the Nofo universe.
+  \*/
 
 # Nofo UI
 
@@ -40,7 +41,7 @@ A production-ready, beautifully styled component library built on top of [Nofo S
 ```html
 <nofo-ui-theme appearance="nofo" accent-color="green" radius="medium">
   <nofo-ui-button variant="default">Enter Nofo</nofo-ui-button>
-  
+
   <nofo-ui-card>
     <nofo-ui-card-header>
       <nofo-ui-card-title>Welcome</nofo-ui-card-title>
@@ -214,4 +215,3 @@ When contributing new components:
 ---
 
 **Built with ❤️ in the Nofo Universe**
-

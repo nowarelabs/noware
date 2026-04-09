@@ -1,5 +1,5 @@
-import { DurableObjectBaseDelegate } from '../delegate';
-import { BaseDurableObject } from '../index';
+import { DurableObjectBaseDelegate } from "../delegate";
+import { BaseDurableObject } from "../index";
 
 export interface PopulateConfig<T = any> {
   from: (owner: BaseDurableObject, ...args: any[]) => Promise<T[]>;
@@ -30,6 +30,6 @@ export class PopulateDelegate extends DurableObjectBaseDelegate<PopulateConfig> 
       await onAfterPopulate(this.durableObject, count);
     }
 
-    return { status: 'populated', count };
+    return { status: "populated", count };
   }
 }

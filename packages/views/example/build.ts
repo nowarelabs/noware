@@ -8,10 +8,10 @@
  * 4. Ensuring DSD (Declarative Shadow DOM) compatibility for SSR'd custom elements
  */
 
-import type { Plugin, ResolvedConfig, Rollup } from 'vite';
-import { createHash } from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
+import type { Plugin, ResolvedConfig, Rollup } from "vite";
+import { createHash } from "crypto";
+import * as fs from "fs";
+import * as path from "path";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ export interface WebComponentEntry {
    * Shadow DOM mode. Defaults to 'open'.
    * Use 'none' for light DOM components (rare).
    */
-  shadow?: 'open' | 'closed' | 'none';
+  shadow?: "open" | "closed" | "none";
 }
 
 export interface VendorEntry {
@@ -119,14 +119,14 @@ export function nomo(options: nomoOptions): Plugin[] {
   const {
     components,
     vendors = [],
-    assetsDir = 'dist/assets',
+    assetsDir = "dist/assets",
     manifest: emitManifest = true,
-    base = '/assets/',
+    base = "/assets/",
   } = options;
 
   let resolvedConfig: ResolvedConfig;
   const manifest: AssetManifest = {
-    version: '1',
+    version: "1",
     generatedAt: new Date().toISOString(),
     base,
     entries: {},
@@ -135,32 +135,30 @@ export function nomo(options: nomoOptions): Plugin[] {
 
   // ── Validation plugin ───────────────────────────────────────────────────────
   const validatePlugin: Plugin = {
-    name: 'nomo:validate',
-    enforce: 'pre',
+    name: "nomo:validate",
+    enforce: "pre",
     configResolved(config) {
       resolvedConfig = config;
     },
     buildStart() {
       // Validate all custom element tag names
       for (const component of components) {
-        if (!component.tag.includes('-')) {
+        if (!component.tag.includes("-")) {
           this.error(
             `[nomo] Component tag "${component.tag}" must contain a hyphen. ` +
-            `Custom element spec requires it. Use e.g. "${component.tag}-element".`
+              `Custom element spec requires it. Use e.g. "${component.tag}-element".`,
           );
         }
         if (!fs.existsSync(path.resolve(component.src))) {
-          this.error(
-            `[nomo] Component src "${component.src}" does not exist.`
-          );
+          this.error(`[nomo] Component src "${component.src}" does not exist.`);
         }
       }
 
       // Validate no duplicate tags
-      const tags = components.map(c => c.tag);
+      const tags = components.map((c) => c.tag);
       const duplicates = tags.filter((t, i) => tags.indexOf(t) !== i);
       if (duplicates.length > 0) {
-        this.error(`[nomo] Duplicate component tags: ${duplicates.join(', ')}`);
+        this.error(`[nomo] Duplicate component tags: ${duplicates.join(", ")}`);
       }
 
       // Validate vendor packages exist in node_modules
@@ -170,7 +168,7 @@ export function nomo(options: nomoOptions): Plugin[] {
         } catch {
           this.warn(
             `[nomo] Vendor package "${vendor.package}" not found in node_modules. ` +
-            `Run: npm install ${vendor.package}`
+              `Run: npm install ${vendor.package}`,
           );
         }
       }
@@ -179,19 +177,19 @@ export function nomo(options: nomoOptions): Plugin[] {
 
   // ── React wrapper code generation ─────────────────────────────────────────
   const reactWrapPlugin: Plugin = {
-    name: 'nomo:react-wrap',
-    enforce: 'pre',
+    name: "nomo:react-wrap",
+    enforce: "pre",
     resolveId(id) {
       // Virtual module for each react-wrapped component
-      if (id.startsWith('virtual:nomo-react-wrap:')) {
-        return '\0' + id;
+      if (id.startsWith("virtual:nomo-react-wrap:")) {
+        return "\0" + id;
       }
     },
     load(id) {
-      if (!id.startsWith('\0virtual:nomo-react-wrap:')) return;
+      if (!id.startsWith("\0virtual:nomo-react-wrap:")) return;
 
-      const tag = id.replace('\0virtual:nomo-react-wrap:', '');
-      const component = components.find(c => c.tag === tag);
+      const tag = id.replace("\0virtual:nomo-react-wrap:", "");
+      const component = components.find((c) => c.tag === tag);
       if (!component || !component.react) return;
 
       // Generate a web component that wraps the React app.
@@ -216,7 +214,7 @@ class ${tagToClassName(tag)}Element extends HTMLElement {
     super();
     // DSD: shadow root may already exist from SSR
     if (!this.shadowRoot) {
-      this.attachShadow({ mode: '${component.shadow ?? 'open'}' });
+      this.attachShadow({ mode: '${component.shadow ?? "open"}' });
     }
   }
 
@@ -303,22 +301,25 @@ if (!customElements.get('${tag}')) {
 
   // ── Vendor copy plugin ─────────────────────────────────────────────────────
   const vendorPlugin: Plugin = {
-    name: 'nomo:vendor',
+    name: "nomo:vendor",
     async writeBundle() {
       for (const vendor of vendors) {
         try {
           const pkgJsonPath = require.resolve(`${vendor.package}/package.json`);
-          const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+          const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
           const pkgDir = path.dirname(pkgJsonPath);
 
           // Resolve entry: prefer module > exports['.'] > main
-          const entryFile = vendor.entry
-            ?? pkgJson.module
-            ?? pkgJson.exports?.['.'](typeof pkgJson.exports?.['.'] === 'string'
-              ? pkgJson.exports['.']
-              : pkgJson.exports?.['.']. import ?? pkgJson.exports?.['.']. default)
-            ?? pkgJson.main
-            ?? 'index.js';
+          const entryFile =
+            vendor.entry ??
+            pkgJson.module ??
+            pkgJson.exports?.["."](
+              typeof pkgJson.exports?.["."] === "string"
+                ? pkgJson.exports["."]
+                : (pkgJson.exports?.["."].import ?? pkgJson.exports?.["."].default),
+            ) ??
+            pkgJson.main ??
+            "index.js";
 
           const entryPath = path.resolve(pkgDir, entryFile);
           if (!fs.existsSync(entryPath)) {
@@ -331,12 +332,12 @@ if (!customElements.get('${tag}')) {
           const ext = path.extname(entryFile);
           const hashedName = `index.${hash}${ext}`;
 
-          const outDir = path.resolve(assetsDir, 'vendor', vendor.package);
+          const outDir = path.resolve(assetsDir, "vendor", vendor.package);
           fs.mkdirSync(outDir, { recursive: true });
           fs.writeFileSync(path.resolve(outDir, hashedName), content);
 
           // Also write an import map entry
-          const importMapPath = path.resolve(outDir, 'importmap.json');
+          const importMapPath = path.resolve(outDir, "importmap.json");
           const importMap = {
             imports: {
               [vendor.package]: `${base}vendor/${vendor.package}/${hashedName}`,
@@ -360,13 +361,13 @@ if (!customElements.get('${tag}')) {
 
   // ── Manifest emitter plugin ────────────────────────────────────────────────
   const manifestPlugin: Plugin = {
-    name: 'nomo:manifest',
+    name: "nomo:manifest",
     generateBundle(_options, bundle) {
       // Record component entries from the bundle
       for (const [fileName, chunk] of Object.entries(bundle)) {
-        if (chunk.type !== 'chunk') continue;
+        if (chunk.type !== "chunk") continue;
 
-        const component = components.find(c => {
+        const component = components.find((c) => {
           const expectedName = c.tag;
           return chunk.name === expectedName || chunk.facadeModuleId?.includes(c.tag);
         });
@@ -386,7 +387,7 @@ if (!customElements.get('${tag}')) {
       if (!emitManifest) return;
 
       manifest.generatedAt = new Date().toISOString();
-      const manifestPath = path.resolve(assetsDir, 'manifest.json');
+      const manifestPath = path.resolve(assetsDir, "manifest.json");
       fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
       console.log(`[nomo] Manifest written to ${manifestPath}`);
@@ -399,10 +400,7 @@ if (!customElements.get('${tag}')) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function contentHash(content: Buffer | string): string {
-  return createHash('sha256')
-    .update(content)
-    .digest('hex')
-    .slice(0, 8);
+  return createHash("sha256").update(content).digest("hex").slice(0, 8);
 }
 
 /**
@@ -411,7 +409,7 @@ function contentHash(content: Buffer | string): string {
  */
 function tagToClassName(tag: string): string {
   return tag
-    .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
 }

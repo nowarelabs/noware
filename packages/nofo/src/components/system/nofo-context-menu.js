@@ -1,25 +1,27 @@
-import { NofoElement, useClickOutside } from '../../index.js';
+import { NofoElement, useClickOutside } from "../../index.js";
 
 class NofoContextMenu extends NofoElement {
   static props = {
     open: false,
     x: 0,
-    y: 0
+    y: 0,
   };
 
   #clickOutsideCleanup = null;
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
 
-    this.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.state.open) {
+    this.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.state.open) {
         this.state.open = false;
       }
     });
 
     this.effect(() => {
-      const content = this.querySelector('nofo-context-menu-content');
+      const content = this.querySelector("nofo-context-menu-content");
       if (content) {
         if (this.state.open) {
           const { bind } = useClickOutside();
@@ -53,9 +55,9 @@ class NofoContextMenu extends NofoElement {
 
 class NofoContextMenuTrigger extends NofoElement {
   onMount() {
-    this.addEventListener('contextmenu', (e) => {
+    this.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const root = this.closest('nofo-context-menu');
+      const root = this.closest("nofo-context-menu");
       if (root) {
         root.state.x = e.clientX;
         root.state.y = e.clientY;
@@ -75,10 +77,10 @@ class NofoContextMenuTrigger extends NofoElement {
 
 class NofoContextMenuContent extends NofoElement {
   onMount() {
-    const root = this.closest('nofo-context-menu');
+    const root = this.closest("nofo-context-menu");
     if (root) {
       this.effect(() => {
-        this.setAttribute('data-state', root.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", root.state.open ? "open" : "closed");
         if (root.state.open) {
           this.style.left = `${root.state.x}px`;
           this.style.top = `${root.state.y}px`;
@@ -92,7 +94,7 @@ class NofoContextMenuContent extends NofoElement {
   }
 
   styles() {
-    const root = this.closest('nofo-context-menu');
+    const root = this.closest("nofo-context-menu");
     const isOpen = root && root.state.open;
 
     return `
@@ -104,7 +106,7 @@ class NofoContextMenuContent extends NofoElement {
         padding: 0.5rem;
         min-width: 160px;
         z-index: 100;
-        display: ${isOpen ? 'flex' : 'none'};
+        display: ${isOpen ? "flex" : "none"};
         flex-direction: column;
         box-sizing: border-box;
       }
@@ -114,16 +116,16 @@ class NofoContextMenuContent extends NofoElement {
 
 class NofoContextMenuItem extends NofoElement {
   static props = {
-    shortcut: '',
-    color: ''
+    shortcut: "",
+    color: "",
   };
 
   onMount() {
-    this.sync().attr('color').toDataAttr('color');
+    this.sync().attr("color").toDataAttr("color");
   }
 
   handleClick() {
-    const root = this.closest('nofo-context-menu');
+    const root = this.closest("nofo-context-menu");
     if (root) root.state.open = false;
   }
 
@@ -131,7 +133,7 @@ class NofoContextMenuItem extends NofoElement {
     return `
       <div class="item-inner" on-click="handleClick">
         <slot></slot>
-        ${this.state.shortcut ? `<span class="shortcut">${this.state.shortcut}</span>` : ''}
+        ${this.state.shortcut ? `<span class="shortcut">${this.state.shortcut}</span>` : ""}
       </div>
     `;
   }
@@ -148,7 +150,7 @@ class NofoContextMenuItem extends NofoElement {
         cursor: pointer;
         font-size: 0.875rem;
         line-height: 1.25rem;
-        color: ${color ? `var(--${color}-11)` : 'var(--gray-12)'};
+        color: ${color ? `var(--${color}-11)` : "var(--gray-12)"};
         gap: 0.5rem;
         transition: background-color 0.2s;
       }
@@ -178,11 +180,13 @@ class NofoContextMenuSeparator extends NofoElement {
 
 class NofoContextMenuSub extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
   }
 
   template() {
@@ -196,7 +200,7 @@ class NofoContextMenuSub extends NofoElement {
 
 class NofoContextMenuSubTrigger extends NofoElement {
   handleMouseEnter() {
-    const sub = this.closest('nofo-context-menu-sub');
+    const sub = this.closest("nofo-context-menu-sub");
     if (sub) sub.state.open = true;
   }
 
@@ -231,10 +235,10 @@ class NofoContextMenuSubTrigger extends NofoElement {
 
 class NofoContextMenuSubContent extends NofoElement {
   onMount() {
-    const sub = this.closest('nofo-context-menu-sub');
+    const sub = this.closest("nofo-context-menu-sub");
     if (sub) {
       this.effect(() => {
-        this.setAttribute('data-state', sub.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", sub.state.open ? "open" : "closed");
       });
     }
   }
@@ -244,7 +248,7 @@ class NofoContextMenuSubContent extends NofoElement {
   }
 
   styles() {
-    const sub = this.closest('nofo-context-menu-sub');
+    const sub = this.closest("nofo-context-menu-sub");
     const isOpen = sub && sub.state.open;
 
     return `
@@ -258,7 +262,7 @@ class NofoContextMenuSubContent extends NofoElement {
         padding: 0.5rem;
         min-width: 120px;
         z-index: 110;
-        display: ${isOpen ? 'flex' : 'none'};
+        display: ${isOpen ? "flex" : "none"};
         flex-direction: column;
         box-sizing: border-box;
       }
@@ -266,14 +270,14 @@ class NofoContextMenuSubContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-context-menu', NofoContextMenu);
-customElements.define('nofo-context-menu-trigger', NofoContextMenuTrigger);
-customElements.define('nofo-context-menu-content', NofoContextMenuContent);
-customElements.define('nofo-context-menu-item', NofoContextMenuItem);
-customElements.define('nofo-context-menu-separator', NofoContextMenuSeparator);
-customElements.define('nofo-context-menu-sub', NofoContextMenuSub);
-customElements.define('nofo-context-menu-sub-trigger', NofoContextMenuSubTrigger);
-customElements.define('nofo-context-menu-sub-content', NofoContextMenuSubContent);
+customElements.define("nofo-context-menu", NofoContextMenu);
+customElements.define("nofo-context-menu-trigger", NofoContextMenuTrigger);
+customElements.define("nofo-context-menu-content", NofoContextMenuContent);
+customElements.define("nofo-context-menu-item", NofoContextMenuItem);
+customElements.define("nofo-context-menu-separator", NofoContextMenuSeparator);
+customElements.define("nofo-context-menu-sub", NofoContextMenuSub);
+customElements.define("nofo-context-menu-sub-trigger", NofoContextMenuSubTrigger);
+customElements.define("nofo-context-menu-sub-content", NofoContextMenuSubContent);
 
 export {
   NofoContextMenu,
@@ -283,7 +287,5 @@ export {
   NofoContextMenuSeparator,
   NofoContextMenuSub,
   NofoContextMenuSubTrigger,
-  NofoContextMenuSubContent
+  NofoContextMenuSubContent,
 };
-
-

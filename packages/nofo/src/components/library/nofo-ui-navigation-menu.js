@@ -1,14 +1,13 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUINavigationMenu extends NofoElement {
   static props = {
-    orientation: 'horizontal'
+    orientation: "horizontal",
   };
 
   onMount() {
-    this.sync()
-      .attr('orientation').toDataAttr('orientation');
+    this.sync().attr("orientation").toDataAttr("orientation");
   }
 
   template() {
@@ -47,14 +46,13 @@ class NofoUINavigationMenuList extends NofoElement {
 
 class NofoUINavigationMenuItem extends NofoElement {
   static props = {
-    value: '',
-    href: '#',
-    active: false
+    value: "",
+    href: "#",
+    active: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('active').toDataAttr('active');
+    this.sync().attr("active").toDataAttr("active");
   }
 
   template() {
@@ -98,11 +96,11 @@ class NofoUINavigationMenuTrigger extends NofoElement {
 
 class NofoUINavigationMenuContent extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('open');
+    this.sync().attr("open").toDataAttr("open");
   }
 
   template() {
@@ -129,7 +127,7 @@ class NofoUINavigationMenuContent extends NofoElement {
 
 class NofoUINavigationMenuLink extends NofoElement {
   static props = {
-    href: '#'
+    href: "#",
   };
 
   template() {
@@ -148,12 +146,12 @@ class NofoUINavigationMenuLink extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-navigation-menu', NofoUINavigationMenu);
-customElements.define('nofo-ui-navigation-menu-list', NofoUINavigationMenuList);
-customElements.define('nofo-ui-navigation-menu-item', NofoUINavigationMenuItem);
-customElements.define('nofo-ui-navigation-menu-trigger', NofoUINavigationMenuTrigger);
-customElements.define('nofo-ui-navigation-menu-content', NofoUINavigationMenuContent);
-customElements.define('nofo-ui-navigation-menu-link', NofoUINavigationMenuLink);
+customElements.define("nofo-ui-navigation-menu", NofoUINavigationMenu);
+customElements.define("nofo-ui-navigation-menu-list", NofoUINavigationMenuList);
+customElements.define("nofo-ui-navigation-menu-item", NofoUINavigationMenuItem);
+customElements.define("nofo-ui-navigation-menu-trigger", NofoUINavigationMenuTrigger);
+customElements.define("nofo-ui-navigation-menu-content", NofoUINavigationMenuContent);
+customElements.define("nofo-ui-navigation-menu-link", NofoUINavigationMenuLink);
 
 export {
   NofoUINavigationMenu,
@@ -161,7 +159,5 @@ export {
   NofoUINavigationMenuItem,
   NofoUINavigationMenuTrigger,
   NofoUINavigationMenuContent,
-  NofoUINavigationMenuLink
+  NofoUINavigationMenuLink,
 };
-
-

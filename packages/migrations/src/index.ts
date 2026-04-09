@@ -13,9 +13,9 @@ export const sql = (strings: TemplateStringsArray, ...values: unknown[]): SqlExp
   return {
     sql: strings.reduce((acc, str, i) => {
       const val = values[i];
-      const valStr = val !== undefined && val !== null ? String(val) : '';
+      const valStr = val !== undefined && val !== null ? String(val) : "";
       return acc + str + valStr;
-    }, ''),
+    }, ""),
     __isSql: true,
   };
 };
@@ -25,7 +25,7 @@ sql.raw = (str: string): SqlExpression => ({ sql: str, __isSql: true });
 /**
  * Migration direction
  */
-export type Direction = 'up' | 'down';
+export type Direction = "up" | "down";
 
 /**
  * Options for column definitions
@@ -43,7 +43,7 @@ export interface ColumnOptions {
   scale?: number;
   comment?: string;
   references?: string; // "table.column"
-  onDelete?: 'cascade' | 'restrict' | 'set null' | 'no action';
+  onDelete?: "cascade" | "restrict" | "set null" | "no action";
   name?: string;
   generated?: { as: string | SqlExpression; stored?: boolean };
 }
@@ -54,7 +54,7 @@ export interface ColumnOptions {
 export interface TableOptions {
   id?: boolean;
   primaryKey?: string | string[];
-  location?: 'd1' | 'do';
+  location?: "d1" | "do";
   durableObject?: string;
   unique?: (string | string[])[];
   check?: (string | SqlExpression)[];
@@ -73,7 +73,7 @@ export interface RelationshipOptions {
 }
 
 export interface DurableObjectOptions {
-  type?: 'view' | 'queue' | 'search' | 'lock' | 'logic' | 'cache' | 'session' | 'state';
+  type?: "view" | "queue" | "search" | "lock" | "logic" | "cache" | "session" | "state";
   populateFrom?: string[];
   doModel?: string;
   rpcPath?: string;
@@ -83,7 +83,7 @@ export interface DurableObjectOptions {
  * Metadata for a relationship
  */
 export interface Relationship {
-  type: 'hasMany' | 'hasOne' | 'belongsTo' | 'belongsToPolymorphic';
+  type: "hasMany" | "hasOne" | "belongsTo" | "belongsToPolymorphic";
   name: string;
   targetTable: string;
   options: RelationshipOptions;
@@ -96,7 +96,7 @@ export class Column {
   constructor(
     public name: string,
     public type: string,
-    public options: ColumnOptions = {}
+    public options: ColumnOptions = {},
   ) {}
 }
 
@@ -105,7 +105,7 @@ export class Index {
   public unique?: boolean;
   constructor(
     public columns: string[],
-    public options: { name?: string; unique?: boolean } = {}
+    public options: { name?: string; unique?: boolean } = {},
   ) {
     this.name = options.name;
     this.unique = options.unique;
@@ -121,15 +121,15 @@ export class ForeignKey {
       onDelete?: string;
       onUpdate?: string;
       name?: string;
-    } = {}
+    } = {},
   ) {}
 }
 
 export class Constraint {
   constructor(
     public name: string | undefined,
-    public type: 'unique' | 'check',
-    public definition: string | string[] | SqlExpression
+    public type: "unique" | "check",
+    public definition: string | string[] | SqlExpression,
   ) {}
 }
 
@@ -142,7 +142,7 @@ export class TableBuilder {
   public foreignKeys: ForeignKey[] = [];
   public constraints: Constraint[] = [];
   public relationships: Relationship[] = [];
-  public location: 'd1' | 'do' = 'd1';
+  public location: "d1" | "do" = "d1";
   public durableObject?: string;
   public primaryKey?: string | string[];
   public strict: boolean = false;
@@ -154,9 +154,9 @@ export class TableBuilder {
 
   constructor(
     public tableName: string,
-    options: TableOptions = {}
+    options: TableOptions = {},
   ) {
-    this.location = options.location || 'd1';
+    this.location = options.location || "d1";
     this.durableObject = options.durableObject;
     this.primaryKey = options.primaryKey;
     this.strict = options.strict || false;
@@ -175,86 +175,86 @@ export class TableBuilder {
   }
 
   id(options: ColumnOptions = {}) {
-    const existing = this.columns.find((c) => c.name === 'id');
+    const existing = this.columns.find((c) => c.name === "id");
     if (existing) {
       existing.options = { ...existing.options, ...options };
       return this;
     }
     this.columns.push(
-      new Column('id', 'integer', {
+      new Column("id", "integer", {
         primaryKey: true,
         notNull: true,
         ...options,
-      })
+      }),
     );
     return this;
   }
 
   string(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'string', options));
+    this.columns.push(new Column(name, "string", options));
     if (options.index) this.index(name, { unique: options.unique });
     return this;
   }
 
   text(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'text', options));
+    this.columns.push(new Column(name, "text", options));
     return this;
   }
 
   integer(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'integer', options));
+    this.columns.push(new Column(name, "integer", options));
     if (options.index) this.index(name, { unique: options.unique });
     return this;
   }
 
   bigint(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'bigint', options));
+    this.columns.push(new Column(name, "bigint", options));
     if (options.index) this.index(name, { unique: options.unique });
     return this;
   }
 
   decimal(name: string, options: ColumnOptions & { precision?: number; scale?: number } = {}) {
-    this.columns.push(new Column(name, 'decimal', options));
+    this.columns.push(new Column(name, "decimal", options));
     if (options.index) this.index(name, { unique: options.unique });
     return this;
   }
 
   boolean(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'boolean', options));
+    this.columns.push(new Column(name, "boolean", options));
     return this;
   }
 
   uuid(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'uuid', options));
+    this.columns.push(new Column(name, "uuid", options));
     return this;
   }
 
   timestamp(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'timestamp', options));
+    this.columns.push(new Column(name, "timestamp", options));
     return this;
   }
 
   datetime(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'datetime', options));
+    this.columns.push(new Column(name, "datetime", options));
     return this;
   }
 
   json(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'json', options));
+    this.columns.push(new Column(name, "json", options));
     return this;
   }
 
   jsonb(name: string, options: ColumnOptions = {}) {
-    this.columns.push(new Column(name, 'jsonb', options));
+    this.columns.push(new Column(name, "jsonb", options));
     return this;
   }
 
   timestamps() {
-    this.timestamp('created_at', {
+    this.timestamp("created_at", {
       notNull: true,
       default: sqlBuilder.currentTimestamp(),
     });
-    this.timestamp('updated_at', {
+    this.timestamp("updated_at", {
       notNull: true,
       default: sqlBuilder.currentTimestamp(),
     });
@@ -262,22 +262,22 @@ export class TableBuilder {
   }
 
   lifecycle() {
-    this.timestamp('trashed_at');
-    this.timestamp('hidden_at');
-    this.timestamp('flagged_at');
-    this.timestamp('retired_at');
+    this.timestamp("trashed_at");
+    this.timestamp("hidden_at");
+    this.timestamp("flagged_at");
+    this.timestamp("retired_at");
     return this;
   }
 
   foreignKey(
     columnName: string,
     toTable: string,
-    toColumn: string = 'id',
+    toColumn: string = "id",
     options: {
-      onDelete?: 'cascade' | 'restrict' | 'set null' | 'no action';
-      onUpdate?: 'cascade' | 'restrict' | 'set null' | 'no action';
+      onDelete?: "cascade" | "restrict" | "set null" | "no action";
+      onUpdate?: "cascade" | "restrict" | "set null" | "no action";
       name?: string;
-    } = {}
+    } = {},
   ) {
     this.foreignKeys.push(new ForeignKey(columnName, toTable, toColumn, options));
     return this;
@@ -290,18 +290,18 @@ export class TableBuilder {
       polymorphic?: boolean;
       foreignKey?: boolean | string;
       type?: string;
-    } = {}
+    } = {},
   ) {
-    const baseName = tableName.replace(/s$/, '');
+    const baseName = tableName.replace(/s$/, "");
     if (options.polymorphic) {
-      this.column(`${baseName}_id`, options.type || 'integer', options);
+      this.column(`${baseName}_id`, options.type || "integer", options);
       this.string(`${baseName}_type`, options);
     } else {
       const columnName = options.columnName || `${baseName}_id`;
-      this.column(columnName, options.type || 'integer', options);
+      this.column(columnName, options.type || "integer", options);
       if (options.foreignKey) {
-        const toTable = typeof options.foreignKey === 'string' ? options.foreignKey : tableName;
-        this.foreignKey(columnName, toTable, 'id', {
+        const toTable = typeof options.foreignKey === "string" ? options.foreignKey : tableName;
+        this.foreignKey(columnName, toTable, "id", {
           onDelete: options.onDelete,
         });
       }
@@ -322,19 +322,19 @@ export class TableBuilder {
 
   unique(columns: string | string[], options: { name?: string } = {}) {
     this.constraints.push(
-      new Constraint(options.name, 'unique', Array.isArray(columns) ? columns : [columns])
+      new Constraint(options.name, "unique", Array.isArray(columns) ? columns : [columns]),
     );
     return this;
   }
 
   check(definition: string | SqlExpression, options: { name?: string } = {}) {
-    this.constraints.push(new Constraint(options.name, 'check', definition));
+    this.constraints.push(new Constraint(options.name, "check", definition));
     return this;
   }
 
   hasMany(targetTable: string, options: RelationshipOptions & { name?: string } = {}) {
     this.relationships.push({
-      type: 'hasMany',
+      type: "hasMany",
       targetTable,
       name: options.name || targetTable,
       options,
@@ -344,7 +344,7 @@ export class TableBuilder {
 
   hasOne(targetTable: string, options: RelationshipOptions & { name?: string } = {}) {
     this.relationships.push({
-      type: 'hasOne',
+      type: "hasOne",
       targetTable,
       name: options.name || targetTable,
       options,
@@ -354,15 +354,15 @@ export class TableBuilder {
 
   belongsTo(targetTable: string, options: RelationshipOptions & { name?: string } = {}) {
     this.relationships.push({
-      type: 'belongsTo',
+      type: "belongsTo",
       targetTable,
-      name: options.name || targetTable.replace(/s$/, ''),
+      name: options.name || targetTable.replace(/s$/, ""),
       options,
     });
     return this;
   }
 
-  doType(type: 'view' | 'queue' | 'search' | 'lock' | 'logic' | 'cache' | 'session' | 'state') {
+  doType(type: "view" | "queue" | "search" | "lock" | "logic" | "cache" | "session" | "state") {
     this.scaffoldDoType = type;
     return this;
   }
@@ -392,7 +392,7 @@ export class VirtualTableBuilder {
 
   constructor(
     public tableName: string,
-    moduleName: string = 'fts5'
+    moduleName: string = "fts5",
   ) {
     this.moduleName = moduleName;
   }
@@ -411,8 +411,8 @@ export interface MigrationCommand {
   down: string | object;
 }
 
-import { type Result, ok, safeAsync } from 'nomo/result';
-import { sql as sqlBuilder, Dialect } from 'nomo/sql';
+import { type Result, ok, safeAsync } from "nomo/result";
+import { sql as sqlBuilder, Dialect } from "nomo/sql";
 
 /**
  * Interface for migrations that can be altered
@@ -422,24 +422,24 @@ export interface TableAltererMigration {
     tableName: string,
     name: string,
     type: string,
-    options?: ColumnOptions
+    options?: ColumnOptions,
   ): Promise<Result<void>>;
   removeColumn(
     tableName: string,
     name: string,
     type?: string,
-    options?: ColumnOptions
+    options?: ColumnOptions,
   ): Promise<Result<void>>;
   renameColumn(tableName: string, oldName: string, newName: string): Promise<Result<void>>;
   addIndex(
     tableName: string,
     columns: string | string[],
-    options?: { name?: string; unique?: boolean }
+    options?: { name?: string; unique?: boolean },
   ): Promise<Result<void>>;
   removeIndex(
     tableName: string,
     columns: string | string[],
-    options?: { name?: string; unique?: boolean }
+    options?: { name?: string; unique?: boolean },
   ): Promise<Result<void>>;
   addForeignKey(
     tableName: string,
@@ -449,24 +449,24 @@ export interface TableAltererMigration {
       onDelete?: string;
       onUpdate?: string;
       name?: string;
-    }
+    },
   ): Promise<Result<void>>;
   removeForeignKey(
     tableName: string,
-    options: { column?: string; name?: string }
+    options: { column?: string; name?: string },
   ): Promise<Result<void>>;
   changeColumn(
     tableName: string,
     name: string,
     type: string,
-    options?: ColumnOptions
+    options?: ColumnOptions,
   ): Promise<Result<void>>;
   changeColumnDefault(tableName: string, name: string, val: unknown): Promise<Result<void>>;
   changeColumnNull(tableName: string, name: string, nullable: boolean): Promise<Result<void>>;
   recreateTable(tableName: string, callback: (t: TableBuilder) => void): Promise<Result<void>>;
   changeTable(
     tableName: string,
-    callback: (t: TableAlterer) => Promise<Result<void>> | Promise<void> | void
+    callback: (t: TableAlterer) => Promise<Result<void>> | Promise<void> | void,
   ): Promise<Result<void>>;
 }
 
@@ -476,7 +476,7 @@ export interface TableAltererMigration {
 export class TableAlterer {
   constructor(
     private tableName: string,
-    private migration: TableAltererMigration
+    private migration: TableAltererMigration,
   ) {}
 
   addColumn(name: string, type: string, options: ColumnOptions = {}): Promise<Result<void>> {
@@ -493,14 +493,14 @@ export class TableAlterer {
 
   addIndex(
     columns: string | string[],
-    options: { name?: string; unique?: boolean } = {}
+    options: { name?: string; unique?: boolean } = {},
   ): Promise<Result<void>> {
     return this.migration.addIndex(this.tableName, columns, options);
   }
 
   removeIndex(
     columns: string | string[],
-    options: { name?: string; unique?: boolean } = {}
+    options: { name?: string; unique?: boolean } = {},
   ): Promise<Result<void>> {
     return this.migration.removeIndex(this.tableName, columns, options);
   }
@@ -512,7 +512,7 @@ export class TableAlterer {
       toColumn?: string;
       onDelete?: string;
       name?: string;
-    }
+    },
   ): Promise<Result<void>> {
     return this.migration.addForeignKey(this.tableName, toTable, options);
   }
@@ -538,8 +538,8 @@ export class TableAlterer {
   }
 }
 
-import { SqlGenerator } from './sql';
-import { HandlerFunc } from './handlers';
+import { SqlGenerator } from "./sql";
+import { HandlerFunc } from "./handlers";
 
 /**
  * Minimal database interface required by the runner
@@ -575,7 +575,7 @@ export abstract class Migration implements TableAltererMigration {
 
   constructor(
     protected db: Database,
-    protected dialect: Dialect = 'sqlite'
+    protected dialect: Dialect = "sqlite",
   ) {
     this._sql = new SqlGenerator(dialect);
   }
@@ -613,13 +613,13 @@ export abstract class Migration implements TableAltererMigration {
   }
 
   protected async transaction(callback: () => Promise<void> | void): Promise<Result<void>> {
-    this._commands.push({ up: 'BEGIN TRANSACTION;', down: '' });
+    this._commands.push({ up: "BEGIN TRANSACTION;", down: "" });
     const res = await safeAsync(async () => await callback());
     if (!res.success) {
-      this._commands.push({ up: 'ROLLBACK;', down: '' });
+      this._commands.push({ up: "ROLLBACK;", down: "" });
       return res as Result<never>;
     }
-    this._commands.push({ up: 'COMMIT;', down: '' });
+    this._commands.push({ up: "COMMIT;", down: "" });
     return ok(undefined);
   }
 
@@ -637,26 +637,26 @@ export abstract class Migration implements TableAltererMigration {
   public async createTable(
     name: string,
     options: TableOptions,
-    callback: (t: TableBuilder) => void
+    callback: (t: TableBuilder) => void,
   ): Promise<Result<void>>;
   public async createTable(
     name: string,
-    callback: (t: TableBuilder) => void
+    callback: (t: TableBuilder) => void,
   ): Promise<Result<void>>;
   public async createTable(
     name: string,
     arg2: TableOptions | ((t: TableBuilder) => void),
-    arg3?: (t: TableBuilder) => void
+    arg3?: (t: TableBuilder) => void,
   ): Promise<Result<void>> {
-    const options: TableOptions = typeof arg2 === 'function' ? {} : arg2;
-    const callback = typeof arg2 === 'function' ? arg2 : (arg3 as (t: TableBuilder) => void);
+    const options: TableOptions = typeof arg2 === "function" ? {} : arg2;
+    const callback = typeof arg2 === "function" ? arg2 : (arg3 as (t: TableBuilder) => void);
 
     const t = new TableBuilder(name, options);
     callback(t);
 
     this._commands.push({
-      up: { type: 'createTable', name, table: t },
-      down: { type: 'dropTable', name },
+      up: { type: "createTable", name, table: t },
+      down: { type: "dropTable", name },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -665,14 +665,14 @@ export abstract class Migration implements TableAltererMigration {
   public async createVirtualTable(
     name: string,
     moduleName: string,
-    callback: (t: VirtualTableBuilder) => void
+    callback: (t: VirtualTableBuilder) => void,
   ): Promise<Result<void>> {
     const t = new VirtualTableBuilder(name, moduleName);
     callback(t);
 
     this._commands.push({
-      up: { type: 'createVirtualTable', name, builder: t },
-      down: { type: 'dropTable', name },
+      up: { type: "createVirtualTable", name, builder: t },
+      down: { type: "dropTable", name },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -680,8 +680,8 @@ export abstract class Migration implements TableAltererMigration {
 
   public async createView(name: string, definition: string | SqlExpression): Promise<Result<void>> {
     this._commands.push({
-      up: { type: 'createView', name, definition },
-      down: { type: 'dropView', name },
+      up: { type: "createView", name, definition },
+      down: { type: "dropView", name },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -689,8 +689,8 @@ export abstract class Migration implements TableAltererMigration {
 
   public async dropView(name: string, definition?: string | SqlExpression): Promise<Result<void>> {
     this._commands.push({
-      up: { type: 'dropView', name },
-      down: { type: 'createView', name, definition },
+      up: { type: "dropView", name },
+      down: { type: "createView", name, definition },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -698,7 +698,7 @@ export abstract class Migration implements TableAltererMigration {
 
   public async dropTable(
     name: string,
-    callback?: (t: TableBuilder) => void
+    callback?: (t: TableBuilder) => void,
   ): Promise<Result<void>> {
     let t: TableBuilder | undefined;
     if (callback) {
@@ -707,8 +707,8 @@ export abstract class Migration implements TableAltererMigration {
     }
 
     this._commands.push({
-      up: { type: 'dropTable', name },
-      down: { type: 'createTable', name, table: t },
+      up: { type: "dropTable", name },
+      down: { type: "createTable", name, table: t },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -718,11 +718,11 @@ export abstract class Migration implements TableAltererMigration {
     tableName: string,
     name: string,
     type: string,
-    options: ColumnOptions = {}
+    options: ColumnOptions = {},
   ): Promise<Result<void>> {
     this._commands.push({
-      up: { type: 'addColumn', tableName, name, columnType: type, options },
-      down: { type: 'removeColumn', tableName, name },
+      up: { type: "addColumn", tableName, name, columnType: type, options },
+      down: { type: "removeColumn", tableName, name },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -732,11 +732,11 @@ export abstract class Migration implements TableAltererMigration {
     tableName: string,
     name: string,
     type?: string,
-    options: ColumnOptions = {}
+    options: ColumnOptions = {},
   ): Promise<Result<void>> {
     this._commands.push({
-      up: { type: 'removeColumn', tableName, name },
-      down: { type: 'addColumn', tableName, name, columnType: type, options },
+      up: { type: "removeColumn", tableName, name },
+      down: { type: "addColumn", tableName, name, columnType: type, options },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -745,11 +745,11 @@ export abstract class Migration implements TableAltererMigration {
   public async renameColumn(
     tableName: string,
     oldName: string,
-    newName: string
+    newName: string,
   ): Promise<Result<void>> {
     this._commands.push({
-      up: { type: 'renameColumn', tableName, from: oldName, to: newName },
-      down: { type: 'renameColumn', tableName, from: newName, to: oldName },
+      up: { type: "renameColumn", tableName, from: oldName, to: newName },
+      down: { type: "renameColumn", tableName, from: newName, to: oldName },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -757,8 +757,8 @@ export abstract class Migration implements TableAltererMigration {
 
   public async renameTable(oldName: string, newName: string): Promise<Result<void>> {
     this._commands.push({
-      up: { type: 'renameTable', from: oldName, to: newName },
-      down: { type: 'renameTable', from: newName, to: oldName },
+      up: { type: "renameTable", from: oldName, to: newName },
+      down: { type: "renameTable", from: newName, to: oldName },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -768,9 +768,9 @@ export abstract class Migration implements TableAltererMigration {
     tableName: string,
     name: string,
     type: string,
-    options: ColumnOptions = {}
+    options: ColumnOptions = {},
   ): Promise<Result<void>> {
-    if (this.dialect === 'sqlite') {
+    if (this.dialect === "sqlite") {
       const pragma = `PRAGMA table_info(${this._sql.strategy.quoteIdentifier(tableName)})`;
       const infoRes = await this.db.all(sql.raw(pragma));
       if (!infoRes.success) return infoRes as Result<never>;
@@ -793,13 +793,13 @@ export abstract class Migration implements TableAltererMigration {
     } else {
       this._commands.push({
         up: {
-          type: 'changeColumn',
+          type: "changeColumn",
           tableName,
           name,
           columnType: type,
           options,
         },
-        down: { type: 'changeColumn', tableName, name },
+        down: { type: "changeColumn", tableName, name },
       });
       if (!this._inChange) return await this.executeCommands();
       return ok(undefined);
@@ -809,9 +809,9 @@ export abstract class Migration implements TableAltererMigration {
   public async changeColumnDefault(
     tableName: string,
     name: string,
-    val: unknown
+    val: unknown,
   ): Promise<Result<void>> {
-    if (this.dialect === 'sqlite') {
+    if (this.dialect === "sqlite") {
       const pragma = `PRAGMA table_info(${this._sql.strategy.quoteIdentifier(tableName)})`;
       const infoRes = await this.db.all(sql.raw(pragma));
       if (!infoRes.success) return infoRes as Result<never>;
@@ -837,8 +837,8 @@ export abstract class Migration implements TableAltererMigration {
       return ok(undefined);
     } else {
       this._commands.push({
-        up: { type: 'changeColumnDefault', tableName, name, value: val },
-        down: { type: 'changeColumnDefault', tableName, name },
+        up: { type: "changeColumnDefault", tableName, name, value: val },
+        down: { type: "changeColumnDefault", tableName, name },
       });
       if (!this._inChange) return await this.executeCommands();
       return ok(undefined);
@@ -848,9 +848,9 @@ export abstract class Migration implements TableAltererMigration {
   public async changeColumnNull(
     tableName: string,
     name: string,
-    nullable: boolean
+    nullable: boolean,
   ): Promise<Result<void>> {
-    if (this.dialect === 'sqlite') {
+    if (this.dialect === "sqlite") {
       const pragma = `PRAGMA table_info(${this._sql.strategy.quoteIdentifier(tableName)})`;
       const infoRes = await this.db.all(sql.raw(pragma));
       if (!infoRes.success) return infoRes as Result<never>;
@@ -876,8 +876,8 @@ export abstract class Migration implements TableAltererMigration {
       return ok(undefined);
     } else {
       this._commands.push({
-        up: { type: 'changeColumnNull', tableName, name, nullable },
-        down: { type: 'changeColumnNull', tableName, name },
+        up: { type: "changeColumnNull", tableName, name, nullable },
+        down: { type: "changeColumnNull", tableName, name },
       });
       if (!this._inChange) return await this.executeCommands();
       return ok(undefined);
@@ -887,12 +887,12 @@ export abstract class Migration implements TableAltererMigration {
   public async addIndex(
     tableName: string,
     columns: string | string[],
-    options: { name?: string; unique?: boolean } = {}
+    options: { name?: string; unique?: boolean } = {},
   ): Promise<Result<void>> {
     const cols = Array.isArray(columns) ? columns : [columns];
     this._commands.push({
-      up: { type: 'addIndex', tableName, columns: cols, options },
-      down: { type: 'removeIndex', tableName, columns: cols, options },
+      up: { type: "addIndex", tableName, columns: cols, options },
+      down: { type: "removeIndex", tableName, columns: cols, options },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -901,12 +901,12 @@ export abstract class Migration implements TableAltererMigration {
   public async removeIndex(
     tableName: string,
     columns: string | string[],
-    options: { name?: string; unique?: boolean } = {}
+    options: { name?: string; unique?: boolean } = {},
   ): Promise<Result<void>> {
     const cols = Array.isArray(columns) ? columns : [columns];
     this._commands.push({
-      up: { type: 'removeIndex', tableName, columns: cols, options },
-      down: { type: 'addIndex', tableName, columns: cols, options },
+      up: { type: "removeIndex", tableName, columns: cols, options },
+      down: { type: "addIndex", tableName, columns: cols, options },
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -920,9 +920,9 @@ export abstract class Migration implements TableAltererMigration {
       onDelete?: string;
       onUpdate?: string;
       name?: string;
-    }
+    },
   ): Promise<Result<void>> {
-    if (this.dialect === 'sqlite') {
+    if (this.dialect === "sqlite") {
       const pragma = `PRAGMA table_info(${this._sql.strategy.quoteIdentifier(tableName)})`;
       const infoRes = await this.db.all(sql.raw(pragma));
       if (!infoRes.success) return infoRes as Result<never>;
@@ -937,11 +937,11 @@ export abstract class Migration implements TableAltererMigration {
           });
           if (col.name === options.column) {
             t.foreignKeys.push(
-              new ForeignKey(options.column, toTable, 'id', {
+              new ForeignKey(options.column, toTable, "id", {
                 onDelete: options.onDelete,
                 onUpdate: options.onUpdate,
                 name: options.name,
-              })
+              }),
             );
           }
         }
@@ -949,8 +949,8 @@ export abstract class Migration implements TableAltererMigration {
       return ok(undefined);
     } else {
       this._commands.push({
-        up: { type: 'addForeignKey', tableName, toTable, options },
-        down: { type: 'removeForeignKey', tableName, options },
+        up: { type: "addForeignKey", tableName, toTable, options },
+        down: { type: "removeForeignKey", tableName, options },
       });
       if (!this._inChange) return await this.executeCommands();
       return ok(undefined);
@@ -959,9 +959,9 @@ export abstract class Migration implements TableAltererMigration {
 
   public async removeForeignKey(
     tableName: string,
-    options: { column?: string; name?: string }
+    options: { column?: string; name?: string },
   ): Promise<Result<void>> {
-    if (this.dialect === 'sqlite') {
+    if (this.dialect === "sqlite") {
       const pragma = `PRAGMA table_info(${this._sql.strategy.quoteIdentifier(tableName)})`;
       const infoRes = await this.db.all(sql.raw(pragma));
       if (!infoRes.success) return infoRes as Result<never>;
@@ -981,11 +981,11 @@ export abstract class Migration implements TableAltererMigration {
       return ok(undefined);
     } else {
       this._commands.push({
-        up: { type: 'removeForeignKey', tableName, options },
+        up: { type: "removeForeignKey", tableName, options },
         down: {
-          type: 'addForeignKey',
+          type: "addForeignKey",
           tableName,
-          options: { ...options, toTable: '' },
+          options: { ...options, toTable: "" },
         },
       });
       if (!this._inChange) return await this.executeCommands();
@@ -994,10 +994,10 @@ export abstract class Migration implements TableAltererMigration {
   }
 
   protected createJoinTable(table1: string, table2: string, options: JoinTableOptions = {}) {
-    const name = options.tableName || `${table1}_${table2}`.split('_').sort().join('_');
+    const name = options.tableName || `${table1}_${table2}`.split("_").sort().join("_");
     this.createTable(name, { id: false }, (t) => {
-      const col1 = options.columnNames?.[0] || `${table1.replace(/s$/, '')}_id`;
-      const col2 = options.columnNames?.[1] || `${table2.replace(/s$/, '')}_id`;
+      const col1 = options.columnNames?.[0] || `${table1.replace(/s$/, "")}_id`;
+      const col2 = options.columnNames?.[1] || `${table2.replace(/s$/, "")}_id`;
       t.integer(col1, options.columnOptions);
       t.integer(col2, options.columnOptions);
       if (options.indexes !== false) {
@@ -1008,14 +1008,14 @@ export abstract class Migration implements TableAltererMigration {
 
   public async recreateTable(
     name: string,
-    callback: (t: TableBuilder) => void
+    callback: (t: TableBuilder) => void,
   ): Promise<Result<void>> {
     const t = new TableBuilder(name, { id: false });
     callback(t);
 
     this._commands.push({
-      up: { type: 'recreateTable', name, table: t },
-      down: { type: 'recreateTable', name, table: null as any }, // Down needs the previous state, which we don't know here
+      up: { type: "recreateTable", name, table: t },
+      down: { type: "recreateTable", name, table: null as any }, // Down needs the previous state, which we don't know here
     });
     if (!this._inChange) return await this.executeCommands();
     return ok(undefined);
@@ -1023,15 +1023,15 @@ export abstract class Migration implements TableAltererMigration {
 
   protected async execute(sqlStr: string) {
     if (this._isUp) {
-      this._commands.push({ up: sqlStr, down: '' });
+      this._commands.push({ up: sqlStr, down: "" });
     } else {
-      this._commands.push({ up: '', down: sqlStr });
+      this._commands.push({ up: "", down: sqlStr });
     }
   }
 
   public async changeTable(
     name: string,
-    callback: (t: TableAlterer) => Promise<Result<void>> | Promise<void> | void
+    callback: (t: TableAlterer) => Promise<Result<void>> | Promise<void> | void,
   ): Promise<Result<void>> {
     const alterer = new TableAlterer(name, this);
     const res = await safeAsync(async () => await callback(alterer));
@@ -1042,8 +1042,8 @@ export abstract class Migration implements TableAltererMigration {
   /**
    * Get the SQL statements for this migration without executing them
    */
-  async toSql(direction: Direction = 'up'): Promise<Result<string[]>> {
-    this._isUp = direction === 'up';
+  async toSql(direction: Direction = "up"): Promise<Result<string[]>> {
+    this._isUp = direction === "up";
     this._inChange = true;
     const res = await safeAsync(async () => await this.change());
     this._inChange = false;
@@ -1061,9 +1061,9 @@ export abstract class Migration implements TableAltererMigration {
 
     for (const cmd of commands) {
       const action = this._isUp ? cmd.up : cmd.down;
-      if (typeof action === 'string' && action) {
+      if (typeof action === "string" && action) {
         statements.push(action);
-      } else if (typeof action === 'object' && action !== null) {
+      } else if (typeof action === "object" && action !== null) {
         const res = this._sql.generate(action);
         if (!res.success) return res as Result<never>;
         if (res.data) {
@@ -1093,8 +1093,8 @@ export abstract class Migration implements TableAltererMigration {
     const metadata: Record<string, Relationship[]> = {};
     for (const cmd of this._commands) {
       const action = cmd.up;
-      if (typeof action === 'object' && action !== null) {
-        if ('table' in action && action.table instanceof TableBuilder) {
+      if (typeof action === "object" && action !== null) {
+        if ("table" in action && action.table instanceof TableBuilder) {
           const t = action.table as TableBuilder;
           if (t.relationships.length > 0) {
             metadata[t.tableName] = [...(metadata[t.tableName] || []), ...t.relationships];
@@ -1106,9 +1106,9 @@ export abstract class Migration implements TableAltererMigration {
   }
 }
 
-export { MigrationRunner } from './runner';
-export { migrateDO, type DOMigration, type SqlStorage } from './durable';
-export { STANDARD_HANDLERS, type HandlerFunc } from './handlers';
+export { MigrationRunner } from "./runner";
+export { migrateDO, type DOMigration, type SqlStorage } from "./durable";
+export { STANDARD_HANDLERS, type HandlerFunc } from "./handlers";
 export {
   Statement,
   Composite,
@@ -1118,4 +1118,4 @@ export {
   Keyword,
   Raw,
   sql as sqlBuilder,
-} from 'nomo/sql';
+} from "nomo/sql";

@@ -1,4 +1,4 @@
-import { createSignal } from './signals.js';
+import { createSignal } from "./signals.js";
 
 export function useThrottle(initialValue, delay = 300) {
   const value = createSignal(initialValue);
@@ -12,10 +12,13 @@ export function useThrottle(initialValue, delay = 300) {
       lastRun = now;
       throttledValue.set(newValue);
     } else {
-      setTimeout(() => {
-        lastRun = Date.now();
-        throttledValue.set(value.get());
-      }, delay - (now - lastRun));
+      setTimeout(
+        () => {
+          lastRun = Date.now();
+          throttledValue.set(value.get());
+        },
+        delay - (now - lastRun),
+      );
     }
   };
 
@@ -24,9 +27,17 @@ export function useThrottle(initialValue, delay = 300) {
   };
 
   return {
-    value: { get value() { return value.get(); } },
-    throttled: { get value() { return throttledValue.get(); } },
+    value: {
+      get value() {
+        return value.get();
+      },
+    },
+    throttled: {
+      get value() {
+        return throttledValue.get();
+      },
+    },
     set,
-    cancel
+    cancel,
   };
 }

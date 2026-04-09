@@ -1,23 +1,23 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoContainer extends NofoElement {
   static props = {
-    size: { type: String, default: '3' }
+    size: { type: String, default: "3" },
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('size', 'data-size');
+    s.attr("size", "data-size");
   }
 
   getSizeStyles(size) {
     const sizes = {
-      '1': '480px',
-      '2': '768px',
-      '3': '1024px',
-      '4': '1280px'
+      1: "480px",
+      2: "768px",
+      3: "1024px",
+      4: "1280px",
     };
-    return sizes[size] || sizes['3'];
+    return sizes[size] || sizes["3"];
   }
 
   template() {
@@ -41,5 +41,5 @@ class NofoContainer extends NofoElement {
   }
 }
 
-customElements.define('nofo-container', NofoContainer);
+customElements.define("nofo-container", NofoContainer);
 export { NofoContainer };

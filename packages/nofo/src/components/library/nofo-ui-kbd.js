@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIKbd extends NofoElement {
   template() {
@@ -36,5 +36,5 @@ class NofoUIKbd extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-kbd', NofoUIKbd);
+customElements.define("nofo-ui-kbd", NofoUIKbd);
 export { NofoUIKbd };

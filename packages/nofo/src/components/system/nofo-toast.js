@@ -1,24 +1,24 @@
-import { NofoElement, useTimeout } from '../../index.js';
+import { NofoElement, useTimeout } from "../../index.js";
 
 class NofoToastGroup extends NofoElement {
   static props = {
-    position: 'bottom-right'
+    position: "bottom-right",
   };
 
   onMount() {
-    this.sync().attr('position').toDataAttr('position');
+    this.sync().attr("position").toDataAttr("position");
   }
 
   getPositionStyles(position) {
     const positions = {
-      'top-left': { top: '1rem', left: '1rem' },
-      'top-right': { top: '1rem', right: '1rem' },
-      'top-center': { top: '1rem', left: '50%', transform: 'translateX(-50%)' },
-      'bottom-left': { bottom: '1rem', left: '1rem' },
-      'bottom-right': { bottom: '1rem', right: '1rem' },
-      'bottom-center': { bottom: '1rem', left: '50%', transform: 'translateX(-50%)' }
+      "top-left": { top: "1rem", left: "1rem" },
+      "top-right": { top: "1rem", right: "1rem" },
+      "top-center": { top: "1rem", left: "50%", transform: "translateX(-50%)" },
+      "bottom-left": { bottom: "1rem", left: "1rem" },
+      "bottom-right": { bottom: "1rem", right: "1rem" },
+      "bottom-center": { bottom: "1rem", left: "50%", transform: "translateX(-50%)" },
     };
-    return positions[position] || positions['bottom-right'];
+    return positions[position] || positions["bottom-right"];
   }
 
   template() {
@@ -36,7 +36,9 @@ class NofoToastGroup extends NofoElement {
         z-index: 1000;
         pointer-events: none;
         box-sizing: border-box;
-        ${Object.entries(positionStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
+        ${Object.entries(positionStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
       }
       ::slotted(nofo-toast) {
         pointer-events: auto;
@@ -47,19 +49,21 @@ class NofoToastGroup extends NofoElement {
 
 class NofoToast extends NofoElement {
   static props = {
-    variant: 'default',
+    variant: "default",
     duration: 5000,
     open: false,
-    defaultOpen: false
+    defaultOpen: false,
   };
 
   #timer = useTimeout();
 
   onMount() {
     this.sync()
-      .attr('variant').toDataAttr('variant')
-      .attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
-    
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
+
     if (this.state.defaultOpen) {
       this.state.open = true;
     }
@@ -86,20 +90,46 @@ class NofoToast extends NofoElement {
     if (this.state.duration > 0) {
       this.#timer.set(() => {
         this.state.open = false;
-        this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+        this.dispatchEvent(
+          new CustomEvent("open-change", {
+            detail: { open: false },
+            bubbles: true,
+            composed: true,
+          }),
+        );
       }, this.state.duration);
     }
   }
 
   getVariantStyles(variant) {
     const variants = {
-      'default': { backgroundColor: 'var(--color-panel-solid)', border: '1px solid var(--gray-6)', color: 'var(--gray-12)' },
-      'success': { backgroundColor: 'var(--green-3)', border: '1px solid var(--green-7)', color: 'var(--green-11)' },
-      'error': { backgroundColor: 'var(--red-3)', border: '1px solid var(--red-7)', color: 'var(--red-11)' },
-      'warning': { backgroundColor: 'var(--amber-3)', border: '1px solid var(--amber-7)', color: 'var(--amber-11)' },
-      'info': { backgroundColor: 'var(--blue-3)', border: '1px solid var(--blue-7)', color: 'var(--blue-11)' }
+      default: {
+        backgroundColor: "var(--color-panel-solid)",
+        border: "1px solid var(--gray-6)",
+        color: "var(--gray-12)",
+      },
+      success: {
+        backgroundColor: "var(--green-3)",
+        border: "1px solid var(--green-7)",
+        color: "var(--green-11)",
+      },
+      error: {
+        backgroundColor: "var(--red-3)",
+        border: "1px solid var(--red-7)",
+        color: "var(--red-11)",
+      },
+      warning: {
+        backgroundColor: "var(--amber-3)",
+        border: "1px solid var(--amber-7)",
+        color: "var(--amber-11)",
+      },
+      info: {
+        backgroundColor: "var(--blue-3)",
+        border: "1px solid var(--blue-7)",
+        color: "var(--blue-11)",
+      },
     };
-    return variants[variant] || variants['default'];
+    return variants[variant] || variants["default"];
   }
 
   template() {
@@ -115,14 +145,16 @@ class NofoToast extends NofoElement {
 
   handleClose() {
     this.state.open = false;
-    this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("open-change", { detail: { open: false }, bubbles: true, composed: true }),
+    );
   }
 
   styles() {
     const variantStyles = this.getVariantStyles(this.state.variant);
     return `
       :host {
-        display: ${this.state.open ? 'flex' : 'none'};
+        display: ${this.state.open ? "flex" : "none"};
         align-items: flex-start;
         gap: 0.75rem;
         padding: 1rem;
@@ -132,7 +164,9 @@ class NofoToast extends NofoElement {
         max-width: 400px;
         position: relative;
         box-sizing: border-box;
-        ${Object.entries(variantStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
+        ${Object.entries(variantStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
       }
       .toast-content { flex: 1; }
       .toast-close {
@@ -187,19 +221,19 @@ class NofoToastDescription extends NofoElement {
 
 class NofoToastAction extends NofoElement {
   static props = {
-    'alt-text': ''
+    "alt-text": "",
   };
 
   onMount() {
-    this.addEventListener('click', () => {
-      const toast = this.closest('nofo-toast');
+    this.addEventListener("click", () => {
+      const toast = this.closest("nofo-toast");
       if (toast) toast.state.open = false;
     });
   }
 
   template() {
     return `
-      <button type="button" aria-label="${this.state['alt-text']}">
+      <button type="button" aria-label="${this.state["alt-text"]}">
         <slot></slot>
       </button>
     `;
@@ -227,14 +261,14 @@ class NofoToastAction extends NofoElement {
 
 class NofoToastClose extends NofoElement {
   onMount() {
-    this.addEventListener('click', () => {
-      const toast = this.closest('nofo-toast');
+    this.addEventListener("click", () => {
+      const toast = this.closest("nofo-toast");
       if (toast) toast.state.open = false;
     });
   }
 
   template() {
-    return '';
+    return "";
   }
 
   styles() {
@@ -242,12 +276,12 @@ class NofoToastClose extends NofoElement {
   }
 }
 
-customElements.define('nofo-toast-group', NofoToastGroup);
-customElements.define('nofo-toast', NofoToast);
-customElements.define('nofo-toast-title', NofoToastTitle);
-customElements.define('nofo-toast-description', NofoToastDescription);
-customElements.define('nofo-toast-action', NofoToastAction);
-customElements.define('nofo-toast-close', NofoToastClose);
+customElements.define("nofo-toast-group", NofoToastGroup);
+customElements.define("nofo-toast", NofoToast);
+customElements.define("nofo-toast-title", NofoToastTitle);
+customElements.define("nofo-toast-description", NofoToastDescription);
+customElements.define("nofo-toast-action", NofoToastAction);
+customElements.define("nofo-toast-close", NofoToastClose);
 
 export {
   NofoToastGroup,
@@ -255,5 +289,5 @@ export {
   NofoToastTitle,
   NofoToastDescription,
   NofoToastAction,
-  NofoToastClose
+  NofoToastClose,
 };

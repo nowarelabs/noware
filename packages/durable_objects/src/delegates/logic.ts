@@ -1,4 +1,4 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface LogicConfig {
   onCalculate?: (owner: any, input: any) => Promise<any>;

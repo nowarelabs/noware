@@ -1,29 +1,29 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoAccordion extends NofoElement {
   static props = {
-    type: 'single',
+    type: "single",
     value: null,
     defaultValue: null,
-    collapsible: false
+    collapsible: false,
   };
 
   onMount() {
-    this.sync().attr('type').toDataAttr('type');
+    this.sync().attr("type").toDataAttr("type");
 
     if (this.state.value === null && this.state.defaultValue !== null) {
       this.state.value = this.state.defaultValue;
     }
 
-    if (this.state.type === 'multiple' && !Array.isArray(this.state.value)) {
+    if (this.state.type === "multiple" && !Array.isArray(this.state.value)) {
       this.state.value = this.state.value ? [this.state.value] : [];
     }
 
-    this.addEventListener('nofo-accordion-select', (e) => {
+    this.addEventListener("nofo-accordion-select", (e) => {
       const { value } = e.detail;
       const { type, collapsible } = this.state;
 
-      if (type === 'single') {
+      if (type === "single") {
         const isCurrent = this.state.value === value;
         if (isCurrent && collapsible) {
           this.state.value = null;
@@ -41,11 +41,13 @@ class NofoAccordion extends NofoElement {
         this.state.value = values;
       }
 
-      this.dispatchEvent(new CustomEvent('value-change', {
-        detail: { value: this.state.value },
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("value-change", {
+          detail: { value: this.state.value },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     });
   }
 
@@ -68,20 +70,21 @@ class NofoAccordion extends NofoElement {
 
 class NofoAccordionItem extends NofoElement {
   static props = {
-    value: null
+    value: null,
   };
 
   onMount() {
-    const accordion = this.closest('nofo-accordion');
+    const accordion = this.closest("nofo-accordion");
     if (accordion) {
       this.effect(() => {
         const parentValue = accordion.state.value;
         const type = accordion.state.type;
-        const isOpen = type === 'single' 
-          ? parentValue === this.state.value 
-          : (Array.isArray(parentValue) && parentValue.includes(this.state.value));
-        
-        this.setAttribute('data-state', isOpen ? 'open' : 'closed');
+        const isOpen =
+          type === "single"
+            ? parentValue === this.state.value
+            : Array.isArray(parentValue) && parentValue.includes(this.state.value);
+
+        this.setAttribute("data-state", isOpen ? "open" : "closed");
       });
     }
   }
@@ -106,23 +109,25 @@ class NofoAccordionItem extends NofoElement {
 
 class NofoAccordionTrigger extends NofoElement {
   onMount() {
-    const item = this.closest('nofo-accordion-item');
+    const item = this.closest("nofo-accordion-item");
     if (item) {
       this.effect(() => {
-        const isOpen = item.getAttribute('data-state') === 'open';
-        this.setAttribute('data-state', isOpen ? 'open' : 'closed');
+        const isOpen = item.getAttribute("data-state") === "open";
+        this.setAttribute("data-state", isOpen ? "open" : "closed");
       });
     }
   }
 
   handleClick() {
-    const item = this.closest('nofo-accordion-item');
+    const item = this.closest("nofo-accordion-item");
     if (item) {
-      this.dispatchEvent(new CustomEvent('nofo-accordion-select', {
-        detail: { value: item.state.value },
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("nofo-accordion-select", {
+          detail: { value: item.state.value },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   }
 
@@ -169,11 +174,11 @@ class NofoAccordionTrigger extends NofoElement {
 
 class NofoAccordionContent extends NofoElement {
   onMount() {
-    const item = this.closest('nofo-accordion-item');
+    const item = this.closest("nofo-accordion-item");
     if (item) {
       this.effect(() => {
-        const isOpen = item.getAttribute('data-state') === 'open';
-        this.setAttribute('data-state', isOpen ? 'open' : 'closed');
+        const isOpen = item.getAttribute("data-state") === "open";
+        this.setAttribute("data-state", isOpen ? "open" : "closed");
       });
     }
   }
@@ -203,14 +208,9 @@ class NofoAccordionContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-accordion', NofoAccordion);
-customElements.define('nofo-accordion-item', NofoAccordionItem);
-customElements.define('nofo-accordion-trigger', NofoAccordionTrigger);
-customElements.define('nofo-accordion-content', NofoAccordionContent);
+customElements.define("nofo-accordion", NofoAccordion);
+customElements.define("nofo-accordion-item", NofoAccordionItem);
+customElements.define("nofo-accordion-trigger", NofoAccordionTrigger);
+customElements.define("nofo-accordion-content", NofoAccordionContent);
 
-export {
-  NofoAccordion,
-  NofoAccordionItem,
-  NofoAccordionTrigger,
-  NofoAccordionContent
-};
+export { NofoAccordion, NofoAccordionItem, NofoAccordionTrigger, NofoAccordionContent };

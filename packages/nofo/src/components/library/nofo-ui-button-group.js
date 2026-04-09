@@ -1,17 +1,17 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIButtonGroup extends NofoElement {
   static props = {
-    orientation: 'horizontal',
+    orientation: "horizontal",
     attached: false,
-    size: '',
-    variant: ''
+    size: "",
+    variant: "",
   };
 
   template() {
     const { orientation, attached, size, variant } = this.state;
-    
+
     return `
       <nofo-button-group
         orientation="${orientation}"
@@ -26,7 +26,7 @@ class NofoUIButtonGroup extends NofoElement {
 
   styles() {
     const { attached } = this.state;
-    
+
     return `
       ${nofoUIStyles}
       
@@ -39,11 +39,15 @@ class NofoUIButtonGroup extends NofoElement {
         gap: var(--nofo-ui-spacing-sm);
       }
       
-      ${attached ? `:host([attached]) nofo-button-group {
+      ${
+        attached
+          ? `:host([attached]) nofo-button-group {
         gap: 0;
-      }` : ''}
+      }`
+          : ""
+      }
     `;
   }
 }
 
-customElements.define('nofo-ui-button-group', NofoUIButtonGroup);
+customElements.define("nofo-ui-button-group", NofoUIButtonGroup);

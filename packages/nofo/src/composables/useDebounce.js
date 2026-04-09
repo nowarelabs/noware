@@ -1,4 +1,4 @@
-import { createSignal } from './signals.js';
+import { createSignal } from "./signals.js";
 
 export function useDebounce(initialValue, delay = 300) {
   const value = createSignal(initialValue);
@@ -28,10 +28,18 @@ export function useDebounce(initialValue, delay = 300) {
   };
 
   return {
-    value: { get value() { return value.get(); } },
-    debounced: { get value() { return debouncedValue.get(); } },
+    value: {
+      get value() {
+        return value.get();
+      },
+    },
+    debounced: {
+      get value() {
+        return debouncedValue.get();
+      },
+    },
     set,
     cancel,
-    flush
+    flush,
   };
 }

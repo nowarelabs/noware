@@ -1,12 +1,12 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICalendar extends NofoElement {
   static props = {
-    value: { type: String, default: '' },
-    defaultValue: { type: String, default: '' },
-    min: { type: String, default: '' },
-    max: { type: String, default: '' }
+    value: { type: String, default: "" },
+    defaultValue: { type: String, default: "" },
+    min: { type: String, default: "" },
+    max: { type: String, default: "" },
   };
 
   static template() {
@@ -74,10 +74,10 @@ class NofoUICalendar extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
 }
 
-customElements.define('nofo-ui-calendar', NofoUICalendar);
+customElements.define("nofo-ui-calendar", NofoUICalendar);

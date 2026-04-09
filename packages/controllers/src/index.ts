@@ -1,7 +1,7 @@
-import { RouterContext } from 'nomo/router';
-import status from 'http-status';
-import { Logger, LogLevel } from 'nomo/logger';
-import { BaseModel } from 'nomo/models';
+import { RouterContext } from "nomo/router";
+import status from "http-status";
+import { Logger, LogLevel } from "nomo/logger";
+import { BaseModel } from "nomo/models";
 
 export interface INormalizer<T = unknown> {
   normalize(): T;
@@ -24,7 +24,7 @@ export type HookConfig<T = unknown, Env = unknown, Ctx = unknown> = {
         controller: T,
         ctx: RouterContext<Env, Ctx>,
         env: Env,
-        request: Request
+        request: Request,
       ) => void | Response | Promise<void | Response>);
   normalize?: Constructor<INormalizer>;
   validate?: Constructor<IValidator>;
@@ -49,7 +49,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
   constructor(
     protected request: Request,
     protected env: Env,
-    protected ctx: RouterContext<Env, Ctx>
+    protected ctx: RouterContext<Env, Ctx>,
   ) {}
 
   /**
@@ -65,7 +65,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
       validJson?: Record<string, unknown>;
     };
     const body = ctxWithJson.validJson || {};
-    const wrappedKey = this.controller_name.toLowerCase().replace('controller', '');
+    const wrappedKey = this.controller_name.toLowerCase().replace("controller", "");
     const wrappedBody = (body as Record<string, unknown>)[wrappedKey] || body;
 
     return {
@@ -89,7 +89,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
     const envWithLogLevel = this.env as Record<string, unknown>;
     const rawLogLevel = envWithLogLevel?.LOG_LEVEL;
     const level: LogLevel =
-      typeof rawLogLevel === 'string' && rawLogLevel in LogLevel
+      typeof rawLogLevel === "string" && rawLogLevel in LogLevel
         ? LogLevel[rawLogLevel as keyof typeof LogLevel]
         : LogLevel.INFO;
 
@@ -97,18 +97,18 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
       // Create a new logger with updated service and context
       const baseLogger = this.ctx.logger;
       return new Logger({
-        service: 'controllers',
+        service: "controllers",
         environment: (baseLogger as any).environment,
         level: (baseLogger as any).level,
         context: {
-          ...((baseLogger as any).context || {}),
+          ...(baseLogger as any).context,
           controller: this.controller_name,
           action: this.action_name,
         },
       });
     }
     return new Logger({
-      service: 'controllers',
+      service: "controllers",
       level,
       context: {
         controller: this.controller_name,
@@ -122,16 +122,16 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
   }
 
   protected get action_name(): string {
-    return this._actionName || '';
+    return this._actionName || "";
   }
 
   protected get controller_name(): string {
     return this._controllerName || this.constructor.name;
   }
 
-  protected extract_value(key: string, delimiter: string = '_'): string[] {
+  protected extract_value(key: string, delimiter: string = "_"): string[] {
     const val = this.params[key];
-    if (typeof val !== 'string') return [];
+    if (typeof val !== "string") return [];
     return val.split(delimiter);
   }
 
@@ -149,9 +149,9 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
 
   protected get ip(): string | null {
     return (
-      this.headers['cf-connecting-ip'] ||
-      this.headers['x-real-ip'] ||
-      this.headers['x-forwarded-for'] ||
+      this.headers["cf-connecting-ip"] ||
+      this.headers["x-real-ip"] ||
+      this.headers["x-forwarded-for"] ||
       null
     );
   }
@@ -174,13 +174,13 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
   }
 
   protected get cookies(): Record<string, string> {
-    const cookieStr = this.headers['cookie'] || '';
+    const cookieStr = this.headers["cookie"] || "";
     return Object.fromEntries(
       cookieStr
-        .split(';')
-        .map((v) => v.split('='))
+        .split(";")
+        .map((v) => v.split("="))
         .map(([k, v]) => [k?.trim(), v?.trim()])
-        .filter(([k, v]) => k && v)
+        .filter(([k, v]) => k && v),
     );
   }
 
@@ -194,8 +194,8 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
       path?: string;
       secure?: boolean;
       httpOnly?: boolean;
-      sameSite?: 'Strict' | 'Lax' | 'None';
-    } = {}
+      sameSite?: "Strict" | "Lax" | "None";
+    } = {},
   ) {
     let cookie = `${name}=${value}`;
     if (options.expires) cookie += `; Expires=${options.expires.toUTCString()}`;
@@ -209,7 +209,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
   }
 
   protected deleteCookie(name: string) {
-    this.setCookie(name, '', { maxAge: 0 });
+    this.setCookie(name, "", { maxAge: 0 });
   }
 
   protected layout: unknown = null;
@@ -244,7 +244,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
       Object.entries(extraHeaders).forEach(([k, v]) => this.responseHeaders.set(k, v));
     }
 
-    this.responseCookies.forEach((cookie) => this.responseHeaders.append('Set-Cookie', cookie));
+    this.responseCookies.forEach((cookie) => this.responseHeaders.append("Set-Cookie", cookie));
 
     const init = {
       status,
@@ -264,28 +264,28 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
       const viewData = data || this.params || {};
 
       // Initialize Asset Pipeline
-      const { AssetPipeline } = await import('nomo/assets');
+      const { AssetPipeline } = await import("nomo/assets");
       const envRecord = this.env as Record<string, unknown>;
       const ctxRecord = this.ctx as Record<string, unknown>;
 
       const assets = new AssetPipeline({
         // @ts-ignore
         manifest: envRecord.ASSET_MANIFEST,
-        isProd: envRecord.ENVIRONMENT === 'production',
+        isProd: envRecord.ENVIRONMENT === "production",
         importMap: ctxRecord.IMPORT_MAP || envRecord.IMPORT_MAP,
       });
 
       if (LayoutClass) {
-        const { BaseLayout } = await import('nomo/views');
+        const { BaseLayout } = await import("nomo/views");
         const renderedHtml = BaseLayout.withLayout(
           LayoutClass as never,
           view as never,
           viewData,
-          assets
+          assets,
         );
         return this.html(renderedHtml, init);
       }
-      const { BaseView } = await import('nomo/views');
+      const { BaseView } = await import("nomo/views");
       const renderedHtml = (view as typeof BaseView).render(viewData, assets);
       return this.html(renderedHtml, init);
     }
@@ -300,36 +300,36 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
   protected redirect_to(url: string, options: { status?: number } = {}): Response {
     let { status } = options;
     if (!status) {
-      const safeMethod = ['GET', 'HEAD'].includes(this.method);
+      const safeMethod = ["GET", "HEAD"].includes(this.method);
       status = safeMethod ? 302 : 303;
     }
     return this.ctx.redirect(url, status);
   }
 
   // Status code shorthands
-  protected notFound(message: string = 'Not Found'): Promise<Response> {
+  protected notFound(message: string = "Not Found"): Promise<Response> {
     return this.render({ json: { error: message }, status: status.NOT_FOUND });
   }
 
-  protected unauthorized(message: string = 'Unauthorized'): Promise<Response> {
+  protected unauthorized(message: string = "Unauthorized"): Promise<Response> {
     return this.render({
       json: { error: message },
       status: status.UNAUTHORIZED,
     });
   }
 
-  protected forbidden(message: string = 'Forbidden'): Promise<Response> {
+  protected forbidden(message: string = "Forbidden"): Promise<Response> {
     return this.render({ json: { error: message }, status: status.FORBIDDEN });
   }
 
-  protected badRequest(message: string = 'Bad Request'): Promise<Response> {
+  protected badRequest(message: string = "Bad Request"): Promise<Response> {
     return this.render({
       json: { error: message },
       status: status.BAD_REQUEST,
     });
   }
 
-  protected internalServerError(message: string = 'Internal Server Error'): Promise<Response> {
+  protected internalServerError(message: string = "Internal Server Error"): Promise<Response> {
     return this.render({
       json: { error: message },
       status: status.INTERNAL_SERVER_ERROR,
@@ -357,14 +357,14 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
   protected xml(data: string, init?: ResponseInit): Response {
     const mergedHeaders = new Headers(init?.headers);
     this.responseHeaders.forEach((v, k) => mergedHeaders.set(k, v));
-    mergedHeaders.set('Content-Type', 'application/xml');
+    mergedHeaders.set("Content-Type", "application/xml");
     return new Response(data, { ...init, headers: mergedHeaders });
   }
 
   protected csv(data: string, init?: ResponseInit): Response {
     const mergedHeaders = new Headers(init?.headers);
     this.responseHeaders.forEach((v, k) => mergedHeaders.set(k, v));
-    mergedHeaders.set('Content-Type', 'text/csv');
+    mergedHeaders.set("Content-Type", "text/csv");
     return new Response(data, { ...init, headers: mergedHeaders });
   }
 
@@ -372,8 +372,8 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
     const mergedHeaders = new Headers(init?.headers);
     this.responseHeaders.forEach((v, k) => mergedHeaders.set(k, v));
     mergedHeaders.set(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     return new Response(data as unknown as BodyInit, {
       ...init,
@@ -408,7 +408,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
 
   public async runAction(name: string | symbol, args: unknown[] = []): Promise<any> {
     const action = (this as any)[name];
-    if (typeof action !== 'function') {
+    if (typeof action !== "function") {
       this.logger.error(`[ACTION NOT FOUND] ${this.controller_name}#${String(name)}`, {
         controller: this.controller_name,
         action: name,
@@ -443,7 +443,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
             if (dataToNormalize && Object.keys(dataToNormalize).length > 0) {
               (this.ctx as Record<string, unknown>).validJson = this.normalize(
                 hook.normalize,
-                dataToNormalize
+                dataToNormalize,
               );
             }
           }
@@ -462,7 +462,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
               });
               return this.render({
                 json: {
-                  error: 'Validation failed',
+                  error: "Validation failed",
                   details: error.errors || error.message,
                 },
                 status: 400,
@@ -472,7 +472,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
 
           // Generic: Run
           if (hook.run) {
-            if (typeof hook.run === 'function') {
+            if (typeof hook.run === "function") {
               this.logger.debug(`[HOOK] ${String(name)}`);
               const result = await hook.run(this, this.ctx, this.env, this.request);
               if (result instanceof Response) {
@@ -484,7 +484,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
             } else {
               const actionName = hook.run; // Narrowed to string | symbol
               const hookFn = (this as unknown as Record<string | symbol, Function>)[actionName];
-              if (typeof hookFn === 'function') {
+              if (typeof hookFn === "function") {
                 this.logger.debug(`[HOOK] ${String(actionName)}→${String(name)}`);
                 const result = await hookFn.apply(this);
                 if (result instanceof Response) {
@@ -527,13 +527,13 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
           const hookStart = Date.now();
 
           if (hook.run) {
-            if (typeof hook.run === 'function') {
+            if (typeof hook.run === "function") {
               this.logger.debug(`[AFTER] ${String(name)}`);
               await hook.run(this, this.ctx, this.env, this.request);
             } else {
               const actionName = hook.run; // Narrowed to string | symbol
               const hookFn = (this as unknown as Record<string | symbol, Function>)[actionName];
-              if (typeof hookFn === 'function') {
+              if (typeof hookFn === "function") {
                 this.logger.debug(`[AFTER] ${String(actionName)}→${String(name)}`);
                 await hookFn.apply(this, [response]);
               }
@@ -548,7 +548,7 @@ export abstract class BaseController<Env = unknown, Ctx = unknown, Service = unk
     }
 
     const totalDuration = Date.now() - startTime;
-    const responseStatus = response?.status || 'unknown';
+    const responseStatus = response?.status || "unknown";
     this.logger.info(`[DONE] ${this.controller_name}#${String(name)}`, {
       total_ms: totalDuration,
       status: responseStatus,
@@ -585,7 +585,7 @@ export abstract class BaseResourceController<
     return (this.pathParams.id ||
       Object.values(this.pathParams).reverse()[0] ||
       this.params.id ||
-      '') as string;
+      "") as string;
   }
 
   protected getScopeConditions(): Record<string, string> {
@@ -593,7 +593,7 @@ export abstract class BaseResourceController<
     const columns = (this as any).getModel().columnNames;
 
     for (const [key, value] of Object.entries(this.pathParams)) {
-      if (key !== 'id' && columns.includes(key)) {
+      if (key !== "id" && columns.includes(key)) {
         conditions[key] = value as string;
       }
     }
@@ -601,24 +601,24 @@ export abstract class BaseResourceController<
   }
 
   protected getTitle(item?: TSelect): string {
-    return this.controller_name.replace('Controller', '');
+    return this.controller_name.replace("Controller", "");
   }
 
   protected async respondWith(data: any, options: { status?: number } = {}): Promise<Response> {
     if (data === null) return this.notFound();
 
-    const accept = (this.request.headers.get('accept') || '').toLowerCase();
+    const accept = (this.request.headers.get("accept") || "").toLowerCase();
     const ViewComponent = this.getView();
     const DtoComponent = this.getDtoView();
 
     const wantsHtmlOnly =
-      accept.includes('text/html') &&
-      !accept.includes('application/json') &&
-      !accept.includes('*/*');
-    const wantsXml = accept.includes('application/xml');
-    const wantsCsv = accept.includes('text/csv');
+      accept.includes("text/html") &&
+      !accept.includes("application/json") &&
+      !accept.includes("*/*");
+    const wantsXml = accept.includes("application/xml");
+    const wantsCsv = accept.includes("text/csv");
     const wantsXlsx = accept.includes(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     // HTML with view component
@@ -639,7 +639,7 @@ export abstract class BaseResourceController<
     // XML with DTO
     if (wantsXml) {
       if (DtoComponent) {
-        const { BaseDtoView } = await import('nomo/views');
+        const { BaseDtoView } = await import("nomo/views");
         return this.xml((DtoComponent as typeof BaseDtoView).renderXml(data), {
           status: options.status,
         });
@@ -659,7 +659,7 @@ export abstract class BaseResourceController<
 
     // JSON (Default)
     if (DtoComponent) {
-      const { BaseDtoView } = await import('nomo/views');
+      const { BaseDtoView } = await import("nomo/views");
       return this.json((DtoComponent as typeof BaseDtoView).renderJson(data), {
         status: options.status,
       });
@@ -686,7 +686,7 @@ export abstract class BaseResourceController<
   async findAllBy(): Promise<Response> {
     const conditions = this.getScopeConditions();
     const { orderBy, limit, offset } = (await this.getRequestData()) as {
-      orderBy?: { column: string; direction?: 'ASC' | 'DESC' };
+      orderBy?: { column: string; direction?: "ASC" | "DESC" };
       limit?: number;
       offset?: number;
     };
@@ -694,7 +694,7 @@ export abstract class BaseResourceController<
     let query = this.getModel().query().where(conditions);
 
     if (orderBy?.column) {
-      query = query.orderBy(orderBy.column as any, orderBy.direction || 'ASC');
+      query = query.orderBy(orderBy.column as any, orderBy.direction || "ASC");
     }
 
     if (limit) {
@@ -737,7 +737,7 @@ export abstract class BaseResourceController<
     const { column, conditions } = data || {};
 
     if (!column) {
-      return this.badRequest('column is required');
+      return this.badRequest("column is required");
     }
 
     const values = await (this.service as any).pluck(column, conditions || {});
@@ -768,7 +768,7 @@ export abstract class BaseResourceController<
     const data = (await this.getRequestData()) as TInsert;
     if (!data || Object.keys(data).length === 0) {
       this.logger.warn(`[CREATE FAILED] ${this.controller_name}: Missing body`);
-      return this.badRequest('Missing request body');
+      return this.badRequest("Missing request body");
     }
 
     // Auto-inject scope parameters
@@ -846,7 +846,7 @@ export abstract class BaseResourceController<
 
     await this.getModel().delete(id);
     this.logger.info(`[DELETED] ${this.controller_name}#${id}`);
-    return this.render({ json: { message: 'Deleted' } });
+    return this.render({ json: { message: "Deleted" } });
   }
 
   // ===== Lifecycle Actions =====
@@ -968,7 +968,7 @@ export abstract class BaseResourceController<
     }
 
     this.logger.info(`[PURGED] ${this.controller_name}#${identifier}`);
-    return this.render({ json: { message: 'Purged' } });
+    return this.render({ json: { message: "Purged" } });
   }
 
   async retire(id?: string): Promise<Response> {
@@ -1055,7 +1055,7 @@ export abstract class BaseResourceController<
     if (model.add) {
       result = await model.add(identifier, data);
     } else {
-      return this.badRequest('Add action not implemented');
+      return this.badRequest("Add action not implemented");
     }
 
     this.logger.info(`[ADDED] ${this.controller_name}#${identifier}`);
@@ -1073,7 +1073,7 @@ export abstract class BaseResourceController<
     if (model.remove) {
       result = await model.remove(identifier, data);
     } else {
-      return this.badRequest('Remove action not implemented');
+      return this.badRequest("Remove action not implemented");
     }
 
     this.logger.info(`[REMOVED] ${this.controller_name}#${identifier}`);
@@ -1091,7 +1091,7 @@ export abstract class BaseResourceController<
     if (model.assign) {
       result = await model.assign(identifier, data);
     } else {
-      return this.badRequest('Assign action not implemented');
+      return this.badRequest("Assign action not implemented");
     }
 
     this.logger.info(`[ASSIGNED] ${this.controller_name}#${identifier}`);
@@ -1109,7 +1109,7 @@ export abstract class BaseResourceController<
     if (model.unassign) {
       result = await model.unassign(identifier, data);
     } else {
-      return this.badRequest('Unassign action not implemented');
+      return this.badRequest("Unassign action not implemented");
     }
 
     this.logger.info(`[UNASSIGNED] ${this.controller_name}#${identifier}`);
@@ -1123,7 +1123,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_CHILD_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1143,7 +1143,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_PARENT_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1163,7 +1163,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_SIBLING_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1183,7 +1183,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_COUSIN_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1203,7 +1203,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_ANCESTOR_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1223,7 +1223,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_DESCENDANT_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1247,7 +1247,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation || !through) {
-      return this.badRequest('relation and through are required');
+      return this.badRequest("relation and through are required");
     }
 
     this.logger.debug(`[LIST_ASSOCIATED_THROUGH_IDS] ${this.controller_name}#${identifier}`, {
@@ -1271,7 +1271,7 @@ export abstract class BaseResourceController<
     const identifier = id || this.getIdentifier();
 
     if (!relation) {
-      return this.badRequest('relation is required');
+      return this.badRequest("relation is required");
     }
 
     this.logger.debug(`[LIST_RELATED_IDS] ${this.controller_name}#${identifier}`, { relation });
@@ -1292,13 +1292,13 @@ export abstract class BaseResourceController<
     const conditions = this.getScopeConditions();
     const { includes, orderBy, limit, offset } = (await this.getRequestData()) as {
       includes?: Record<string, { model: string; foreignKey: string }>;
-      orderBy?: { column: string; direction?: 'ASC' | 'DESC' };
+      orderBy?: { column: string; direction?: "ASC" | "DESC" };
       limit?: number;
       offset?: number;
     };
 
     if (!includes || Object.keys(includes).length === 0) {
-      return this.badRequest('includes is required');
+      return this.badRequest("includes is required");
     }
 
     this.logger.debug(`[FIND_ALL_WITH] ${this.controller_name}`, { includes, conditions });
@@ -1320,7 +1320,7 @@ export abstract class BaseResourceController<
     };
 
     if (!includes || Object.keys(includes).length === 0) {
-      return this.badRequest('includes is required');
+      return this.badRequest("includes is required");
     }
 
     this.logger.debug(`[FIND_WITH] ${this.controller_name}`, { includes, conditions });
@@ -1338,7 +1338,7 @@ export abstract class BaseResourceController<
 
 function shouldRunHook(
   hook: HookConfig<BaseController<unknown, unknown, unknown>, unknown, unknown>,
-  actionName: string | symbol
+  actionName: string | symbol,
 ): boolean {
   if (hook.only && !hook.only.includes(actionName)) return false;
   if (hook.except && hook.except.includes(actionName)) return false;

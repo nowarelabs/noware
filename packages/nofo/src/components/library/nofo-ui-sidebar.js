@@ -1,12 +1,12 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISidebar extends NofoElement {
   static props() {
     return {
-      open: { type: Boolean, attribute: 'open' },
-      side: { type: String, attribute: 'side' },
-      size: { type: String, attribute: 'size' }
+      open: { type: Boolean, attribute: "open" },
+      side: { type: String, attribute: "side" },
+      size: { type: String, attribute: "size" },
     };
   }
 
@@ -31,27 +31,27 @@ class NofoUISidebar extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
-    this._drawer = this.shadowRoot.querySelector('nofo-drawer');
+    this._drawer = this.shadowRoot.querySelector("nofo-drawer");
     this.sync();
   }
 
   sync() {
     if (this._drawer) {
       if (this.open) {
-        this._drawer.setAttribute('open', '');
+        this._drawer.setAttribute("open", "");
       } else {
-        this._drawer.removeAttribute('open');
+        this._drawer.removeAttribute("open");
       }
-      
-      const side = this.side || 'left';
-      this._drawer.setAttribute('side', side);
-      
-      const size = this.size || 'md';
-      this._drawer.setAttribute('size', size);
+
+      const side = this.side || "left";
+      this._drawer.setAttribute("side", side);
+
+      const size = this.size || "md";
+      this._drawer.setAttribute("size", size);
     }
   }
 }
@@ -73,7 +73,7 @@ class NofoUISidebarTrigger extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -102,7 +102,7 @@ class NofoUISidebarContent extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -130,7 +130,7 @@ class NofoUISidebarHeader extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -159,7 +159,7 @@ class NofoUISidebarTitle extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -187,15 +187,15 @@ class NofoUISidebarBody extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
 }
 
-customElements.define('nofo-ui-sidebar', NofoUISidebar);
-customElements.define('nofo-ui-sidebar-trigger', NofoUISidebarTrigger);
-customElements.define('nofo-ui-sidebar-content', NofoUISidebarContent);
-customElements.define('nofo-ui-sidebar-header', NofoUISidebarHeader);
-customElements.define('nofo-ui-sidebar-title', NofoUISidebarTitle);
-customElements.define('nofo-ui-sidebar-body', NofoUISidebarBody);
+customElements.define("nofo-ui-sidebar", NofoUISidebar);
+customElements.define("nofo-ui-sidebar-trigger", NofoUISidebarTrigger);
+customElements.define("nofo-ui-sidebar-content", NofoUISidebarContent);
+customElements.define("nofo-ui-sidebar-header", NofoUISidebarHeader);
+customElements.define("nofo-ui-sidebar-title", NofoUISidebarTitle);
+customElements.define("nofo-ui-sidebar-body", NofoUISidebarBody);

@@ -1,4 +1,4 @@
-import { NofoElement, useInterval } from '../../index.js';
+import { NofoElement, useInterval } from "../../index.js";
 
 class NofoCarousel extends NofoElement {
   static props = {
@@ -7,7 +7,7 @@ class NofoCarousel extends NofoElement {
     loop: false,
     autoplay: false,
     interval: 3000,
-    orientation: 'horizontal'
+    orientation: "horizontal",
   };
 
   #internalValue = 0;
@@ -43,40 +43,40 @@ class NofoCarousel extends NofoElement {
   }
 
   setupEventListeners() {
-    const previous = this.querySelector('nofo-carousel-previous');
-    const next = this.querySelector('nofo-carousel-next');
+    const previous = this.querySelector("nofo-carousel-previous");
+    const next = this.querySelector("nofo-carousel-next");
 
     if (previous) {
-      previous.addEventListener('click', () => {
+      previous.addEventListener("click", () => {
         this.previous();
       });
     }
 
     if (next) {
-      next.addEventListener('click', () => {
+      next.addEventListener("click", () => {
         this.next();
       });
     }
 
-    this.addEventListener('click', (e) => {
-      const indicator = e.target.closest('nofo-carousel-indicator');
+    this.addEventListener("click", (e) => {
+      const indicator = e.target.closest("nofo-carousel-indicator");
       if (!indicator) return;
 
-      const value = parseInt(indicator.getAttribute('value')) || 0;
+      const value = parseInt(indicator.getAttribute("value")) || 0;
       this.goToSlide(value);
     });
 
-    this.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') {
+    this.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
         this.previous();
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === "ArrowRight") {
         this.next();
       }
     });
   }
 
   getSlideCount() {
-    return this.querySelectorAll('nofo-carousel-item').length;
+    return this.querySelectorAll("nofo-carousel-item").length;
   }
 
   previous() {
@@ -107,12 +107,12 @@ class NofoCarousel extends NofoElement {
     const slideCount = this.getSlideCount();
     this._internalValue = Math.max(0, Math.min(slideCount - 1, index));
 
-    this.attr('value', this._internalValue);
+    this.attr("value", this._internalValue);
 
-    const event = new CustomEvent('value-change', {
+    const event = new CustomEvent("value-change", {
       detail: { value: this._internalValue },
       bubbles: true,
-      composed: true
+      composed: true,
     });
     this.dispatchEvent(event);
 
@@ -120,43 +120,44 @@ class NofoCarousel extends NofoElement {
   }
 
   updateCarousel() {
-    const content = this.querySelector('nofo-carousel-content');
+    const content = this.querySelector("nofo-carousel-content");
 
     if (content) {
       const slideCount = this.getSlideCount();
-      const translate = this.orientation === 'horizontal'
-        ? `translateX(-${this._internalValue * 100}%)`
-        : `translateY(-${this._internalValue * 100}%)`;
+      const translate =
+        this.orientation === "horizontal"
+          ? `translateX(-${this._internalValue * 100}%)`
+          : `translateY(-${this._internalValue * 100}%)`;
 
       content.style.transform = translate;
     }
 
-    const indicators = this.querySelectorAll('nofo-carousel-indicator');
+    const indicators = this.querySelectorAll("nofo-carousel-indicator");
     indicators.forEach((indicator, index) => {
       if (index === this._internalValue) {
-        indicator.setAttribute('data-active', '');
+        indicator.setAttribute("data-active", "");
       } else {
-        indicator.removeAttribute('data-active');
+        indicator.removeAttribute("data-active");
       }
     });
 
-    const previous = this.querySelector('nofo-carousel-previous');
-    const next = this.querySelector('nofo-carousel-next');
+    const previous = this.querySelector("nofo-carousel-previous");
+    const next = this.querySelector("nofo-carousel-next");
     const slideCount = this.getSlideCount();
 
     if (previous) {
       if (this._internalValue === 0 && !this.loop) {
-        previous.setAttribute('disabled', '');
+        previous.setAttribute("disabled", "");
       } else {
-        previous.removeAttribute('disabled');
+        previous.removeAttribute("disabled");
       }
     }
 
     if (next) {
       if (this._internalValue === slideCount - 1 && !this.loop) {
-        next.setAttribute('disabled', '');
+        next.setAttribute("disabled", "");
       } else {
-        next.removeAttribute('disabled');
+        next.removeAttribute("disabled");
       }
     }
   }
@@ -214,13 +215,15 @@ class NofoCarouselContent extends NofoElement {
   }
 
   styles() {
-    const carousel = this.closest('nofo-carousel');
-    const orientation = carousel ? carousel.getAttribute('orientation') || 'horizontal' : 'horizontal';
+    const carousel = this.closest("nofo-carousel");
+    const orientation = carousel
+      ? carousel.getAttribute("orientation") || "horizontal"
+      : "horizontal";
 
     return `
       :host {
         display: flex;
-        flex-direction: ${orientation === 'vertical' ? 'column' : 'row'};
+        flex-direction: ${orientation === "vertical" ? "column" : "row"};
         transition: transform 0.3s ease;
         will-change: transform;
         box-sizing: border-box;
@@ -235,14 +238,16 @@ class NofoCarouselItem extends NofoElement {
   }
 
   styles() {
-    const carousel = this.closest('nofo-carousel');
-    const orientation = carousel ? carousel.getAttribute('orientation') || 'horizontal' : 'horizontal';
+    const carousel = this.closest("nofo-carousel");
+    const orientation = carousel
+      ? carousel.getAttribute("orientation") || "horizontal"
+      : "horizontal";
 
     return `
       :host {
         flex: 0 0 100%;
-        width: ${orientation === 'horizontal' ? '100%' : 'auto'};
-        height: ${orientation === 'vertical' ? '100%' : 'auto'};
+        width: ${orientation === "horizontal" ? "100%" : "auto"};
+        height: ${orientation === "vertical" ? "100%" : "auto"};
         box-sizing: border-box;
       }
     `;
@@ -251,7 +256,7 @@ class NofoCarouselItem extends NofoElement {
 
 class NofoCarouselPrevious extends NofoElement {
   static props = {
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
@@ -260,7 +265,7 @@ class NofoCarouselPrevious extends NofoElement {
 
   updateDataAttributes() {
     if (this.disabled) {
-      this.dataset.disabled = '';
+      this.dataset.disabled = "";
     } else {
       delete this.dataset.disabled;
     }
@@ -290,7 +295,7 @@ class NofoCarouselPrevious extends NofoElement {
 
 class NofoCarouselNext extends NofoElement {
   static props = {
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
@@ -299,7 +304,7 @@ class NofoCarouselNext extends NofoElement {
 
   updateDataAttributes() {
     if (this.disabled) {
-      this.dataset.disabled = '';
+      this.dataset.disabled = "";
     } else {
       delete this.dataset.disabled;
     }
@@ -352,7 +357,7 @@ class NofoCarouselIndicators extends NofoElement {
 
 class NofoCarouselIndicator extends NofoElement {
   static props = {
-    value: 0
+    value: 0,
   };
 
   onMount() {
@@ -360,8 +365,8 @@ class NofoCarouselIndicator extends NofoElement {
   }
 
   updateDataAttributes() {
-    if (this.has('data-active')) {
-      this.dataset.active = '';
+    if (this.has("data-active")) {
+      this.dataset.active = "";
     }
   }
 
@@ -394,13 +399,22 @@ class NofoCarouselIndicator extends NofoElement {
   }
 }
 
-customElements.define('nofo-carousel', NofoCarousel);
-customElements.define('nofo-carousel-viewport', NofoCarouselViewport);
-customElements.define('nofo-carousel-content', NofoCarouselContent);
-customElements.define('nofo-carousel-item', NofoCarouselItem);
-customElements.define('nofo-carousel-previous', NofoCarouselPrevious);
-customElements.define('nofo-carousel-next', NofoCarouselNext);
-customElements.define('nofo-carousel-indicators', NofoCarouselIndicators);
-customElements.define('nofo-carousel-indicator', NofoCarouselIndicator);
+customElements.define("nofo-carousel", NofoCarousel);
+customElements.define("nofo-carousel-viewport", NofoCarouselViewport);
+customElements.define("nofo-carousel-content", NofoCarouselContent);
+customElements.define("nofo-carousel-item", NofoCarouselItem);
+customElements.define("nofo-carousel-previous", NofoCarouselPrevious);
+customElements.define("nofo-carousel-next", NofoCarouselNext);
+customElements.define("nofo-carousel-indicators", NofoCarouselIndicators);
+customElements.define("nofo-carousel-indicator", NofoCarouselIndicator);
 
-export { NofoCarousel, NofoCarouselViewport, NofoCarouselContent, NofoCarouselItem, NofoCarouselPrevious, NofoCarouselNext, NofoCarouselIndicators, NofoCarouselIndicator };
+export {
+  NofoCarousel,
+  NofoCarouselViewport,
+  NofoCarouselContent,
+  NofoCarouselItem,
+  NofoCarouselPrevious,
+  NofoCarouselNext,
+  NofoCarouselIndicators,
+  NofoCarouselIndicator,
+};

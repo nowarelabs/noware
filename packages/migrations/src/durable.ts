@@ -1,6 +1,6 @@
-import { type Result, ok, safe } from 'nomo/result';
-import { sql, Statement, getDialectStrategy } from 'nomo/sql';
-import { Logger } from 'nomo/logger';
+import { type Result, ok, safe } from "nomo/result";
+import { sql, Statement, getDialectStrategy } from "nomo/sql";
+import { Logger } from "nomo/logger";
 
 /**
  * Utility for running SQL migrations within a Cloudflare Durable Object using ctx.storage.sql.
@@ -26,38 +26,38 @@ export interface SqlStorage {
 export async function migrateDO(
   storage: SqlStorage,
   migrations: DOMigration[],
-  options: { className?: string; logger?: Logger } = {}
+  options: { className?: string; logger?: Logger } = {},
 ): Promise<Result<void>> {
   const logger =
     options.logger ||
     new Logger({
-      service: 'migrations',
+      service: "migrations",
       context: { class_name: options.className },
     });
-  const strategy = getDialectStrategy('sqlite');
+  const strategy = getDialectStrategy("sqlite");
 
   // 1. Ensure the migrations tracking table exists using structural builder
   const createTableStmt = new Statement([
-    sql.key('CREATE TABLE IF NOT EXISTS '),
-    sql.id('_migrations'),
-    sql.op(' ('),
+    sql.key("CREATE TABLE IF NOT EXISTS "),
+    sql.id("_migrations"),
+    sql.op(" ("),
     sql.nl(),
     sql.indent(),
-    sql.id('name'),
-    sql.op(' '),
-    sql.type('TEXT'),
-    sql.op(' '),
+    sql.id("name"),
+    sql.op(" "),
+    sql.type("TEXT"),
+    sql.op(" "),
     sql.primaryKey(),
-    sql.op(','),
+    sql.op(","),
     sql.nl(),
     sql.indent(),
-    sql.id('applied_at'),
-    sql.op(' '),
-    sql.type('TEXT'),
-    sql.op(' '),
+    sql.id("applied_at"),
+    sql.op(" "),
+    sql.type("TEXT"),
+    sql.op(" "),
     sql.default(sql.currentTimestamp()),
     sql.nl(),
-    sql.op(')'),
+    sql.op(")"),
   ]);
 
   const ensureRes = safe(() => {
@@ -69,10 +69,10 @@ export async function migrateDO(
 
   // 2. Fetch already applied migrations
   const selectStmt = new Statement([
-    sql.key('SELECT '),
-    sql.id('name'),
-    sql.key(' FROM '),
-    sql.id('_migrations'),
+    sql.key("SELECT "),
+    sql.id("name"),
+    sql.key(" FROM "),
+    sql.id("_migrations"),
   ]);
 
   const fetchRes = safe(() => {
@@ -94,7 +94,7 @@ export async function migrateDO(
       // Filter by durableObjectClass: must have a class AND it must match the provided className
       if (m.durableObjectClass && m.durableObjectClass !== options.className) {
         logger.debug(
-          `Skipping migration ${m.name}: targeted at ${m.durableObjectClass}, but running in ${options.className || 'unspecified class'}`
+          `Skipping migration ${m.name}: targeted at ${m.durableObjectClass}, but running in ${options.className || "unspecified class"}`,
         );
         continue;
       }
@@ -105,7 +105,7 @@ export async function migrateDO(
         // Execute the migration SQL (bundled SQL is assumed to be safe or at least raw)
         storage.exec(m.sql);
         // Record that it was applied using parameterized query
-        storage.exec('INSERT INTO _migrations (name) VALUES (?)', m.name);
+        storage.exec("INSERT INTO _migrations (name) VALUES (?)", m.name);
       });
 
       if (!applyRes.success) return applyRes as Result<never>;

@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIBreadcrumb extends NofoElement {
   template() {
@@ -20,11 +20,11 @@ class NofoUIBreadcrumb extends NofoElement {
 
 class NofoUIBreadcrumbItem extends NofoElement {
   static props = {
-    current: false
+    current: false,
   };
 
   onMount() {
-    this.sync().attr('current').toDataAttr('current');
+    this.sync().attr("current").toDataAttr("current");
   }
 
   template() {
@@ -69,14 +69,8 @@ class NofoUIBreadcrumbSeparator extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-breadcrumb', NofoUIBreadcrumb);
-customElements.define('nofo-ui-breadcrumb-item', NofoUIBreadcrumbItem);
-customElements.define('nofo-ui-breadcrumb-separator', NofoUIBreadcrumbSeparator);
+customElements.define("nofo-ui-breadcrumb", NofoUIBreadcrumb);
+customElements.define("nofo-ui-breadcrumb-item", NofoUIBreadcrumbItem);
+customElements.define("nofo-ui-breadcrumb-separator", NofoUIBreadcrumbSeparator);
 
-export {
-  NofoUIBreadcrumb,
-  NofoUIBreadcrumbItem,
-  NofoUIBreadcrumbSeparator
-};
-
-
+export { NofoUIBreadcrumb, NofoUIBreadcrumbItem, NofoUIBreadcrumbSeparator };

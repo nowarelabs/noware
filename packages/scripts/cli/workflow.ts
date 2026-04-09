@@ -1,11 +1,7 @@
 import { Command } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "pathe";
-import {
-  WORKFLOW_TEMPLATE,
-  patchWranglerConfig,
-  ensureSuffix,
-} from "../src/generators";
+import { WORKFLOW_TEMPLATE, patchWranglerConfig, ensureSuffix } from "../src/generators";
 
 export const workflowCommand = new Command("workflow")
   .description("Generate a new Workflow")
@@ -40,11 +36,7 @@ export const workflowCommand = new Command("workflow")
     // 4. Update wrangler.jsonc
     if (await fs.stat(wranglerPath).catch(() => null)) {
       const wranglerContent = await fs.readFile(wranglerPath, "utf-8");
-      const updatedContent = patchWranglerConfig(
-        wranglerContent,
-        "workflow",
-        name,
-      );
+      const updatedContent = patchWranglerConfig(wranglerContent, "workflow", name);
       await fs.writeFile(wranglerPath, updatedContent);
       console.log(`✅ Updated ${wranglerPath}`);
     }

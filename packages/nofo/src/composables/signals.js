@@ -23,13 +23,13 @@ export function createSignal(initial) {
   return {
     get: () => computed.get(),
     set: (val) => {
-      if (typeof val === 'function') {
+      if (typeof val === "function") {
         const current = state.get();
         state.set(val(current));
       } else {
         state.set(val);
       }
-    }
+    },
   };
 }
 

@@ -1,13 +1,12 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoTabNav extends NofoElement {
   static props = {
-    size: '1'
+    size: "1",
   };
 
   onMount() {
-    this.sync()
-      .attr('size').toDataAttr('size');
+    this.sync().attr("size").toDataAttr("size");
   }
 
   template() {
@@ -32,21 +31,19 @@ class NofoTabNav extends NofoElement {
 
 class NofoTabNavLink extends NofoElement {
   static props = {
-    href: '#',
+    href: "#",
     active: false,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('active').toDataAttr('active')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("active").toDataAttr("active").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
     const { href, disabled } = this.state;
     return `
-      <a href="${disabled ? '#' : href}" class="link" ${disabled ? 'aria-disabled="true"' : ''}>
+      <a href="${disabled ? "#" : href}" class="link" ${disabled ? 'aria-disabled="true"' : ""}>
         <slot></slot>
       </a>
     `;
@@ -84,9 +81,7 @@ class NofoTabNavLink extends NofoElement {
   }
 }
 
-customElements.define('nofo-tab-nav', NofoTabNav);
-customElements.define('nofo-tab-nav-link', NofoTabNavLink);
+customElements.define("nofo-tab-nav", NofoTabNav);
+customElements.define("nofo-tab-nav-link", NofoTabNavLink);
 
 export { NofoTabNav, NofoTabNavLink };
-
-

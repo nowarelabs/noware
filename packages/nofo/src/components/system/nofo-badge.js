@@ -1,21 +1,26 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoBadge extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    radius: 'full',
-    'high-contrast': false
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    radius: "full",
+    "high-contrast": false,
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('radius').toDataAttr('radius')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("radius")
+      .toDataAttr("radius")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
   }
 
   template() {
@@ -57,5 +62,5 @@ class NofoBadge extends NofoElement {
   }
 }
 
-customElements.define('nofo-badge', NofoBadge);
+customElements.define("nofo-badge", NofoBadge);
 export { NofoBadge };

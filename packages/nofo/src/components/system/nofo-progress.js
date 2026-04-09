@@ -1,22 +1,26 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoProgress extends NofoElement {
   static props = {
     value: null,
     max: 100,
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    'high-contrast': false,
-    duration: '0s'
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    "high-contrast": false,
+    duration: "0s",
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
   }
 
   template() {
@@ -26,7 +30,7 @@ class NofoProgress extends NofoElement {
 
     return `
       <div class="progress-track">
-        <div class="progress-indicator" style="width: ${isIndeterminate ? '30%' : percentage + '%'}; transition: width ${duration} ease;"></div>
+        <div class="progress-indicator" style="width: ${isIndeterminate ? "30%" : percentage + "%"}; transition: width ${duration} ease;"></div>
       </div>
       <slot></slot>
     `;
@@ -72,11 +76,15 @@ class NofoProgress extends NofoElement {
 }
 
 class NofoProgressIndicator extends NofoElement {
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: contents; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
-customElements.define('nofo-progress', NofoProgress);
-customElements.define('nofo-progress-indicator', NofoProgressIndicator);
+customElements.define("nofo-progress", NofoProgress);
+customElements.define("nofo-progress-indicator", NofoProgressIndicator);
 
 export { NofoProgress, NofoProgressIndicator };

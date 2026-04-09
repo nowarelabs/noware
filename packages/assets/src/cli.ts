@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-import { VendorManager } from './vendor';
-import path from 'node:path';
-import fs from 'node:fs';
+import { VendorManager } from "./vendor";
+import path from "node:path";
+import fs from "node:fs";
 
 async function main() {
-  const pkgJsonPath = path.join(process.cwd(), 'package.json');
+  const pkgJsonPath = path.join(process.cwd(), "package.json");
   if (!fs.existsSync(pkgJsonPath)) {
-    console.error('No package.json found in current directory');
+    console.error("No package.json found in current directory");
     process.exit(1);
   }
 
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
   const vendorConfig = pkgJson.vendorAssets || [];
 
   if (vendorConfig.length === 0) {
@@ -20,7 +20,7 @@ async function main() {
 
   const manager = new VendorManager({
     packages: vendorConfig,
-    targetDir: path.join(process.cwd(), 'public', 'assets', 'vendor'),
+    targetDir: path.join(process.cwd(), "public", "assets", "vendor"),
   });
 
   await manager.vendor();

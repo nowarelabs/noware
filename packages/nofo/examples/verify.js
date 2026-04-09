@@ -1,23 +1,21 @@
-import { NofoElement } from '../src/index.js';
+import { NofoElement } from "../src/index.js";
 
 class TestElement extends NofoElement {
   static props = {
-    title: 'Hello'
+    title: "Hello",
   };
 
   onMount() {
-    console.log('Mounted!');
+    console.log("Mounted!");
     this.state.count = 0;
-    
+
     // Test effect
     this.effect(() => {
-      console.log('Count changed:', this.state.count);
+      console.log("Count changed:", this.state.count);
     });
 
     // Test sync
-    this.sync()
-      .value(this.state.count)
-      .toCSSVar('--test-count');
+    this.sync().value(this.state.count).toCSSVar("--test-count");
   }
 
   template() {
@@ -29,5 +27,5 @@ class TestElement extends NofoElement {
   }
 }
 
-customElements.define('test-element', TestElement);
-console.log('TestElement defined');
+customElements.define("test-element", TestElement);
+console.log("TestElement defined");

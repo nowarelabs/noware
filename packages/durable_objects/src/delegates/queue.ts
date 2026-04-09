@@ -1,4 +1,4 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface QueueConfig<T = any> {
   name: string;
@@ -16,9 +16,9 @@ export class QueueDelegate<T = any> extends DurableObjectBaseDelegate<QueueConfi
     await this.durableObject.storage.sql.exec(
       `INSERT INTO queue_${this.config.name} (id, payload, status, retries, created_at) 
        VALUES (?, ?, ?, ?, ?)`,
-      [id, JSON.stringify(item), 'pending', 0, Date.now()]
+      [id, JSON.stringify(item), "pending", 0, Date.now()],
     );
-    return { status: 'enqueued', id };
+    return { status: "enqueued", id };
   }
 
   /**
@@ -32,7 +32,7 @@ export class QueueDelegate<T = any> extends DurableObjectBaseDelegate<QueueConfi
       .exec(
         `SELECT * FROM queue_${name} WHERE status = 'pending' OR (status = 'failed' AND retries < ?) 
        ORDER BY created_at ASC LIMIT ?`,
-        [maxRetries, batchSize]
+        [maxRetries, batchSize],
       )
       .toArray();
 
@@ -48,7 +48,7 @@ export class QueueDelegate<T = any> extends DurableObjectBaseDelegate<QueueConfi
       } catch (_e) {
         await this.durableObject.storage.sql.exec(
           `UPDATE queue_${name} SET status = 'failed', retries = retries + 1 WHERE id = ?`,
-          [row.id]
+          [row.id],
         );
       }
     }

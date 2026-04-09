@@ -1,0 +1,27 @@
+{
+  "name": "nomo/docs-site",
+  "version": "1.0.0",
+  "description": "Nomo framework documentation site",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "marked": "^15.0.0",
+    "nomo/controllers": "workspace:*",
+    "nomo/entrypoints": "workspace:*",
+    "nomo/logger": "workspace:*",
+    "nomo/router": "workspace:*",
+    "nomo/services": "workspace:*",
+    "nomo/views": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260203.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^3.100.0"
+  }
+}

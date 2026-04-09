@@ -1,4 +1,4 @@
-import { NofoElement, useTimeout } from '../../index.js';
+import { NofoElement, useTimeout } from "../../index.js";
 
 class NofoTooltip extends NofoElement {
   static props = {
@@ -6,36 +6,50 @@ class NofoTooltip extends NofoElement {
     defaultOpen: false,
     delayDuration: 700,
     skipDelayDuration: 300,
-    disableHoverableContent: false
+    disableHoverableContent: false,
   };
 
   #openTimer = useTimeout();
   #closeTimer = useTimeout();
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
-    
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
+
     if (this.state.defaultOpen) {
       this.state.open = true;
     }
 
-    const trigger = this.querySelector('nofo-tooltip-trigger');
+    const trigger = this.querySelector("nofo-tooltip-trigger");
     if (trigger) {
-      trigger.addEventListener('mouseenter', () => {
+      trigger.addEventListener("mouseenter", () => {
         this.#closeTimer.clear();
-        
+
         this.#openTimer.set(() => {
           this.state.open = true;
-          this.dispatchEvent(new CustomEvent('open-change', { detail: { open: true }, bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent("open-change", {
+              detail: { open: true },
+              bubbles: true,
+              composed: true,
+            }),
+          );
         }, this.state.delayDuration);
       });
-      
-      trigger.addEventListener('mouseleave', () => {
+
+      trigger.addEventListener("mouseleave", () => {
         this.#openTimer.clear();
-        
+
         this.#closeTimer.set(() => {
           this.state.open = false;
-          this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent("open-change", {
+              detail: { open: false },
+              bubbles: true,
+              composed: true,
+            }),
+          );
         }, this.state.skipDelayDuration);
       });
     }
@@ -67,38 +81,36 @@ class NofoTooltipTrigger extends NofoElement {
 
 class NofoTooltipContent extends NofoElement {
   static props = {
-    side: 'top',
-    align: 'center',
+    side: "top",
+    align: "center",
     sideOffset: 5,
-    alignOffset: 0
+    alignOffset: 0,
   };
 
   onMount() {
-    this.sync()
-      .attr('side').toDataAttr('side')
-      .attr('align').toDataAttr('align');
+    this.sync().attr("side").toDataAttr("side").attr("align").toDataAttr("align");
   }
 
   getSideStyles(side, sideOffset) {
     const offset = parseInt(sideOffset) || 5;
     const sides = {
-      'top': { bottom: `calc(100% + ${offset}px)` },
-      'right': { left: `calc(100% + ${offset}px)` },
-      'bottom': { top: `calc(100% + ${offset}px)` },
-      'left': { right: `calc(100% + ${offset}px)` }
+      top: { bottom: `calc(100% + ${offset}px)` },
+      right: { left: `calc(100% + ${offset}px)` },
+      bottom: { top: `calc(100% + ${offset}px)` },
+      left: { right: `calc(100% + ${offset}px)` },
     };
-    return sides[side] || sides['top'];
+    return sides[side] || sides["top"];
   }
 
   template() {
-    const parent = this.closest('nofo-tooltip');
+    const parent = this.closest("nofo-tooltip");
     const isOpen = parent && parent.state.open;
-    if (!isOpen) return '';
+    if (!isOpen) return "";
     return `<slot></slot>`;
   }
 
   styles() {
-    const parent = this.closest('nofo-tooltip');
+    const parent = this.closest("nofo-tooltip");
     const isOpen = parent && parent.state.open;
     const sideStyles = this.getSideStyles(this.state.side, this.state.sideOffset);
 
@@ -111,11 +123,13 @@ class NofoTooltipContent extends NofoElement {
         border-radius: var(--radius);
         font-size: 0.875rem;
         z-index: 100;
-        display: ${isOpen ? 'block' : 'none'};
+        display: ${isOpen ? "block" : "none"};
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         maxWidth: 300px;
         box-sizing: border-box;
-        ${Object.entries(sideStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
+        ${Object.entries(sideStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
       }
     `;
   }
@@ -123,7 +137,7 @@ class NofoTooltipContent extends NofoElement {
 
 class NofoTooltipArrow extends NofoElement {
   template() {
-    return '';
+    return "";
   }
 
   styles() {
@@ -146,16 +160,9 @@ class NofoTooltipArrow extends NofoElement {
   }
 }
 
-customElements.define('nofo-tooltip', NofoTooltip);
-customElements.define('nofo-tooltip-trigger', NofoTooltipTrigger);
-customElements.define('nofo-tooltip-content', NofoTooltipContent);
-customElements.define('nofo-tooltip-arrow', NofoTooltipArrow);
+customElements.define("nofo-tooltip", NofoTooltip);
+customElements.define("nofo-tooltip-trigger", NofoTooltipTrigger);
+customElements.define("nofo-tooltip-content", NofoTooltipContent);
+customElements.define("nofo-tooltip-arrow", NofoTooltipArrow);
 
-export {
-  NofoTooltip,
-  NofoTooltipTrigger,
-  NofoTooltipContent,
-  NofoTooltipArrow
-};
-
-
+export { NofoTooltip, NofoTooltipTrigger, NofoTooltipContent, NofoTooltipArrow };

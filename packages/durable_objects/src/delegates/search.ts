@@ -1,4 +1,4 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface SearchConfig {
   table: any; // Drizzle table
@@ -11,7 +11,7 @@ export class SearchDelegate extends DurableObjectBaseDelegate<SearchConfig> {
    */
   async handle(
     queryText: string,
-    options: { limit?: number; offset?: number } = {}
+    options: { limit?: number; offset?: number } = {},
   ): Promise<any[]> {
     const { table, searchColumns } = this.config;
     const { limit = 20, offset = 0 } = options;
@@ -19,7 +19,7 @@ export class SearchDelegate extends DurableObjectBaseDelegate<SearchConfig> {
     if (!queryText) return [];
 
     // Simple search using LIKE
-    const conditions = searchColumns.map((col) => `"${col}" LIKE ?`).join(' OR ');
+    const conditions = searchColumns.map((col) => `"${col}" LIKE ?`).join(" OR ");
     const searchVal = `%${queryText}%`;
     const values = searchColumns.map(() => searchVal);
 

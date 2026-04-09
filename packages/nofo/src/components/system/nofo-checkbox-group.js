@@ -1,30 +1,29 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoCheckboxGroup extends NofoElement {
   static props = {
     value: [],
     defaultValue: [],
-    name: '',
+    name: "",
     required: false,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("disabled").toDataAttr("disabled");
 
     if (this.state.value.length === 0 && this.state.defaultValue.length > 0) {
       this.state.value = [...this.state.defaultValue];
     }
 
-    this.effect(['value'], () => {
+    this.effect(["value"], () => {
       this.updateCheckboxes();
     });
   }
 
   updateCheckboxes() {
-    const checkboxes = this.querySelectorAll('nofo-checkbox');
-    checkboxes.forEach(checkbox => {
+    const checkboxes = this.querySelectorAll("nofo-checkbox");
+    checkboxes.forEach((checkbox) => {
       const val = checkbox.state.value;
       if (val) {
         checkbox.state.checked = this.state.value.includes(val);
@@ -34,7 +33,7 @@ class NofoCheckboxGroup extends NofoElement {
   }
 
   handleCheckboxChange(e) {
-    const checkbox = e.target.closest('nofo-checkbox');
+    const checkbox = e.target.closest("nofo-checkbox");
     if (!checkbox || this.state.disabled) return;
 
     const val = checkbox.state.value;
@@ -51,11 +50,13 @@ class NofoCheckboxGroup extends NofoElement {
     }
 
     this.state.value = currentValues;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: currentValues },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: currentValues },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -79,5 +80,5 @@ class NofoCheckboxGroup extends NofoElement {
   }
 }
 
-customElements.define('nofo-checkbox-group', NofoCheckboxGroup);
+customElements.define("nofo-checkbox-group", NofoCheckboxGroup);
 export { NofoCheckboxGroup };

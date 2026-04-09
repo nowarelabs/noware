@@ -1,50 +1,54 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoRadioGroup extends NofoElement {
   static props = {
     value: null,
     defaultValue: null,
-    name: '',
+    name: "",
     required: false,
     disabled: false,
-    orientation: 'vertical'
+    orientation: "vertical",
   };
 
   onMount() {
     this.sync()
-      .attr('orientation').toDataAttr('orientation')
-      .attr('disabled').toDataAttr('disabled');
+      .attr("orientation")
+      .toDataAttr("orientation")
+      .attr("disabled")
+      .toDataAttr("disabled");
 
     if (!this.state.value && this.state.defaultValue) {
       this.state.value = this.state.defaultValue;
     }
 
-    this.effect(['value'], () => {
+    this.effect(["value"], () => {
       this.updateRadios();
     });
   }
 
   updateRadios() {
-    const radios = this.querySelectorAll('nofo-radio');
-    radios.forEach(radio => {
-      radio.state.checked = (radio.state.value === this.state.value);
+    const radios = this.querySelectorAll("nofo-radio");
+    radios.forEach((radio) => {
+      radio.state.checked = radio.state.value === this.state.value;
       if (this.state.name) radio.state.name = this.state.name;
     });
   }
 
   handleRadioChange(e) {
-    const radio = e.target.closest('nofo-radio');
+    const radio = e.target.closest("nofo-radio");
     if (!radio || this.state.disabled) return;
 
     const newValue = radio.state.value;
     if (newValue === this.state.value) return;
 
     this.state.value = newValue;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: newValue },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: newValue },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -56,12 +60,12 @@ class NofoRadioGroup extends NofoElement {
   }
 
   styles() {
-    const orientation = this.state.orientation || 'vertical';
+    const orientation = this.state.orientation || "vertical";
     return `
       :host { display: block; box-sizing: border-box; }
       .root {
         display: flex;
-        flex-direction: ${orientation === 'horizontal' ? 'row' : 'column'};
+        flex-direction: ${orientation === "horizontal" ? "row" : "column"};
         gap: var(--space-2);
       }
     `;
@@ -70,34 +74,42 @@ class NofoRadioGroup extends NofoElement {
 
 class NofoRadio extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    'high-contrast': false,
-    value: '',
-    name: '',
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    "high-contrast": false,
+    value: "",
+    name: "",
     checked: false,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('checked').toDataAttr('checked')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("checked")
+      .toDataAttr("checked")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
   }
 
   handleChange(e) {
     if (this.state.disabled) return;
     this.state.checked = e.target.checked;
-    
-    this.dispatchEvent(new Event('change', {
-      bubbles: true,
-      composed: true
-    }));
+
+    this.dispatchEvent(
+      new Event("change", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -175,7 +187,7 @@ class NofoRadio extends NofoElement {
   }
 }
 
-customElements.define('nofo-radio-group', NofoRadioGroup);
-customElements.define('nofo-radio', NofoRadio);
+customElements.define("nofo-radio-group", NofoRadioGroup);
+customElements.define("nofo-radio", NofoRadio);
 
 export { NofoRadioGroup, NofoRadio };

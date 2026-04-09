@@ -1,13 +1,15 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoAlertDialog extends NofoElement {
   static props = {
     open: false,
-    defaultOpen: false
+    defaultOpen: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
     if (this.state.defaultOpen) this.state.open = true;
   }
 
@@ -22,7 +24,7 @@ class NofoAlertDialog extends NofoElement {
 
 class NofoAlertDialogTrigger extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-alert-dialog');
+    const root = this.closest("nofo-alert-dialog");
     if (root) root.state.open = true;
   }
 
@@ -37,10 +39,10 @@ class NofoAlertDialogTrigger extends NofoElement {
 
 class NofoAlertDialogPortal extends NofoElement {
   onMount() {
-    const root = this.closest('nofo-alert-dialog');
+    const root = this.closest("nofo-alert-dialog");
     if (root) {
       this.effect(() => {
-        this.style.display = root.state.open ? 'block' : 'none';
+        this.style.display = root.state.open ? "block" : "none";
       });
     }
   }
@@ -56,7 +58,7 @@ class NofoAlertDialogPortal extends NofoElement {
 
 class NofoAlertDialogOverlay extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-alert-dialog');
+    const root = this.closest("nofo-alert-dialog");
     if (root) root.state.open = false;
   }
 
@@ -140,7 +142,7 @@ class NofoAlertDialogDescription extends NofoElement {
 
 class NofoAlertDialogCancel extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-alert-dialog');
+    const root = this.closest("nofo-alert-dialog");
     if (root) root.state.open = false;
   }
 
@@ -155,7 +157,7 @@ class NofoAlertDialogCancel extends NofoElement {
 
 class NofoAlertDialogAction extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-alert-dialog');
+    const root = this.closest("nofo-alert-dialog");
     if (root) root.state.open = false;
   }
 
@@ -168,15 +170,15 @@ class NofoAlertDialogAction extends NofoElement {
   }
 }
 
-customElements.define('nofo-alert-dialog', NofoAlertDialog);
-customElements.define('nofo-alert-dialog-trigger', NofoAlertDialogTrigger);
-customElements.define('nofo-alert-dialog-portal', NofoAlertDialogPortal);
-customElements.define('nofo-alert-dialog-overlay', NofoAlertDialogOverlay);
-customElements.define('nofo-alert-dialog-content', NofoAlertDialogContent);
-customElements.define('nofo-alert-dialog-title', NofoAlertDialogTitle);
-customElements.define('nofo-alert-dialog-description', NofoAlertDialogDescription);
-customElements.define('nofo-alert-dialog-cancel', NofoAlertDialogCancel);
-customElements.define('nofo-alert-dialog-action', NofoAlertDialogAction);
+customElements.define("nofo-alert-dialog", NofoAlertDialog);
+customElements.define("nofo-alert-dialog-trigger", NofoAlertDialogTrigger);
+customElements.define("nofo-alert-dialog-portal", NofoAlertDialogPortal);
+customElements.define("nofo-alert-dialog-overlay", NofoAlertDialogOverlay);
+customElements.define("nofo-alert-dialog-content", NofoAlertDialogContent);
+customElements.define("nofo-alert-dialog-title", NofoAlertDialogTitle);
+customElements.define("nofo-alert-dialog-description", NofoAlertDialogDescription);
+customElements.define("nofo-alert-dialog-cancel", NofoAlertDialogCancel);
+customElements.define("nofo-alert-dialog-action", NofoAlertDialogAction);
 
 export {
   NofoAlertDialog,
@@ -187,5 +189,5 @@ export {
   NofoAlertDialogTitle,
   NofoAlertDialogDescription,
   NofoAlertDialogCancel,
-  NofoAlertDialogAction
+  NofoAlertDialogAction,
 };

@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoFileInput extends NofoElement {
   static props = {
@@ -8,7 +8,7 @@ class NofoFileInput extends NofoElement {
     required: { type: Boolean, reflect: true },
     name: { type: String },
     size: { type: String, reflect: true },
-    variant: { type: String, reflect: true }
+    variant: { type: String, reflect: true },
   };
 
   _files = [];
@@ -16,90 +16,90 @@ class NofoFileInput extends NofoElement {
   onMount() {
     const input = this.shadowRoot.querySelector('input[type="file"]');
     if (input) {
-      input.addEventListener('change', (e) => {
+      input.addEventListener("change", (e) => {
         if (this.disabled) return;
-        
+
         const files = Array.from(e.target.files);
         this._files = this.multiple ? [...this._files, ...files] : files;
-        
-        const event = new CustomEvent('file-change', {
+
+        const event = new CustomEvent("file-change", {
           detail: { files: this._files },
           bubbles: true,
-          composed: true
+          composed: true,
         });
         this.dispatchEvent(event);
-        
+
         this.updateFileList();
       });
     }
-    
-    this.addEventListener('click', (e) => {
-      const removeBtn = e.target.closest('nofo-file-input-item-remove');
+
+    this.addEventListener("click", (e) => {
+      const removeBtn = e.target.closest("nofo-file-input-item-remove");
       if (!removeBtn) return;
-      
-      const item = removeBtn.closest('nofo-file-input-item');
+
+      const item = removeBtn.closest("nofo-file-input-item");
       if (!item) return;
-      
-      const fileName = item.getAttribute('data-file-name');
-      this._files = this._files.filter(f => f.name !== fileName);
-      
-      const event = new CustomEvent('file-change', {
+
+      const fileName = item.getAttribute("data-file-name");
+      this._files = this._files.filter((f) => f.name !== fileName);
+
+      const event = new CustomEvent("file-change", {
         detail: { files: this._files },
         bubbles: true,
-        composed: true
+        composed: true,
       });
       this.dispatchEvent(event);
-      
+
       this.updateFileList();
     });
   }
 
   updateFileList() {
-    const list = this.querySelector('nofo-file-input-list');
+    const list = this.querySelector("nofo-file-input-list");
     if (!list) return;
-    
-    list.innerHTML = '';
-    this._files.forEach(file => {
-      const item = document.createElement('nofo-file-input-item');
-      item.setAttribute('data-file-name', file.name);
-      item.setAttribute('data-file-size', file.size);
-      item.setAttribute('data-file-type', file.type);
-      
-      const name = document.createElement('nofo-file-input-item-name');
+
+    list.innerHTML = "";
+    this._files.forEach((file) => {
+      const item = document.createElement("nofo-file-input-item");
+      item.setAttribute("data-file-name", file.name);
+      item.setAttribute("data-file-size", file.size);
+      item.setAttribute("data-file-type", file.type);
+
+      const name = document.createElement("nofo-file-input-item-name");
       name.textContent = file.name;
-      
-      const size = document.createElement('nofo-file-input-item-size');
+
+      const size = document.createElement("nofo-file-input-item-size");
       size.textContent = this.formatFileSize(file.size);
-      
-      const remove = document.createElement('nofo-file-input-item-remove');
-      
+
+      const remove = document.createElement("nofo-file-input-item-remove");
+
       item.appendChild(name);
       item.appendChild(size);
       item.appendChild(remove);
-      
+
       list.appendChild(item);
     });
   }
 
   formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   }
 
   template() {
-    const accept = this.accept || '';
-    const name = this.name || 'files';
-    
+    const accept = this.accept || "";
+    const name = this.name || "files";
+
     return `
       <input 
         type="file" 
         accept="${accept}"
-        ${this.multiple ? 'multiple' : ''}
-        ${this.disabled ? 'disabled' : ''}
-        ${this.required ? 'required' : ''}
+        ${this.multiple ? "multiple" : ""}
+        ${this.disabled ? "disabled" : ""}
+        ${this.required ? "required" : ""}
         name="${name}"
       />
       <slot></slot>
@@ -129,10 +129,10 @@ class NofoFileInput extends NofoElement {
 
 class NofoFileInputTrigger extends NofoElement {
   onMount() {
-    this.addEventListener('click', () => {
-      const fileInput = this.closest('nofo-file-input');
+    this.addEventListener("click", () => {
+      const fileInput = this.closest("nofo-file-input");
       if (!fileInput) return;
-      
+
       const input = fileInput.shadowRoot.querySelector('input[type="file"]');
       if (input) {
         input.click();
@@ -254,12 +254,20 @@ class NofoFileInputItemRemove extends NofoElement {
   }
 }
 
-customElements.define('nofo-file-input', NofoFileInput);
-customElements.define('nofo-file-input-trigger', NofoFileInputTrigger);
-customElements.define('nofo-file-input-list', NofoFileInputList);
-customElements.define('nofo-file-input-item', NofoFileInputItem);
-customElements.define('nofo-file-input-item-name', NofoFileInputItemName);
-customElements.define('nofo-file-input-item-size', NofoFileInputItemSize);
-customElements.define('nofo-file-input-item-remove', NofoFileInputItemRemove);
+customElements.define("nofo-file-input", NofoFileInput);
+customElements.define("nofo-file-input-trigger", NofoFileInputTrigger);
+customElements.define("nofo-file-input-list", NofoFileInputList);
+customElements.define("nofo-file-input-item", NofoFileInputItem);
+customElements.define("nofo-file-input-item-name", NofoFileInputItemName);
+customElements.define("nofo-file-input-item-size", NofoFileInputItemSize);
+customElements.define("nofo-file-input-item-remove", NofoFileInputItemRemove);
 
-export { NofoFileInput, NofoFileInputTrigger, NofoFileInputList, NofoFileInputItem, NofoFileInputItemName, NofoFileInputItemSize, NofoFileInputItemRemove };
+export {
+  NofoFileInput,
+  NofoFileInputTrigger,
+  NofoFileInputList,
+  NofoFileInputItem,
+  NofoFileInputItemName,
+  NofoFileInputItemSize,
+  NofoFileInputItemRemove,
+};

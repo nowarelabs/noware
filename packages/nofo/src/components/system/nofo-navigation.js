@@ -1,23 +1,22 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoNavigation extends NofoElement {
   static props = {
-    orientation: 'vertical'
+    orientation: "vertical",
   };
 
   onMount() {
-    this.sync()
-      .attr('orientation').toDataAttr('orientation');
+    this.sync().attr("orientation").toDataAttr("orientation");
   }
 
   handleSubToggle(e) {
-    const trigger = e.target.closest('nofo-nav-sub-trigger');
+    const trigger = e.target.closest("nofo-nav-sub-trigger");
     if (!trigger) return;
 
-    const sub = trigger.closest('nofo-nav-sub');
+    const sub = trigger.closest("nofo-nav-sub");
     if (!sub) return;
 
-    const content = sub.querySelector('nofo-nav-sub-content');
+    const content = sub.querySelector("nofo-nav-sub-content");
     if (content) {
       content.state.open = !content.state.open;
     }
@@ -37,7 +36,7 @@ class NofoNavigation extends NofoElement {
       :host { display: block; box-sizing: border-box; }
       .root {
         display: flex;
-        flex-direction: ${orientation === 'horizontal' ? 'row' : 'column'};
+        flex-direction: ${orientation === "horizontal" ? "row" : "column"};
         gap: var(--space-2);
       }
     `;
@@ -46,14 +45,14 @@ class NofoNavigation extends NofoElement {
 
 class NofoNavGroup extends NofoElement {
   static props = {
-    label: ''
+    label: "",
   };
 
   template() {
     const { label } = this.state;
     return `
       <div class="group-container" role="group" aria-label="${label}">
-        ${label ? `<div class="label">${label}</div>` : ''}
+        ${label ? `<div class="label">${label}</div>` : ""}
         <slot></slot>
       </div>
     `;
@@ -81,14 +80,13 @@ class NofoNavGroup extends NofoElement {
 
 class NofoNavItem extends NofoElement {
   static props = {
-    value: '',
-    href: '#',
-    active: false
+    value: "",
+    href: "#",
+    active: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('active').toDataAttr('active');
+    this.sync().attr("active").toDataAttr("active");
   }
 
   template() {
@@ -148,12 +146,12 @@ class NofoNavSub extends NofoElement {
 
 class NofoNavSubTrigger extends NofoElement {
   onMount() {
-    const sub = this.closest('nofo-nav-sub');
+    const sub = this.closest("nofo-nav-sub");
     if (sub) {
-      const content = sub.querySelector('nofo-nav-sub-content');
+      const content = sub.querySelector("nofo-nav-sub-content");
       if (content) {
         this.effect(() => {
-          this.setAttribute('data-open', content.state.open ? 'true' : 'false');
+          this.setAttribute("data-open", content.state.open ? "true" : "false");
         });
       }
     }
@@ -199,12 +197,11 @@ class NofoNavSubTrigger extends NofoElement {
 
 class NofoNavSubContent extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('open').toDataAttr('open');
+    this.sync().attr("open").toDataAttr("open");
   }
 
   template() {
@@ -230,20 +227,18 @@ class NofoNavSubContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-navigation', NofoNavigation);
-customElements.define('nofo-nav-group', NofoNavGroup);
-customElements.define('nofo-nav-item', NofoNavItem);
-customElements.define('nofo-nav-sub', NofoNavSub);
-customElements.define('nofo-nav-sub-trigger', NofoNavSubTrigger);
-customElements.define('nofo-nav-sub-content', NofoNavSubContent);
+customElements.define("nofo-navigation", NofoNavigation);
+customElements.define("nofo-nav-group", NofoNavGroup);
+customElements.define("nofo-nav-item", NofoNavItem);
+customElements.define("nofo-nav-sub", NofoNavSub);
+customElements.define("nofo-nav-sub-trigger", NofoNavSubTrigger);
+customElements.define("nofo-nav-sub-content", NofoNavSubContent);
 
-export { 
-  NofoNavigation, 
-  NofoNavGroup, 
-  NofoNavItem, 
-  NofoNavSub, 
-  NofoNavSubTrigger, 
-  NofoNavSubContent 
+export {
+  NofoNavigation,
+  NofoNavGroup,
+  NofoNavItem,
+  NofoNavSub,
+  NofoNavSubTrigger,
+  NofoNavSubContent,
 };
-
-

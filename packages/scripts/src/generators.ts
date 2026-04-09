@@ -31,8 +31,8 @@ export class ${name} extends DurableObject {
  */
 export function toBindingName(name: string): string {
   return name
-    .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1_$2")
     .toUpperCase();
 }
 
@@ -42,11 +42,11 @@ export function toBindingName(name: string): string {
  * e.g. "UserDO" -> "UserDurableObject"
  */
 export function ensureSuffix(name: string, suffix: string): string {
-  if (suffix === 'DurableObject' && name.endsWith('DO')) {
-    return name.slice(0, -2) + 'DurableObject';
+  if (suffix === "DurableObject" && name.endsWith("DO")) {
+    return name.slice(0, -2) + "DurableObject";
   }
-  if (suffix === 'Workflow' && name.endsWith('Wf')) {
-    return name.slice(0, -2) + 'Workflow';
+  if (suffix === "Workflow" && name.endsWith("Wf")) {
+    return name.slice(0, -2) + "Workflow";
   }
   if (name.endsWith(suffix)) return name;
   return name + suffix;
@@ -54,12 +54,12 @@ export function ensureSuffix(name: string, suffix: string): string {
 
 export function patchWranglerConfig(
   content: string,
-  type: 'workflow' | 'do',
-  name: string
+  type: "workflow" | "do",
+  name: string,
 ): string {
   const bindingName = toBindingName(name);
 
-  if (type === 'workflow') {
+  if (type === "workflow") {
     const _workflowBinding = {
       name: bindingName,
       binding: bindingName,
@@ -72,7 +72,7 @@ export function patchWranglerConfig(
       const jsonStr = `\n\t\t\t{\n\t\t\t\t"name": "${bindingName}",\n\t\t\t\t"binding": "${bindingName}",\n\t\t\t\t"class_name": "${name}"\n\t\t\t},`;
       return content.slice(0, insertPos) + jsonStr + content.slice(insertPos);
     }
-  } else if (type === 'do') {
+  } else if (type === "do") {
     const _doBinding = {
       class_name: name,
       name: bindingName,

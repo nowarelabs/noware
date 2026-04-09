@@ -1,16 +1,14 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIDatePicker extends NofoElement {
   static props = {
     value: null,
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('open').toDataAttr('open');
+    this.sync().attr("value").toDataAttr("value").attr("open").toDataAttr("open");
   }
 
   template() {
@@ -63,12 +61,8 @@ class NofoUIDatePickerContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-date-picker', NofoUIDatePicker);
-customElements.define('nofo-ui-date-picker-trigger', NofoUIDatePickerTrigger);
-customElements.define('nofo-ui-date-picker-content', NofoUIDatePickerContent);
+customElements.define("nofo-ui-date-picker", NofoUIDatePicker);
+customElements.define("nofo-ui-date-picker-trigger", NofoUIDatePickerTrigger);
+customElements.define("nofo-ui-date-picker-content", NofoUIDatePickerContent);
 
-export {
-  NofoUIDatePicker,
-  NofoUIDatePickerTrigger,
-  NofoUIDatePickerContent
-};
+export { NofoUIDatePicker, NofoUIDatePickerTrigger, NofoUIDatePickerContent };

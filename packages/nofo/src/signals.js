@@ -24,7 +24,7 @@ function processPending() {
 
 /**
  * Creates a reactive effect
- * @param {Function} callback 
+ * @param {Function} callback
  * @returns {Function} cleanup
  */
 export function effect(callback) {
@@ -49,7 +49,7 @@ export function effect(callback) {
  */
 export function createStore(initial = {}) {
   const root = new Signal.State(initial);
-  
+
   // Internal map for field-level signals to allow granular updates
   const signals = new Map();
 
@@ -62,24 +62,25 @@ export function createStore(initial = {}) {
     return signals.get(key);
   };
 
-  const proxy = new Proxy({}, {
-    get: (_, key) => {
-      if (key === '__isSignalStore') return true;
-      if (key === '__getSignal') return getSignal;
-      return getSignal(key).get();
+  const proxy = new Proxy(
+    {},
+    {
+      get: (_, key) => {
+        if (key === "__isSignalStore") return true;
+        if (key === "__getSignal") return getSignal;
+        return getSignal(key).get();
+      },
+      set: (_, key, value) => {
+        const current = root.get();
+        if (current[key] === value) return true;
+
+        const next = Array.isArray(current) ? [...current] : { ...current };
+        next[key] = value;
+        root.set(next);
+        return true;
+      },
     },
-    set: (_, key, value) => {
-      const current = root.get();
-      if (current[key] === value) return true;
-      
-      const next = Array.isArray(current) 
-        ? [...current] 
-        : { ...current };
-      next[key] = value;
-      root.set(next);
-      return true;
-    }
-  });
+  );
 
   return { proxy, root };
 }

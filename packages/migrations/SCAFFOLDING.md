@@ -45,28 +45,28 @@ export default class CreateTournaments extends Migration {
   readonly version = "20260313001702";
 
   async change() {
-    const options = { location: 'd1' as const };
+    const options = { location: "d1" as const };
 
-    await this.createTable('tournaments', options, (t) => {
-      t.text('id', { primaryKey: true, notNull: true });
-      t.text('name', { notNull: true });
-      t.text('type', { notNull: true });
-      t.text('status', { notNull: true, default: 'draft' });
-      t.integer('total_participants', { notNull: true });
+    await this.createTable("tournaments", options, (t) => {
+      t.text("id", { primaryKey: true, notNull: true });
+      t.text("name", { notNull: true });
+      t.text("type", { notNull: true });
+      t.text("status", { notNull: true, default: "draft" });
+      t.integer("total_participants", { notNull: true });
       t.timestamps();
       t.lifecycle();
 
       // Indexes
-      t.index('type');
-      t.index('status');
+      t.index("type");
+      t.index("status");
 
       // Foreign keys
-      t.foreignKey('phase_id', 'phases', 'id', { onDelete: 'cascade' });
+      t.foreignKey("phase_id", "phases", "id", { onDelete: "cascade" });
 
       // Relationships (used for model generation)
-      t.hasMany('participants', { name: 'participants', foreignKey: 'tournament_id' });
-      t.hasMany('brackets', { name: 'brackets', foreignKey: 'tournament_id' });
-      t.belongsTo('phases', { name: 'phase', foreignKey: 'phase_id' });
+      t.hasMany("participants", { name: "participants", foreignKey: "tournament_id" });
+      t.hasMany("brackets", { name: "brackets", foreignKey: "tournament_id" });
+      t.belongsTo("phases", { name: "phase", foreignKey: "phase_id" });
     });
   }
 }
@@ -79,31 +79,31 @@ import { Migration } from "nomo/migrations";
 
 export default class CreateSingleEliminationViewDurableObject extends Migration {
   readonly version = "20260313002014";
-  readonly durableObjectClass = 'SingleEliminationViewDurableObject';
+  readonly durableObjectClass = "SingleEliminationViewDurableObject";
 
   async change() {
-    const options = { location: 'do' as const };
+    const options = { location: "do" as const };
 
-    await this.createTable('single_elimination_view', options, (t) => {
+    await this.createTable("single_elimination_view", options, (t) => {
       t.id({ autoincrement: true });
-      t.text('tournament_id', { notNull: true });
-      t.text('tournament_name', { notNull: true });
-      t.text('match_id', { notNull: true });
-      t.integer('round', { notNull: true });
-      t.text('match_status', { notNull: true });
-      t.text('player1_name');
-      t.text('player2_name');
+      t.text("tournament_id", { notNull: true });
+      t.text("tournament_name", { notNull: true });
+      t.text("match_id", { notNull: true });
+      t.integer("round", { notNull: true });
+      t.text("match_status", { notNull: true });
+      t.text("player1_name");
+      t.text("player2_name");
       t.timestamps();
 
-      t.index('tournament_id');
-      t.index('match_id');
-      t.index('match_status');
+      t.index("tournament_id");
+      t.index("match_id");
+      t.index("match_status");
 
       // DO metadata - tells the scaffold what kind of DO this is
-      t.doType('view');
+      t.doType("view");
 
       // Tells the scaffold which RPC clients to import in the populate method
-      t.populateFrom('tournaments', 'brackets', 'matches', 'participants');
+      t.populateFrom("tournaments", "brackets", "matches", "participants");
     });
   }
 }
@@ -112,6 +112,7 @@ export default class CreateSingleEliminationViewDurableObject extends Migration 
 ## DSL Methods
 
 ### Column Types
+
 - `t.text(name, options)` - TEXT column
 - `t.integer(name, options)` - INTEGER column
 - `t.boolean(name, options)` - BOOLEAN column
@@ -120,6 +121,7 @@ export default class CreateSingleEliminationViewDurableObject extends Migration 
 - `t.id(options)` - Auto-incrementing integer primary key
 
 ### Column Options
+
 - `primaryKey: true` - Primary key
 - `notNull: true` - NOT NULL constraint
 - `default: value` - Default value
@@ -127,6 +129,7 @@ export default class CreateSingleEliminationViewDurableObject extends Migration 
 - `index: true` - Create an index
 
 ### Table Methods
+
 - `t.timestamps()` - Adds created_at and updated_at
 - `t.lifecycle()` - Adds trashed_at, hidden_at, flagged_at, retired_at
 - `t.index(column)` - Single column index
@@ -136,6 +139,7 @@ export default class CreateSingleEliminationViewDurableObject extends Migration 
 - `t.hasOne(table, options)` - HasOne relationship
 
 ### Durable Object Methods
+
 - `t.doType(type)` - Sets the DO type: `view`, `queue`, `search`, `lock`, `logic`, `cache`, `session`, `state`
 - `t.populateFrom(...tables)` - Lists tables this DO populates from (generates RPC imports)
 - `t.doModel(model)` - Specifies which model populates this DO
@@ -221,6 +225,7 @@ public/components/
 4. **Run `pnpm db:migrate:full`** to apply migrations to the database
 
 The scaffold parser reads the migration files and extracts:
+
 - Table names and column definitions
 - Foreign key relationships
 - hasMany/belongsTo/hasOne relationships

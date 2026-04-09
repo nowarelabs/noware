@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISonner extends NofoElement {
   static template() {
@@ -18,10 +18,10 @@ class NofoUISonner extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
 }
 
-customElements.define('nofo-ui-sonner', NofoUISonner);
+customElements.define("nofo-ui-sonner", NofoUISonner);

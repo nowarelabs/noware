@@ -1,35 +1,34 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoCheckboxCards extends NofoElement {
   static props = {
     value: [],
     defaultValue: [],
-    columns: '1',
-    gap: '3'
+    columns: "1",
+    gap: "3",
   };
 
   onMount() {
-    this.sync()
-      .attr('columns').toDataAttr('columns');
+    this.sync().attr("columns").toDataAttr("columns");
 
     if (this.state.value.length === 0 && this.state.defaultValue.length > 0) {
       this.state.value = [...this.state.defaultValue];
     }
 
-    this.effect(['value'], () => {
+    this.effect(["value"], () => {
       this.updateCards();
     });
   }
 
   updateCards() {
-    const cards = this.querySelectorAll('nofo-checkbox-cards-item');
-    cards.forEach(card => {
+    const cards = this.querySelectorAll("nofo-checkbox-cards-item");
+    cards.forEach((card) => {
       card.state.selected = this.state.value.includes(card.state.value);
     });
   }
 
   handleCardClick(e) {
-    const card = e.target.closest('nofo-checkbox-cards-item');
+    const card = e.target.closest("nofo-checkbox-cards-item");
     if (!card || card.state.disabled) return;
 
     const val = card.state.value;
@@ -46,11 +45,13 @@ class NofoCheckboxCards extends NofoElement {
     }
 
     this.state.value = currentValues;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: currentValues },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: currentValues },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -64,11 +65,18 @@ class NofoCheckboxCards extends NofoElement {
   styles() {
     const { columns, gap } = this.state;
     const spacingScale = {
-      '0': '0', '1': 'var(--space-1)', '2': 'var(--space-2)', '3': 'var(--space-3)',
-      '4': 'var(--space-4)', '5': 'var(--space-5)', '6': 'var(--space-6)',
-      '7': 'var(--space-7)', '8': 'var(--space-8)', '9': 'var(--space-9)'
+      0: "0",
+      1: "var(--space-1)",
+      2: "var(--space-2)",
+      3: "var(--space-3)",
+      4: "var(--space-4)",
+      5: "var(--space-5)",
+      6: "var(--space-6)",
+      7: "var(--space-7)",
+      8: "var(--space-8)",
+      9: "var(--space-9)",
     };
-    const gapValue = spacingScale[gap] || spacingScale['3'];
+    const gapValue = spacingScale[gap] || spacingScale["3"];
 
     return `
       :host { display: block; box-sizing: border-box; }
@@ -83,15 +91,13 @@ class NofoCheckboxCards extends NofoElement {
 
 class NofoCheckboxCardsItem extends NofoElement {
   static props = {
-    value: '',
+    value: "",
     selected: false,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('selected').toDataAttr('selected')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("selected").toDataAttr("selected").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
@@ -130,8 +136,7 @@ class NofoCheckboxCardsItem extends NofoElement {
   }
 }
 
-customElements.define('nofo-checkbox-cards', NofoCheckboxCards);
-customElements.define('nofo-checkbox-cards-item', NofoCheckboxCardsItem);
+customElements.define("nofo-checkbox-cards", NofoCheckboxCards);
+customElements.define("nofo-checkbox-cards-item", NofoCheckboxCardsItem);
 
 export { NofoCheckboxCards, NofoCheckboxCardsItem };
-

@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoSlider extends NofoElement {
   static props = {
@@ -8,46 +8,51 @@ class NofoSlider extends NofoElement {
     max: 100,
     step: 1,
     minStepsBetweenThumbs: 0,
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    'high-contrast': false,
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    "high-contrast": false,
     disabled: false,
-    orientation: 'horizontal',
-    inverted: false
+    orientation: "horizontal",
+    inverted: false,
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('high-contrast').toDataAttr('high-contrast');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("high-contrast")
+      .toDataAttr("high-contrast");
 
     this._isDragging = false;
     this._activeThumb = null;
 
-    this.effect(['value'], () => {
+    this.effect(["value"], () => {
       this.updateUI();
     });
 
-    this.addEventListener('mousedown', this.handleMouseDown.bind(this));
+    this.addEventListener("mousedown", this.handleMouseDown.bind(this));
     this._onMouseMove = this.handleMouseMove.bind(this);
     this._onMouseUp = this.handleMouseUp.bind(this);
-    document.addEventListener('mousemove', this._onMouseMove);
-    document.addEventListener('mouseup', this._onMouseUp);
+    document.addEventListener("mousemove", this._onMouseMove);
+    document.addEventListener("mouseup", this._onMouseUp);
   }
 
   onUnmount() {
-    document.removeEventListener('mousemove', this._onMouseMove);
-    document.removeEventListener('mouseup', this._onMouseUp);
+    document.removeEventListener("mousemove", this._onMouseMove);
+    document.removeEventListener("mouseup", this._onMouseUp);
   }
 
   handleMouseDown(e) {
     if (this.state.disabled) return;
-    
-    const thumb = e.target.closest('.slider-thumb');
+
+    const thumb = e.target.closest(".slider-thumb");
     if (thumb) {
       this._isDragging = true;
       this._activeThumb = parseInt(thumb.dataset.index);
@@ -55,8 +60,8 @@ class NofoSlider extends NofoElement {
       return;
     }
 
-    const track = this.shadowRoot.querySelector('.slider-track');
-    if (e.target.closest('.slider-track')) {
+    const track = this.shadowRoot.querySelector(".slider-track");
+    if (e.target.closest(".slider-track")) {
       this.updateValueFromCoords(e.clientX, e.clientY);
       this._isDragging = true;
     }
@@ -73,26 +78,26 @@ class NofoSlider extends NofoElement {
   }
 
   updateValueFromCoords(clientX, clientY) {
-    const track = this.shadowRoot.querySelector('.slider-track');
+    const track = this.shadowRoot.querySelector(".slider-track");
     const rect = track.getBoundingClientRect();
     const { min, max, step, orientation, inverted } = this.state;
-    
+
     let percentage;
-    if (orientation === 'vertical') {
+    if (orientation === "vertical") {
       percentage = (clientY - rect.top) / rect.height;
       if (!inverted) percentage = 1 - percentage;
     } else {
       percentage = (clientX - rect.left) / rect.width;
       if (inverted) percentage = 1 - percentage;
     }
-    
+
     percentage = Math.max(0, Math.min(1, percentage));
     let newValue = min + (max - min) * percentage;
     newValue = Math.round(newValue / step) * step;
     newValue = Math.max(min, Math.min(max, newValue));
 
     const currentValues = [...this.state.value];
-    
+
     if (this._activeThumb === null) {
       let closestIdx = 0;
       let minDiff = Math.abs(currentValues[0] - newValue);
@@ -110,51 +115,53 @@ class NofoSlider extends NofoElement {
       currentValues[this._activeThumb] = newValue;
       currentValues.sort((a, b) => a - b);
       this._activeThumb = currentValues.indexOf(newValue);
-      
+
       this.state.value = currentValues;
-      this.dispatchEvent(new CustomEvent('value-change', {
-        detail: { value: currentValues },
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("value-change", {
+          detail: { value: currentValues },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   }
 
   updateUI() {
     const { min, max, value, orientation, inverted } = this.state;
-    const range = this.shadowRoot.querySelector('.slider-range');
-    const thumbs = this.shadowRoot.querySelectorAll('.slider-thumb');
-    
+    const range = this.shadowRoot.querySelector(".slider-range");
+    const thumbs = this.shadowRoot.querySelectorAll(".slider-thumb");
+
     if (value.length === 1) {
       const percent = ((value[0] - min) / (max - min)) * 100;
-      if (orientation === 'vertical') {
-        range.style.bottom = '0';
+      if (orientation === "vertical") {
+        range.style.bottom = "0";
         range.style.height = `${percent}%`;
-        range.style.left = '0';
-        range.style.right = '0';
+        range.style.left = "0";
+        range.style.right = "0";
         thumbs[0].style.bottom = `${percent}%`;
-        thumbs[0].style.left = '50%';
+        thumbs[0].style.left = "50%";
       } else {
-        range.style.left = '0';
+        range.style.left = "0";
         range.style.width = `${percent}%`;
-        range.style.top = '0';
-        range.style.bottom = '0';
+        range.style.top = "0";
+        range.style.bottom = "0";
         thumbs[0].style.left = `${percent}%`;
-        thumbs[0].style.top = '50%';
+        thumbs[0].style.top = "50%";
       }
     } else {
       const minVal = Math.min(...value);
       const maxVal = Math.max(...value);
       const startPercent = ((minVal - min) / (max - min)) * 100;
       const endPercent = ((maxVal - min) / (max - min)) * 100;
-      
-      if (orientation === 'vertical') {
+
+      if (orientation === "vertical") {
         range.style.bottom = `${startPercent}%`;
         range.style.height = `${endPercent - startPercent}%`;
         value.forEach((v, i) => {
           const p = ((v - min) / (max - min)) * 100;
           thumbs[i].style.bottom = `${p}%`;
-          thumbs[i].style.left = '50%';
+          thumbs[i].style.left = "50%";
         });
       } else {
         range.style.left = `${startPercent}%`;
@@ -162,7 +169,7 @@ class NofoSlider extends NofoElement {
         value.forEach((v, i) => {
           const p = ((v - min) / (max - min)) * 100;
           thumbs[i].style.left = `${p}%`;
-          thumbs[i].style.top = '50%';
+          thumbs[i].style.top = "50%";
         });
       }
     }
@@ -173,7 +180,7 @@ class NofoSlider extends NofoElement {
     return `
       <div class="slider-track">
         <div class="slider-range"></div>
-        ${value.map((_, i) => `<div class="slider-thumb" data-index="${i}"></div>`).join('')}
+        ${value.map((_, i) => `<div class="slider-thumb" data-index="${i}"></div>`).join("")}
       </div>
       <slot></slot>
     `;
@@ -181,20 +188,20 @@ class NofoSlider extends NofoElement {
 
   styles() {
     const { size, color, orientation } = this.state;
-    const isVertical = orientation === 'vertical';
-    
+    const isVertical = orientation === "vertical";
+
     const sizeMap = {
-      '1': { track: '0.375rem', thumb: '0.875rem' },
-      '2': { track: '0.5rem', thumb: '1rem' },
-      '3': { track: '0.625rem', thumb: '1.25rem' }
+      1: { track: "0.375rem", thumb: "0.875rem" },
+      2: { track: "0.5rem", thumb: "1rem" },
+      3: { track: "0.625rem", thumb: "1.25rem" },
     };
-    const s = sizeMap[size] || sizeMap['2'];
+    const s = sizeMap[size] || sizeMap["2"];
 
     return `
       :host {
         display: inline-block;
         box-sizing: border-box;
-        ${isVertical ? 'height: 100%; width: ' + s.track : 'width: 100%; height: ' + s.track};
+        ${isVertical ? "height: 100%; width: " + s.track : "width: 100%; height: " + s.track};
         position: relative;
         touch-action: none;
       }
@@ -239,23 +246,35 @@ class NofoSlider extends NofoElement {
 }
 
 class NofoSliderTrack extends NofoElement {
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: contents; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
 class NofoSliderRange extends NofoElement {
-  template() { return ``; }
-  styles() { return `:host { display: contents; }`; }
+  template() {
+    return ``;
+  }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
 class NofoSliderThumb extends NofoElement {
-  template() { return ``; }
-  styles() { return `:host { display: contents; }`; }
+  template() {
+    return ``;
+  }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
-customElements.define('nofo-slider', NofoSlider);
-customElements.define('nofo-slider-track', NofoSliderTrack);
-customElements.define('nofo-slider-range', NofoSliderRange);
-customElements.define('nofo-slider-thumb', NofoSliderThumb);
+customElements.define("nofo-slider", NofoSlider);
+customElements.define("nofo-slider-track", NofoSliderTrack);
+customElements.define("nofo-slider-range", NofoSliderRange);
+customElements.define("nofo-slider-thumb", NofoSliderThumb);
 
 export { NofoSlider, NofoSliderTrack, NofoSliderRange, NofoSliderThumb };

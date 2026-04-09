@@ -1,18 +1,18 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIDialog extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('open');
+    this.sync().attr("open").toDataAttr("open");
   }
 
   template() {
     return `
-      <nofo-dialog ${this.state.open ? 'open' : ''}>
+      <nofo-dialog ${this.state.open ? "open" : ""}>
         <slot></slot>
       </nofo-dialog>
     `;
@@ -190,14 +190,14 @@ class NofoUIDialogFooter extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-dialog', NofoUIDialog);
-customElements.define('nofo-ui-dialog-trigger', NofoUIDialogTrigger);
-customElements.define('nofo-ui-dialog-content', NofoUIDialogContent);
-customElements.define('nofo-ui-dialog-header', NofoUIDialogHeader);
-customElements.define('nofo-ui-dialog-title', NofoUIDialogTitle);
-customElements.define('nofo-ui-dialog-description', NofoUIDialogDescription);
-customElements.define('nofo-ui-dialog-body', NofoUIDialogBody);
-customElements.define('nofo-ui-dialog-footer', NofoUIDialogFooter);
+customElements.define("nofo-ui-dialog", NofoUIDialog);
+customElements.define("nofo-ui-dialog-trigger", NofoUIDialogTrigger);
+customElements.define("nofo-ui-dialog-content", NofoUIDialogContent);
+customElements.define("nofo-ui-dialog-header", NofoUIDialogHeader);
+customElements.define("nofo-ui-dialog-title", NofoUIDialogTitle);
+customElements.define("nofo-ui-dialog-description", NofoUIDialogDescription);
+customElements.define("nofo-ui-dialog-body", NofoUIDialogBody);
+customElements.define("nofo-ui-dialog-footer", NofoUIDialogFooter);
 
 export {
   NofoUIDialog,
@@ -207,7 +207,5 @@ export {
   NofoUIDialogTitle,
   NofoUIDialogDescription,
   NofoUIDialogBody,
-  NofoUIDialogFooter
+  NofoUIDialogFooter,
 };
-
-

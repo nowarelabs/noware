@@ -8,26 +8,14 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "./dist",
-    "types": [
-      "@cloudflare/workers-types"
-    ],
+    "types": ["@cloudflare/workers-types"],
     "baseUrl": ".",
     "paths": {
-      "nomo/router": [
-        "../router/src"
-      ],
-      "nomo/logger": [
-        "../logger/src"
-      ],
-      "nomo/sql": [
-        "../sql/src"
-      ],
-      "nomo/result": [
-        "../result/src"
-      ]
+      "nomo/router": ["../router/src"],
+      "nomo/logger": ["../logger/src"],
+      "nomo/sql": ["../sql/src"],
+      "nomo/result": ["../result/src"]
     }
   },
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }

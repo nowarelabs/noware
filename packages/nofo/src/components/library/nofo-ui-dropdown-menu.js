@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIDropdownMenu extends NofoElement {
   template() {
@@ -64,16 +64,16 @@ class NofoUIDropdownMenuContent extends NofoElement {
 
 class NofoUIDropdownMenuItem extends NofoElement {
   static props = {
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync().attr('disabled').toDataAttr('disabled');
+    this.sync().attr("disabled").toDataAttr("disabled");
   }
 
   template() {
     return `
-      <nofo-dropdown-menu-item ${this.state.disabled ? 'disabled' : ''}>
+      <nofo-dropdown-menu-item ${this.state.disabled ? "disabled" : ""}>
         <slot></slot>
       </nofo-dropdown-menu-item>
     `;
@@ -123,18 +123,16 @@ class NofoUIDropdownMenuSeparator extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-dropdown-menu', NofoUIDropdownMenu);
-customElements.define('nofo-ui-dropdown-menu-trigger', NofoUIDropdownMenuTrigger);
-customElements.define('nofo-ui-dropdown-menu-content', NofoUIDropdownMenuContent);
-customElements.define('nofo-ui-dropdown-menu-item', NofoUIDropdownMenuItem);
-customElements.define('nofo-ui-dropdown-menu-separator', NofoUIDropdownMenuSeparator);
+customElements.define("nofo-ui-dropdown-menu", NofoUIDropdownMenu);
+customElements.define("nofo-ui-dropdown-menu-trigger", NofoUIDropdownMenuTrigger);
+customElements.define("nofo-ui-dropdown-menu-content", NofoUIDropdownMenuContent);
+customElements.define("nofo-ui-dropdown-menu-item", NofoUIDropdownMenuItem);
+customElements.define("nofo-ui-dropdown-menu-separator", NofoUIDropdownMenuSeparator);
 
 export {
   NofoUIDropdownMenu,
   NofoUIDropdownMenuTrigger,
   NofoUIDropdownMenuContent,
   NofoUIDropdownMenuItem,
-  NofoUIDropdownMenuSeparator
+  NofoUIDropdownMenuSeparator,
 };
-
-

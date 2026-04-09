@@ -1,22 +1,23 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIInput extends NofoElement {
   static props = {
-    type: 'text',
-    placeholder: '',
-    value: '',
+    type: "text",
+    placeholder: "",
+    value: "",
     disabled: false,
-    error: '',
-    helperText: '',
-    label: '',
-    name: '',
-    required: false
+    error: "",
+    helperText: "",
+    label: "",
+    name: "",
+    required: false,
   };
 
   template() {
-    const { type, placeholder, value, disabled, error, helperText, label, name, required } = this.state;
-    
+    const { type, placeholder, value, disabled, error, helperText, label, name, required } =
+      this.state;
+
     return `
       <nofo-text-field
         type="${type}"
@@ -53,7 +54,5 @@ class NofoUIInput extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-input', NofoUIInput);
+customElements.define("nofo-ui-input", NofoUIInput);
 export { NofoUIInput };
-
-

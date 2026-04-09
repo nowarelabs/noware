@@ -1,22 +1,23 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUITextarea extends NofoElement {
   static props = {
-    placeholder: '',
-    value: '',
+    placeholder: "",
+    value: "",
     disabled: false,
-    error: '',
-    helperText: '',
-    label: '',
-    name: '',
+    error: "",
+    helperText: "",
+    label: "",
+    name: "",
     required: false,
-    rows: '4'
+    rows: "4",
   };
 
   template() {
-    const { placeholder, value, disabled, error, helperText, label, name, required, rows } = this.state;
-    
+    const { placeholder, value, disabled, error, helperText, label, name, required, rows } =
+      this.state;
+
     return `
       <nofo-text-area
         variant="surface"
@@ -52,7 +53,5 @@ class NofoUITextarea extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-textarea', NofoUITextarea);
+customElements.define("nofo-ui-textarea", NofoUITextarea);
 export { NofoUITextarea };
-
-

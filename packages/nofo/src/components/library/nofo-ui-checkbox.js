@@ -1,19 +1,19 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICheckbox extends NofoElement {
   static props = {
     checked: false,
     defaultChecked: false,
     disabled: false,
-    name: '',
+    name: "",
     required: false,
-    value: ''
+    value: "",
   };
 
   template() {
     const { checked, defaultChecked, disabled, name, required, value } = this.state;
-    
+
     return `
       <nofo-checkbox
         ?checked="${checked}"
@@ -57,7 +57,5 @@ class NofoUICheckbox extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-checkbox', NofoUICheckbox);
+customElements.define("nofo-ui-checkbox", NofoUICheckbox);
 export { NofoUICheckbox };
-
-

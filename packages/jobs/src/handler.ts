@@ -1,7 +1,7 @@
-import type { ExecutionContext } from '@cloudflare/workers-types';
-import { BaseJob } from './index';
-import { Logger, LogLevel } from 'nomo/logger';
-import { trace, context, propagation, SpanStatusCode } from '@opentelemetry/api';
+import type { ExecutionContext } from "@cloudflare/workers-types";
+import { BaseJob } from "./index";
+import { Logger, LogLevel } from "nomo/logger";
+import { trace, context, propagation, SpanStatusCode } from "@opentelemetry/api";
 
 export type JobConstructor<T = any> = new (params: T) => BaseJob<T>;
 
@@ -16,7 +16,7 @@ export interface IJobDispatcher<Env = any> {
 
 export class JobDispatcher implements IJobDispatcher {
   private logger = new Logger({
-    service: 'jobs-dispatcher',
+    service: "jobs-dispatcher",
     level: LogLevel.DEBUG,
   });
   constructor(private jobRegistry: IJobRegistry) {}
@@ -27,16 +27,16 @@ export class JobDispatcher implements IJobDispatcher {
     }
     if (env?.LOG_LEVEL) {
       Logger.LEVEL = env.LOG_LEVEL;
-    } else if (Logger.ENVIRONMENT === 'development') {
+    } else if (Logger.ENVIRONMENT === "development") {
       Logger.LEVEL = LogLevel.DEBUG;
     }
 
     for (const message of batch.messages) {
       const body = message.body;
-      if (body.type === 'job') {
+      if (body.type === "job") {
         const { jobName, params, traceContext } = body;
         await this.runJob(jobName, params, env, ctx, traceContext);
-        if (typeof message.ack === 'function') {
+        if (typeof message.ack === "function") {
           message.ack();
         }
       }
@@ -47,7 +47,7 @@ export class JobDispatcher implements IJobDispatcher {
     const parentContext = traceContext
       ? propagation.extract(context.active(), traceContext)
       : context.active();
-    const tracer = trace.getTracer('nomo-jobs');
+    const tracer = trace.getTracer("nomo-jobs");
 
     return await context.with(parentContext, async () => {
       return await tracer.startActiveSpan(`job ${jobName}`, async (span) => {
@@ -81,7 +81,7 @@ export class JobDispatcher implements IJobDispatcher {
           contextualLogger.warn(`Job ${jobName} not found in registry`);
           span.setStatus({
             code: SpanStatusCode.ERROR,
-            message: 'Job not found',
+            message: "Job not found",
           });
           span.end();
         }
@@ -99,7 +99,7 @@ export class JobDispatcher implements IJobDispatcher {
     const parentContext = traceContext
       ? propagation.extract(context.active(), traceContext)
       : context.active();
-    const tracer = trace.getTracer('nomo-workflows');
+    const tracer = trace.getTracer("nomo-workflows");
 
     return await context.with(parentContext, async () => {
       return await tracer.startActiveSpan(`workflow-job ${jobName}`, async (span) => {
@@ -135,7 +135,7 @@ export class JobDispatcher implements IJobDispatcher {
           contextualLogger.error(`Job ${jobName} not found in registry`);
           span.setStatus({
             code: SpanStatusCode.ERROR,
-            message: 'Job not found',
+            message: "Job not found",
           });
           span.end();
           throw new Error(`Job ${jobName} not found in registry`);

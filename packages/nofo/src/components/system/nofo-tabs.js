@@ -1,31 +1,31 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoTabs extends NofoElement {
   static props = {
     value: null,
     defaultValue: null,
-    orientation: 'horizontal',
-    'activation-mode': 'automatic'
+    orientation: "horizontal",
+    "activation-mode": "automatic",
   };
 
   onMount() {
-    this.sync()
-      .attr('orientation').toDataAttr('orientation')
-      .attr('value').toDataAttr('value');
+    this.sync().attr("orientation").toDataAttr("orientation").attr("value").toDataAttr("value");
 
     if (this.state.value === null && this.state.defaultValue !== null) {
       this.state.value = this.state.defaultValue;
     }
 
-    this.addEventListener('nofo-tabs-select', (e) => {
+    this.addEventListener("nofo-tabs-select", (e) => {
       const { value } = e.detail;
       this.state.value = value;
-      
-      this.dispatchEvent(new CustomEvent('value-change', {
-        detail: { value },
-        bubbles: true,
-        composed: true
-      }));
+
+      this.dispatchEvent(
+        new CustomEvent("value-change", {
+          detail: { value },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     });
   }
 
@@ -48,11 +48,11 @@ class NofoTabs extends NofoElement {
 
 class NofoTabsList extends NofoElement {
   static props = {
-    size: '1'
+    size: "1",
   };
 
   onMount() {
-    this.sync().attr('size').toDataAttr('size');
+    this.sync().attr("size").toDataAttr("size");
   }
 
   template() {
@@ -82,29 +82,30 @@ class NofoTabsList extends NofoElement {
 class NofoTabsTrigger extends NofoElement {
   static props = {
     value: null,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("disabled").toDataAttr("disabled");
 
-    const tabs = this.closest('nofo-tabs');
+    const tabs = this.closest("nofo-tabs");
     if (tabs) {
       this.effect(() => {
         const isActive = tabs.state.value === this.state.value;
-        this.setAttribute('data-state', isActive ? 'active' : 'inactive');
+        this.setAttribute("data-state", isActive ? "active" : "inactive");
       });
     }
   }
 
   handleClick() {
     if (this.state.disabled) return;
-    this.dispatchEvent(new CustomEvent('nofo-tabs-select', {
-      detail: { value: this.state.value },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("nofo-tabs-select", {
+        detail: { value: this.state.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -168,15 +169,15 @@ class NofoTabsTrigger extends NofoElement {
 
 class NofoTabsContent extends NofoElement {
   static props = {
-    value: null
+    value: null,
   };
 
   onMount() {
-    const tabs = this.closest('nofo-tabs');
+    const tabs = this.closest("nofo-tabs");
     if (tabs) {
       this.effect(() => {
         const isActive = tabs.state.value === this.state.value;
-        this.setAttribute('data-state', isActive ? 'active' : 'inactive');
+        this.setAttribute("data-state", isActive ? "active" : "inactive");
       });
     }
   }
@@ -197,15 +198,9 @@ class NofoTabsContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-tabs', NofoTabs);
-customElements.define('nofo-tabs-list', NofoTabsList);
-customElements.define('nofo-tabs-trigger', NofoTabsTrigger);
-customElements.define('nofo-tabs-content', NofoTabsContent);
+customElements.define("nofo-tabs", NofoTabs);
+customElements.define("nofo-tabs-list", NofoTabsList);
+customElements.define("nofo-tabs-trigger", NofoTabsTrigger);
+customElements.define("nofo-tabs-content", NofoTabsContent);
 
-export { 
-  NofoTabs, 
-  NofoTabsList, 
-  NofoTabsTrigger, 
-  NofoTabsContent 
-};
-
+export { NofoTabs, NofoTabsList, NofoTabsTrigger, NofoTabsContent };

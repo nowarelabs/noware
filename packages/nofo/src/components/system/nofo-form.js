@@ -1,8 +1,8 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoForm extends NofoElement {
   static props = {
-    onSubmit: { type: Function, default: null }
+    onSubmit: { type: Function, default: null },
   };
 
   onMount() {
@@ -10,15 +10,15 @@ class NofoForm extends NofoElement {
   }
 
   setupEventListeners() {
-    const form = this.shadowRoot.querySelector('form');
+    const form = this.shadowRoot.querySelector("form");
     if (form) {
-      form.addEventListener('submit', (e) => {
+      form.addEventListener("submit", (e) => {
         e.preventDefault();
 
-        const event = new CustomEvent('form-submit', {
+        const event = new CustomEvent("form-submit", {
           detail: { formData: new FormData(form) },
           bubbles: true,
-          composed: true
+          composed: true,
         });
         this.dispatchEvent(event);
 
@@ -47,5 +47,5 @@ class NofoForm extends NofoElement {
   }
 }
 
-customElements.define('nofo-form', NofoForm);
+customElements.define("nofo-form", NofoForm);
 export { NofoForm };

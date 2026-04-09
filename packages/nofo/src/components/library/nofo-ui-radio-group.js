@@ -1,37 +1,37 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIRadioGroup extends NofoElement {
   static props = {
     value: null,
     defaultValue: null,
-    name: '',
+    name: "",
     disabled: false,
-    orientation: 'vertical'
+    orientation: "vertical",
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   handleValueChange(e) {
     const newValue = e.detail.value;
     this.state.value = newValue;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: newValue },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: newValue },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
     const { value, defaultValue, name, disabled, orientation } = this.state;
     return `
       <nofo-radio-group
-        value="${value || ''}"
-        defaultValue="${defaultValue || ''}"
+        value="${value || ""}"
+        defaultValue="${defaultValue || ""}"
         name="${name}"
         ?disabled="${disabled}"
         orientation="${orientation}"
@@ -52,14 +52,12 @@ class NofoUIRadioGroup extends NofoElement {
 
 class NofoUIRadioItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
@@ -85,14 +83,16 @@ class NofoUIRadioItem extends NofoElement {
 }
 
 class NofoUIRadioIndicator extends NofoElement {
-  template() { return ``; }
-  styles() { return `:host { display: none; }`; }
+  template() {
+    return ``;
+  }
+  styles() {
+    return `:host { display: none; }`;
+  }
 }
 
-customElements.define('nofo-ui-radio-group', NofoUIRadioGroup);
-customElements.define('nofo-ui-radio-item', NofoUIRadioItem);
-customElements.define('nofo-ui-radio-indicator', NofoUIRadioIndicator);
+customElements.define("nofo-ui-radio-group", NofoUIRadioGroup);
+customElements.define("nofo-ui-radio-item", NofoUIRadioItem);
+customElements.define("nofo-ui-radio-indicator", NofoUIRadioIndicator);
 
 export { NofoUIRadioGroup, NofoUIRadioItem, NofoUIRadioIndicator };
-
-

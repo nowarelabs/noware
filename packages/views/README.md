@@ -3,6 +3,7 @@
 The ultimate, **zero-dependency** direct JSX-to-String engine for Cloudflare Workers (Edge).
 
 ## Philosophy: Radical Minimalism
+
 This engine does away with intermediate VNode structures, DOM diffing, and complex patching mechanisms. It leverages JSX as a high-performance template literal system, rendering directly to HTML strings from your class-based components.
 
 - **Zero VNodes**: JSX renders directly to strings. No tree traversal, no memory overhead.
@@ -23,6 +24,7 @@ pnpm add nomo/views
 ## 2. Core Architecture (BaseView & BaseLayout)
 
 ### The View (`src/views/welcome.tsx`)
+
 ```typescript
 import { BaseView } from "nomo/views";
 
@@ -39,6 +41,7 @@ export class WelcomeView extends BaseView<{ name: string }> {
 ```
 
 ### The Layout (`src/layouts/application.tsx`)
+
 ```typescript
 import { BaseLayout } from "nomo/views";
 
@@ -60,11 +63,12 @@ export class ApplicationLayout extends BaseLayout {
 ```
 
 ### Rendering
+
 ```typescript
 import { BaseLayout } from "nomo/views";
 
 const html = BaseLayout.withLayout(ApplicationLayout, WelcomeView, {
-  name: "Vance"
+  name: "Vance",
 });
 ```
 
@@ -92,6 +96,7 @@ const html = <MyComponent title="Hello" />;
 nomo Views are designed to work seamlessly with **Nofo Web Components**. Since every component renders to a string, it's perfect for custom elements with shadow DOM.
 
 ### Nofo Web Components
+
 You can use Nofo custom elements directly in your views. They are loaded via the import map and provide reactive state management using the Signal Polyfill.
 
 ```typescript
@@ -99,6 +104,7 @@ import { NofoElement } from "nomo/nofo";
 ```
 
 ### Custom Elements
+
 Use Nofo custom elements for interactive UI components:
 
 ```typescript
@@ -114,6 +120,7 @@ export class UserProfile extends BaseView {
 ```
 
 ### Declarative Attributes
+
 Nofo elements work with standard HTML attributes. The framework handles reactivity through signals:
 
 ```typescript
@@ -121,7 +128,7 @@ export class UserProfile extends BaseView {
   render() {
     return (
       <div class="profile">
-        <profile-card 
+        <profile-card
           name={this.props.name}
           editable="true"
         >
@@ -152,6 +159,7 @@ const html = <UserBadge name="Vance" />;
 ```
 
 ### BaseElement (Full-Stack Web Components)
+
 `BaseElement` is a specialized class for building Web Components with SSR. It automatically wraps your output in its assigned `static tag`.
 
 ```typescript
@@ -182,6 +190,7 @@ const html = <CounterElement count={5} />;
 The primary goal of nomo is the synergy between **Capnweb** (Web Components & RPC), **Hotwired** (Fast SSR Navigation), and **BaseView** (JSX SSR).
 
 ### The Pattern
+
 1.  **Define** your logic-heavy UI as a Web Component using `capnweb`.
 2.  **Provide** an initial SSR state in `BaseView` using `custom_element`.
 3.  **Enhance** the experience with `hotwired` for fragment updates and page transitions.
@@ -189,6 +198,7 @@ The primary goal of nomo is the synergy between **Capnweb** (Web Components & RP
 ### Example: Real-time Status Badge
 
 **1. The Component (`status-badge.ts`)**
+
 ```typescript
 import { BaseElement, safeCss } from "nomo/views";
 
@@ -220,6 +230,7 @@ class StatusBadge extends BaseElement {
 ```
 
 ### Advanced Features
+
 `BaseElement` provides a bridge between SSR and standard Web APIs:
 
 - **Reactive Attributes**: Add `static get observedAttributes() { return ['status', 'color']; }` to have attribute changes automatically update `this.props` and re-render.
@@ -228,6 +239,7 @@ class StatusBadge extends BaseElement {
 - **Direct Manipulation**: Standard methods like `removeChild` and `insertBefore` are available for fine-grained control when tagged literals aren't enough.
 
 **2. The View (`welcome.tsx`)**
+
 ```typescript
 export class WelcomeView extends BaseView {
   render() {
@@ -244,6 +256,7 @@ export class WelcomeView extends BaseView {
 ```
 
 **3. The Orchestration**
+
 - The `status-badge` element is instantly visible via Declarative Shadow DOM.
 - **Capnweb** upgrades the element and starts the RPC loop.
 - Signals handle reactive updates without a virtual DOM.
@@ -265,6 +278,7 @@ export class WelcomeView extends BaseView {
 The `import_map_tag()` helper generates a `<script type="importmap">` tag for modern browser-based module resolution.
 
 ### Basic Usage (Layout)
+
 In your layout's `<head>`, call `this.import_map_tag()` to include the default import map:
 
 ```tsx
@@ -272,9 +286,7 @@ export class ApplicationLayout extends BaseLayout {
   render() {
     return (
       <html>
-        <head>
-          {this.import_map_tag()}
-        </head>
+        <head>{this.import_map_tag()}</head>
         {/* ... */}
       </html>
     );
@@ -283,6 +295,7 @@ export class ApplicationLayout extends BaseLayout {
 ```
 
 ### Customization (View)
+
 Individual views can override or extend the import map by passing an object to `import_map_tag`. This is useful for adding view-specific dependencies:
 
 ```tsx
@@ -290,16 +303,17 @@ export class TournamentListView extends BaseView {
   render() {
     return (
       <div>
-        {this.content_for('head', (
+        {this.content_for(
+          "head",
           <>
             {this.import_map_tag({
               imports: {
-                ...this.a?.importMap?.imports || {},
-                "nomo/nofo": "/assets/vendor/nomo/nofo.js"
-              }
+                ...(this.a?.importMap?.imports || {}),
+                "nomo/nofo": "/assets/vendor/nomo/nofo.js",
+              },
             })}
-          </>
-        ))}
+          </>,
+        )}
         {/* ... */}
       </div>
     );
@@ -308,7 +322,9 @@ export class TournamentListView extends BaseView {
 ```
 
 ### Default Imports
+
 By default, the following mappings are included:
+
 - `capnweb`: `/assets/vendor/capnweb.js`
 - `signal-polyfill`: `/assets/vendor/signal-polyfill.js`
 - `nomo/nofo`: `/assets/vendor/nomo/nofo.js`
@@ -316,6 +332,7 @@ By default, the following mappings are included:
 ---
 
 ## 9. Why no tags/svg modules?
+
 In a direct string-rendering JSX system, standard HTML and SVG elements are natively supported via JSX. Redundant functional helpers (`div()`, `svg()`) add unnecessary weight to the package without providing any benefit over standard JSX.
 
 ---

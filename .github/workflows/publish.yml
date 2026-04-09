@@ -1,0 +1,140 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Packages to publish (comma-separated, or "all" for all packages)'
+        required: false
+        default: "all"
+      version:
+        description: 'Version override (optional, e.g., "1.0.0")'
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run (no actual publish)"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.set-packages.outputs.packages }}
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - id: set-packages
+        name: Determine packages to publish
+        run: |
+          if [[ "${{ github.event.inputs.packages }}" == "all" ]] || [[ "${{ github.event.inputs.packages }}" == "" ]]; then
+            # Get all packages with version 1.0.0 or from git tags
+            PACKAGES=$(ls packages/ | tr '\n' ',')
+            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          else
+            echo "packages=${{ github.event.inputs.packages }}" >> $GITHUB_OUTPUT
+          fi
+
+      - id: set-version
+        name: Determine version
+        run: |
+          if [[ "${{ github.event.inputs.version }}" != "" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/tags/v"* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0" >> $GITHUB_OUTPUT
+          fi
+
+  publish:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        run: echo "store=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.store }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Publish packages
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          PACKAGES="${{ needs.prepare.outputs.packages }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+
+          # Split packages by comma
+          IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
+
+          for pkg in "${PKG_ARRAY[@]}"; do
+            pkg=$(echo "$pkg" | tr -d ' ')
+            if [[ -z "$pkg" ]]; then
+              continue
+            fi
+            
+            pkg_dir="packages/$pkg"
+            if [[ ! -d "$pkg_dir" ]]; then
+              echo "Warning: Package directory $pkg_dir does not exist, skipping..."
+              continue
+            fi
+            
+            cd "$pkg_dir"
+            
+            # Update version if provided
+            if [[ "$VERSION" != "" ]]; then
+              npm version "$VERSION" --no-git-tag-version --allow-same-version
+            fi
+            
+            # Publish or dry-run
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "Dry-run: would publish $pkg at version $(node -p 'require(\"./package.json\").version')"
+              npm publish --dry-run
+            else
+              echo "Publishing $pkg at version $(node -p 'require(\"./package.json\").version')"
+              npm publish --access public
+            fi
+            
+            cd ../..
+          done

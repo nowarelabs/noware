@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export abstract class BaseValidator<T = any> {
   protected abstract schema: z.ZodType<T>;

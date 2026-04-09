@@ -1,14 +1,14 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISeparator extends NofoElement {
   static props = {
-    orientation: 'horizontal'
+    orientation: "horizontal",
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('orientation').toDataAttr('orientation');
+    s.attr("orientation").toDataAttr("orientation");
   }
 
   template() {
@@ -39,5 +39,5 @@ class NofoUISeparator extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-separator', NofoUISeparator);
+customElements.define("nofo-ui-separator", NofoUISeparator);
 export { NofoUISeparator };

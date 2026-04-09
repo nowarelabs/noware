@@ -32,8 +32,8 @@ A comprehensive, production-ready web component system built with modern web sta
 
 <!-- Or import all components -->
 <script type="module">
-  import '/components/system/nofo-button.js';
-  import '/components/system/nofo-card.js';
+  import "/components/system/nofo-button.js";
+  import "/components/system/nofo-card.js";
   // ... import other components
 </script>
 ```
@@ -51,6 +51,7 @@ Wrap your application with the theme component to enable design tokens:
 ## Design Principles
 
 ### 1. Compound Components
+
 Related parts are grouped hierarchically, allowing flexible composition:
 
 ```html
@@ -64,6 +65,7 @@ Related parts are grouped hierarchically, allowing flexible composition:
 ```
 
 ### 2. Data Attributes for Styling
+
 All components expose `data-*` attributes for styling hooks:
 
 ```css
@@ -78,17 +80,19 @@ nofo-dialog[data-state="open"] {
 ```
 
 ### 3. Controlled & Uncontrolled Patterns
+
 Support both controlled (`value`) and uncontrolled (`defaultValue`) patterns:
 
 ```html
 <!-- Controlled -->
-<nofo-select value="option-1" onValueChange={handleChange}>
-
-<!-- Uncontrolled -->
-<nofo-select defaultValue="option-1">
+<nofo-select value="option-1" onValueChange="{handleChange}">
+  <!-- Uncontrolled -->
+  <nofo-select defaultValue="option-1"></nofo-select
+></nofo-select>
 ```
 
 ### 4. Portal Rendering
+
 Overlays render in portals for proper stacking:
 
 ```html
@@ -101,6 +105,7 @@ Overlays render in portals for proper stacking:
 ```
 
 ### 5. Consistent Size Scales
+
 All components use a 1-9 size scale:
 
 - **Size 1**: Smallest
@@ -108,10 +113,11 @@ All components use a 1-9 size scale:
 - **Size 3-9**: Progressively larger
 
 ### 6. Responsive Props
+
 Use object syntax for responsive values:
 
 ```html
-<nofo-box p='{ "initial": "2", "sm": "4", "lg": "6" }'>
+<nofo-box p='{ "initial": "2", "sm": "4", "lg": "6" }'></nofo-box>
 ```
 
 ## Core Concepts
@@ -127,9 +133,9 @@ Components dispatch custom events for state changes:
 - `nofo-click` - Button clicked
 
 ```javascript
-const button = document.querySelector('nofo-button');
-button.addEventListener('nofo-click', (e) => {
-  console.log('Button clicked!');
+const button = document.querySelector("nofo-button");
+button.addEventListener("nofo-click", (e) => {
+  console.log("Button clicked!");
 });
 ```
 
@@ -139,8 +145,9 @@ Components use `data-state` attributes to expose their current state:
 
 ```html
 <nofo-dialog data-state="open">
-<nofo-dropdown-menu data-state="closed">
-<nofo-toggle-group-item data-state="on">
+  <nofo-dropdown-menu data-state="closed">
+    <nofo-toggle-group-item data-state="on"></nofo-toggle-group-item></nofo-dropdown-menu
+></nofo-dialog>
 ```
 
 ### CSS Variables
@@ -168,17 +175,11 @@ var(--font-size-1) through var(--font-size-9)
 The fundamental layout component supporting spacing, sizing, positioning, and grid properties.
 
 ```html
-<nofo-box
-  p="4"
-  px="6"
-  width="100%"
-  position="relative"
->
-  Content
-</nofo-box>
+<nofo-box p="4" px="6" width="100%" position="relative"> Content </nofo-box>
 ```
 
 **Props:**
+
 - `p`, `px`, `py`, `pt`, `pr`, `pb`, `pl` - Padding (1-9 or CSS values)
 - `m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml` - Margin (1-9 or CSS values)
 - `width`, `min-width`, `max-width` - Width
@@ -205,6 +206,7 @@ Box with flexbox capabilities.
 ```
 
 **Props:**
+
 - `direction` - Flex direction
 - `align` - Align items
 - `justify` - Justify content
@@ -216,19 +218,14 @@ Box with flexbox capabilities.
 Box with CSS Grid capabilities.
 
 ```html
-<nofo-grid
-  columns="3"
-  rows="auto"
-  gap="4"
-  gap-x="4"
-  gap-y="2"
->
+<nofo-grid columns="3" rows="auto" gap="4" gap-x="4" gap-y="2">
   <nofo-box>Item 1</nofo-box>
   <nofo-box>Item 2</nofo-box>
 </nofo-grid>
 ```
 
 **Props:**
+
 - `columns` - Grid columns
 - `rows` - Grid rows
 - `gap`, `gap-x`, `gap-y` - Grid gap
@@ -239,12 +236,11 @@ Box with CSS Grid capabilities.
 Consistent max-width wrapper.
 
 ```html
-<nofo-container size="1|2|3|4">
-  Content
-</nofo-container>
+<nofo-container size="1|2|3|4"> Content </nofo-container>
 ```
 
 **Props:**
+
 - `size` - Max width (1: 480px, 2: 768px, 3: 1024px, 4: 1280px)
 
 ### Section
@@ -253,13 +249,12 @@ Consistent vertical spacing for page sections.
 
 ```html
 <nofo-section size="1|2|3">
-  <nofo-container>
-    Content
-  </nofo-container>
+  <nofo-container> Content </nofo-container>
 </nofo-section>
 ```
 
 **Props:**
+
 - `size` - Padding size (1: 1rem, 2: 2rem, 3: 3rem)
 
 ### Stack
@@ -267,13 +262,18 @@ Consistent vertical spacing for page sections.
 Flexbox layout with consistent gap.
 
 ```html
-<nofo-stack direction="vertical|horizontal" gap="sm|md|lg|1|2|3|4|5|6|7|8|9" align="start|center|end|stretch">
+<nofo-stack
+  direction="vertical|horizontal"
+  gap="sm|md|lg|1|2|3|4|5|6|7|8|9"
+  align="start|center|end|stretch"
+>
   <nofo-box>Item 1</nofo-box>
   <nofo-box>Item 2</nofo-box>
 </nofo-stack>
 ```
 
 **Props:**
+
 - `direction` - Stack direction
 - `gap` - Gap between items
 - `align` - Alignment
@@ -298,6 +298,7 @@ Body copy component with responsive sizing.
 ```
 
 **Props:**
+
 - `as` - Polymorphic element type
 - `size` - Font size (1-9)
 - `weight` - Font weight
@@ -327,16 +328,13 @@ Title component with semantic HTML.
 Inline and block code display.
 
 ```html
-<nofo-code
-  size="1|2|3|4|5|6|7|8|9"
-  variant="solid|soft|outline|ghost"
-  color="accent-color"
->
+<nofo-code size="1|2|3|4|5|6|7|8|9" variant="solid|soft|outline|ghost" color="accent-color">
   console.log('Hello')
 </nofo-code>
 ```
 
 **Props:**
+
 - `size` - Font size
 - `variant` - Visual variant
 - `color` - Accent color
@@ -359,6 +357,7 @@ Styled link component.
 ```
 
 **Props:**
+
 - `href` - Link URL
 - `size` - Font size
 - `color` - Link color
@@ -373,9 +372,7 @@ Styled link component.
 <nofo-strong>Strong text</nofo-strong>
 <nofo-kbd size="2">Cmd</nofo-kbd>
 <nofo-quote>"Quote text"</nofo-quote>
-<nofo-blockquote cite="https://example.com">
-  Block quote content
-</nofo-blockquote>
+<nofo-blockquote cite="https://example.com"> Block quote content </nofo-blockquote>
 ```
 
 ## Form Controls
@@ -400,6 +397,7 @@ Primary button component with multiple variants.
 ```
 
 **Props:**
+
 - `size` - Button size (1-4)
 - `variant` - Visual variant
 - `color` - Accent color
@@ -409,6 +407,7 @@ Primary button component with multiple variants.
 - `high-contrast` - High contrast mode
 
 **Events:**
+
 - `nofo-click` - Dispatched on click
 
 ### Icon Button
@@ -416,11 +415,7 @@ Primary button component with multiple variants.
 Button optimized for icons only.
 
 ```html
-<nofo-icon-button
-  size="1|2|3|4"
-  variant="solid|soft|surface|outline|ghost"
-  aria-label="Settings"
->
+<nofo-icon-button size="1|2|3|4" variant="solid|soft|surface|outline|ghost" aria-label="Settings">
   <nofo-icon name="gear"></nofo-icon>
 </nofo-icon-button>
 ```
@@ -433,8 +428,8 @@ Text input component with slots for icons.
 
 ```html
 <nofo-text-field
-  value={value}
-  onValueChange={handleChange}
+  value="{value}"
+  onValueChange="{handleChange}"
   defaultValue=""
   placeholder="Enter text..."
   size="1|2|3"
@@ -455,6 +450,7 @@ Text input component with slots for icons.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Input value
 - `size` - Input size
 - `variant` - Visual variant
@@ -465,6 +461,7 @@ Text input component with slots for icons.
 - `name` - Form field name
 
 **Events:**
+
 - `value-change` - Dispatched on input change
 
 ### Text Area
@@ -473,14 +470,14 @@ Multi-line text input.
 
 ```html
 <nofo-text-area
-  value={value}
-  onValueChange={handleChange}
+  value="{value}"
+  onValueChange="{handleChange}"
   defaultValue=""
   placeholder="Enter message..."
   size="1|2|3"
   variant="surface|classic|soft|ghost"
   resize="none|vertical|horizontal|both"
-  rows={4}
+  rows="{4}"
   disabled
   readOnly
   required
@@ -495,8 +492,8 @@ Dropdown select component.
 
 ```html
 <nofo-select
-  value={value}
-  onValueChange={handleChange}
+  value="{value}"
+  onValueChange="{handleChange}"
   defaultValue="option-1"
   size="1|2|3"
   variant="solid|soft|surface|ghost"
@@ -508,7 +505,7 @@ Dropdown select component.
       <nofo-icon name="chevron-down"></nofo-icon>
     </nofo-select-icon>
   </nofo-select-trigger>
-  
+
   <nofo-select-content side="bottom" align="start">
     <nofo-select-group>
       <nofo-select-label>Fruits</nofo-select-label>
@@ -525,12 +522,14 @@ Dropdown select component.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Selected value
 - `size` - Select size
 - `variant` - Visual variant
 - `disabled` - Disabled state
 
 **Events:**
+
 - `value-change` - Dispatched on selection change
 
 ### Checkbox
@@ -542,9 +541,9 @@ Checkbox input with label support.
   size="1|2|3"
   variant="solid|soft|surface"
   color="accent-color"
-  checked={checked}
-  onCheckedChange={handleChange}
-  defaultChecked={false}
+  checked="{checked}"
+  onCheckedChange="{handleChange}"
+  defaultChecked="{false}"
   disabled
   required
   name="terms"
@@ -555,6 +554,7 @@ Checkbox input with label support.
 ```
 
 **Props:**
+
 - `size` - Checkbox size
 - `variant` - Visual variant
 - `checked` / `defaultChecked` - Checked state
@@ -562,6 +562,7 @@ Checkbox input with label support.
 - `indeterminate` - Indeterminate state (use `checked="indeterminate"`)
 
 **Events:**
+
 - `checked-change` - Dispatched on state change
 
 ### Checkbox Group
@@ -585,11 +586,13 @@ Group of checkboxes with shared state.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Array of selected values
 - `name` - Form field name
 - `disabled` - Disabled state
 
 **Events:**
+
 - `value-change` - Dispatched with array of selected values
 
 ### Radio
@@ -598,8 +601,8 @@ Radio button input.
 
 ```html
 <nofo-radio-group
-  value={selected}
-  onValueChange={setSelected}
+  value="{selected}"
+  onValueChange="{setSelected}"
   defaultValue="option-1"
   name="options"
   orientation="vertical|horizontal"
@@ -614,11 +617,13 @@ Radio button input.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Selected value
 - `name` - Form field name
 - `orientation` - Layout direction
 
 **Events:**
+
 - `value-change` - Dispatched on selection change
 
 ### Switch
@@ -627,9 +632,9 @@ Toggle switch component.
 
 ```html
 <nofo-switch
-  checked={checked}
-  onCheckedChange={handleChange}
-  defaultChecked={false}
+  checked="{checked}"
+  onCheckedChange="{handleChange}"
+  defaultChecked="{false}"
   size="1|2|3"
   variant="solid|soft|surface"
   color="accent-color"
@@ -641,12 +646,14 @@ Toggle switch component.
 ```
 
 **Props:**
+
 - `size` - Switch size
 - `variant` - Visual variant
 - `checked` / `defaultChecked` - Checked state
 - `disabled` - Disabled state
 
 **Events:**
+
 - `checked-change` - Dispatched on state change
 
 ### Slider
@@ -655,12 +662,12 @@ Range slider component.
 
 ```html
 <nofo-slider
-  value={value}
-  onValueChange={handleChange}
-  defaultValue={[50]}
-  min={0}
-  max={100}
-  step={1}
+  value="{value}"
+  onValueChange="{handleChange}"
+  defaultValue="{[50]}"
+  min="{0}"
+  max="{100}"
+  step="{1}"
   size="1|2|3"
   variant="solid|soft|surface"
   disabled
@@ -676,6 +683,7 @@ Range slider component.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Value or array of values
 - `min` / `max` - Range bounds
 - `step` - Step increment
@@ -683,6 +691,7 @@ Range slider component.
 - `orientation` - Horizontal or vertical
 
 **Events:**
+
 - `value-change` - Dispatched on value change
 
 ### Form
@@ -690,7 +699,7 @@ Range slider component.
 Form container component.
 
 ```html
-<nofo-form onSubmit={handleSubmit}>
+<nofo-form onSubmit="{handleSubmit}">
   <nofo-flex direction="column" gap="4">
     <nofo-text-field name="email" required />
     <nofo-button type="submit">Submit</nofo-button>
@@ -699,6 +708,7 @@ Form container component.
 ```
 
 **Events:**
+
 - `form-submit` - Dispatched on form submission
 
 ## Overlay Components
@@ -708,19 +718,17 @@ Form container component.
 Modal dialog component.
 
 ```html
-<nofo-dialog open={isOpen} onOpenChange={setIsOpen}>
+<nofo-dialog open="{isOpen}" onOpenChange="{setIsOpen}">
   <nofo-dialog-trigger>
     <nofo-button>Open Dialog</nofo-button>
   </nofo-dialog-trigger>
-  
+
   <nofo-dialog-portal>
     <nofo-dialog-overlay />
     <nofo-dialog-content size="1|2|3|4">
       <nofo-dialog-title>Dialog Title</nofo-dialog-title>
-      <nofo-dialog-description>
-        Dialog description
-      </nofo-dialog-description>
-      
+      <nofo-dialog-description> Dialog description </nofo-dialog-description>
+
       <nofo-dialog-close>
         <nofo-button variant="soft">Close</nofo-button>
       </nofo-dialog-close>
@@ -730,9 +738,11 @@ Modal dialog component.
 ```
 
 **Props:**
+
 - `open` - Open state
 
 **Events:**
+
 - `open-change` - Dispatched on open/close
 
 ### Alert Dialog
@@ -740,19 +750,17 @@ Modal dialog component.
 Confirmation dialog for destructive actions.
 
 ```html
-<nofo-alert-dialog open={isOpen} onOpenChange={setIsOpen}>
+<nofo-alert-dialog open="{isOpen}" onOpenChange="{setIsOpen}">
   <nofo-alert-dialog-trigger>
     <nofo-button variant="danger">Delete</nofo-button>
   </nofo-alert-dialog-trigger>
-  
+
   <nofo-alert-dialog-portal>
     <nofo-alert-dialog-overlay />
     <nofo-alert-dialog-content>
       <nofo-alert-dialog-title>Are you sure?</nofo-alert-dialog-title>
-      <nofo-alert-dialog-description>
-        This action cannot be undone.
-      </nofo-alert-dialog-description>
-      
+      <nofo-alert-dialog-description> This action cannot be undone. </nofo-alert-dialog-description>
+
       <nofo-alert-dialog-cancel>
         <nofo-button variant="soft">Cancel</nofo-button>
       </nofo-alert-dialog-cancel>
@@ -769,16 +777,16 @@ Confirmation dialog for destructive actions.
 Popover component for additional content.
 
 ```html
-<nofo-popover open={isOpen} onOpenChange={setIsOpen}>
+<nofo-popover open="{isOpen}" onOpenChange="{setIsOpen}">
   <nofo-popover-trigger>
     <nofo-button variant="soft">Open Popover</nofo-button>
   </nofo-popover-trigger>
-  
+
   <nofo-popover-content
     size="1|2|3|4"
     side="top|right|bottom|left"
     align="start|center|end"
-    sideOffset={5}
+    sideOffset="{5}"
   >
     Popover content
     <nofo-popover-close>
@@ -791,6 +799,7 @@ Popover component for additional content.
 ```
 
 **Props:**
+
 - `open` - Open state
 - `side` - Positioning side
 - `align` - Alignment
@@ -805,7 +814,7 @@ Dropdown menu component.
   <nofo-dropdown-menu-trigger>
     <nofo-button variant="soft">Options</nofo-button>
   </nofo-dropdown-menu-trigger>
-  
+
   <nofo-dropdown-menu-content align="start" side="bottom">
     <nofo-dropdown-menu-item shortcut="⌘ N">
       <nofo-icon name="file-plus"></nofo-icon>
@@ -826,7 +835,7 @@ Right-click context menu.
   <nofo-context-menu-trigger>
     <nofo-box p="5">Right click here</nofo-box>
   </nofo-context-menu-trigger>
-  
+
   <nofo-context-menu-content>
     <nofo-context-menu-item shortcut="⌘ E">Edit</nofo-context-menu-item>
     <nofo-context-menu-separator />
@@ -840,22 +849,14 @@ Right-click context menu.
 Tooltip component.
 
 ```html
-<nofo-tooltip
-  open={isOpen}
-  onOpenChange={setIsOpen}
-  delayDuration={700}
->
+<nofo-tooltip open="{isOpen}" onOpenChange="{setIsOpen}" delayDuration="{700}">
   <nofo-tooltip-trigger>
     <nofo-icon-button variant="ghost">
       <nofo-icon name="info-circled"></nofo-icon>
     </nofo-icon-button>
   </nofo-tooltip-trigger>
-  
-  <nofo-tooltip-content
-    side="top"
-    align="center"
-    sideOffset={5}
-  >
+
+  <nofo-tooltip-content side="top" align="center" sideOffset="{5}">
     Tooltip content
     <nofo-tooltip-arrow />
   </nofo-tooltip-content>
@@ -863,6 +864,7 @@ Tooltip component.
 ```
 
 **Props:**
+
 - `open` - Open state
 - `delayDuration` - Delay before showing (ms)
 - `skipDelayDuration` - Delay before hiding (ms)
@@ -872,17 +874,12 @@ Tooltip component.
 Card that appears on hover.
 
 ```html
-<nofo-hover-card
-  openDelay={200}
-  closeDelay={300}
->
+<nofo-hover-card openDelay="{200}" closeDelay="{300}">
   <nofo-hover-card-trigger>
     <nofo-link href="#">@username</nofo-link>
   </nofo-hover-card-trigger>
-  
-  <nofo-hover-card-content size="1|2|3">
-    Card content
-  </nofo-hover-card-content>
+
+  <nofo-hover-card-content size="1|2|3"> Card content </nofo-hover-card-content>
 </nofo-hover-card>
 ```
 
@@ -899,16 +896,14 @@ Navigation menu with groups and sub-menus.
       <nofo-icon name="home"></nofo-icon>
       Home
     </nofo-nav-item>
-    
+
     <nofo-nav-sub>
       <nofo-nav-sub-trigger>
         Products
         <nofo-icon name="chevron-down"></nofo-icon>
       </nofo-nav-sub-trigger>
       <nofo-nav-sub-content>
-        <nofo-nav-item value="product-1" href="/products/1">
-          Product 1
-        </nofo-nav-item>
+        <nofo-nav-item value="product-1" href="/products/1"> Product 1 </nofo-nav-item>
       </nofo-nav-sub-content>
     </nofo-nav-sub>
   </nofo-nav-group>
@@ -941,35 +936,29 @@ Tab navigation component.
 
 ```html
 <nofo-tabs
-  value={value}
-  onValueChange={setValue}
+  value="{value}"
+  onValueChange="{setValue}"
   defaultValue="account"
   orientation="horizontal|vertical"
 >
   <nofo-tabs-list size="1|2">
-    <nofo-tabs-trigger value="account">
-      Account
-    </nofo-tabs-trigger>
-    <nofo-tabs-trigger value="settings">
-      Settings
-    </nofo-tabs-trigger>
+    <nofo-tabs-trigger value="account"> Account </nofo-tabs-trigger>
+    <nofo-tabs-trigger value="settings"> Settings </nofo-tabs-trigger>
   </nofo-tabs-list>
-  
-  <nofo-tabs-content value="account">
-    Account content
-  </nofo-tabs-content>
-  <nofo-tabs-content value="settings">
-    Settings content
-  </nofo-tabs-content>
+
+  <nofo-tabs-content value="account"> Account content </nofo-tabs-content>
+  <nofo-tabs-content value="settings"> Settings content </nofo-tabs-content>
 </nofo-tabs>
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Active tab value
 - `orientation` - Tab orientation
 - `activation-mode` - "automatic" or "manual"
 
 **Events:**
+
 - `value-change` - Dispatched on tab change
 
 ### Tab Nav
@@ -978,12 +967,8 @@ Navigation-style tabs.
 
 ```html
 <nofo-tab-nav size="1|2">
-  <nofo-tab-nav-link href="/" active>
-    Dashboard
-  </nofo-tab-nav-link>
-  <nofo-tab-nav-link href="/projects">
-    Projects
-  </nofo-tab-nav-link>
+  <nofo-tab-nav-link href="/" active> Dashboard </nofo-tab-nav-link>
+  <nofo-tab-nav-link href="/projects"> Projects </nofo-tab-nav-link>
 </nofo-tab-nav>
 ```
 
@@ -993,17 +978,18 @@ Pagination component.
 
 ```html
 <nofo-pagination
-  total={100}
-  page={page}
-  onPageChange={setPage}
-  pageSize={10}
-  siblingCount={1}
+  total="{100}"
+  page="{page}"
+  onPageChange="{setPage}"
+  pageSize="{10}"
+  siblingCount="{1}"
   showFirstLast
 >
 </nofo-pagination>
 ```
 
 **Props:**
+
 - `total` - Total number of items
 - `page` - Current page (1-indexed)
 - `pageSize` - Items per page
@@ -1011,6 +997,7 @@ Pagination component.
 - `showFirstLast` - Show first/last buttons
 
 **Events:**
+
 - `page-change` - Dispatched on page change
 
 ## Feedback Components
@@ -1023,14 +1010,12 @@ Toast notification component.
 <nofo-toast-group position="top-right|top-left|bottom-right|bottom-left|top-center|bottom-center">
   <nofo-toast
     variant="default|success|error|warning|info"
-    duration={5000}
-    open={isOpen}
-    onOpenChange={setIsOpen}
+    duration="{5000}"
+    open="{isOpen}"
+    onOpenChange="{setIsOpen}"
   >
     <nofo-toast-title>Success</nofo-toast-title>
-    <nofo-toast-description>
-      Your changes have been saved.
-    </nofo-toast-description>
+    <nofo-toast-description> Your changes have been saved. </nofo-toast-description>
     <nofo-toast-action alt-text="Undo">Undo</nofo-toast-action>
     <nofo-toast-close></nofo-toast-close>
   </nofo-toast>
@@ -1038,11 +1023,13 @@ Toast notification component.
 ```
 
 **Props:**
+
 - `variant` - Toast variant
 - `duration` - Auto-dismiss duration (ms, 0 = no auto-dismiss)
 - `open` - Open state
 
 **Events:**
+
 - `open-change` - Dispatched on open/close
 
 ### Alert
@@ -1054,23 +1041,22 @@ Alert message component.
   variant="info|success|warning|error"
   size="1|2|3"
   dismissible
-  open={isOpen}
-  onOpenChange={setIsOpen}
+  open="{isOpen}"
+  onOpenChange="{setIsOpen}"
 >
   <nofo-alert-icon>
     <nofo-icon name="info-circled"></nofo-icon>
   </nofo-alert-icon>
   <nofo-alert-content>
     <nofo-alert-title>Important notice</nofo-alert-title>
-    <nofo-alert-description>
-      Alert description
-    </nofo-alert-description>
+    <nofo-alert-description> Alert description </nofo-alert-description>
   </nofo-alert-content>
   <nofo-alert-close></nofo-alert-close>
 </nofo-alert>
 ```
 
 **Props:**
+
 - `variant` - Alert variant
 - `size` - Alert size
 - `dismissible` - Show close button
@@ -1080,15 +1066,9 @@ Alert message component.
 Banner component for page-level announcements.
 
 ```html
-<nofo-banner
-  variant="info|success|warning|error"
-  dismissible
-  open={isOpen}
->
+<nofo-banner variant="info|success|warning|error" dismissible open="{isOpen}">
   <nofo-icon name="info"></nofo-icon>
-  <nofo-banner-content>
-    Important announcement
-  </nofo-banner-content>
+  <nofo-banner-content> Important announcement </nofo-banner-content>
   <nofo-banner-close></nofo-banner-close>
 </nofo-banner>
 ```
@@ -1105,9 +1085,7 @@ Card container component.
     <nofo-card-title>Card Title</nofo-card-title>
     <nofo-card-description>Card description</nofo-card-description>
   </nofo-card-header>
-  <nofo-card-content>
-    Card content
-  </nofo-card-content>
+  <nofo-card-content> Card content </nofo-card-content>
   <nofo-card-footer>
     <nofo-button>Action</nofo-button>
   </nofo-card-footer>
@@ -1115,6 +1093,7 @@ Card container component.
 ```
 
 **Props:**
+
 - `size` - Padding size (1-5)
 - `variant` - Visual variant
 
@@ -1123,17 +1102,13 @@ Card container component.
 Badge component for labels and status.
 
 ```html
-<nofo-badge
-  size="1|2|3"
-  variant="solid|soft|surface|outline"
-  color="accent-color"
-  high-contrast
->
+<nofo-badge size="1|2|3" variant="solid|soft|surface|outline" color="accent-color" high-contrast>
   New
 </nofo-badge>
 ```
 
 **Props:**
+
 - `size` - Badge size
 - `variant` - Visual variant
 - `color` - Accent color
@@ -1152,11 +1127,12 @@ Avatar component with image and fallback.
   fallback="JD"
 >
   <nofo-avatar-image src="/avatar.jpg" alt="John Doe" />
-  <nofo-avatar-fallback delayMs={600}>JD</nofo-avatar-fallback>
+  <nofo-avatar-fallback delayMs="{600}">JD</nofo-avatar-fallback>
 </nofo-avatar>
 ```
 
 **Props:**
+
 - `size` - Avatar size (1-9)
 - `variant` - Visual variant
 - `radius` - Border radius
@@ -1168,8 +1144,8 @@ Progress bar component.
 
 ```html
 <nofo-progress
-  value={progress}
-  max={100}
+  value="{progress}"
+  max="{100}"
   size="1|2|3"
   variant="solid|soft|surface"
   color="accent-color"
@@ -1179,6 +1155,7 @@ Progress bar component.
 ```
 
 **Props:**
+
 - `value` - Current value (omit for indeterminate)
 - `max` - Maximum value
 - `size` - Progress bar size
@@ -1189,10 +1166,11 @@ Progress bar component.
 Loading spinner component.
 
 ```html
-<nofo-spinner size="1|2|3" loading={isLoading}></nofo-spinner>
+<nofo-spinner size="1|2|3" loading="{isLoading}"></nofo-spinner>
 ```
 
 **Props:**
+
 - `size` - Spinner size
 - `loading` - Show/hide spinner
 
@@ -1201,17 +1179,13 @@ Loading spinner component.
 Loading skeleton component.
 
 ```html
-<nofo-skeleton
-  width="100%"
-  height="20px"
-  loading={isLoading}
-  variant="text|circular|rectangular"
->
+<nofo-skeleton width="100%" height="20px" loading="{isLoading}" variant="text|circular|rectangular">
   {isLoading ? null : <nofo-text>Loaded content</nofo-text>}
 </nofo-skeleton>
 ```
 
 **Props:**
+
 - `width` - Skeleton width
 - `height` - Skeleton height
 - `loading` - Show/hide skeleton
@@ -1229,14 +1203,14 @@ Table component with headers, body, and footer.
       <nofo-table-column-header-cell>Email</nofo-table-column-header-cell>
     </nofo-table-row>
   </nofo-table-header>
-  
+
   <nofo-table-body>
     <nofo-table-row>
       <nofo-table-row-header-cell>John Doe</nofo-table-row-header-cell>
       <nofo-table-cell>john@example.com</nofo-table-cell>
     </nofo-table-row>
   </nofo-table-body>
-  
+
   <nofo-table-footer>
     <nofo-table-row>
       <nofo-table-cell colspan="3">Total: 1</nofo-table-cell>
@@ -1246,6 +1220,7 @@ Table component with headers, body, and footer.
 ```
 
 **Props:**
+
 - `size` - Table size
 - `variant` - Visual variant
 - `layout` - Table layout
@@ -1270,11 +1245,7 @@ Empty state component for when there's no data.
 Separator component.
 
 ```html
-<nofo-separator
-  size="1|2|3|4"
-  orientation="horizontal|vertical"
-  decorative
-/>
+<nofo-separator size="1|2|3|4" orientation="horizontal|vertical" decorative />
 
 <!-- Or use divider -->
 <nofo-divider orientation="horizontal|vertical" />
@@ -1285,18 +1256,11 @@ Separator component.
 Callout component for highlights and notes.
 
 ```html
-<nofo-callout
-  size="1|2|3"
-  variant="solid|soft|surface|outline"
-  color="accent-color"
-  high-contrast
->
+<nofo-callout size="1|2|3" variant="solid|soft|surface|outline" color="accent-color" high-contrast>
   <nofo-callout-icon>
     <nofo-icon name="info-circled"></nofo-icon>
   </nofo-callout-icon>
-  <nofo-callout-text>
-    Callout message
-  </nofo-callout-text>
+  <nofo-callout-text> Callout message </nofo-callout-text>
 </nofo-callout>
 ```
 
@@ -1305,11 +1269,7 @@ Callout component for highlights and notes.
 Data list for key-value pairs.
 
 ```html
-<nofo-data-list
-  size="1|2|3"
-  orientation="horizontal|vertical"
-  trim="normal|start|end|both"
->
+<nofo-data-list size="1|2|3" orientation="horizontal|vertical" trim="normal|start|end|both">
   <nofo-data-list-item align="start|center|baseline">
     <nofo-data-list-label>Status</nofo-data-list-label>
     <nofo-data-list-value>
@@ -1328,8 +1288,8 @@ Collapsible accordion component.
 ```html
 <nofo-accordion
   type="single|multiple"
-  value={value}
-  onValueChange={setValue}
+  value="{value}"
+  onValueChange="{setValue}"
   defaultValue="item-1"
   collapsible
 >
@@ -1338,19 +1298,19 @@ Collapsible accordion component.
       <nofo-heading size="4">Section 1</nofo-heading>
       <nofo-icon name="chevron-down"></nofo-icon>
     </nofo-accordion-trigger>
-    <nofo-accordion-content>
-      Content for section 1
-    </nofo-accordion-content>
+    <nofo-accordion-content> Content for section 1 </nofo-accordion-content>
   </nofo-accordion-item>
 </nofo-accordion>
 ```
 
 **Props:**
+
 - `type` - "single" or "multiple"
 - `value` / `defaultValue` - Selected item(s)
 - `collapsible` - Allow closing selected item
 
 **Events:**
+
 - `value-change` - Dispatched on item open/close
 
 ### Collapsible
@@ -1358,26 +1318,22 @@ Collapsible accordion component.
 Simple collapsible content.
 
 ```html
-<nofo-collapsible
-  open={isOpen}
-  onOpenChange={setIsOpen}
-  defaultOpen={false}
->
+<nofo-collapsible open="{isOpen}" onOpenChange="{setIsOpen}" defaultOpen="{false}">
   <nofo-collapsible-trigger>
     <nofo-heading size="4">Toggle</nofo-heading>
     <nofo-icon name="chevron-down"></nofo-icon>
   </nofo-collapsible-trigger>
-  <nofo-collapsible-content>
-    Collapsible content
-  </nofo-collapsible-content>
+  <nofo-collapsible-content> Collapsible content </nofo-collapsible-content>
 </nofo-collapsible>
 ```
 
 **Props:**
+
 - `open` - Open state
 - `defaultOpen` - Default open state
 
 **Events:**
+
 - `open-change` - Dispatched on open/close
 
 ### Toggle Group
@@ -1387,8 +1343,8 @@ Group of toggle buttons.
 ```html
 <nofo-toggle-group
   type="single|multiple"
-  value={value}
-  onValueChange={setValue}
+  value="{value}"
+  onValueChange="{setValue}"
   size="1|2|3"
   variant="solid|soft|surface|outline"
 >
@@ -1402,12 +1358,14 @@ Group of toggle buttons.
 ```
 
 **Props:**
+
 - `type` - "single" or "multiple"
 - `value` / `defaultValue` - Selected value(s)
 - `size` - Toggle size
 - `variant` - Visual variant
 
 **Events:**
+
 - `value-change` - Dispatched on selection change
 
 ### Segmented Control
@@ -1416,8 +1374,8 @@ Segmented control for mutually exclusive options.
 
 ```html
 <nofo-segmented-control
-  value={selected}
-  onValueChange={setSelected}
+  value="{selected}"
+  onValueChange="{setSelected}"
   defaultValue="list"
   size="1|2|3"
   variant="solid|soft|surface"
@@ -1434,11 +1392,13 @@ Segmented control for mutually exclusive options.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Selected value
 - `size` - Control size
 - `variant` - Visual variant
 
 **Events:**
+
 - `value-change` - Dispatched on selection change
 
 ### Steps
@@ -1447,8 +1407,8 @@ Step indicator component.
 
 ```html
 <nofo-steps
-  value={currentStep}
-  onValueChange={setCurrentStep}
+  value="{currentStep}"
+  onValueChange="{setCurrentStep}"
   defaultValue="1"
   orientation="horizontal|vertical"
 >
@@ -1458,19 +1418,19 @@ Step indicator component.
         <nofo-steps-indicator>1</nofo-steps-indicator>
         <nofo-steps-title>Step 1</nofo-steps-title>
       </nofo-steps-trigger>
-      <nofo-steps-content>
-        Content for step 1
-      </nofo-steps-content>
+      <nofo-steps-content> Content for step 1 </nofo-steps-content>
     </nofo-steps-item>
   </nofo-steps-list>
 </nofo-steps>
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Current step value
 - `orientation` - Step orientation
 
 **Events:**
+
 - `value-change` - Dispatched on step change
 
 ### Rating
@@ -1479,10 +1439,10 @@ Star rating component.
 
 ```html
 <nofo-rating
-  value={rating}
-  onValueChange={setRating}
-  defaultValue={0}
-  max={5}
+  value="{rating}"
+  onValueChange="{setRating}"
+  defaultValue="{0}"
+  max="{5}"
   size="1|2|3"
   color="accent-color"
   disabled
@@ -1492,6 +1452,7 @@ Star rating component.
 ```
 
 **Props:**
+
 - `value` / `defaultValue` - Rating value (0-max)
 - `max` - Maximum rating (default: 5)
 - `size` - Star size
@@ -1499,6 +1460,7 @@ Star rating component.
 - `readOnly` - Read-only state
 
 **Events:**
+
 - `value-change` - Dispatched on rating change
 
 ### Command Menu
@@ -1506,27 +1468,27 @@ Star rating component.
 Command palette component (Cmd/Ctrl + K).
 
 ```html
-<nofo-command-menu open={isOpen} onOpenChange={setIsOpen}>
+<nofo-command-menu open="{isOpen}" onOpenChange="{setIsOpen}">
   <nofo-command-menu-trigger>
     <nofo-button variant="soft">
       <nofo-icon name="magnifying-glass"></nofo-icon>
       Search...
     </nofo-button>
   </nofo-command-menu-trigger>
-  
+
   <nofo-command-menu-content>
     <nofo-command-menu-input placeholder="Type a command..." />
-    
+
     <nofo-command-menu-list>
       <nofo-command-menu-empty>No results found.</nofo-command-menu-empty>
-      
+
       <nofo-command-menu-group heading="Suggestions">
         <nofo-command-menu-item value="calendar">
           <nofo-icon name="calendar"></nofo-icon>
           Calendar
         </nofo-command-menu-item>
       </nofo-command-menu-group>
-      
+
       <nofo-command-menu-separator></nofo-command-menu-separator>
     </nofo-command-menu-list>
   </nofo-command-menu-content>
@@ -1534,13 +1496,16 @@ Command palette component (Cmd/Ctrl + K).
 ```
 
 **Props:**
+
 - `open` - Open state
 
 **Events:**
+
 - `open-change` - Dispatched on open/close
 - `select` - Dispatched on item selection
 
 **Keyboard:**
+
 - `Cmd/Ctrl + K` - Open command menu
 - `Escape` - Close command menu
 - `Arrow Up/Down` - Navigate items
@@ -1566,6 +1531,7 @@ Theme provider component.
 ```
 
 **Props:**
+
 - `appearance` - Color scheme
 - `accent-color` - Accent color palette
 - `gray-color` - Gray color palette
@@ -1590,9 +1556,7 @@ Portal for rendering content outside DOM hierarchy.
 Screen reader only content.
 
 ```html
-<nofo-visually-hidden>
-  Screen reader only text
-</nofo-visually-hidden>
+<nofo-visually-hidden> Screen reader only text </nofo-visually-hidden>
 ```
 
 ### Loading Overlay
@@ -1600,14 +1564,13 @@ Screen reader only content.
 Loading overlay with spinner.
 
 ```html
-<nofo-loading-overlay loading={isLoading}>
-  <nofo-box p="4">
-    Content that will be covered when loading
-  </nofo-box>
+<nofo-loading-overlay loading="{isLoading}">
+  <nofo-box p="4"> Content that will be covered when loading </nofo-box>
 </nofo-loading-overlay>
 ```
 
 **Props:**
+
 - `loading` - Show/hide overlay
 
 ### Reset
@@ -1632,6 +1595,7 @@ Icon component (requires icon library integration).
 ```
 
 **Props:**
+
 - `name` - Icon name
 - `size` - Icon size
 
@@ -1646,6 +1610,7 @@ Maintain aspect ratio for content.
 ```
 
 **Props:**
+
 - `ratio` - Aspect ratio (e.g., "16/9", "1/1", "4/3")
 
 ### Inset
@@ -1662,6 +1627,7 @@ Inset component for bleeding content to card edges.
 ```
 
 **Props:**
+
 - `clip` - Clipping behavior
 - `side` - Sides to bleed
 - Padding props (`p`, `px`, `py`, etc.) - Padding values
@@ -1717,21 +1683,21 @@ All components dispatch custom events that bubble and are composed:
 
 ```javascript
 // Listen for value changes
-const select = document.querySelector('nofo-select');
-select.addEventListener('value-change', (e) => {
-  console.log('New value:', e.detail.value);
+const select = document.querySelector("nofo-select");
+select.addEventListener("value-change", (e) => {
+  console.log("New value:", e.detail.value);
 });
 
 // Listen for open changes
-const dialog = document.querySelector('nofo-dialog');
-dialog.addEventListener('open-change', (e) => {
-  console.log('Dialog open:', e.detail.open);
+const dialog = document.querySelector("nofo-dialog");
+dialog.addEventListener("open-change", (e) => {
+  console.log("Dialog open:", e.detail.open);
 });
 
 // Listen for button clicks
-const button = document.querySelector('nofo-button');
-button.addEventListener('nofo-click', () => {
-  console.log('Button clicked!');
+const button = document.querySelector("nofo-button");
+button.addEventListener("nofo-click", () => {
+  console.log("Button clicked!");
 });
 ```
 
@@ -1802,8 +1768,8 @@ Prefer semantic components over generic ones:
 Always handle component events:
 
 ```javascript
-const checkbox = document.querySelector('nofo-checkbox');
-checkbox.addEventListener('checked-change', (e) => {
+const checkbox = document.querySelector("nofo-checkbox");
+checkbox.addEventListener("checked-change", (e) => {
   // Update your application state
   updateState(e.detail.checked);
 });
@@ -1857,7 +1823,7 @@ Use object syntax for responsive values:
 <nofo-box
   p='{ "initial": "2", "sm": "4", "lg": "6" }'
   display='{ "initial": "none", "md": "block" }'
->
+></nofo-box>
 ```
 
 ### 7. Compose Components
@@ -1895,52 +1861,33 @@ Build complex UIs by composing components:
   <nofo-card>
     <nofo-card-header>
       <nofo-card-title>Create Account</nofo-card-title>
-      <nofo-card-description>
-        Fill in your information to get started
-      </nofo-card-description>
+      <nofo-card-description> Fill in your information to get started </nofo-card-description>
     </nofo-card-header>
-    
+
     <nofo-card-content>
-      <nofo-form onSubmit={handleSubmit}>
+      <nofo-form onSubmit="{handleSubmit}">
         <nofo-flex direction="column" gap="4">
           <nofo-flex direction="column" gap="2">
-            <nofo-text as="label" size="2" weight="bold">
-              Full Name
-            </nofo-text>
-            <nofo-text-field
-              name="fullName"
-              placeholder="John Doe"
-              required
-            />
+            <nofo-text as="label" size="2" weight="bold"> Full Name </nofo-text>
+            <nofo-text-field name="fullName" placeholder="John Doe" required />
           </nofo-flex>
-          
+
           <nofo-flex direction="column" gap="2">
-            <nofo-text as="label" size="2" weight="bold">
-              Email
-            </nofo-text>
-            <nofo-text-field
-              name="email"
-              type="email"
-              placeholder="john@example.com"
-              required
-            >
+            <nofo-text as="label" size="2" weight="bold"> Email </nofo-text>
+            <nofo-text-field name="email" type="email" placeholder="john@example.com" required>
               <nofo-text-field-slot name="prefix">
                 <nofo-icon name="envelope-closed"></nofo-icon>
               </nofo-text-field-slot>
             </nofo-text-field>
           </nofo-flex>
-          
+
           <nofo-checkbox name="terms" required>
             <nofo-text>I agree to the terms and conditions</nofo-text>
           </nofo-checkbox>
-          
+
           <nofo-flex gap="3" justify="end">
-            <nofo-button type="button" variant="soft" color="gray">
-              Cancel
-            </nofo-button>
-            <nofo-button type="submit">
-              Create Account
-            </nofo-button>
+            <nofo-button type="button" variant="soft" color="gray"> Cancel </nofo-button>
+            <nofo-button type="submit"> Create Account </nofo-button>
           </nofo-flex>
         </nofo-flex>
       </nofo-form>
@@ -1971,7 +1918,7 @@ Build complex UIs by composing components:
         </nofo-flex>
       </nofo-container>
     </nofo-box>
-    
+
     <!-- Main Content -->
     <nofo-section size="3">
       <nofo-container size="3">
@@ -2007,7 +1954,7 @@ Build complex UIs by composing components:
           <nofo-table-column-header-cell></nofo-table-column-header-cell>
         </nofo-table-row>
       </nofo-table-header>
-      
+
       <nofo-table-body>
         <nofo-table-row>
           <nofo-table-row-header-cell>John Doe</nofo-table-row-header-cell>
@@ -2056,6 +2003,7 @@ Nofo components use modern web standards:
 - **CSS Custom Properties**
 
 Supported in all modern browsers:
+
 - Chrome/Edge 90+
 - Firefox 88+
 - Safari 14+
@@ -2079,4 +2027,3 @@ When contributing new components:
 ---
 
 **Built with ❤️ using Web Components**
-

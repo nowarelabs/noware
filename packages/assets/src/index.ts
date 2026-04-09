@@ -1,4 +1,4 @@
-export * from './vendor';
+export * from "./vendor";
 
 export interface AssetManifest {
   [key: string]: string;
@@ -14,7 +14,7 @@ export class AssetPipeline {
       manifest?: AssetManifest;
       isProd?: boolean;
       importMap?: any;
-    } = {}
+    } = {},
   ) {
     this.manifest = options.manifest || null;
     this.isProd = options.isProd || false;
@@ -51,7 +51,7 @@ export class AssetPipeline {
    * Generates the raw JSON string for the import map.
    */
   import_map_tag(): string {
-    if (!this.importMap) return '';
+    if (!this.importMap) return "";
     return JSON.stringify(this.importMap);
   }
 }
@@ -62,11 +62,11 @@ export class AssetPipeline {
 export class AssetInjector {
   constructor(
     private pipeline: AssetPipeline,
-    private entries: { styles: string[]; scripts: string[] }
+    private entries: { styles: string[]; scripts: string[] },
   ) {}
 
   element(element: any) {
-    if (element.tagName === 'head') {
+    if (element.tagName === "head") {
       for (const style of this.entries.styles) {
         element.append(this.pipeline.stylesheet_link_tag(style), {
           html: true,

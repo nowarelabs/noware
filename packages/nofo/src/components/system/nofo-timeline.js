@@ -1,15 +1,15 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoTimeline extends NofoElement {
   onMount() {
-    this.setAttribute('data-timeline', 'true');
-    
+    this.setAttribute("data-timeline", "true");
+
     const styles = {
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative',
-      paddingLeft: 'var(--space-4)',
-      boxSizing: 'border-box'
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      paddingLeft: "var(--space-4)",
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -42,18 +42,18 @@ class NofoTimeline extends NofoElement {
 
 class NofoTimelineItem extends NofoElement {
   static props = {
-    status: { type: String, default: 'complete' }
+    status: { type: String, default: "complete" },
   };
 
   onMount() {
-    this.setAttribute('data-status', this.props.status);
-    
+    this.setAttribute("data-status", this.props.status);
+
     const styles = {
-      display: 'flex',
-      gap: 'var(--space-3)',
-      position: 'relative',
-      paddingBottom: 'var(--space-4)',
-      boxSizing: 'border-box'
+      display: "flex",
+      gap: "var(--space-3)",
+      position: "relative",
+      paddingBottom: "var(--space-4)",
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -78,49 +78,49 @@ class NofoTimelineItem extends NofoElement {
 class NofoTimelineIndicator extends NofoElement {
   getStatusStyles(status) {
     const statusStyles = {
-      'complete': {
-        backgroundColor: 'var(--green-9)',
-        color: 'var(--gray-1)',
-        border: '2px solid var(--green-9)'
+      complete: {
+        backgroundColor: "var(--green-9)",
+        color: "var(--gray-1)",
+        border: "2px solid var(--green-9)",
       },
-      'current': {
-        backgroundColor: 'var(--accent-9)',
-        color: 'var(--gray-1)',
-        border: '2px solid var(--accent-9)'
+      current: {
+        backgroundColor: "var(--accent-9)",
+        color: "var(--gray-1)",
+        border: "2px solid var(--accent-9)",
       },
-      'pending': {
-        backgroundColor: 'var(--gray-3)',
-        color: 'var(--gray-9)',
-        border: '2px solid var(--gray-6)'
+      pending: {
+        backgroundColor: "var(--gray-3)",
+        color: "var(--gray-9)",
+        border: "2px solid var(--gray-6)",
       },
-      'error': {
-        backgroundColor: 'var(--red-9)',
-        color: 'var(--gray-1)',
-        border: '2px solid var(--red-9)'
-      }
+      error: {
+        backgroundColor: "var(--red-9)",
+        color: "var(--gray-1)",
+        border: "2px solid var(--red-9)",
+      },
     };
-    return statusStyles[status] || statusStyles['complete'];
+    return statusStyles[status] || statusStyles["complete"];
   }
 
   onMount() {
-    const item = this.closest('nofo-timeline-item');
-    const status = item ? (item.props?.status || 'complete') : 'complete';
-    
+    const item = this.closest("nofo-timeline-item");
+    const status = item ? item.props?.status || "complete" : "complete";
+
     const statusStyles = this.getStatusStyles(status);
-    
+
     const styles = {
       ...statusStyles,
-      width: '1.5rem',
-      height: '1.5rem',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      width: "1.5rem",
+      height: "1.5rem",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
       flexShrink: 0,
-      position: 'relative',
+      position: "relative",
       zIndex: 1,
-      marginLeft: '-1.75rem',
-      boxSizing: 'border-box'
+      marginLeft: "-1.75rem",
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -130,10 +130,10 @@ class NofoTimelineIndicator extends NofoElement {
   }
 
   styles() {
-    const item = this.closest('nofo-timeline-item');
-    const status = item ? (item.props?.status || 'complete') : 'complete';
+    const item = this.closest("nofo-timeline-item");
+    const status = item ? item.props?.status || "complete" : "complete";
     const statusStyles = this.getStatusStyles(status);
-    
+
     return `
       :host {
         width: 1.5rem;
@@ -147,7 +147,9 @@ class NofoTimelineIndicator extends NofoElement {
         z-index: 1;
         margin-left: -1.75rem;
         box-sizing: border-box;
-        ${Object.entries(statusStyles).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`).join(' ')}
+        ${Object.entries(statusStyles)
+          .map(([key, value]) => `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value};`)
+          .join(" ")}
       }
     `;
   }
@@ -157,10 +159,10 @@ class NofoTimelineContent extends NofoElement {
   onMount() {
     const styles = {
       flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-1)',
-      boxSizing: 'border-box'
+      display: "flex",
+      flexDirection: "column",
+      gap: "var(--space-1)",
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -185,11 +187,11 @@ class NofoTimelineContent extends NofoElement {
 class NofoTimelineTitle extends NofoElement {
   onMount() {
     const styles = {
-      fontSize: '0.875rem',
-      fontWeight: '600',
-      color: 'var(--gray-12)',
+      fontSize: "0.875rem",
+      fontWeight: "600",
+      color: "var(--gray-12)",
       margin: 0,
-      boxSizing: 'border-box'
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -215,10 +217,10 @@ class NofoTimelineTitle extends NofoElement {
 class NofoTimelineDescription extends NofoElement {
   onMount() {
     const styles = {
-      fontSize: '0.875rem',
-      color: 'var(--gray-10)',
+      fontSize: "0.875rem",
+      color: "var(--gray-10)",
       margin: 0,
-      boxSizing: 'border-box'
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -243,11 +245,11 @@ class NofoTimelineDescription extends NofoElement {
 class NofoTimelineTime extends NofoElement {
   onMount() {
     const styles = {
-      fontSize: '0.75rem',
-      color: 'var(--gray-9)',
+      fontSize: "0.75rem",
+      color: "var(--gray-9)",
       margin: 0,
-      marginTop: 'var(--space-1)',
-      boxSizing: 'border-box'
+      marginTop: "var(--space-1)",
+      boxSizing: "border-box",
     };
     return styles;
   }
@@ -270,12 +272,20 @@ class NofoTimelineTime extends NofoElement {
   }
 }
 
-customElements.define('nofo-timeline', NofoTimeline);
-customElements.define('nofo-timeline-item', NofoTimelineItem);
-customElements.define('nofo-timeline-indicator', NofoTimelineIndicator);
-customElements.define('nofo-timeline-content', NofoTimelineContent);
-customElements.define('nofo-timeline-title', NofoTimelineTitle);
-customElements.define('nofo-timeline-description', NofoTimelineDescription);
-customElements.define('nofo-timeline-time', NofoTimelineTime);
+customElements.define("nofo-timeline", NofoTimeline);
+customElements.define("nofo-timeline-item", NofoTimelineItem);
+customElements.define("nofo-timeline-indicator", NofoTimelineIndicator);
+customElements.define("nofo-timeline-content", NofoTimelineContent);
+customElements.define("nofo-timeline-title", NofoTimelineTitle);
+customElements.define("nofo-timeline-description", NofoTimelineDescription);
+customElements.define("nofo-timeline-time", NofoTimelineTime);
 
-export { NofoTimeline, NofoTimelineItem, NofoTimelineIndicator, NofoTimelineContent, NofoTimelineTitle, NofoTimelineDescription, NofoTimelineTime };
+export {
+  NofoTimeline,
+  NofoTimelineItem,
+  NofoTimelineIndicator,
+  NofoTimelineContent,
+  NofoTimelineTitle,
+  NofoTimelineDescription,
+  NofoTimelineTime,
+};

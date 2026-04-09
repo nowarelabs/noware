@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIH1 extends NofoElement {
   template() {
@@ -198,10 +198,10 @@ class NofoUICode extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-h1', NofoUIH1);
-customElements.define('nofo-ui-h2', NofoUIH2);
-customElements.define('nofo-ui-h3', NofoUIH3);
-customElements.define('nofo-ui-h4', NofoUIH4);
-customElements.define('nofo-ui-p', NofoUIP);
-customElements.define('nofo-ui-blockquote', NofoUIBlockquote);
-customElements.define('nofo-ui-code', NofoUICode);
+customElements.define("nofo-ui-h1", NofoUIH1);
+customElements.define("nofo-ui-h2", NofoUIH2);
+customElements.define("nofo-ui-h3", NofoUIH3);
+customElements.define("nofo-ui-h4", NofoUIH4);
+customElements.define("nofo-ui-p", NofoUIP);
+customElements.define("nofo-ui-blockquote", NofoUIBlockquote);
+customElements.define("nofo-ui-code", NofoUICode);

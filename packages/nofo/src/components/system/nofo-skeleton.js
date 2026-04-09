@@ -1,11 +1,11 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoSkeleton extends NofoElement {
   static props = {
-    width: { type: String, default: '100%' },
-    height: { type: String, default: '1rem' },
+    width: { type: String, default: "100%" },
+    height: { type: String, default: "1rem" },
     loading: { type: Boolean, default: true },
-    variant: { type: String, default: 'text' }
+    variant: { type: String, default: "text" },
   };
 
   onMount() {
@@ -13,29 +13,30 @@ class NofoSkeleton extends NofoElement {
   }
 
   sync() {
-    const width = this.props.width || '100%';
-    const height = this.props.height || '1rem';
+    const width = this.props.width || "100%";
+    const height = this.props.height || "1rem";
     const loading = this.props.loading;
-    const variant = this.props.variant || 'text';
+    const variant = this.props.variant || "text";
 
-    this.dataset.loading = loading ? 'true' : 'false';
+    this.dataset.loading = loading ? "true" : "false";
     this.dataset.variant = variant;
 
     this._skeletonStyles = {
       width: width,
       height: height,
-      backgroundColor: 'var(--gray-4)',
-      borderRadius: variant === 'circular' ? '50%' : (variant === 'rectangular' ? '0' : 'var(--radius)'),
-      animation: 'skeleton-pulse 1.5s ease-in-out infinite',
-      display: loading ? 'block' : 'none'
+      backgroundColor: "var(--gray-4)",
+      borderRadius:
+        variant === "circular" ? "50%" : variant === "rectangular" ? "0" : "var(--radius)",
+      animation: "skeleton-pulse 1.5s ease-in-out infinite",
+      display: loading ? "block" : "none",
     };
     this._loading = loading;
   }
 
   template() {
     const styleString = Object.entries(this._skeletonStyles)
-      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-      .join(' ');
+      .map(([key, value]) => `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value};`)
+      .join(" ");
 
     return `
       <style>
@@ -51,7 +52,7 @@ class NofoSkeleton extends NofoElement {
           50% { opacity: 0.5; }
         }
         ::slotted(*) {
-          display: ${this._loading ? 'none' : 'block'};
+          display: ${this._loading ? "none" : "block"};
         }
       </style>
       <div class="skeleton"></div>
@@ -64,5 +65,5 @@ class NofoSkeleton extends NofoElement {
   }
 }
 
-customElements.define('nofo-skeleton', NofoSkeleton);
+customElements.define("nofo-skeleton", NofoSkeleton);
 export { NofoSkeleton };

@@ -1,32 +1,32 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoButton extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    radius: 'medium',
-    'high-contrast': false,
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    radius: "medium",
+    "high-contrast": false,
     disabled: false,
     loading: false,
-    type: 'button'
+    type: "button",
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('size').toDataAttr('size');
-    s.attr('variant').toDataAttr('variant');
-    s.attr('color').toDataAttr('color');
-    s.attr('high-contrast').toDataAttr('high-contrast');
-    s.attr('disabled').toDataAttr('disabled');
-    s.attr('loading').toDataAttr('loading');
+    s.attr("size").toDataAttr("size");
+    s.attr("variant").toDataAttr("variant");
+    s.attr("color").toDataAttr("color");
+    s.attr("high-contrast").toDataAttr("high-contrast");
+    s.attr("disabled").toDataAttr("disabled");
+    s.attr("loading").toDataAttr("loading");
   }
 
   template() {
     const isLoading = this.state.loading;
     return `
       <button type="${this.type}" ?disabled="${this.state.disabled || isLoading}">
-        ${isLoading ? '<span class="loader">●</span>' : ''}
+        ${isLoading ? '<span class="loader">●</span>' : ""}
         <slot></slot>
       </button>
     `;
@@ -91,20 +91,20 @@ class NofoButton extends NofoElement {
 
 class NofoIconButton extends NofoElement {
   static props = {
-    size: '2',
-    variant: 'solid',
-    color: 'accent',
-    radius: 'medium',
-    'high-contrast': false,
-    disabled: false
+    size: "2",
+    variant: "solid",
+    color: "accent",
+    radius: "medium",
+    "high-contrast": false,
+    disabled: false,
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('size').toDataAttr('size');
-    s.attr('variant').toDataAttr('variant');
-    s.attr('color').toDataAttr('color');
-    s.attr('disabled').toDataAttr('disabled');
+    s.attr("size").toDataAttr("size");
+    s.attr("variant").toDataAttr("variant");
+    s.attr("color").toDataAttr("color");
+    s.attr("disabled").toDataAttr("disabled");
   }
 
   template() {
@@ -153,6 +153,6 @@ class NofoIconButton extends NofoElement {
   }
 }
 
-customElements.define('nofo-button', NofoButton);
-customElements.define('nofo-icon-button', NofoIconButton);
+customElements.define("nofo-button", NofoButton);
+customElements.define("nofo-icon-button", NofoIconButton);
 export { NofoButton, NofoIconButton };

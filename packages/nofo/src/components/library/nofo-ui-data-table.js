@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIDataTable extends NofoElement {
   template() {
@@ -23,5 +23,5 @@ class NofoUIDataTable extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-data-table', NofoUIDataTable);
+customElements.define("nofo-ui-data-table", NofoUIDataTable);
 export { NofoUIDataTable };

@@ -1,32 +1,32 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISwitch extends NofoElement {
   static props = {
     checked: false,
     defaultChecked: false,
     disabled: false,
-    name: '',
+    name: "",
     required: false,
-    size: '2',
-    variant: 'solid',
-    color: 'accent'
+    size: "2",
+    variant: "solid",
+    color: "accent",
   };
 
   onMount() {
-    this.sync()
-      .attr('checked').toDataAttr('checked')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("checked").toDataAttr("checked").attr("disabled").toDataAttr("disabled");
   }
 
   handleCheckedChange(e) {
     const newChecked = e.detail.checked;
     this.state.checked = newChecked;
-    this.dispatchEvent(new CustomEvent('checked-change', {
-      detail: { checked: newChecked },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("checked-change", {
+        detail: { checked: newChecked },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -75,7 +75,5 @@ class NofoUISwitch extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-switch', NofoUISwitch);
+customElements.define("nofo-ui-switch", NofoUISwitch);
 export { NofoUISwitch };
-
-

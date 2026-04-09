@@ -1,4 +1,4 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface CheckConfig {
   validator: (owner: any, data: any) => Promise<{ success: boolean; errors?: string[] }>;

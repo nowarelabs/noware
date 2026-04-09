@@ -1,25 +1,28 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUITabs extends NofoElement {
   static props = {
     value: null,
     defaultValue: null,
-    orientation: 'horizontal'
+    orientation: "horizontal",
   };
 
   onMount() {
     this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('defaultValue').toDataAttr('defaultValue')
-      .attr('orientation').toDataAttr('orientation');
+      .attr("value")
+      .toDataAttr("value")
+      .attr("defaultValue")
+      .toDataAttr("defaultValue")
+      .attr("orientation")
+      .toDataAttr("orientation");
   }
 
   template() {
     return `
       <nofo-tabs 
-        value="${this.state.value || ''}" 
-        defaultValue="${this.state.defaultValue || ''}"
+        value="${this.state.value || ""}" 
+        defaultValue="${this.state.defaultValue || ""}"
         orientation="${this.state.orientation}"
       >
         <slot></slot>
@@ -63,19 +66,17 @@ class NofoUITabsList extends NofoElement {
 
 class NofoUITabsTrigger extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
     return `
-      <nofo-tabs-trigger value="${this.state.value}" ${this.state.disabled ? 'disabled' : ''}>
+      <nofo-tabs-trigger value="${this.state.value}" ${this.state.disabled ? "disabled" : ""}>
         <slot></slot>
       </nofo-tabs-trigger>
     `;
@@ -118,11 +119,11 @@ class NofoUITabsTrigger extends NofoElement {
 
 class NofoUITabsContent extends NofoElement {
   static props = {
-    value: ''
+    value: "",
   };
 
   onMount() {
-    this.sync().attr('value').toDataAttr('value');
+    this.sync().attr("value").toDataAttr("value");
   }
 
   template() {
@@ -151,16 +152,9 @@ class NofoUITabsContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-tabs', NofoUITabs);
-customElements.define('nofo-ui-tabs-list', NofoUITabsList);
-customElements.define('nofo-ui-tabs-trigger', NofoUITabsTrigger);
-customElements.define('nofo-ui-tabs-content', NofoUITabsContent);
+customElements.define("nofo-ui-tabs", NofoUITabs);
+customElements.define("nofo-ui-tabs-list", NofoUITabsList);
+customElements.define("nofo-ui-tabs-trigger", NofoUITabsTrigger);
+customElements.define("nofo-ui-tabs-content", NofoUITabsContent);
 
-export {
-  NofoUITabs,
-  NofoUITabsList,
-  NofoUITabsTrigger,
-  NofoUITabsContent
-};
-
-
+export { NofoUITabs, NofoUITabsList, NofoUITabsTrigger, NofoUITabsContent };

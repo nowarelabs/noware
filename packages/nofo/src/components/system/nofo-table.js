@@ -1,19 +1,19 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoTable extends NofoElement {
   static props = {
     size: { type: String, reflect: true },
     variant: { type: String, reflect: true },
-    layout: { type: String, reflect: true }
+    layout: { type: String, reflect: true },
   };
 
   getSizeStyles(size) {
     const sizes = {
-      '1': { fontSize: '0.875rem', padding: '0.5rem' },
-      '2': { fontSize: '1rem', padding: '0.75rem' },
-      '3': { fontSize: '1.125rem', padding: '1rem' }
+      1: { fontSize: "0.875rem", padding: "0.5rem" },
+      2: { fontSize: "1rem", padding: "0.75rem" },
+      3: { fontSize: "1.125rem", padding: "1rem" },
     };
-    return sizes[size] || sizes['2'];
+    return sizes[size] || sizes["2"];
   }
 
   template() {
@@ -21,10 +21,10 @@ class NofoTable extends NofoElement {
   }
 
   styles() {
-    const size = this.size || '2';
-    const layout = this.layout || 'auto';
+    const size = this.size || "2";
+    const layout = this.layout || "auto";
     const sizeStyles = this.getSizeStyles(size);
-    
+
     return `
       :host {
         width: 100%;
@@ -104,16 +104,16 @@ class NofoTableColumnHeaderCell extends NofoElement {
   }
 
   styles() {
-    const table = this.closest('nofo-table');
-    const size = table ? table.size || '2' : '2';
-    
+    const table = this.closest("nofo-table");
+    const size = table ? table.size || "2" : "2";
+
     const sizeStyles = {
-      '1': { padding: '0.5rem' },
-      '2': { padding: '0.75rem' },
-      '3': { padding: '1rem' }
+      1: { padding: "0.5rem" },
+      2: { padding: "0.75rem" },
+      3: { padding: "1rem" },
     };
-    const s = sizeStyles[size] || sizeStyles['2'];
-    
+    const s = sizeStyles[size] || sizeStyles["2"];
+
     return `
       :host {
         padding: ${s.padding};
@@ -134,16 +134,16 @@ class NofoTableRowHeaderCell extends NofoElement {
   }
 
   styles() {
-    const table = this.closest('nofo-table');
-    const size = table ? table.size || '2' : '2';
-    
+    const table = this.closest("nofo-table");
+    const size = table ? table.size || "2" : "2";
+
     const sizeStyles = {
-      '1': { padding: '0.5rem' },
-      '2': { padding: '0.75rem' },
-      '3': { padding: '1rem' }
+      1: { padding: "0.5rem" },
+      2: { padding: "0.75rem" },
+      3: { padding: "1rem" },
     };
-    const s = sizeStyles[size] || sizeStyles['2'];
-    
+    const s = sizeStyles[size] || sizeStyles["2"];
+
     return `
       :host {
         padding: ${s.padding};
@@ -164,16 +164,16 @@ class NofoTableCell extends NofoElement {
   }
 
   styles() {
-    const table = this.closest('nofo-table');
-    const size = table ? table.size || '2' : '2';
-    
+    const table = this.closest("nofo-table");
+    const size = table ? table.size || "2" : "2";
+
     const sizeStyles = {
-      '1': { padding: '0.5rem' },
-      '2': { padding: '0.75rem' },
-      '3': { padding: '1rem' }
+      1: { padding: "0.5rem" },
+      2: { padding: "0.75rem" },
+      3: { padding: "1rem" },
     };
-    const s = sizeStyles[size] || sizeStyles['2'];
-    
+    const s = sizeStyles[size] || sizeStyles["2"];
+
     return `
       :host {
         padding: ${s.padding};
@@ -186,13 +186,22 @@ class NofoTableCell extends NofoElement {
   }
 }
 
-customElements.define('nofo-table', NofoTable);
-customElements.define('nofo-table-header', NofoTableHeader);
-customElements.define('nofo-table-body', NofoTableBody);
-customElements.define('nofo-table-footer', NofoTableFooter);
-customElements.define('nofo-table-row', NofoTableRow);
-customElements.define('nofo-table-column-header-cell', NofoTableColumnHeaderCell);
-customElements.define('nofo-table-row-header-cell', NofoTableRowHeaderCell);
-customElements.define('nofo-table-cell', NofoTableCell);
+customElements.define("nofo-table", NofoTable);
+customElements.define("nofo-table-header", NofoTableHeader);
+customElements.define("nofo-table-body", NofoTableBody);
+customElements.define("nofo-table-footer", NofoTableFooter);
+customElements.define("nofo-table-row", NofoTableRow);
+customElements.define("nofo-table-column-header-cell", NofoTableColumnHeaderCell);
+customElements.define("nofo-table-row-header-cell", NofoTableRowHeaderCell);
+customElements.define("nofo-table-cell", NofoTableCell);
 
-export { NofoTable, NofoTableHeader, NofoTableBody, NofoTableFooter, NofoTableRow, NofoTableColumnHeaderCell, NofoTableRowHeaderCell, NofoTableCell };
+export {
+  NofoTable,
+  NofoTableHeader,
+  NofoTableBody,
+  NofoTableFooter,
+  NofoTableRow,
+  NofoTableColumnHeaderCell,
+  NofoTableRowHeaderCell,
+  NofoTableCell,
+};

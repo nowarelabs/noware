@@ -11,7 +11,7 @@ export function syncAttrToCSS(element, attrName, cssVar, transform = null) {
   update();
   const obs = new MutationObserver((recs) => {
     for (const r of recs) {
-      if (r.type === 'attributes' && r.attributeName === attrName) update();
+      if (r.type === "attributes" && r.attributeName === attrName) update();
     }
   });
   obs.observe(element, { attributes: true, attributeFilter: [attrName] });
@@ -43,16 +43,16 @@ export function syncToCustomStates(element, stateMap) {
 export function wire(element) {
   return {
     attr: (n) => ({
-      toCSS: (v, t) => syncAttrToCSS(element, n, v, t)
+      toCSS: (v, t) => syncAttrToCSS(element, n, v, t),
     }),
     data: (v) => ({
       toDataAttr: (n, t) => syncToDataAttr(element, v, n, t),
-      toCSSVar: (n, t) => syncToCSSVar(element, v, n, t)
+      toCSSVar: (n, t) => syncToCSSVar(element, v, n, t),
     }),
     states: (m) => syncToCustomStates(element, m),
     value: (v) => ({
       toCSSVar: (n, t) => syncToCSSVar(element, v, n, t),
-      toDataAttr: (n, t) => syncToDataAttr(element, v, n, t)
-    })
+      toDataAttr: (n, t) => syncToDataAttr(element, v, n, t),
+    }),
   };
 }

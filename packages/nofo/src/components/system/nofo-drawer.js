@@ -1,18 +1,21 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoDrawer extends NofoElement {
   static props = {
     open: false,
     defaultOpen: false,
-    side: 'right',
-    size: 'md'
+    side: "right",
+    size: "md",
   };
 
   onMount() {
     this.sync()
-      .attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed')
-      .attr('side').toDataAttr('side')
-      .attr('size').toDataAttr('size');
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"))
+      .attr("side")
+      .toDataAttr("side")
+      .attr("size")
+      .toDataAttr("size");
 
     if (this.state.defaultOpen) {
       this.state.open = true;
@@ -20,15 +23,15 @@ class NofoDrawer extends NofoElement {
 
     this.effect(() => {
       if (this.state.open) {
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow = "hidden";
       } else {
-        document.body.style.overflow = '';
+        document.body.style.overflow = "";
       }
     });
   }
 
   onUnmount() {
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
   }
 
   template() {
@@ -42,7 +45,7 @@ class NofoDrawer extends NofoElement {
 
 class NofoDrawerTrigger extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-drawer');
+    const root = this.closest("nofo-drawer");
     if (root) root.state.open = true;
   }
 
@@ -67,7 +70,7 @@ class NofoDrawerPortal extends NofoElement {
 
 class NofoDrawerOverlay extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-drawer');
+    const root = this.closest("nofo-drawer");
     if (root) root.state.open = false;
   }
 
@@ -76,7 +79,7 @@ class NofoDrawerOverlay extends NofoElement {
   }
 
   styles() {
-    const root = this.closest('nofo-drawer');
+    const root = this.closest("nofo-drawer");
     const isOpen = root && root.state.open;
 
     return `
@@ -85,8 +88,8 @@ class NofoDrawerOverlay extends NofoElement {
         inset: 0;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 40;
-        display: ${isOpen ? 'block' : 'none'};
-        animation: ${isOpen ? 'fadeIn 0.2s ease' : 'none'};
+        display: ${isOpen ? "block" : "none"};
+        animation: ${isOpen ? "fadeIn 0.2s ease" : "none"};
         box-sizing: border-box;
       }
       div { width: 100%; height: 100%; }
@@ -100,47 +103,59 @@ class NofoDrawerOverlay extends NofoElement {
 
 class NofoDrawerContent extends NofoElement {
   onMount() {
-    const root = this.closest('nofo-drawer');
+    const root = this.closest("nofo-drawer");
     if (root) {
       this.effect(() => {
-        this.setAttribute('data-state', root.state.open ? 'open' : 'closed');
-        this.setAttribute('data-side', root.state.side);
-        this.setAttribute('data-size', root.state.size);
+        this.setAttribute("data-state", root.state.open ? "open" : "closed");
+        this.setAttribute("data-side", root.state.side);
+        this.setAttribute("data-size", root.state.size);
       });
     }
   }
 
   getSizeStyles(size) {
     const sizes = {
-      'sm': { width: '300px', height: 'auto' },
-      'md': { width: '400px', height: 'auto' },
-      'lg': { width: '500px', height: 'auto' },
-      'xl': { width: '600px', height: 'auto' },
-      'full': { width: '100vw', height: '100vh' }
+      sm: { width: "300px", height: "auto" },
+      md: { width: "400px", height: "auto" },
+      lg: { width: "500px", height: "auto" },
+      xl: { width: "600px", height: "auto" },
+      full: { width: "100vw", height: "100vh" },
     };
-    return sizes[size] || sizes['md'];
+    return sizes[size] || sizes["md"];
   }
 
   getSideStyles(side, isOpen) {
     const sides = {
-      'left': {
-        left: 0, top: 0, bottom: 0, right: 'auto',
-        transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
+      left: {
+        left: 0,
+        top: 0,
+        bottom: 0,
+        right: "auto",
+        transform: isOpen ? "translateX(0)" : "translateX(-100%)",
       },
-      'right': {
-        right: 0, top: 0, bottom: 0, left: 'auto',
-        transform: isOpen ? 'translateX(0)' : 'translateX(100%)'
+      right: {
+        right: 0,
+        top: 0,
+        bottom: 0,
+        left: "auto",
+        transform: isOpen ? "translateX(0)" : "translateX(100%)",
       },
-      'top': {
-        top: 0, left: 0, right: 0, bottom: 'auto',
-        transform: isOpen ? 'translateY(0)' : 'translateY(-100%)'
+      top: {
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: "auto",
+        transform: isOpen ? "translateY(0)" : "translateY(-100%)",
       },
-      'bottom': {
-        bottom: 0, left: 0, right: 0, top: 'auto',
-        transform: isOpen ? 'translateY(0)' : 'translateY(100%)'
-      }
+      bottom: {
+        bottom: 0,
+        left: 0,
+        right: 0,
+        top: "auto",
+        transform: isOpen ? "translateY(0)" : "translateY(100%)",
+      },
     };
-    return sides[side] || sides['right'];
+    return sides[side] || sides["right"];
   }
 
   template() {
@@ -148,10 +163,10 @@ class NofoDrawerContent extends NofoElement {
   }
 
   styles() {
-    const root = this.closest('nofo-drawer');
+    const root = this.closest("nofo-drawer");
     const isOpen = root && root.state.open;
-    const side = root ? root.state.side : 'right';
-    const size = root ? root.state.size : 'md';
+    const side = root ? root.state.side : "right";
+    const size = root ? root.state.size : "md";
 
     const sizeStyles = this.getSizeStyles(size);
     const sideStyles = this.getSideStyles(side, isOpen);
@@ -166,8 +181,12 @@ class NofoDrawerContent extends NofoElement {
         flex-direction: column;
         transition: transform 0.3s ease;
         box-sizing: border-box;
-        ${Object.entries(sizeStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
-        ${Object.entries(sideStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
+        ${Object.entries(sizeStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
+        ${Object.entries(sideStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
       }
     `;
   }
@@ -250,7 +269,7 @@ class NofoDrawerFooter extends NofoElement {
 
 class NofoDrawerClose extends NofoElement {
   handleClick() {
-    const root = this.closest('nofo-drawer');
+    const root = this.closest("nofo-drawer");
     if (root) root.state.open = false;
   }
 
@@ -263,16 +282,16 @@ class NofoDrawerClose extends NofoElement {
   }
 }
 
-customElements.define('nofo-drawer', NofoDrawer);
-customElements.define('nofo-drawer-trigger', NofoDrawerTrigger);
-customElements.define('nofo-drawer-portal', NofoDrawerPortal);
-customElements.define('nofo-drawer-overlay', NofoDrawerOverlay);
-customElements.define('nofo-drawer-content', NofoDrawerContent);
-customElements.define('nofo-drawer-header', NofoDrawerHeader);
-customElements.define('nofo-drawer-title', NofoDrawerTitle);
-customElements.define('nofo-drawer-body', NofoDrawerBody);
-customElements.define('nofo-drawer-footer', NofoDrawerFooter);
-customElements.define('nofo-drawer-close', NofoDrawerClose);
+customElements.define("nofo-drawer", NofoDrawer);
+customElements.define("nofo-drawer-trigger", NofoDrawerTrigger);
+customElements.define("nofo-drawer-portal", NofoDrawerPortal);
+customElements.define("nofo-drawer-overlay", NofoDrawerOverlay);
+customElements.define("nofo-drawer-content", NofoDrawerContent);
+customElements.define("nofo-drawer-header", NofoDrawerHeader);
+customElements.define("nofo-drawer-title", NofoDrawerTitle);
+customElements.define("nofo-drawer-body", NofoDrawerBody);
+customElements.define("nofo-drawer-footer", NofoDrawerFooter);
+customElements.define("nofo-drawer-close", NofoDrawerClose);
 
 export {
   NofoDrawer,
@@ -284,5 +303,5 @@ export {
   NofoDrawerTitle,
   NofoDrawerBody,
   NofoDrawerFooter,
-  NofoDrawerClose
+  NofoDrawerClose,
 };

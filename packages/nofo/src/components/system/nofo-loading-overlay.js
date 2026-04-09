@@ -1,8 +1,8 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoLoadingOverlay extends NofoElement {
   static props = {
-    loading: { type: Boolean, default: false }
+    loading: { type: Boolean, default: false },
   };
 
   onMount() {
@@ -14,7 +14,7 @@ class NofoLoadingOverlay extends NofoElement {
   }
 
   updateDataAttributes() {
-    this.setAttribute('data-loading', this.props.loading ? 'true' : 'false');
+    this.setAttribute("data-loading", this.props.loading ? "true" : "false");
   }
 
   template() {
@@ -23,7 +23,7 @@ class NofoLoadingOverlay extends NofoElement {
       <div class="content">
         <slot></slot>
       </div>
-      <div class="overlay" style="display: ${isLoading ? 'flex' : 'none'}">
+      <div class="overlay" style="display: ${isLoading ? "flex" : "none"}">
         <nofo-spinner size="3"></nofo-spinner>
       </div>
     `;
@@ -51,12 +51,12 @@ class NofoLoadingOverlay extends NofoElement {
         z-index: 10;
       }
       .content {
-        opacity: ${isLoading ? '0.5' : '1'};
+        opacity: ${isLoading ? "0.5" : "1"};
         transition: opacity 0.2s;
       }
     `;
   }
 }
 
-customElements.define('nofo-loading-overlay', NofoLoadingOverlay);
+customElements.define("nofo-loading-overlay", NofoLoadingOverlay);
 export { NofoLoadingOverlay };

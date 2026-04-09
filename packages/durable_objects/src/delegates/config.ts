@@ -1,4 +1,4 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface ConfigEntry<T = any> {
   key: string;

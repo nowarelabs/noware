@@ -1,4 +1,4 @@
-import { context, trace } from '@opentelemetry/api';
+import { context, trace } from "@opentelemetry/api";
 
 type LogEnv = { LOG_FORMAT?: string };
 const LOG_FORMAT = (globalThis as unknown as LogEnv).LOG_FORMAT;
@@ -29,7 +29,7 @@ export class Logger {
   private service: string;
   private environment?: string;
   private context: LogContext = {};
-  public static ENVIRONMENT = 'production';
+  public static ENVIRONMENT = "production";
   public static LEVEL = LogLevel.INFO;
 
   constructor(options: {
@@ -113,7 +113,7 @@ export class Logger {
     };
 
     // Switch between Pretty and JSON based on environment
-    if (currentEnv === 'development' || LOG_FORMAT === 'pretty') {
+    if (currentEnv === "development" || LOG_FORMAT === "pretty") {
       console.log(this.formatPretty(entry));
     } else {
       // Output to stdout as a single JSON line for SIEM ingestion (Production)
@@ -136,15 +136,15 @@ export class Logger {
 
   private formatPretty(entry: LogEntry): string {
     const colors = {
-      reset: '\x1b[0m',
-      dim: '\x1b[2m',
-      bold: '\x1b[1m',
-      blue: '\x1b[34m',
-      cyan: '\x1b[36m',
-      green: '\x1b[32m',
-      yellow: '\x1b[33m',
-      red: '\x1b[31m',
-      magenta: '\x1b[35m',
+      reset: "\x1b[0m",
+      dim: "\x1b[2m",
+      bold: "\x1b[1m",
+      blue: "\x1b[34m",
+      cyan: "\x1b[36m",
+      green: "\x1b[32m",
+      yellow: "\x1b[33m",
+      red: "\x1b[31m",
+      magenta: "\x1b[35m",
     };
 
     const levelColors: Record<string, string> = {
@@ -158,35 +158,35 @@ export class Logger {
     const timestamp = colors.dim + new Date(entry.timestamp).toLocaleTimeString() + colors.reset;
     const levelColor = levelColors[entry.level] || colors.reset;
     const level = levelColor + colors.bold + entry.level.padEnd(5) + colors.reset;
-    const service = colors.cyan + (entry.service || 'app') + colors.reset;
+    const service = colors.cyan + (entry.service || "app") + colors.reset;
     const msg = colors.bold + entry.message + colors.reset;
 
-    let meta = '';
+    let meta = "";
     const skipKeys = [
-      'timestamp',
-      'level',
-      'message',
-      'service',
-      'environment',
-      'trace_id',
-      'span_id',
+      "timestamp",
+      "level",
+      "message",
+      "service",
+      "environment",
+      "trace_id",
+      "span_id",
     ];
     const entries = Object.entries(entry).filter(([k]) => !skipKeys.includes(k));
 
     if (entries.length > 0) {
       meta =
-        ' ' +
+        " " +
         entries
           .map(
             ([k, v]) =>
-              colors.dim + k + '=' + colors.reset + (typeof v === 'object' ? JSON.stringify(v) : v)
+              colors.dim + k + "=" + colors.reset + (typeof v === "object" ? JSON.stringify(v) : v),
           )
-          .join(' ');
+          .join(" ");
     }
 
     const traceInfo = entry.trace_id
       ? ` ${colors.dim}[trace:${entry.trace_id.slice(0, 8)}]${colors.reset}`
-      : '';
+      : "";
 
     return `${timestamp} ${level} (${service}): ${msg}${meta}${traceInfo}`;
   }

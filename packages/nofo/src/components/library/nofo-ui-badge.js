@@ -1,16 +1,16 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIBadge extends NofoElement {
   static props = {
-    variant: 'solid',
-    size: '2',
-    color: 'accent'
+    variant: "solid",
+    size: "2",
+    color: "accent",
   };
 
   template() {
     const { variant, size, color } = this.state;
-    
+
     return `
       <nofo-badge
         variant="${variant}"
@@ -34,5 +34,5 @@ class NofoUIBadge extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-badge', NofoUIBadge);
+customElements.define("nofo-ui-badge", NofoUIBadge);
 export { NofoUIBadge };

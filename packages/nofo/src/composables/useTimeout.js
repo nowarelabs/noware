@@ -22,6 +22,6 @@ export function useTimeout() {
   return {
     set,
     clear,
-    isActive
+    isActive,
   };
 }

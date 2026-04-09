@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICard extends NofoElement {
   static template() {
@@ -31,18 +31,18 @@ class NofoUICard extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
-    this._card = this.shadowRoot.querySelector('nofo-card');
+    this._card = this.shadowRoot.querySelector("nofo-card");
     this.sync();
   }
 
   sync() {
     if (this._card) {
-      this._card.setAttribute('variant', 'surface');
-      this._card.setAttribute('size', '3');
+      this._card.setAttribute("variant", "surface");
+      this._card.setAttribute("size", "3");
     }
   }
 }
@@ -71,7 +71,7 @@ class NofoUICardHeader extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -101,7 +101,7 @@ class NofoUICardTitle extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -130,7 +130,7 @@ class NofoUICardDescription extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -158,7 +158,7 @@ class NofoUICardContent extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
@@ -189,15 +189,15 @@ class NofoUICardFooter extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {}
 }
 
-customElements.define('nofo-ui-card', NofoUICard);
-customElements.define('nofo-ui-card-header', NofoUICardHeader);
-customElements.define('nofo-ui-card-title', NofoUICardTitle);
-customElements.define('nofo-ui-card-description', NofoUICardDescription);
-customElements.define('nofo-ui-card-content', NofoUICardContent);
-customElements.define('nofo-ui-card-footer', NofoUICardFooter);
+customElements.define("nofo-ui-card", NofoUICard);
+customElements.define("nofo-ui-card-header", NofoUICardHeader);
+customElements.define("nofo-ui-card-title", NofoUICardTitle);
+customElements.define("nofo-ui-card-description", NofoUICardDescription);
+customElements.define("nofo-ui-card-content", NofoUICardContent);
+customElements.define("nofo-ui-card-footer", NofoUICardFooter);

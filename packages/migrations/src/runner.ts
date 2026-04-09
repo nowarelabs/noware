@@ -1,9 +1,9 @@
-import { type Result, ok, safeAsync } from 'nomo/result';
-import { consola } from 'consola';
-import { hash } from 'ohash';
-import { sql as sqlTag } from './index';
-import type { Migration } from './index';
-import { sql as sqlBuilder, getDialectStrategy } from 'nomo/sql';
+import { type Result, ok, safeAsync } from "nomo/result";
+import { consola } from "consola";
+import { hash } from "ohash";
+import { sql as sqlTag } from "./index";
+import type { Migration } from "./index";
+import { sql as sqlBuilder, getDialectStrategy } from "nomo/sql";
 
 /**
  * Migration Runner for Cloudflare environment (D1/DO)
@@ -26,38 +26,38 @@ export class MigrationRunner {
    */
   async ensureMigrationsTable(): Promise<Result<this>> {
     const stmt = sqlBuilder.statement([
-      sqlBuilder.key('CREATE TABLE IF NOT EXISTS '),
-      sqlBuilder.id('schema_migrations'),
-      sqlBuilder.op(' ('),
+      sqlBuilder.key("CREATE TABLE IF NOT EXISTS "),
+      sqlBuilder.id("schema_migrations"),
+      sqlBuilder.op(" ("),
       sqlBuilder.nl(),
       sqlBuilder.indent(),
-      sqlBuilder.id('version'),
-      sqlBuilder.op(' '),
-      sqlBuilder.type('TEXT'),
-      sqlBuilder.op(' '),
+      sqlBuilder.id("version"),
+      sqlBuilder.op(" "),
+      sqlBuilder.type("TEXT"),
+      sqlBuilder.op(" "),
       sqlBuilder.primaryKey(),
-      sqlBuilder.op(','),
+      sqlBuilder.op(","),
       sqlBuilder.nl(),
       sqlBuilder.indent(),
-      sqlBuilder.id('applied_at'),
-      sqlBuilder.op(' '),
-      sqlBuilder.type('TEXT'),
-      sqlBuilder.op(' '),
-      sqlBuilder.key('NOT NULL'),
-      sqlBuilder.op(' '),
-      sqlBuilder.key('DEFAULT CURRENT_TIMESTAMP'),
+      sqlBuilder.id("applied_at"),
+      sqlBuilder.op(" "),
+      sqlBuilder.type("TEXT"),
+      sqlBuilder.op(" "),
+      sqlBuilder.key("NOT NULL"),
+      sqlBuilder.op(" "),
+      sqlBuilder.key("DEFAULT CURRENT_TIMESTAMP"),
       sqlBuilder.nl(),
-      sqlBuilder.op(','),
+      sqlBuilder.op(","),
       sqlBuilder.nl(),
       sqlBuilder.indent(),
-      sqlBuilder.id('checksum'),
-      sqlBuilder.op(' '),
-      sqlBuilder.type('TEXT'),
+      sqlBuilder.id("checksum"),
+      sqlBuilder.op(" "),
+      sqlBuilder.type("TEXT"),
       sqlBuilder.nl(),
-      sqlBuilder.op(')'),
+      sqlBuilder.op(")"),
     ]);
 
-    const sqlRes = stmt.toSql(getDialectStrategy('sqlite'));
+    const sqlRes = stmt.toSql(getDialectStrategy("sqlite"));
     if (!sqlRes.success) return sqlRes as Result<never>;
 
     const res = await this.db.run({ sql: sqlRes.data.value, __isSql: true });
@@ -70,7 +70,7 @@ export class MigrationRunner {
    */
   async getAppliedVersions(): Promise<Result<string[]>> {
     const res = await this.db.all(
-      sqlTag`SELECT version FROM schema_migrations ORDER BY version ASC;`
+      sqlTag`SELECT version FROM schema_migrations ORDER BY version ASC;`,
     );
     if (!res.success) return res as Result<never>;
     return ok(res.data.map((r: any) => r.version));
@@ -89,7 +89,7 @@ export class MigrationRunner {
     const checksum = hash(migration.toString());
 
     const dbRes = await this.db.run(
-      sqlTag`INSERT INTO schema_migrations (version, checksum) VALUES (${migration.version}, ${checksum});`
+      sqlTag`INSERT INTO schema_migrations (version, checksum) VALUES (${migration.version}, ${checksum});`,
     );
     if (!dbRes.success) return dbRes as Result<never>;
 
@@ -108,7 +108,7 @@ export class MigrationRunner {
     if (!downRes.success) return downRes as Result<never>;
 
     const dbRes = await this.db.run(
-      sqlTag`DELETE FROM schema_migrations WHERE version = ${migration.version};`
+      sqlTag`DELETE FROM schema_migrations WHERE version = ${migration.version};`,
     );
     if (!dbRes.success) return dbRes as Result<never>;
 
@@ -137,7 +137,7 @@ export class MigrationRunner {
     }
 
     if (pending.length === 0) {
-      consola.info('No pending migrations.');
+      consola.info("No pending migrations.");
       return ok(this);
     }
 
@@ -145,7 +145,7 @@ export class MigrationRunner {
       const runRes = await this.runUp(m);
       if (!runRes.success) return runRes;
     }
-    consola.success('All migrations completed successfully.');
+    consola.success("All migrations completed successfully.");
     return ok(this);
   }
 
@@ -171,20 +171,20 @@ export class MigrationRunner {
     }
 
     if (pending.length === 0) {
-      consola.info('No pending migrations.');
+      consola.info("No pending migrations.");
       return ok(this);
     }
 
     const batchStmts: any[] = [];
     for (const m of pending) {
-      const sqlsRes = await m.toSql('up');
+      const sqlsRes = await m.toSql("up");
       if (!sqlsRes.success) return sqlsRes as Result<never>;
 
       const checksum = hash(m.toString());
 
       sqlsRes.data.forEach((s) => batchStmts.push({ sql: s, __isSql: true }));
       batchStmts.push(
-        sqlTag`INSERT INTO schema_migrations (version, checksum) VALUES (${m.version}, ${checksum});`
+        sqlTag`INSERT INTO schema_migrations (version, checksum) VALUES (${m.version}, ${checksum});`,
       );
     }
 
@@ -192,7 +192,7 @@ export class MigrationRunner {
     const res = await this.db.batch(batchStmts);
     if (!res.success) return res as Result<never>;
 
-    consola.success('All migrations completed successfully via batch.');
+    consola.success("All migrations completed successfully via batch.");
     return ok(this);
   }
 
@@ -213,7 +213,7 @@ export class MigrationRunner {
       .slice(0, steps);
 
     if (toRollback.length === 0) {
-      consola.info('No migrations to rollback.');
+      consola.info("No migrations to rollback.");
       return ok(this);
     }
 
@@ -221,7 +221,7 @@ export class MigrationRunner {
       const runRes = await this.runDown(m);
       if (!runRes.success) return runRes;
     }
-    consola.success('Rollback completed successfully.');
+    consola.success("Rollback completed successfully.");
     return ok(this);
   }
 
@@ -229,9 +229,9 @@ export class MigrationRunner {
    * Reset the database by dropping everything and re-running migrations
    */
   async reset(): Promise<Result<this>> {
-    consola.warn('Resetting database...');
+    consola.warn("Resetting database...");
     const tablesRes = await this.db.all(
-      sqlTag`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';`
+      sqlTag`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';`,
     );
     if (!tablesRes.success) return tablesRes as Result<never>;
     const tables = tablesRes.data;
@@ -240,7 +240,7 @@ export class MigrationRunner {
       const dropRes = await this.db.run(sqlTag.raw(`DROP TABLE IF EXISTS ${table.name};`));
       if (!dropRes.success) return dropRes as Result<never>;
     }
-    consola.success('Database cleared.');
+    consola.success("Database cleared.");
     return await this.up();
   }
 
@@ -255,15 +255,15 @@ export class MigrationRunner {
     if (!appliedRes.success) return appliedRes as Result<never>;
     const applied = appliedRes.data;
 
-    consola.log('');
-    consola.info('Migration Status:');
+    consola.log("");
+    consola.info("Migration Status:");
 
     const rows = this.migrations
       .sort((a, b) => a.version.localeCompare(b.version))
       .map((m) => {
         const isApplied = applied.includes(m.version);
         return {
-          Status: isApplied ? 'up' : 'down',
+          Status: isApplied ? "up" : "down",
           Version: m.version,
           Name: m.constructor.name,
         };
@@ -277,7 +277,7 @@ export class MigrationRunner {
    * Run SQLite optimization
    */
   async optimize(): Promise<Result<this>> {
-    consola.info('Running PRAGMA optimize...');
+    consola.info("Running PRAGMA optimize...");
     const res = await this.db.run(sqlTag`PRAGMA optimize;`);
     if (!res.success) return res as Result<never>;
     return ok(this);
@@ -287,7 +287,7 @@ export class MigrationRunner {
    * Run SQLite analysis
    */
   async analyze(): Promise<Result<this>> {
-    consola.info('Running ANALYZE...');
+    consola.info("Running ANALYZE...");
     const res = await this.db.run(sqlTag`ANALYZE;`);
     if (!res.success) return res as Result<never>;
     return ok(this);

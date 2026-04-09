@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUICombobox extends NofoElement {
   static props = {
@@ -9,18 +9,25 @@ class NofoUICombobox extends NofoElement {
     placeholder: null,
     disabled: false,
     loading: false,
-    multiple: false
+    multiple: false,
   };
 
   onMount() {
     this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('defaultValue').toDataAttr('defaultValue')
-      .attr('options').toDataAttr('options')
-      .attr('placeholder').toDataAttr('placeholder')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('loading').toDataAttr('loading')
-      .attr('multiple').toDataAttr('multiple');
+      .attr("value")
+      .toDataAttr("value")
+      .attr("defaultValue")
+      .toDataAttr("defaultValue")
+      .attr("options")
+      .toDataAttr("options")
+      .attr("placeholder")
+      .toDataAttr("placeholder")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("loading")
+      .toDataAttr("loading")
+      .attr("multiple")
+      .toDataAttr("multiple");
   }
 
   template() {
@@ -28,10 +35,10 @@ class NofoUICombobox extends NofoElement {
       <nofo-autocomplete 
         variant="surface" 
         size="2"
-        value="${this.state.value || ''}"
-        defaultValue="${this.state.defaultValue || ''}"
-        options="${this.state.options || ''}"
-        placeholder="${this.state.placeholder || ''}"
+        value="${this.state.value || ""}"
+        defaultValue="${this.state.defaultValue || ""}"
+        options="${this.state.options || ""}"
+        placeholder="${this.state.placeholder || ""}"
         ?disabled="${this.state.disabled}"
         ?loading="${this.state.loading}"
         ?multiple="${this.state.multiple}"
@@ -109,14 +116,12 @@ class NofoUIComboboxList extends NofoElement {
 
 class NofoUIComboboxItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
@@ -166,12 +171,12 @@ class NofoUIComboboxEmpty extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-combobox', NofoUICombobox);
-customElements.define('nofo-ui-combobox-input', NofoUIComboboxInput);
-customElements.define('nofo-ui-combobox-popover', NofoUIComboboxPopover);
-customElements.define('nofo-ui-combobox-list', NofoUIComboboxList);
-customElements.define('nofo-ui-combobox-item', NofoUIComboboxItem);
-customElements.define('nofo-ui-combobox-empty', NofoUIComboboxEmpty);
+customElements.define("nofo-ui-combobox", NofoUICombobox);
+customElements.define("nofo-ui-combobox-input", NofoUIComboboxInput);
+customElements.define("nofo-ui-combobox-popover", NofoUIComboboxPopover);
+customElements.define("nofo-ui-combobox-list", NofoUIComboboxList);
+customElements.define("nofo-ui-combobox-item", NofoUIComboboxItem);
+customElements.define("nofo-ui-combobox-empty", NofoUIComboboxEmpty);
 
 export {
   NofoUICombobox,
@@ -179,5 +184,5 @@ export {
   NofoUIComboboxPopover,
   NofoUIComboboxList,
   NofoUIComboboxItem,
-  NofoUIComboboxEmpty
+  NofoUIComboboxEmpty,
 };

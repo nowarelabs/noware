@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIContextMenu extends NofoElement {
   template() {
@@ -65,15 +65,18 @@ class NofoUIContextMenuContent extends NofoElement {
 class NofoUIContextMenuItem extends NofoElement {
   static props = {
     disabled: false,
-    shortcut: '',
-    color: ''
+    shortcut: "",
+    color: "",
   };
 
   onMount() {
     this.sync()
-      .attr('disabled').toDataAttr('disabled')
-      .attr('shortcut').toDataAttr('shortcut')
-      .attr('color').toDataAttr('color');
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("shortcut")
+      .toDataAttr("shortcut")
+      .attr("color")
+      .toDataAttr("color");
   }
 
   template() {
@@ -136,31 +139,37 @@ class NofoUIContextMenuSub extends NofoElement {
   template() {
     return `<nofo-context-menu-sub><slot></slot></nofo-context-menu-sub>`;
   }
-  styles() { return `:host { display: contents; }`; }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
 class NofoUIContextMenuSubTrigger extends NofoElement {
   template() {
     return `<nofo-context-menu-sub-trigger><slot></slot></nofo-context-menu-sub-trigger>`;
   }
-  styles() { return `:host { display: contents; }`; }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
 class NofoUIContextMenuSubContent extends NofoElement {
   template() {
     return `<nofo-context-menu-sub-content><slot></slot></nofo-context-menu-sub-content>`;
   }
-  styles() { return `:host { display: contents; }`; }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
-customElements.define('nofo-ui-context-menu', NofoUIContextMenu);
-customElements.define('nofo-ui-context-menu-trigger', NofoUIContextMenuTrigger);
-customElements.define('nofo-ui-context-menu-content', NofoUIContextMenuContent);
-customElements.define('nofo-ui-context-menu-item', NofoUIContextMenuItem);
-customElements.define('nofo-ui-context-menu-separator', NofoUIContextMenuSeparator);
-customElements.define('nofo-ui-context-menu-sub', NofoUIContextMenuSub);
-customElements.define('nofo-ui-context-menu-sub-trigger', NofoUIContextMenuSubTrigger);
-customElements.define('nofo-ui-context-menu-sub-content', NofoUIContextMenuSubContent);
+customElements.define("nofo-ui-context-menu", NofoUIContextMenu);
+customElements.define("nofo-ui-context-menu-trigger", NofoUIContextMenuTrigger);
+customElements.define("nofo-ui-context-menu-content", NofoUIContextMenuContent);
+customElements.define("nofo-ui-context-menu-item", NofoUIContextMenuItem);
+customElements.define("nofo-ui-context-menu-separator", NofoUIContextMenuSeparator);
+customElements.define("nofo-ui-context-menu-sub", NofoUIContextMenuSub);
+customElements.define("nofo-ui-context-menu-sub-trigger", NofoUIContextMenuSubTrigger);
+customElements.define("nofo-ui-context-menu-sub-content", NofoUIContextMenuSubContent);
 
 export {
   NofoUIContextMenu,
@@ -170,7 +179,5 @@ export {
   NofoUIContextMenuSeparator,
   NofoUIContextMenuSub,
   NofoUIContextMenuSubTrigger,
-  NofoUIContextMenuSubContent
+  NofoUIContextMenuSubContent,
 };
-
-

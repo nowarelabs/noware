@@ -1,28 +1,28 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoKbd extends NofoElement {
   static props = {
-    size: { type: String, default: '2' }
+    size: { type: String, default: "2" },
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('size', 'data-size');
+    s.attr("size", "data-size");
   }
 
   getSizeStyles(size) {
     const sizes = {
-      '1': 'var(--font-size-1)',
-      '2': 'var(--font-size-2)',
-      '3': 'var(--font-size-3)',
-      '4': 'var(--font-size-4)',
-      '5': 'var(--font-size-5)',
-      '6': 'var(--font-size-6)',
-      '7': 'var(--font-size-7)',
-      '8': 'var(--font-size-8)',
-      '9': 'var(--font-size-9)'
+      1: "var(--font-size-1)",
+      2: "var(--font-size-2)",
+      3: "var(--font-size-3)",
+      4: "var(--font-size-4)",
+      5: "var(--font-size-5)",
+      6: "var(--font-size-6)",
+      7: "var(--font-size-7)",
+      8: "var(--font-size-8)",
+      9: "var(--font-size-9)",
     };
-    return sizes[size] || sizes['2'];
+    return sizes[size] || sizes["2"];
   }
 
   template() {
@@ -53,5 +53,5 @@ class NofoKbd extends NofoElement {
   }
 }
 
-customElements.define('nofo-kbd', NofoKbd);
+customElements.define("nofo-kbd", NofoKbd);
 export { NofoKbd };

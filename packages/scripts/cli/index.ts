@@ -5,10 +5,7 @@ import { doCommand } from "./do";
 
 const program = new Command();
 
-program
-  .name("nbb")
-  .description("Rails-like generators for nomo applications")
-  .version("1.0.0");
+program.name("nbb").description("Rails-like generators for nomo applications").version("1.0.0");
 
 program.addCommand(workflowCommand);
 program.addCommand(doCommand);

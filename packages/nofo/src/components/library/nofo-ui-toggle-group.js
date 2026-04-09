@@ -1,12 +1,12 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIToggleGroup extends NofoElement {
   static props() {
     return {
-      type: { type: String, attribute: 'type' },
-      value: { type: String, attribute: 'value' },
-      defaultValue: { type: String, attribute: 'defaultValue' }
+      type: { type: String, attribute: "type" },
+      value: { type: String, attribute: "value" },
+      defaultValue: { type: String, attribute: "defaultValue" },
     };
   }
 
@@ -35,24 +35,24 @@ class NofoUIToggleGroup extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
-    this._toggleGroup = this.shadowRoot.querySelector('nofo-toggle-group');
+    this._toggleGroup = this.shadowRoot.querySelector("nofo-toggle-group");
     this.sync();
   }
 
   sync() {
     if (this._toggleGroup) {
-      const type = this.type || 'single';
-      this._toggleGroup.setAttribute('type', type);
-      
+      const type = this.type || "single";
+      this._toggleGroup.setAttribute("type", type);
+
       if (this.value) {
-        this._toggleGroup.setAttribute('value', this.value);
+        this._toggleGroup.setAttribute("value", this.value);
       }
       if (this.defaultValue) {
-        this._toggleGroup.setAttribute('defaultValue', this.defaultValue);
+        this._toggleGroup.setAttribute("defaultValue", this.defaultValue);
       }
     }
   }
@@ -61,8 +61,8 @@ class NofoUIToggleGroup extends NofoElement {
 class NofoUIToggleGroupItem extends NofoElement {
   static props() {
     return {
-      value: { type: String, attribute: 'value' },
-      disabled: { type: Boolean, attribute: 'disabled' }
+      value: { type: String, attribute: "value" },
+      disabled: { type: Boolean, attribute: "disabled" },
     };
   }
 
@@ -110,27 +110,27 @@ class NofoUIToggleGroupItem extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
-    this._item = this.shadowRoot.querySelector('nofo-toggle-group-item');
+    this._item = this.shadowRoot.querySelector("nofo-toggle-group-item");
     this.sync();
   }
 
   sync() {
     if (this._item) {
       if (this.value) {
-        this._item.setAttribute('value', this.value);
+        this._item.setAttribute("value", this.value);
       }
       if (this.disabled) {
-        this._item.setAttribute('disabled', '');
+        this._item.setAttribute("disabled", "");
       } else {
-        this._item.removeAttribute('disabled');
+        this._item.removeAttribute("disabled");
       }
     }
   }
 }
 
-customElements.define('nofo-ui-toggle-group', NofoUIToggleGroup);
-customElements.define('nofo-ui-toggle-group-item', NofoUIToggleGroupItem);
+customElements.define("nofo-ui-toggle-group", NofoUIToggleGroup);
+customElements.define("nofo-ui-toggle-group-item", NofoUIToggleGroupItem);

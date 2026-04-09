@@ -1,26 +1,26 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoAutocomplete extends NofoElement {
   static props = {
-    value: '',
-    defaultValue: '',
-    options: '',
-    placeholder: '',
-    size: '2',
-    variant: 'surface',
+    value: "",
+    defaultValue: "",
+    options: "",
+    placeholder: "",
+    size: "2",
+    variant: "surface",
     disabled: false,
     loading: false,
     multiple: false,
-    open: false
+    open: false,
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('size').toDataAttr('size');
-    s.attr('variant').toDataAttr('variant');
-    s.attr('disabled').toDataAttr('disabled');
-    s.attr('loading').toDataAttr('loading');
-    s.attr('open').toDataAttr('state', v => v ? 'open' : 'closed');
+    s.attr("size").toDataAttr("size");
+    s.attr("variant").toDataAttr("variant");
+    s.attr("disabled").toDataAttr("disabled");
+    s.attr("loading").toDataAttr("loading");
+    s.attr("open").toDataAttr("state", (v) => (v ? "open" : "closed"));
   }
 
   template() {
@@ -41,18 +41,18 @@ class NofoAutocomplete extends NofoElement {
 
 class NofoAutocompleteInput extends NofoElement {
   static props = {
-    value: '',
-    placeholder: '',
-    size: '2',
-    variant: 'surface',
+    value: "",
+    placeholder: "",
+    size: "2",
+    variant: "surface",
     disabled: false,
-    loading: false
+    loading: false,
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('size').toDataAttr('size');
-    s.attr('variant').toDataAttr('variant');
+    s.attr("size").toDataAttr("size");
+    s.attr("variant").toDataAttr("variant");
   }
 
   template() {
@@ -60,8 +60,8 @@ class NofoAutocompleteInput extends NofoElement {
     return `
       <input 
         type="text" 
-        value="${value || ''}"
-        placeholder="${placeholder || ''}"
+        value="${value || ""}"
+        placeholder="${placeholder || ""}"
         ?disabled="${disabled}"
         autocomplete="off"
       />
@@ -98,12 +98,12 @@ class NofoAutocompleteInput extends NofoElement {
 
 class NofoAutocompletePopover extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('open').toDataAttr('state', v => v ? 'open' : 'closed');
+    s.attr("open").toDataAttr("state", (v) => (v ? "open" : "closed"));
   }
 
   template() {
@@ -153,13 +153,13 @@ class NofoAutocompleteList extends NofoElement {
 
 class NofoAutocompleteItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
     const s = this.sync();
-    s.attr('disabled').toDataAttr('disabled');
+    s.attr("disabled").toDataAttr("disabled");
   }
 
   template() {
@@ -208,12 +208,12 @@ class NofoAutocompleteEmpty extends NofoElement {
   }
 }
 
-customElements.define('nofo-autocomplete', NofoAutocomplete);
-customElements.define('nofo-autocomplete-input', NofoAutocompleteInput);
-customElements.define('nofo-autocomplete-popover', NofoAutocompletePopover);
-customElements.define('nofo-autocomplete-list', NofoAutocompleteList);
-customElements.define('nofo-autocomplete-item', NofoAutocompleteItem);
-customElements.define('nofo-autocomplete-empty', NofoAutocompleteEmpty);
+customElements.define("nofo-autocomplete", NofoAutocomplete);
+customElements.define("nofo-autocomplete-input", NofoAutocompleteInput);
+customElements.define("nofo-autocomplete-popover", NofoAutocompletePopover);
+customElements.define("nofo-autocomplete-list", NofoAutocompleteList);
+customElements.define("nofo-autocomplete-item", NofoAutocompleteItem);
+customElements.define("nofo-autocomplete-empty", NofoAutocompleteEmpty);
 
 export {
   NofoAutocomplete,
@@ -221,5 +221,5 @@ export {
   NofoAutocompletePopover,
   NofoAutocompleteList,
   NofoAutocompleteItem,
-  NofoAutocompleteEmpty
+  NofoAutocompleteEmpty,
 };

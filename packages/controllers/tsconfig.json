@@ -7,29 +7,15 @@
     "strict": true,
     "skipLibCheck": true,
     "declaration": true,
-    "types": [
-      "@cloudflare/workers-types"
-    ],
+    "types": ["@cloudflare/workers-types"],
     "baseUrl": ".",
     "paths": {
-      "nomo/router": [
-        "../router/src"
-      ],
-      "nomo/models": [
-        "../models/src"
-      ],
-      "nomo/logger": [
-        "../logger/src"
-      ],
-      "nomo/views": [
-        "../views/src"
-      ],
-      "nomo/assets": [
-        "../assets/src"
-      ]
+      "nomo/router": ["../router/src"],
+      "nomo/models": ["../models/src"],
+      "nomo/logger": ["../logger/src"],
+      "nomo/views": ["../views/src"],
+      "nomo/assets": ["../assets/src"]
     }
   },
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }

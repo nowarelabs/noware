@@ -1,9 +1,9 @@
-import { z } from 'zod';
-import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
-import type { ExecutionContext } from '@cloudflare/workers-types';
+import { z } from "zod";
+import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
+import type { ExecutionContext } from "@cloudflare/workers-types";
 
-import RouterTrieNode from './lib/routerTrieNode';
-import { isValidPath, splitPath, tryDecode } from './utils/url';
+import RouterTrieNode from "./lib/routerTrieNode";
+import { isValidPath, splitPath, tryDecode } from "./utils/url";
 
 export interface RouterContext<Env = unknown, Ctx = ExecutionContext> extends Record<string, any> {
   params: Record<string, string>;
@@ -20,12 +20,12 @@ export interface RouterContext<Env = unknown, Ctx = ExecutionContext> extends Re
 }
 
 export interface RouteConfig {
-  method: 'get' | 'post' | 'put' | 'delete' | 'patch';
+  method: "get" | "post" | "put" | "delete" | "patch";
   path: string;
   request?: {
     body?: {
       content: {
-        'application/json': {
+        "application/json": {
           schema: z.ZodTypeAny;
         };
       };
@@ -41,7 +41,7 @@ export interface RouteConfig {
     {
       description: string;
       content?: {
-        'application/json': {
+        "application/json": {
           schema: z.ZodTypeAny;
         };
       };
@@ -52,7 +52,7 @@ export interface RouteConfig {
 export type RouteHandler<Env = unknown, Ctx = ExecutionContext> = (
   request: Request,
   env: Env,
-  ctx: RouterContext<Env, Ctx>
+  ctx: RouterContext<Env, Ctx>,
 ) => Response | Promise<Response>;
 
 export type Next = () => Promise<Response>;
@@ -61,7 +61,7 @@ export type Middleware<Env = unknown, Ctx = ExecutionContext> = (
   request: Request,
   env: Env,
   ctx: RouterContext<Env, Ctx>,
-  next: Next
+  next: Next,
 ) => Response | Promise<Response>;
 
 interface MiddlewareEntry<Env = unknown, Ctx = ExecutionContext> {
@@ -76,7 +76,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
     err: any,
     request: Request,
     env: Env,
-    ctx: RouterContext<Env, Ctx>
+    ctx: RouterContext<Env, Ctx>,
   ) => Response | Promise<Response>;
   private strict: boolean;
   public openAPIRegistry: OpenAPIRegistry;
@@ -91,7 +91,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
   private addRoute(
     method: string,
     path: string,
-    handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[]
+    handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[],
   ) {
     if (!isValidPath(path)) {
       throw new Error(`Invalid route path: ${path}. Paths must not contain forbidden characters.`);
@@ -106,9 +106,9 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
 
     for (let i = 0; i < rawParts.length; i++) {
       const part = rawParts[i];
-      const isParam = part.startsWith(':');
-      const isWildcard = part === '*';
-      const partKey = isWildcard ? '*' : isParam ? ':' : part;
+      const isParam = part.startsWith(":");
+      const isWildcard = part === "*";
+      const partKey = isWildcard ? "*" : isParam ? ":" : part;
 
       if (!node.children[partKey]) {
         node.children[partKey] = new RouterTrieNode();
@@ -146,8 +146,8 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
   }
 
   use(path: string | Middleware<Env, Ctx>, middleware?: Middleware<Env, Ctx>) {
-    if (typeof path === 'function') {
-      this.middlewares.push({ path: '*', handler: path });
+    if (typeof path === "function") {
+      this.middlewares.push({ path: "*", handler: path });
     } else if (middleware) {
       this.middlewares.push({ path, handler: middleware });
     }
@@ -159,18 +159,18 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
    * @param schema The Zod schema to validate against
    */
   static zValidator<S extends z.ZodTypeAny, Env = unknown, Ctx = ExecutionContext>(
-    target: 'json' | 'query' | 'header' | 'param',
-    schema: S
+    target: "json" | "query" | "header" | "param",
+    schema: S,
   ): Middleware<Env, Ctx> {
     return async (req, env, ctx, next) => {
       let value: any;
-      if (target === 'json') {
+      if (target === "json") {
         value = await ctx.parseJson();
-      } else if (target === 'query') {
+      } else if (target === "query") {
         value = ctx.query;
-      } else if (target === 'header') {
+      } else if (target === "header") {
         value = ctx.headers;
-      } else if (target === 'param') {
+      } else if (target === "param") {
         value = ctx.params;
       }
 
@@ -178,11 +178,11 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       if (!result.success) {
         return ctx.json(
           {
-            error: 'Validation failed',
+            error: "Validation failed",
             target,
             issues: result.error.issues,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -194,10 +194,10 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
   }
 
   private matchPath(pattern: string, path: string): boolean {
-    if (pattern === '*') return true;
+    if (pattern === "*") return true;
     if (pattern === path) return true;
-    if (pattern.endsWith('/') && path.startsWith(pattern)) return true;
-    if (!pattern.endsWith('/') && path.startsWith(pattern + '/')) return true;
+    if (pattern.endsWith("/") && path.startsWith(pattern)) return true;
+    if (!pattern.endsWith("/") && path.startsWith(pattern + "/")) return true;
     return false;
   }
 
@@ -205,7 +205,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
     request: Request,
     env: Env,
     ctx: RouterContext<Env, Ctx>,
-    finalHandler: () => Promise<Response>
+    finalHandler: () => Promise<Response>,
   ): Promise<Response> {
     const pathname = new URL(request.url).pathname;
     const matchedMiddlewares = this.middlewares.filter((m) => this.matchPath(m.path, pathname));
@@ -228,44 +228,44 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
   }
 
   get(path: string, ...handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[]) {
-    this.on('GET', path, ...handlers);
+    this.on("GET", path, ...handlers);
   }
 
   post(path: string, ...handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[]) {
-    this.on('POST', path, ...handlers);
+    this.on("POST", path, ...handlers);
   }
 
   put(path: string, ...handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[]) {
-    this.on('PUT', path, ...handlers);
+    this.on("PUT", path, ...handlers);
   }
 
   delete(path: string, ...handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[]) {
-    this.on('DELETE', path, ...handlers);
+    this.on("DELETE", path, ...handlers);
   }
 
   patch(path: string, ...handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[]) {
-    this.on('PATCH', path, ...handlers);
+    this.on("PATCH", path, ...handlers);
   }
 
   openapi<T extends RouteConfig>(config: T, handler: RouteHandler<Env, Ctx>) {
     // Transform {id} to :id for the router
-    const routingPath = config.path.replace(/{([^}]+)}/g, ':$1');
+    const routingPath = config.path.replace(/{([^}]+)}/g, ":$1");
 
     const handlers: (Middleware<Env, Ctx> | RouteHandler<Env, Ctx>)[] = [];
 
     // Apply automatic validation middleware based on config
     if (config.request?.params) {
-      handlers.push(Router.zValidator('param', config.request.params));
+      handlers.push(Router.zValidator("param", config.request.params));
     }
     if (config.request?.query) {
-      handlers.push(Router.zValidator('query', config.request.query));
+      handlers.push(Router.zValidator("query", config.request.query));
     }
     if (config.request?.headers) {
-      handlers.push(Router.zValidator('header', config.request.headers));
+      handlers.push(Router.zValidator("header", config.request.headers));
     }
-    if (config.request?.body?.content['application/json']?.schema) {
+    if (config.request?.body?.content["application/json"]?.schema) {
       handlers.push(
-        Router.zValidator('json', config.request.body.content['application/json'].schema)
+        Router.zValidator("json", config.request.body.content["application/json"].schema),
       );
     }
 
@@ -302,7 +302,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
   getOpenApiDocument(info: { title: string; version: string; description?: string }): any {
     const generator = new OpenApiGeneratorV3(this.openAPIRegistry.definitions);
     return generator.generateDocument({
-      openapi: '3.0.0',
+      openapi: "3.0.0",
       info,
     });
   }
@@ -312,22 +312,22 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       err: any,
       request: Request,
       env: Env,
-      ctx: RouterContext<Env, Ctx>
-    ) => Response | Promise<Response>
+      ctx: RouterContext<Env, Ctx>,
+    ) => Response | Promise<Response>,
   ) {
     this.errorHandler = handler;
   }
 
   findRoute(
     method: string,
-    path: string
+    path: string,
   ): {
     handler: RouteHandler<Env, Ctx>;
     params: Record<string, string>;
   } | null {
     // The path passed here should already be decoded and NFC normalized
     let truePath = path;
-    if (!this.strict && truePath.length > 1 && truePath.endsWith('/')) {
+    if (!this.strict && truePath.length > 1 && truePath.endsWith("/")) {
       truePath = truePath.slice(0, -1);
     }
 
@@ -341,8 +341,8 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
 
       // Priority: Exact match > Parameter > Wildcard
       const exactChild = node.children[part];
-      const paramChild = node.children[':'];
-      const wildcardChild = node.children['*'];
+      const paramChild = node.children[":"];
+      const wildcardChild = node.children["*"];
 
       if (exactChild) {
         node = exactChild;
@@ -353,7 +353,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
         node = paramChild;
       } else if (wildcardChild) {
         // Wildcard matches ALL remaining segments
-        params['*'] = trueParts.slice(i).join('/');
+        params["*"] = trueParts.slice(i).join("/");
         node = wildcardChild;
         break; // Exit loop as wildcard is terminal
       } else {
@@ -370,7 +370,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
     const method = request.method;
 
     // Decode the path safely and normalize
-    const decodedPath = tryDecode(url.pathname).normalize('NFC');
+    const decodedPath = tryDecode(url.pathname).normalize("NFC");
 
     // DoS Protection: Limit path segments
     try {
@@ -380,7 +380,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
     }
 
     if (!isValidPath(decodedPath)) {
-      return new Response('Malformed Path', { status: 400 });
+      return new Response("Malformed Path", { status: 400 });
     }
 
     // We use the original url.pathname for routing to preserve trailing slash behavior
@@ -398,7 +398,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       json: (data, init) => {
         const headers = new Headers(init?.headers);
         responseHeaders.forEach((v, k) => headers.append(k, v));
-        headers.set('Content-Type', 'application/json');
+        headers.set("Content-Type", "application/json");
         return new Response(JSON.stringify(data), { ...init, headers });
       },
       text: (data, init) => {
@@ -409,12 +409,12 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       html: (data, init) => {
         const headers = new Headers(init?.headers);
         responseHeaders.forEach((v, k) => headers.append(k, v));
-        headers.set('Content-Type', 'text/html; charset=utf-8');
+        headers.set("Content-Type", "text/html; charset=utf-8");
         return new Response(data, { ...init, headers });
       },
       redirect: (url, status = 302) => Response.redirect(url, status),
       cache: (seconds) => {
-        responseHeaders.set('Cache-Control', `public, max-age=${seconds}`);
+        responseHeaders.set("Cache-Control", `public, max-age=${seconds}`);
       },
       parseJson: async () => {
         try {
@@ -434,14 +434,14 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
     });
 
     // Handle CORS preflight automatically if CORS middleware is used
-    if (request.method === 'OPTIONS') {
+    if (request.method === "OPTIONS") {
       const pathname =
-        url.pathname === '/' || !url.pathname.endsWith('/')
+        url.pathname === "/" || !url.pathname.endsWith("/")
           ? url.pathname
           : url.pathname.slice(0, -1);
       const _preflightHeaders = new Headers();
       const _matchedCORS = this.middlewares.filter(
-        (m) => m.path === '*' || this.matchPath(m.path, pathname)
+        (m) => m.path === "*" || this.matchPath(m.path, pathname),
       );
       // Note: This logic depends on the specific CORS middleware implementation below
     }
@@ -457,7 +457,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
 
         return new Response(`"${decodedPath}" not found`, {
           status: 404,
-          statusText: 'Not Found',
+          statusText: "Not Found",
         });
       });
     } catch (err) {
@@ -465,7 +465,7 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
         return await this.errorHandler(err, request, env, ctx);
       }
       console.error(err);
-      return new Response('Internal Server Error', { status: 500 });
+      return new Response("Internal Server Error", { status: 500 });
     }
   }
 }

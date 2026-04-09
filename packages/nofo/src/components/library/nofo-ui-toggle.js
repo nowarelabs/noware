@@ -1,14 +1,14 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIToggle extends NofoElement {
   static props() {
     return {
-      pressed: { type: Boolean, attribute: 'pressed' },
-      defaultPressed: { type: Boolean, attribute: 'defaultPressed' },
-      disabled: { type: Boolean, attribute: 'disabled' },
-      size: { type: String, attribute: 'size' },
-      variant: { type: String, attribute: 'variant' }
+      pressed: { type: Boolean, attribute: "pressed" },
+      defaultPressed: { type: Boolean, attribute: "defaultPressed" },
+      disabled: { type: Boolean, attribute: "disabled" },
+      size: { type: String, attribute: "size" },
+      variant: { type: String, attribute: "variant" },
     };
   }
 
@@ -59,40 +59,40 @@ class NofoUIToggle extends NofoElement {
   }
 
   static styles() {
-    return '';
+    return "";
   }
 
   onMount() {
-    this._toggle = this.shadowRoot.querySelector('nofo-toggle-group-item');
+    this._toggle = this.shadowRoot.querySelector("nofo-toggle-group-item");
     this.sync();
   }
 
   sync() {
     if (this._toggle) {
       if (this.pressed) {
-        this._toggle.setAttribute('pressed', '');
+        this._toggle.setAttribute("pressed", "");
       } else {
-        this._toggle.removeAttribute('pressed');
+        this._toggle.removeAttribute("pressed");
       }
-      
+
       if (this.disabled) {
-        this._toggle.setAttribute('disabled', '');
+        this._toggle.setAttribute("disabled", "");
       } else {
-        this._toggle.removeAttribute('disabled');
+        this._toggle.removeAttribute("disabled");
       }
-      
-      const size = this.size || 'md';
+
+      const size = this.size || "md";
       const sizeMap = {
-        'sm': '1',
-        'md': '2',
-        'lg': '3'
+        sm: "1",
+        md: "2",
+        lg: "3",
       };
-      this._toggle.setAttribute('size', sizeMap[size] || '2');
-      
-      const variant = this.variant || 'outline';
-      this._toggle.setAttribute('variant', variant);
+      this._toggle.setAttribute("size", sizeMap[size] || "2");
+
+      const variant = this.variant || "outline";
+      this._toggle.setAttribute("variant", variant);
     }
   }
 }
 
-customElements.define('nofo-ui-toggle', NofoUIToggle);
+customElements.define("nofo-ui-toggle", NofoUIToggle);

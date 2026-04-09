@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUITooltip extends NofoElement {
   template() {
@@ -63,14 +63,8 @@ class NofoUITooltipContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-tooltip', NofoUITooltip);
-customElements.define('nofo-ui-tooltip-trigger', NofoUITooltipTrigger);
-customElements.define('nofo-ui-tooltip-content', NofoUITooltipContent);
+customElements.define("nofo-ui-tooltip", NofoUITooltip);
+customElements.define("nofo-ui-tooltip-trigger", NofoUITooltipTrigger);
+customElements.define("nofo-ui-tooltip-content", NofoUITooltipContent);
 
-export {
-  NofoUITooltip,
-  NofoUITooltipTrigger,
-  NofoUITooltipContent
-};
-
-
+export { NofoUITooltip, NofoUITooltipTrigger, NofoUITooltipContent };

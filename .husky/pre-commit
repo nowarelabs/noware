@@ -1,7 +1,0 @@
-#!/bin/sh
-# Direct pnpm invocation without husky.sh
-
-npx --yes pnpm run format
-npx --yes pnpm run lint
-npx --yes pnpm run typecheck
-npx --yes pnpm run test

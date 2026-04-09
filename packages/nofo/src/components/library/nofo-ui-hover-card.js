@@ -1,16 +1,18 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIHoverCard extends NofoElement {
   static props = {
     openDelay: 200,
-    closeDelay: 300
+    closeDelay: 300,
   };
 
   onMount() {
     this.sync()
-      .attr('openDelay').toDataAttr('open-delay')
-      .attr('closeDelay').toDataAttr('close-delay');
+      .attr("openDelay")
+      .toDataAttr("open-delay")
+      .attr("closeDelay")
+      .toDataAttr("close-delay");
   }
 
   template() {
@@ -75,14 +77,8 @@ class NofoUIHoverCardContent extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-hover-card', NofoUIHoverCard);
-customElements.define('nofo-ui-hover-card-trigger', NofoUIHoverCardTrigger);
-customElements.define('nofo-ui-hover-card-content', NofoUIHoverCardContent);
+customElements.define("nofo-ui-hover-card", NofoUIHoverCard);
+customElements.define("nofo-ui-hover-card-trigger", NofoUIHoverCardTrigger);
+customElements.define("nofo-ui-hover-card-content", NofoUIHoverCardContent);
 
-export {
-  NofoUIHoverCard,
-  NofoUIHoverCardTrigger,
-  NofoUIHoverCardContent
-};
-
-
+export { NofoUIHoverCard, NofoUIHoverCardTrigger, NofoUIHoverCardContent };

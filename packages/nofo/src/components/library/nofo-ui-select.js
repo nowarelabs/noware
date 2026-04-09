@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUISelect extends NofoElement {
   static props = {
@@ -7,26 +7,31 @@ class NofoUISelect extends NofoElement {
     defaultValue: null,
     disabled: false,
     name: null,
-    required: false
+    required: false,
   };
 
   onMount() {
     this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('defaultValue').toDataAttr('defaultValue')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('name').toDataAttr('name')
-      .attr('required').toDataAttr('required');
+      .attr("value")
+      .toDataAttr("value")
+      .attr("defaultValue")
+      .toDataAttr("defaultValue")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("name")
+      .toDataAttr("name")
+      .attr("required")
+      .toDataAttr("required");
   }
 
   template() {
     return `
       <nofo-select 
-        value="${this.state.value || ''}" 
-        defaultValue="${this.state.defaultValue || ''}"
-        ${this.state.disabled ? 'disabled' : ''}
-        name="${this.state.name || ''}"
-        ${this.state.required ? 'required' : ''}
+        value="${this.state.value || ""}" 
+        defaultValue="${this.state.defaultValue || ""}"
+        ${this.state.disabled ? "disabled" : ""}
+        name="${this.state.name || ""}"
+        ${this.state.required ? "required" : ""}
         variant="surface"
         size="2"
       >
@@ -79,11 +84,11 @@ class NofoUISelectTrigger extends NofoElement {
 
 class NofoUISelectValue extends NofoElement {
   static props = {
-    placeholder: ''
+    placeholder: "",
   };
 
   onMount() {
-    this.sync().attr('placeholder').toDataAttr('placeholder');
+    this.sync().attr("placeholder").toDataAttr("placeholder");
   }
 
   template() {
@@ -128,19 +133,17 @@ class NofoUISelectContent extends NofoElement {
 
 class NofoUISelectItem extends NofoElement {
   static props = {
-    value: '',
-    disabled: false
+    value: "",
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("value").toDataAttr("value").attr("disabled").toDataAttr("disabled");
   }
 
   template() {
     return `
-      <nofo-select-item value="${this.state.value}" ${this.state.disabled ? 'disabled' : ''}>
+      <nofo-select-item value="${this.state.value}" ${this.state.disabled ? "disabled" : ""}>
         <slot></slot>
       </nofo-select-item>
     `;
@@ -165,18 +168,16 @@ class NofoUISelectItem extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-select', NofoUISelect);
-customElements.define('nofo-ui-select-trigger', NofoUISelectTrigger);
-customElements.define('nofo-ui-select-value', NofoUISelectValue);
-customElements.define('nofo-ui-select-content', NofoUISelectContent);
-customElements.define('nofo-ui-select-item', NofoUISelectItem);
+customElements.define("nofo-ui-select", NofoUISelect);
+customElements.define("nofo-ui-select-trigger", NofoUISelectTrigger);
+customElements.define("nofo-ui-select-value", NofoUISelectValue);
+customElements.define("nofo-ui-select-content", NofoUISelectContent);
+customElements.define("nofo-ui-select-item", NofoUISelectItem);
 
 export {
   NofoUISelect,
   NofoUISelectTrigger,
   NofoUISelectValue,
   NofoUISelectContent,
-  NofoUISelectItem
+  NofoUISelectItem,
 };
-
-

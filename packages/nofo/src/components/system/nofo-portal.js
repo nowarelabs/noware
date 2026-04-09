@@ -1,12 +1,12 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoPortal extends NofoElement {
   onMount() {
-    this._portalRoot = document.createElement('div');
-    this._portalRoot.setAttribute('data-portal', 'true');
+    this._portalRoot = document.createElement("div");
+    this._portalRoot.setAttribute("data-portal", "true");
     document.body.appendChild(this._portalRoot);
     this.moveChildren();
-    
+
     this._observer = new MutationObserver(() => this.moveChildren());
     this._observer.observe(this, { childList: true });
   }
@@ -26,7 +26,7 @@ class NofoPortal extends NofoElement {
   }
 
   template() {
-    return '';
+    return "";
   }
 
   styles() {
@@ -34,7 +34,5 @@ class NofoPortal extends NofoElement {
   }
 }
 
-customElements.define('nofo-portal', NofoPortal);
+customElements.define("nofo-portal", NofoPortal);
 export { NofoPortal };
-
-

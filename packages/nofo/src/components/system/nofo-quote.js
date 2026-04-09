@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoQuote extends NofoElement {
   template() {
@@ -28,5 +28,5 @@ class NofoQuote extends NofoElement {
   }
 }
 
-customElements.define('nofo-quote', NofoQuote);
+customElements.define("nofo-quote", NofoQuote);
 export { NofoQuote };

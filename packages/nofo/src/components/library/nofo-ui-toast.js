@@ -1,5 +1,5 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIToastProvider extends NofoElement {
   template() {
@@ -30,32 +30,30 @@ class NofoUIToastProvider extends NofoElement {
 
 class NofoUIToast extends NofoElement {
   static props = {
-    title: '',
-    description: '',
-    variant: 'default',
+    title: "",
+    description: "",
+    variant: "default",
     open: false,
-    duration: 5000
+    duration: 5000,
   };
 
   onMount() {
-    this.sync()
-      .attr('open').toDataAttr('open')
-      .attr('duration').toDataAttr('duration');
+    this.sync().attr("open").toDataAttr("open").attr("duration").toDataAttr("duration");
   }
 
   getSystemVariant(variant) {
     const map = {
-      'default': 'default',
-      'destructive': 'error',
-      'success': 'success'
+      default: "default",
+      destructive: "error",
+      success: "success",
     };
-    return map[variant] || 'default';
+    return map[variant] || "default";
   }
 
   template() {
     const systemVariant = this.getSystemVariant(this.state.variant);
     return `
-      <nofo-toast variant="${systemVariant}" ${this.state.open ? 'open' : ''} duration="${this.state.duration}">
+      <nofo-toast variant="${systemVariant}" ${this.state.open ? "open" : ""} duration="${this.state.duration}">
         <slot></slot>
       </nofo-toast>
     `;
@@ -168,18 +166,16 @@ class NofoUIToastClose extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-toast-provider', NofoUIToastProvider);
-customElements.define('nofo-ui-toast', NofoUIToast);
-customElements.define('nofo-ui-toast-title', NofoUIToastTitle);
-customElements.define('nofo-ui-toast-description', NofoUIToastDescription);
-customElements.define('nofo-ui-toast-close', NofoUIToastClose);
+customElements.define("nofo-ui-toast-provider", NofoUIToastProvider);
+customElements.define("nofo-ui-toast", NofoUIToast);
+customElements.define("nofo-ui-toast-title", NofoUIToastTitle);
+customElements.define("nofo-ui-toast-description", NofoUIToastDescription);
+customElements.define("nofo-ui-toast-close", NofoUIToastClose);
 
 export {
   NofoUIToastProvider,
   NofoUIToast,
   NofoUIToastTitle,
   NofoUIToastDescription,
-  NofoUIToastClose
+  NofoUIToastClose,
 };
-
-

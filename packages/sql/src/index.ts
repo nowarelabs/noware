@@ -1,2 +1,2 @@
-export * from './dialects';
-export * from './statements';
+export * from "./dialects";
+export * from "./statements";

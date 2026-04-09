@@ -30,7 +30,7 @@ export class MatchViewDO extends BaseDurableObject {
     // 1. Data Projection Pattern
     this.is_view({
       table: matches,
-      primaryKey: "id"
+      primaryKey: "id",
     });
 
     // 2. Population Pattern
@@ -39,7 +39,7 @@ export class MatchViewDO extends BaseDurableObject {
         const data = await owner.env.MATCH_SERVICE.getMatch(matchId);
         return [data];
       },
-      into: matches
+      into: matches,
     });
 
     // 3. Task Queue Pattern
@@ -47,13 +47,13 @@ export class MatchViewDO extends BaseDurableObject {
       name: "score_updates",
       onProcess: async (owner, item) => {
         await owner.db.update(matches).set({ score: item.score }).where(eq(matches.id, item.id));
-      }
+      },
     });
 
     // 4. Locking Pattern
     this.is_lock({
       type: "status",
-      timeoutMs: 30000
+      timeoutMs: 30000,
     });
   }
 }
@@ -61,20 +61,20 @@ export class MatchViewDO extends BaseDurableObject {
 
 ### Available Patterns (DSL)
 
-| DSL Method | Delegate | Description |
-|------------|----------|-------------|
-| `is_view(config)` | `ViewDelegate` | Exposes `view.handle()` and `view.find()` for querying local state. |
-| `can_populate(config)` | `PopulateDelegate` | Exposes `populate()` to fill DO storage from external sources. |
-| `is_queue(config)` | `QueueDelegate` | SQL-backed queue for background tasks. |
-| `is_check(config)` | `CheckDelegate` | Validation logic for incoming data. |
-| `is_lock(config)` | `LockDelegate` | Synchronization for status or callback confirmation. |
-| `is_search(config)` | `SearchDelegate` | LIKE-based search and pagination. |
-| `is_sequential(config)`| `ExecutionDelegate`| Sequential task execution. |
-| `is_parallel(config)` | `ExecutionDelegate`| Parallel task execution. |
-| `is_event_log(config)` | `LogDelegate` | Recording events to a log table. |
-| `is_calculate(config)` | `LogicDelegate` | Complex calculation logic. |
-| `is_trigger(config)` | `LogicDelegate` | Reactive event triggers. |
-| `is_configure(config)` | `ConfigDelegate` | Custom DO configuration handling. |
+| DSL Method              | Delegate            | Description                                                         |
+| ----------------------- | ------------------- | ------------------------------------------------------------------- |
+| `is_view(config)`       | `ViewDelegate`      | Exposes `view.handle()` and `view.find()` for querying local state. |
+| `can_populate(config)`  | `PopulateDelegate`  | Exposes `populate()` to fill DO storage from external sources.      |
+| `is_queue(config)`      | `QueueDelegate`     | SQL-backed queue for background tasks.                              |
+| `is_check(config)`      | `CheckDelegate`     | Validation logic for incoming data.                                 |
+| `is_lock(config)`       | `LockDelegate`      | Synchronization for status or callback confirmation.                |
+| `is_search(config)`     | `SearchDelegate`    | LIKE-based search and pagination.                                   |
+| `is_sequential(config)` | `ExecutionDelegate` | Sequential task execution.                                          |
+| `is_parallel(config)`   | `ExecutionDelegate` | Parallel task execution.                                            |
+| `is_event_log(config)`  | `LogDelegate`       | Recording events to a log table.                                    |
+| `is_calculate(config)`  | `LogicDelegate`     | Complex calculation logic.                                          |
+| `is_trigger(config)`    | `LogicDelegate`     | Reactive event triggers.                                            |
+| `is_configure(config)`  | `ConfigDelegate`    | Custom DO configuration handling.                                   |
 
 ### RPC Accessibility
 
@@ -100,7 +100,9 @@ export class CustomDelegate extends DurableObjectBaseDelegate {
 }
 
 // In your DO constructor:
-this.use("custom", CustomDelegate, { /* config */ });
+this.use("custom", CustomDelegate, {
+  /* config */
+});
 ```
 
 ## License

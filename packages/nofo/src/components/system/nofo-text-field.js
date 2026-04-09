@@ -1,40 +1,46 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoTextField extends NofoElement {
   static props = {
-    value: '',
-    defaultValue: '',
-    placeholder: '',
-    size: '2',
-    variant: 'surface',
-    color: 'accent',
-    type: 'text',
+    value: "",
+    defaultValue: "",
+    placeholder: "",
+    size: "2",
+    variant: "surface",
+    color: "accent",
+    type: "text",
     disabled: false,
     readOnly: false,
     required: false,
-    name: '',
-    autoComplete: '',
-    pattern: '',
+    name: "",
+    autoComplete: "",
+    pattern: "",
     minLength: null,
     maxLength: null,
     min: null,
     max: null,
     step: null,
-    error: '',
+    error: "",
     invalid: false,
-    helperText: '',
-    label: '',
-    description: ''
+    helperText: "",
+    label: "",
+    description: "",
   };
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('color').toDataAttr('color')
-      .attr('disabled').toDataAttr('disabled')
-      .attr('invalid').toDataAttr('invalid')
-      .attr('error').toDataAttr('invalid', v => !!v);
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("color")
+      .toDataAttr("color")
+      .attr("disabled")
+      .toDataAttr("disabled")
+      .attr("invalid")
+      .toDataAttr("invalid")
+      .attr("error")
+      .toDataAttr("invalid", (v) => !!v);
 
     if (this.defaultValue && !this.value) {
       this.state.value = this.defaultValue;
@@ -43,22 +49,40 @@ class NofoTextField extends NofoElement {
 
   handleInput(e) {
     this.state.value = e.target.value;
-    this.dispatchEvent(new CustomEvent('value-change', {
-      detail: { value: this.state.value },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("value-change", {
+        detail: { value: this.state.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
-    const { 
-      type, name, autoComplete, pattern, minLength, maxLength, min, max, step,
-      disabled, readOnly, required, placeholder, label, error, helperText, description, value
+    const {
+      type,
+      name,
+      autoComplete,
+      pattern,
+      minLength,
+      maxLength,
+      min,
+      max,
+      step,
+      disabled,
+      readOnly,
+      required,
+      placeholder,
+      label,
+      error,
+      helperText,
+      description,
+      value,
     } = this.state;
 
     return `
       <div class="root">
-        ${label ? `<label class="label">${label}</label>` : ''}
+        ${label ? `<label class="label">${label}</label>` : ""}
         <div class="field-wrapper">
           <div class="prefix"><slot name="prefix"></slot></div>
           <input 
@@ -66,11 +90,11 @@ class NofoTextField extends NofoElement {
             name="${name}"
             autocomplete="${autoComplete}"
             pattern="${pattern}"
-            minlength="${minLength || ''}"
-            maxlength="${maxLength || ''}"
-            min="${min || ''}"
-            max="${max || ''}"
-            step="${step || ''}"
+            minlength="${minLength || ""}"
+            maxlength="${maxLength || ""}"
+            min="${min || ""}"
+            max="${max || ""}"
+            step="${step || ""}"
             ?disabled="${disabled}"
             ?readonly="${readOnly}"
             ?required="${required}"
@@ -80,9 +104,9 @@ class NofoTextField extends NofoElement {
           />
           <div class="suffix"><slot name="suffix"></slot></div>
         </div>
-        ${error ? `<div class="error-text">${error}</div>` : ''}
-        ${helperText && !error ? `<div class="helper-text">${helperText}</div>` : ''}
-        ${description ? `<div class="description">${description}</div>` : ''}
+        ${error ? `<div class="error-text">${error}</div>` : ""}
+        ${helperText && !error ? `<div class="helper-text">${helperText}</div>` : ""}
+        ${description ? `<div class="description">${description}</div>` : ""}
       </div>
     `;
   }
@@ -134,13 +158,15 @@ class NofoTextField extends NofoElement {
 }
 
 class NofoTextFieldSlot extends NofoElement {
-  static props = { name: '' };
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: contents; }`; }
+  static props = { name: "" };
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: contents; }`;
+  }
 }
 
-customElements.define('nofo-text-field', NofoTextField);
-customElements.define('nofo-text-field-slot', NofoTextFieldSlot);
+customElements.define("nofo-text-field", NofoTextField);
+customElements.define("nofo-text-field-slot", NofoTextFieldSlot);
 export { NofoTextField, NofoTextFieldSlot };
-
-

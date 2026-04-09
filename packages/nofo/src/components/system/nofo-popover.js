@@ -1,21 +1,27 @@
-import { NofoElement, useClickOutside } from '../../index.js';
+import { NofoElement, useClickOutside } from "../../index.js";
 
 class NofoPopover extends NofoElement {
   static props = {
-    open: false
+    open: false,
   };
 
   onMount() {
-    this.sync().attr('open').toDataAttr('state', (v) => v ? 'open' : 'closed');
+    this.sync()
+      .attr("open")
+      .toDataAttr("state", (v) => (v ? "open" : "closed"));
 
-    this.addEventListener('popover-open', () => {
+    this.addEventListener("popover-open", () => {
       this.state.open = true;
-      this.dispatchEvent(new CustomEvent('open-change', { detail: { open: true }, bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent("open-change", { detail: { open: true }, bubbles: true, composed: true }),
+      );
     });
-    
-    this.addEventListener('popover-close', () => {
+
+    this.addEventListener("popover-close", () => {
       this.state.open = false;
-      this.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent("open-change", { detail: { open: false }, bubbles: true, composed: true }),
+      );
     });
   }
 
@@ -30,12 +36,18 @@ class NofoPopover extends NofoElement {
 
 class NofoPopoverTrigger extends NofoElement {
   onMount() {
-    this.addEventListener('click', (e) => {
+    this.addEventListener("click", (e) => {
       e.stopPropagation();
-      const parent = this.closest('nofo-popover');
+      const parent = this.closest("nofo-popover");
       if (parent) {
         parent.state.open = !parent.state.open;
-        parent.dispatchEvent(new CustomEvent('open-change', { detail: { open: parent.state.open }, bubbles: true, composed: true }));
+        parent.dispatchEvent(
+          new CustomEvent("open-change", {
+            detail: { open: parent.state.open },
+            bubbles: true,
+            composed: true,
+          }),
+        );
       }
     });
   }
@@ -51,30 +63,40 @@ class NofoPopoverTrigger extends NofoElement {
 
 class NofoPopoverContent extends NofoElement {
   static props = {
-    size: '2',
-    side: 'bottom',
-    align: 'center',
-    sideOffset: 5
+    size: "2",
+    side: "bottom",
+    align: "center",
+    sideOffset: 5,
   };
 
   #clickOutsideCleanup = null;
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('side').toDataAttr('side')
-      .attr('align').toDataAttr('align')
-      .attr('sideOffset').toDataAttr('side-offset');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("side")
+      .toDataAttr("side")
+      .attr("align")
+      .toDataAttr("align")
+      .attr("sideOffset")
+      .toDataAttr("side-offset");
 
     this.effect(() => {
-      const parent = this.closest('nofo-popover');
+      const parent = this.closest("nofo-popover");
       if (parent) {
         if (parent.state.open) {
           const { bind } = useClickOutside();
           this.#clickOutsideCleanup = bind(this, () => {
             if (parent.state.open) {
               parent.state.open = false;
-              parent.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+              parent.dispatchEvent(
+                new CustomEvent("open-change", {
+                  detail: { open: false },
+                  bubbles: true,
+                  composed: true,
+                }),
+              );
             }
           });
         } else if (this.#clickOutsideCleanup) {
@@ -93,43 +115,43 @@ class NofoPopoverContent extends NofoElement {
 
   getSizeStyles(size) {
     const sizes = {
-      '1': { padding: '0.5rem', maxWidth: '200px' },
-      '2': { padding: '0.75rem', maxWidth: '250px' },
-      '3': { padding: '1rem', maxWidth: '300px' },
-      '4': { padding: '1.5rem', maxWidth: '350px' }
+      1: { padding: "0.5rem", maxWidth: "200px" },
+      2: { padding: "0.75rem", maxWidth: "250px" },
+      3: { padding: "1rem", maxWidth: "300px" },
+      4: { padding: "1.5rem", maxWidth: "350px" },
     };
-    return sizes[size] || sizes['2'];
+    return sizes[size] || sizes["2"];
   }
 
   getSideStyles(side, sideOffset) {
     const offset = parseInt(sideOffset) || 5;
     const sides = {
-      'top': { bottom: `calc(100% + ${offset}px)` },
-      'right': { left: `calc(100% + ${offset}px)` },
-      'bottom': { top: `calc(100% + ${offset}px)` },
-      'left': { right: `calc(100% + ${offset}px)` }
+      top: { bottom: `calc(100% + ${offset}px)` },
+      right: { left: `calc(100% + ${offset}px)` },
+      bottom: { top: `calc(100% + ${offset}px)` },
+      left: { right: `calc(100% + ${offset}px)` },
     };
-    return sides[side] || sides['bottom'];
+    return sides[side] || sides["bottom"];
   }
 
   getAlignStyles(align) {
     const alignments = {
-      'start': { alignItems: 'flex-start' },
-      'center': { alignItems: 'center' },
-      'end': { alignItems: 'flex-end' }
+      start: { alignItems: "flex-start" },
+      center: { alignItems: "center" },
+      end: { alignItems: "flex-end" },
     };
-    return alignments[align] || alignments['center'];
+    return alignments[align] || alignments["center"];
   }
 
   template() {
-    const parent = this.closest('nofo-popover');
+    const parent = this.closest("nofo-popover");
     const isOpen = parent && parent.state.open;
-    if (!isOpen) return '';
+    if (!isOpen) return "";
     return `<slot></slot>`;
   }
 
   styles() {
-    const parent = this.closest('nofo-popover');
+    const parent = this.closest("nofo-popover");
     const isOpen = parent && parent.state.open;
     const sizeStyles = this.getSizeStyles(this.state.size);
     const sideStyles = this.getSideStyles(this.state.side, this.state.sideOffset);
@@ -144,10 +166,14 @@ class NofoPopoverContent extends NofoElement {
         padding: ${sizeStyles.padding};
         max-width: ${sizeStyles.maxWidth};
         z-index: 50;
-        display: ${isOpen ? 'block' : 'none'};
+        display: ${isOpen ? "block" : "none"};
         box-sizing: border-box;
-        ${Object.entries(sideStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
-        ${Object.entries(alignStyles).map(([k, v]) => `${k}: ${v};`).join(' ')}
+        ${Object.entries(sideStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
+        ${Object.entries(alignStyles)
+          .map(([k, v]) => `${k}: ${v};`)
+          .join(" ")}
       }
     `;
   }
@@ -155,12 +181,18 @@ class NofoPopoverContent extends NofoElement {
 
 class NofoPopoverClose extends NofoElement {
   onMount() {
-    this.addEventListener('click', (e) => {
+    this.addEventListener("click", (e) => {
       e.stopPropagation();
-      const parent = this.closest('nofo-popover');
+      const parent = this.closest("nofo-popover");
       if (parent) {
         parent.state.open = false;
-        parent.dispatchEvent(new CustomEvent('open-change', { detail: { open: false }, bubbles: true, composed: true }));
+        parent.dispatchEvent(
+          new CustomEvent("open-change", {
+            detail: { open: false },
+            bubbles: true,
+            composed: true,
+          }),
+        );
       }
     });
   }
@@ -174,14 +206,9 @@ class NofoPopoverClose extends NofoElement {
   }
 }
 
-customElements.define('nofo-popover', NofoPopover);
-customElements.define('nofo-popover-trigger', NofoPopoverTrigger);
-customElements.define('nofo-popover-content', NofoPopoverContent);
-customElements.define('nofo-popover-close', NofoPopoverClose);
+customElements.define("nofo-popover", NofoPopover);
+customElements.define("nofo-popover-trigger", NofoPopoverTrigger);
+customElements.define("nofo-popover-content", NofoPopoverContent);
+customElements.define("nofo-popover-close", NofoPopoverClose);
 
-export {
-  NofoPopover,
-  NofoPopoverTrigger,
-  NofoPopoverContent,
-  NofoPopoverClose
-};
+export { NofoPopover, NofoPopoverTrigger, NofoPopoverContent, NofoPopoverClose };

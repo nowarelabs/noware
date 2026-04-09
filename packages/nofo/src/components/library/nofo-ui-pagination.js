@@ -1,27 +1,31 @@
-import { NofoElement } from '../../index.js';
-import { nofoUIStyles } from './nofo-ui-styles.js';
+import { NofoElement } from "../../index.js";
+import { nofoUIStyles } from "./nofo-ui-styles.js";
 
 class NofoUIPagination extends NofoElement {
   static props = {
     value: null,
     defaultValue: null,
     total: 0,
-    perPage: 10
+    perPage: 10,
   };
 
   onMount() {
     this.sync()
-      .attr('value').toDataAttr('value')
-      .attr('defaultValue').toDataAttr('defaultValue')
-      .attr('total').toDataAttr('total')
-      .attr('perPage').toDataAttr('perPage');
+      .attr("value")
+      .toDataAttr("value")
+      .attr("defaultValue")
+      .toDataAttr("defaultValue")
+      .attr("total")
+      .toDataAttr("total")
+      .attr("perPage")
+      .toDataAttr("perPage");
   }
 
   template() {
     return `
       <nofo-pagination
-        value="${this.state.value || ''}"
-        defaultValue="${this.state.defaultValue || ''}"
+        value="${this.state.value || ""}"
+        defaultValue="${this.state.defaultValue || ""}"
         total="${this.state.total}"
         perPage="${this.state.perPage}"
       >
@@ -125,14 +129,9 @@ class NofoUIPaginationPages extends NofoElement {
   }
 }
 
-customElements.define('nofo-ui-pagination', NofoUIPagination);
-customElements.define('nofo-ui-pagination-previous', NofoUIPaginationPrevious);
-customElements.define('nofo-ui-pagination-next', NofoUIPaginationNext);
-customElements.define('nofo-ui-pagination-pages', NofoUIPaginationPages);
+customElements.define("nofo-ui-pagination", NofoUIPagination);
+customElements.define("nofo-ui-pagination-previous", NofoUIPaginationPrevious);
+customElements.define("nofo-ui-pagination-next", NofoUIPaginationNext);
+customElements.define("nofo-ui-pagination-pages", NofoUIPaginationPages);
 
-export {
-  NofoUIPagination,
-  NofoUIPaginationPrevious,
-  NofoUIPaginationNext,
-  NofoUIPaginationPages
-};
+export { NofoUIPagination, NofoUIPaginationPrevious, NofoUIPaginationNext, NofoUIPaginationPages };

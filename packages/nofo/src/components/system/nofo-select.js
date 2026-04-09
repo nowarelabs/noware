@@ -1,58 +1,64 @@
-import { NofoElement, useClickOutside } from '../../index.js';
+import { NofoElement, useClickOutside } from "../../index.js";
 
 class NofoSelect extends NofoElement {
   static props = {
     value: null,
     defaultValue: null,
-    name: '',
+    name: "",
     required: false,
     disabled: false,
-    size: '2',
-    variant: 'surface',
-    color: 'accent',
-    radius: 'medium',
-    open: false
+    size: "2",
+    variant: "surface",
+    color: "accent",
+    radius: "medium",
+    open: false,
   };
 
   #clickOutsideCleanup = null;
 
   onMount() {
     this.sync()
-      .attr('size').toDataAttr('size')
-      .attr('variant').toDataAttr('variant')
-      .attr('open').toDataAttr('state', (val) => val ? 'open' : 'closed')
-      .attr('disabled').toDataAttr('disabled');
+      .attr("size")
+      .toDataAttr("size")
+      .attr("variant")
+      .toDataAttr("variant")
+      .attr("open")
+      .toDataAttr("state", (val) => (val ? "open" : "closed"))
+      .attr("disabled")
+      .toDataAttr("disabled");
 
     if (this.state.value === null && this.state.defaultValue !== null) {
       this.state.value = this.state.defaultValue;
     }
 
-    this.addEventListener('nofo-select-toggle', () => {
+    this.addEventListener("nofo-select-toggle", () => {
       if (!this.state.disabled) {
         this.state.open = !this.state.open;
       }
     });
 
-    this.addEventListener('nofo-select-item-select', (e) => {
+    this.addEventListener("nofo-select-item-select", (e) => {
       const { value } = e.detail;
       this.state.value = value;
       this.state.open = false;
 
-      this.dispatchEvent(new CustomEvent('value-change', {
-        detail: { value },
-        bubbles: true,
-        composed: true
-      }));
+      this.dispatchEvent(
+        new CustomEvent("value-change", {
+          detail: { value },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     });
 
-    this.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.state.open) {
+    this.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.state.open) {
         this.state.open = false;
       }
     });
 
     this.effect(() => {
-      const content = this.querySelector('nofo-select-content');
+      const content = this.querySelector("nofo-select-content");
       if (content) {
         if (this.state.open) {
           const { bind } = useClickOutside();
@@ -92,23 +98,23 @@ class NofoSelect extends NofoElement {
 
 class NofoSelectTrigger extends NofoElement {
   static props = {
-    placeholder: ''
+    placeholder: "",
   };
 
   onMount() {
-    const select = this.closest('nofo-select');
+    const select = this.closest("nofo-select");
     if (select) {
-      this.sync()
-        .dataAttr('size').from(select, 'size')
-        .dataAttr('variant').from(select, 'variant');
+      this.sync().dataAttr("size").from(select, "size").dataAttr("variant").from(select, "variant");
     }
   }
 
   handleClick() {
-    this.dispatchEvent(new CustomEvent('nofo-select-toggle', {
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("nofo-select-toggle", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -144,17 +150,21 @@ class NofoSelectTrigger extends NofoElement {
 
 class NofoSelectValue extends NofoElement {
   onMount() {
-    const select = this.closest('nofo-select');
+    const select = this.closest("nofo-select");
     if (select) {
       this.effect(() => {
         const value = select.state.value;
         const selectedItem = select.querySelector(`nofo-select-item[value="${value}"]`);
         if (selectedItem) {
-          const text = selectedItem.querySelector('nofo-select-item-text');
-          this.shadowRoot.querySelector('.value-text').textContent = text ? text.textContent : selectedItem.textContent.trim();
+          const text = selectedItem.querySelector("nofo-select-item-text");
+          this.shadowRoot.querySelector(".value-text").textContent = text
+            ? text.textContent
+            : selectedItem.textContent.trim();
         } else {
-          const trigger = select.querySelector('nofo-select-trigger');
-          this.shadowRoot.querySelector('.value-text').textContent = trigger ? trigger.state.placeholder : '';
+          const trigger = select.querySelector("nofo-select-trigger");
+          this.shadowRoot.querySelector(".value-text").textContent = trigger
+            ? trigger.state.placeholder
+            : "";
         }
       });
     }
@@ -173,7 +183,9 @@ class NofoSelectValue extends NofoElement {
 }
 
 class NofoSelectIcon extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -188,20 +200,18 @@ class NofoSelectIcon extends NofoElement {
 
 class NofoSelectContent extends NofoElement {
   static props = {
-    position: 'popper',
-    side: 'bottom',
-    align: 'start'
+    position: "popper",
+    side: "bottom",
+    align: "start",
   };
 
   onMount() {
-    this.sync()
-      .attr('side').toDataAttr('side')
-      .attr('align').toDataAttr('align');
+    this.sync().attr("side").toDataAttr("side").attr("align").toDataAttr("align");
 
-    const select = this.closest('nofo-select');
+    const select = this.closest("nofo-select");
     if (select) {
       this.effect(() => {
-        this.setAttribute('data-state', select.state.open ? 'open' : 'closed');
+        this.setAttribute("data-state", select.state.open ? "open" : "closed");
       });
     }
   }
@@ -236,12 +246,18 @@ class NofoSelectContent extends NofoElement {
 }
 
 class NofoSelectGroup extends NofoElement {
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { display: block; box-sizing: border-box; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { display: block; box-sizing: border-box; }`;
+  }
 }
 
 class NofoSelectLabel extends NofoElement {
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -261,29 +277,30 @@ class NofoSelectLabel extends NofoElement {
 class NofoSelectItem extends NofoElement {
   static props = {
     value: null,
-    disabled: false
+    disabled: false,
   };
 
   onMount() {
-    this.sync()
-      .attr('disabled').toDataAttr('disabled');
+    this.sync().attr("disabled").toDataAttr("disabled");
 
-    const select = this.closest('nofo-select');
+    const select = this.closest("nofo-select");
     if (select) {
       this.effect(() => {
         const isSelected = select.state.value === this.state.value;
-        this.setAttribute('data-state', isSelected ? 'checked' : 'unchecked');
+        this.setAttribute("data-state", isSelected ? "checked" : "unchecked");
       });
     }
   }
 
   handleSelect() {
     if (this.state.disabled) return;
-    this.dispatchEvent(new CustomEvent('nofo-select-item-select', {
-      detail: { value: this.state.value },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("nofo-select-item-select", {
+        detail: { value: this.state.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   template() {
@@ -313,20 +330,26 @@ class NofoSelectItem extends NofoElement {
 }
 
 class NofoSelectItemText extends NofoElement {
-  template() { return `<slot></slot>`; }
-  styles() { return `:host { flex: 1; box-sizing: border-box; }`; }
+  template() {
+    return `<slot></slot>`;
+  }
+  styles() {
+    return `:host { flex: 1; box-sizing: border-box; }`;
+  }
 }
 
 class NofoSelectItemIndicator extends NofoElement {
   onMount() {
-    const item = this.closest('nofo-select-item');
+    const item = this.closest("nofo-select-item");
     if (item) {
       this.effect(() => {
-        this.style.display = item.getAttribute('data-state') === 'checked' ? 'flex' : 'none';
+        this.style.display = item.getAttribute("data-state") === "checked" ? "flex" : "none";
       });
     }
   }
-  template() { return `<slot></slot>`; }
+  template() {
+    return `<slot></slot>`;
+  }
   styles() {
     return `
       :host {
@@ -339,7 +362,9 @@ class NofoSelectItemIndicator extends NofoElement {
 }
 
 class NofoSelectSeparator extends NofoElement {
-  template() { return ``; }
+  template() {
+    return ``;
+  }
   styles() {
     return `
       :host {
@@ -353,17 +378,17 @@ class NofoSelectSeparator extends NofoElement {
   }
 }
 
-customElements.define('nofo-select', NofoSelect);
-customElements.define('nofo-select-trigger', NofoSelectTrigger);
-customElements.define('nofo-select-value', NofoSelectValue);
-customElements.define('nofo-select-icon', NofoSelectIcon);
-customElements.define('nofo-select-content', NofoSelectContent);
-customElements.define('nofo-select-group', NofoSelectGroup);
-customElements.define('nofo-select-label', NofoSelectLabel);
-customElements.define('nofo-select-item', NofoSelectItem);
-customElements.define('nofo-select-item-text', NofoSelectItemText);
-customElements.define('nofo-select-item-indicator', NofoSelectItemIndicator);
-customElements.define('nofo-select-separator', NofoSelectSeparator);
+customElements.define("nofo-select", NofoSelect);
+customElements.define("nofo-select-trigger", NofoSelectTrigger);
+customElements.define("nofo-select-value", NofoSelectValue);
+customElements.define("nofo-select-icon", NofoSelectIcon);
+customElements.define("nofo-select-content", NofoSelectContent);
+customElements.define("nofo-select-group", NofoSelectGroup);
+customElements.define("nofo-select-label", NofoSelectLabel);
+customElements.define("nofo-select-item", NofoSelectItem);
+customElements.define("nofo-select-item-text", NofoSelectItemText);
+customElements.define("nofo-select-item-indicator", NofoSelectItemIndicator);
+customElements.define("nofo-select-separator", NofoSelectSeparator);
 
 export {
   NofoSelect,
@@ -376,5 +401,5 @@ export {
   NofoSelectItem,
   NofoSelectItemText,
   NofoSelectItemIndicator,
-  NofoSelectSeparator
+  NofoSelectSeparator,
 };

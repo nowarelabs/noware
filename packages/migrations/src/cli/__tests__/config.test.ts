@@ -1,20 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WranglerConfigUpdater } from '../config';
-import * as fs from 'node:fs/promises';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { WranglerConfigUpdater } from "../config";
+import * as fs from "node:fs/promises";
 
-vi.mock('node:fs/promises', () => ({
+vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
 }));
 
-describe('WranglerConfigUpdater', () => {
-  const mockPath = 'wrangler.jsonc';
+describe("WranglerConfigUpdater", () => {
+  const mockPath = "wrangler.jsonc";
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should parse existing migrations', async () => {
+  it("should parse existing migrations", async () => {
     const content = `{
   "name": "test",
   "migrations": [
@@ -30,16 +30,16 @@ describe('WranglerConfigUpdater', () => {
 
     updaterRes.match(
       (updater) => {
-        const updateRes = updater.addMigrations(['v2']);
+        const updateRes = updater.addMigrations(["v2"]);
         expect(updateRes.success).toBe(true);
       },
       (err) => {
         throw new Error(err.message);
-      }
+      },
     );
   });
 
-  it('should add new migrations while preserving existing ones', async () => {
+  it("should add new migrations while preserving existing ones", async () => {
     const content = `{
   "migrations": [
     {
@@ -52,7 +52,7 @@ describe('WranglerConfigUpdater', () => {
     const updaterRes = await WranglerConfigUpdater.fromFile(mockPath);
     const updater = (updaterRes as any).data;
 
-    updater.addMigrations(['v2']);
+    updater.addMigrations(["v2"]);
 
     await updater.save();
 
@@ -62,7 +62,7 @@ describe('WranglerConfigUpdater', () => {
     expect(writtenContent).toContain('"migrations": [');
   });
 
-  it('should not add duplicate migrations', async () => {
+  it("should not add duplicate migrations", async () => {
     const content = `{
   "migrations": [
     {
@@ -75,7 +75,7 @@ describe('WranglerConfigUpdater', () => {
     const updaterRes = await WranglerConfigUpdater.fromFile(mockPath);
     const updater = (updaterRes as any).data;
 
-    const updateRes = updater.addMigrations(['v1']);
+    const updateRes = updater.addMigrations(["v1"]);
     // It should return success but no changes in content (or at least no new entries)
     // In our implementation, it returns ok(this) if no new entries.
     expect(updateRes.success).toBe(true);
@@ -88,7 +88,7 @@ describe('WranglerConfigUpdater', () => {
     expect(count).toBe(1);
   });
 
-  it('should handle empty migrations array', async () => {
+  it("should handle empty migrations array", async () => {
     const content = `{
   "migrations": []
 }`;
@@ -97,14 +97,14 @@ describe('WranglerConfigUpdater', () => {
     const updaterRes = await WranglerConfigUpdater.fromFile(mockPath);
     const updater = (updaterRes as any).data;
 
-    updater.addMigrations(['v1']);
+    updater.addMigrations(["v1"]);
     await updater.save();
 
     const writtenContent = vi.mocked(fs.writeFile).mock.calls[0][1] as string;
     expect(writtenContent).toContain('"tag": "v1"');
   });
 
-  it('should return error if migrations array is missing', async () => {
+  it("should return error if migrations array is missing", async () => {
     const content = `{
   "name": "test"
 }`;
@@ -113,8 +113,8 @@ describe('WranglerConfigUpdater', () => {
     const updaterRes = await WranglerConfigUpdater.fromFile(mockPath);
     const updater = (updaterRes as any).data;
 
-    const updateRes = updater.addMigrations(['v1']);
+    const updateRes = updater.addMigrations(["v1"]);
     expect(updateRes.success).toBe(false);
-    expect((updateRes as any).error).toBe('Migrations array not found in configuration');
+    expect((updateRes as any).error).toBe("Migrations array not found in configuration");
   });
 });

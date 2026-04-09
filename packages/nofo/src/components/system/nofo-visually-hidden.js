@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoVisuallyHidden extends NofoElement {
   template() {
@@ -34,5 +34,5 @@ class NofoVisuallyHidden extends NofoElement {
   }
 }
 
-customElements.define('nofo-visually-hidden', NofoVisuallyHidden);
+customElements.define("nofo-visually-hidden", NofoVisuallyHidden);
 export { NofoVisuallyHidden };

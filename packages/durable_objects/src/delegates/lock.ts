@@ -1,7 +1,7 @@
-import { DurableObjectBaseDelegate } from '../delegate';
+import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface LockConfig {
-  type: 'status' | 'callback';
+  type: "status" | "callback";
   onTimeout?: (owner: any) => Promise<void>;
   timeoutMs?: number;
 }
@@ -30,7 +30,7 @@ export class LockDelegate extends DurableObjectBaseDelegate<LockConfig> {
     // Acquire lock
     await this.durableObject.storage.sql.exec(
       `INSERT OR REPLACE INTO locks (id, type, expires_at) VALUES (?, ?, ?)`,
-      [id, type, expiresAt]
+      [id, type, expiresAt],
     );
 
     return { success: true, lockId: id };

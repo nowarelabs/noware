@@ -1,4 +1,4 @@
-import { NofoElement } from '../../index.js';
+import { NofoElement } from "../../index.js";
 
 class NofoNumberInput extends NofoElement {
   static props = {
@@ -7,12 +7,12 @@ class NofoNumberInput extends NofoElement {
     min: null,
     max: null,
     step: 1,
-    size: '2',
-    variant: 'surface',
+    size: "2",
+    variant: "surface",
     disabled: false,
     readOnly: false,
     required: false,
-    name: ''
+    name: "",
   };
 
   constructor() {
@@ -32,36 +32,36 @@ class NofoNumberInput extends NofoElement {
   }
 
   setupEventListeners() {
-    const decrement = this.querySelector('nofo-number-input-decrement');
-    const increment = this.querySelector('nofo-number-input-increment');
+    const decrement = this.querySelector("nofo-number-input-decrement");
+    const increment = this.querySelector("nofo-number-input-increment");
 
     if (decrement) {
-      decrement.addEventListener('click', () => {
+      decrement.addEventListener("click", () => {
         if (this.disabled || this.readOnly) return;
         this.decrement();
       });
     }
 
     if (increment) {
-      increment.addEventListener('click', () => {
+      increment.addEventListener("click", () => {
         if (this.disabled || this.readOnly) return;
         this.increment();
       });
     }
 
-    const input = this.shadowRoot.querySelector('input');
+    const input = this.shadowRoot.querySelector("input");
     if (input) {
-      input.addEventListener('input', (e) => {
+      input.addEventListener("input", (e) => {
         if (this.disabled || this.readOnly) return;
 
         const newValue = parseFloat(e.target.value) || 0;
         this._internalValue = this.clampValue(newValue);
-        this.attr('value', this._internalValue);
+        this.attr("value", this._internalValue);
 
-        const event = new CustomEvent('value-change', {
+        const event = new CustomEvent("value-change", {
           detail: { value: this._internalValue },
           bubbles: true,
-          composed: true
+          composed: true,
         });
         this.dispatchEvent(event);
 
@@ -72,14 +72,14 @@ class NofoNumberInput extends NofoElement {
 
   decrement() {
     this._internalValue = this.clampValue(this._internalValue - this.step);
-    this.attr('value', this._internalValue);
+    this.attr("value", this._internalValue);
     this.dispatchChange();
     this.updateValue();
   }
 
   increment() {
     this._internalValue = this.clampValue(this._internalValue + this.step);
-    this.attr('value', this._internalValue);
+    this.attr("value", this._internalValue);
     this.dispatchChange();
     this.updateValue();
   }
@@ -91,8 +91,8 @@ class NofoNumberInput extends NofoElement {
   }
 
   updateValue() {
-    const input = this.shadowRoot.querySelector('input');
-    const valueDisplay = this.querySelector('nofo-number-input-value');
+    const input = this.shadowRoot.querySelector("input");
+    const valueDisplay = this.querySelector("nofo-number-input-value");
 
     if (input) {
       input.value = this._internalValue;
@@ -103,43 +103,43 @@ class NofoNumberInput extends NofoElement {
   }
 
   dispatchChange() {
-    const event = new CustomEvent('value-change', {
+    const event = new CustomEvent("value-change", {
       detail: { value: this._internalValue },
       bubbles: true,
-      composed: true
+      composed: true,
     });
     this.dispatchEvent(event);
   }
 
   getSizeStyles(size) {
     const sizes = {
-      '1': { height: '2rem', fontSize: '0.875rem', padding: '0 0.5rem' },
-      '2': { height: '2.5rem', fontSize: '1rem', padding: '0 0.75rem' },
-      '3': { height: '3rem', fontSize: '1.125rem', padding: '0 1rem' }
+      1: { height: "2rem", fontSize: "0.875rem", padding: "0 0.5rem" },
+      2: { height: "2.5rem", fontSize: "1rem", padding: "0 0.75rem" },
+      3: { height: "3rem", fontSize: "1.125rem", padding: "0 1rem" },
     };
-    return sizes[size] || sizes['2'];
+    return sizes[size] || sizes["2"];
   }
 
   getVariantStyles(variant) {
     const variants = {
-      'surface': {
-        backgroundColor: 'var(--color-panel-solid)',
-        border: '1px solid var(--gray-6)'
+      surface: {
+        backgroundColor: "var(--color-panel-solid)",
+        border: "1px solid var(--gray-6)",
       },
-      'classic': {
-        backgroundColor: 'var(--color-panel-solid)',
-        border: '2px solid var(--gray-6)'
+      classic: {
+        backgroundColor: "var(--color-panel-solid)",
+        border: "2px solid var(--gray-6)",
       },
-      'soft': {
-        backgroundColor: 'var(--gray-2)',
-        border: '1px solid var(--gray-5)'
+      soft: {
+        backgroundColor: "var(--gray-2)",
+        border: "1px solid var(--gray-5)",
       },
-      'ghost': {
-        backgroundColor: 'transparent',
-        border: 'none'
-      }
+      ghost: {
+        backgroundColor: "transparent",
+        border: "none",
+      },
     };
-    return variants[variant] || variants['surface'];
+    return variants[variant] || variants["surface"];
   }
 
   template() {
@@ -149,37 +149,37 @@ class NofoNumberInput extends NofoElement {
     const styles = {
       ...sizeStyles,
       ...variantStyles,
-      borderRadius: 'var(--radius)',
-      color: 'var(--gray-12)',
-      outline: 'none',
-      transition: 'all 0.2s ease',
-      width: '100%',
-      textAlign: 'center',
-      fontFamily: 'inherit'
+      borderRadius: "var(--radius)",
+      color: "var(--gray-12)",
+      outline: "none",
+      transition: "all 0.2s ease",
+      width: "100%",
+      textAlign: "center",
+      fontFamily: "inherit",
     };
 
     const styleString = Object.entries(styles)
-      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-      .join(' ');
+      .map(([key, value]) => `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value};`)
+      .join(" ");
 
     const inputStyles = {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 'var(--space-1)',
-      width: '100%'
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--space-1)",
+      width: "100%",
     };
 
     const inputStyleString = Object.entries(inputStyles)
-      .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-      .join(' ');
+      .map(([key, value]) => `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value};`)
+      .join(" ");
 
-    const minAttr = this.min ? `min="${this.min}"` : '';
-    const maxAttr = this.max ? `max="${this.max}"` : '';
-    const stepAttr = this.step ? `step="${this.step}"` : '';
-    const nameAttr = this.name ? `name="${this.name}"` : '';
-    const disabledAttr = this.disabled ? 'disabled' : '';
-    const readOnlyAttr = this.readOnly ? 'readonly' : '';
-    const requiredAttr = this.required ? 'required' : '';
+    const minAttr = this.min ? `min="${this.min}"` : "";
+    const maxAttr = this.max ? `max="${this.max}"` : "";
+    const stepAttr = this.step ? `step="${this.step}"` : "";
+    const nameAttr = this.name ? `name="${this.name}"` : "";
+    const disabledAttr = this.disabled ? "disabled" : "";
+    const readOnlyAttr = this.readOnly ? "readonly" : "";
+    const requiredAttr = this.required ? "required" : "";
 
     return `
       <div class="number-input-wrapper" style="${inputStyleString}">
@@ -300,9 +300,14 @@ class NofoNumberInputValue extends NofoElement {
   }
 }
 
-customElements.define('nofo-number-input', NofoNumberInput);
-customElements.define('nofo-number-input-decrement', NofoNumberInputDecrement);
-customElements.define('nofo-number-input-increment', NofoNumberInputIncrement);
-customElements.define('nofo-number-input-value', NofoNumberInputValue);
+customElements.define("nofo-number-input", NofoNumberInput);
+customElements.define("nofo-number-input-decrement", NofoNumberInputDecrement);
+customElements.define("nofo-number-input-increment", NofoNumberInputIncrement);
+customElements.define("nofo-number-input-value", NofoNumberInputValue);
 
-export { NofoNumberInput, NofoNumberInputDecrement, NofoNumberInputIncrement, NofoNumberInputValue };
+export {
+  NofoNumberInput,
+  NofoNumberInputDecrement,
+  NofoNumberInputIncrement,
+  NofoNumberInputValue,
+};

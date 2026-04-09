@@ -12,14 +12,8 @@
     "sourceMap": true,
     "composite": false,
     "incremental": false,
-    "types": [
-      "@cloudflare/workers-types"
-    ],
-    "lib": [
-      "es2024",
-      "dom",
-      "dom.iterable"
-    ]
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["es2024", "dom", "dom.iterable"]
   },
   "include": [
     "src/index.ts",
@@ -28,9 +22,5 @@
     "src/lib/routeDrawer.ts",
     "src/utils/*.ts"
   ],
-  "exclude": [
-    "src/**/*.test.ts",
-    "node_modules",
-    "dist"
-  ]
+  "exclude": ["src/**/*.test.ts", "node_modules", "dist"]
 }
