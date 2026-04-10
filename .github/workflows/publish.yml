@@ -27,24 +27,16 @@ jobs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          node-version: '22'
+          cache: true
+      - run: vp install
 
       - id: set-packages
         name: Determine packages to publish
         run: |
           if [[ "${{ github.event.inputs.packages }}" == "all" ]] || [[ "${{ github.event.inputs.packages }}" == "" ]]; then
-            # Get all packages with version 1.0.0 or from git tags
             PACKAGES=$(ls packages/ | tr '\n' ',')
             echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
           else
@@ -68,32 +60,14 @@ jobs:
     environment: npm
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "store=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-store.outputs.store }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          node-version: '22'
+          cache: true
+      - run: vp install
 
       - name: Build packages
-        run: pnpm build
+        run: vp build
         env:
           NODE_ENV: production
 
@@ -105,7 +79,6 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
 
-          # Split packages by comma
           IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
 
           for pkg in "${PKG_ARRAY[@]}"; do
@@ -122,17 +95,15 @@ jobs:
             
             cd "$pkg_dir"
             
-            # Update version if provided
             if [[ "$VERSION" != "" ]]; then
               npm version "$VERSION" --no-git-tag-version --allow-same-version
             fi
             
-            # Publish or dry-run
             if [[ "$DRY_RUN" == "true" ]]; then
-              echo "Dry-run: would publish $pkg at version $(node -p 'require(\"./package.json\").version')"
+              echo "Dry-run: would publish $pkg at version $(node -p 'require("./package.json").version')"
               npm publish --dry-run
             else
-              echo "Publishing $pkg at version $(node -p 'require(\"./package.json\").version')"
+              echo "Publishing $pkg at version $(node -p 'require("./package.json").version')"
               npm publish --access public
             fi
             
