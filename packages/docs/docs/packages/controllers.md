@@ -1,76 +1,101 @@
 # Controllers
 
-Rails-adjacent controllers for Nomo applications.
+Controllers handle HTTP requests and delegate to services. They are the entry point for request handling in Nomo.
 
 ## BaseController
 
-The `BaseController` is the foundation for all controllers in Nomo.
+The foundation for all controllers. Provides request/response handling, validation, and rendering.
 
-```typescript
-import { BaseController } from 'nomo/controllers';
-
-export class HomeController extends BaseController {
-  protected service = null;
-
-  async index() {
-    return this.json({ message: 'Hello World' });
-  }
-}
-```
-
-## Properties
+### Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `request` | `Request` | The incoming HTTP request |
-| `env` | `Env` | Environment variables |
-| `params` | `Record<string, unknown>` | Request parameters (path, query, body) |
-| `pathParams` | `Record<string, string>` | URL path parameters |
-| `queryParams` | `Record<string, string>` | Query string parameters |
-| `headers` | `Record<string, string>` | Request headers |
-| `method` | `string` | HTTP method |
-| `path` | `string` | Request path |
-| `cookies` | `Record<string, string>` | Parsed cookies |
+| `env` | `Env` | Environment variables (includes D1, KV, DO bindings) |
+| `ctx` | `RouterContext` | Router context with params, query, etc. |
+| `service` | `Service` | Injected service for business logic |
 
-## Response Methods
+### Accessors
+
+```typescript
+// All params (path + query + body)
+this.params
+
+// URL path parameters only
+this.pathParams
+
+// Query string parameters only  
+this.queryParams
+
+// Request headers
+this.headers
+
+// Cookies (parsed)
+this.cookies
+
+// Client IP address
+this.ip
+
+// HTTP method
+this.method
+
+// Request path
+this.path
+
+// Full URL
+this.url
+
+// Logger with controller context
+this.logger
+
+// Database (D1)
+this.db
+```
+
+### Response Methods
 
 ```typescript
 // JSON response
-this.json(data, { status: 200 })
+this.json({ data: 'value' })
+this.json({ data: 'value' }, { status: 201 })
 
 // Text response
-this.text('Hello', { status: 200 })
+this.text('Hello World')
 
 // HTML response
-this.html('<h1>Hello</h1>', { status: 200 })
+this.html('<h1>Hello</h1>')
 
 // XML response
-this.xml('<root></root>', { status: 200 })
+this.xml('<root><item>value</item></root>')
 
 // CSV response
-this.csv('col1,col2\nval1,val2', { status: 200 })
+this.csv('col1,col2\nval1,val2')
 
-// Excel (xlsx) response
-this.xlsx(uint8Array, { status: 200 })
+// Excel (xlsx)
+this.xlsx(uint8ArrayData)
 
 // Redirect
 this.redirect_to('/new-path')
 
-// File download with custom response
-this.render({ text: 'content', headers: { 'Content-Disposition': 'attachment' } })
+// Render view (JSX)
+this.render({
+  view: UserView,
+  layout: MainLayout,
+  data: { user }
+})
 ```
 
-## Error Responses
+### Error Responses
 
 ```typescript
 // 404 Not Found
-return this.notFound('Resource not found')
+return this.notFound('User not found')
 
 // 401 Unauthorized
-return this.unauthorized()
+return this.unauthorized('Please login')
 
 // 403 Forbidden
-return this.forbidden()
+return this.forbidden('Access denied')
 
 // 400 Bad Request
 return this.badRequest('Invalid input')
@@ -79,97 +104,7 @@ return this.badRequest('Invalid input')
 return this.internalServerError('Something went wrong')
 ```
 
-## Before/After Actions
-
-Define hooks that run before or after controller actions:
-
-```typescript
-export class UsersController extends BaseController {
-  protected service = userService;
-
-  static beforeActions = [
-    {
-      run: 'authenticate',
-      only: ['edit', 'update', 'destroy']
-    }
-  ];
-
-  async authenticate() {
-    const token = this.headers['authorization'];
-    if (!token) {
-      return this.unauthorized();
-    }
-  }
-
-  async index() {
-    const users = await this.service.list();
-    return this.json(users);
-  }
-}
-```
-
-## BaseResourceController
-
-For RESTful CRUD controllers, extend `BaseResourceController`:
-
-```typescript
-import { BaseResourceController } from 'nomo/controllers';
-import { UserModel } from './models/user';
-
-export class UsersController extends BaseResourceController {
-  protected service = userService;
-  
-  protected getModel() {
-    return UserModel;
-  }
-
-  // RESTful actions: index, show, new, create, edit, update, destroy
-  // Also supports: findAllBy, findByIds, pluck, trash, restore, etc.
-}
-```
-
-### Resource Actions
-
-| Action | Method | Description |
-|--------|--------|-------------|
-| `index` | GET | List all resources |
-| `show` | GET | Show single resource |
-| `new` | GET | Form for new resource |
-| `create` | POST | Create new resource |
-| `edit` | GET | Form for editing |
-| `update` | PUT/PATCH | Update resource |
-| `destroy` | DELETE | Delete resource |
-| `trash` | POST | Soft delete |
-| `restore` | POST | Restore from trash |
-| `hide` | POST | Hide resource |
-| `unhide` | POST | Unhide resource |
-
-### Lifecycle Actions
-
-```typescript
-// Soft delete (trash)
-async trash(id?: string)
-
-// Restore from trash
-async restore(id?: string)
-
-// Soft hide
-async hide(id?: string)
-async unhide(id?: string)
-
-// Flag/unflag
-async flag(id?: string)
-async unflag(id?: string)
-
-// Hard delete
-async purge(id?: string)
-
-// Retire/unretire
-async retire(id?: string)
-async unretire(id?: string)
-```
-
-## Cookies
+### Cookies
 
 ```typescript
 // Set cookie
@@ -185,26 +120,261 @@ this.setCookie('session', 'abc123', {
 this.deleteCookie('session');
 ```
 
-## Validation & Normalization
+## BaseResourceController
+
+Extends `BaseController` for RESTful CRUD operations with automatic endpoints.
+
+### Automatic REST Actions
+
+| Action | Method | Description |
+|--------|--------|-------------|
+| `index` | GET | List all resources |
+| `show` | GET | Get single resource |
+| `new` | GET | Form for new resource |
+| `create` | POST | Create resource |
+| `edit` | GET | Form for editing |
+| `update` | PUT/PATCH | Update resource |
+| `destroy` | DELETE | Delete resource |
+
+### Lifecycle Actions
 
 ```typescript
-import { IValidator, INormalizer } from 'nomo/controllers';
+async trash(id)      // Soft delete (sets deleted_at)
+async restore(id)   // Restore from soft delete
+async hide(id)      // Hide resource
+async unhide(id)    // Unhide resource
+async flag(id)      // Flag resource
+async unflag(id)   // Unflag resource
+async purge(id)     // Hard delete
+async retire(id)    // Mark as retired
+async unretire(id)  // Unretire
+```
 
-class UserValidator implements IValidator<User> {
-  validate(): User {
-    // validation logic
-    return data;
+### Relationship Actions
+
+```typescript
+async listChildIds()      // Get child IDs
+async listParentIds()     // Get parent IDs
+async listSiblingIds()   // Get sibling IDs
+async listAncestorIds()  // Get ancestor IDs
+async listDescendantIds() // Get descendant IDs
+```
+
+### Eager Loading
+
+```typescript
+async findAllWith()  // Find with includes
+async findWith()    // Find single with includes
+```
+
+## Real-World Example
+
+### Blog Posts Controller
+
+```typescript
+import { RouterContext } from 'nomo/router';
+import { BaseResourceController } from 'nomo/controllers';
+import { BlogService } from '../services/blog';
+import { PostModel } from '../models/post';
+import type { Post, NewPost } from '../models/types';
+
+export class PostsController extends BaseResourceController<
+  Env,
+  ExecutionContext,
+  BlogService,
+  PostModel,
+  Post,
+  NewPost
+> {
+  protected service: BlogService;
+
+  constructor(req: Request, env: Env, ctx: RouterContext<Env, ExecutionContext>) {
+    super(req, env, ctx);
+    this.service = new BlogService(req, env, ctx);
+  }
+
+  protected getModel() {
+    return this.service.posts;
+  }
+
+  // Custom: Get only published posts
+  async published() {
+    const posts = await this.service.getPublishedPosts();
+    return this.json(posts);
+  }
+
+  // Custom: Get by slug instead of ID
+  async showBySlug() {
+    const { slug } = this.pathParams;
+    const post = await this.service.getPostBySlug(slug);
+    
+    if (!post) {
+      return this.notFound('Post not found');
+    }
+    
+    return this.json(post);
   }
 }
+```
 
-class UserNormalizer implements INormalizer<NormalizedUser> {
-  normalize(): NormalizedUser {
-    // normalization logic
-    return data;
+### With Validation & Normalization
+
+```typescript
+import { BaseResourceController } from 'nomo/controllers';
+import { PostsValidator } from '../validators/posts';
+import { PostsNormalizer } from '../normalizers/posts';
+
+export class PostsController extends BaseResourceController<...> {
+  // Hooks for validation/normalization
+  static beforeActions = [
+    { 
+      normalize: PostsNormalizer, 
+      only: ['create', 'update'] 
+    },
+    { 
+      validate: PostsValidator, 
+      only: ['create'] 
+    }
+  ];
+
+  // ... rest of controller
+}
+```
+
+### Service Layer
+
+```typescript
+import { BaseService } from 'nomo/services';
+import { PostModel } from '../models/post';
+
+export class BlogService extends BaseService {
+  public posts: PostModel;
+
+  constructor(req: Request, env: Env, ctx: any) {
+    super(req, env, ctx);
+    this.posts = new PostModel(this.db, req, env, ctx);
+  }
+
+  async getPublishedPosts(limit = 10, offset = 0) {
+    return this.posts.query()
+      .where({ published: true })
+      .orderBy('createdAt', 'DESC')
+      .limit(limit)
+      .offset(offset)
+      .all();
+  }
+
+  async getPostBySlug(slug: string) {
+    return this.posts.query().where({ slug }).first();
   }
 }
+```
 
-// In controller
-this.validate(UserValidator, inputData);
-this.normalize(UserNormalizer, inputData);
+### Model
+
+```typescript
+import { BaseModel } from 'nomo/models';
+import { posts } from '../db/schema';
+
+export class PostModel extends BaseModel<typeof posts, Post, NewPost> {
+  constructor(db, req, env, ctx) {
+    super(db, posts, req, env, ctx);
+    this.hasMany('comments', { model: 'CommentModel', foreignKey: 'postId' });
+  }
+}
+```
+
+### Router Setup
+
+```typescript
+import { RouteDrawer } from 'nomo/router';
+
+export class AppRoutes extends RouteDrawer<Env, ExecutionContext> {
+  draw() {
+    // Public routes
+    this.get('/posts', PostsController.action('published'));
+    this.get('/posts/:slug', PostsController.action('showBySlug'));
+    
+    // Admin CRUD routes
+    this.namespace('admin', (admin) => {
+      admin.resources('posts', PostsController);
+    });
+  }
+}
+```
+
+## Validation & Normalization
+
+### Validator
+
+```typescript
+import { BaseValidator } from 'nomo/validators';
+import { z } from 'zod';
+
+export class PostsValidator extends BaseValidator {
+  protected schema = z.object({
+    title: z.string().min(1).max(200),
+    content: z.string().min(1),
+    slug: z.string().regex(/^[a-z0-9-]+$/),
+    published: z.boolean().optional()
+  });
+}
+```
+
+### Normalizer
+
+```typescript
+import { BaseNormalizer } from 'nomo/normalizers';
+
+export class PostsNormalizer extends BaseNormalizer {
+  normalize() {
+    return {
+      ...this.data,
+      title: this.data.title?.trim(),
+      slug: this.data.slug?.toLowerCase().replace(/\s+/g, '-')
+    };
+  }
+}
+```
+
+## Combining with Other Packages
+
+### With Drizzle ORM
+
+```typescript
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+
+export const posts = sqliteTable('posts', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  published: text('published').default('false')
+});
+
+// In model
+this.query().where({ published: 'true' }).all();
+```
+
+### With Durable Objects
+
+```typescript
+// Access DO from controller
+async accessDO() {
+  const id = this.env.COUNTERS.idFromName('my-counter');
+  const stub = this.env.COUNTERS.get(id);
+  const response = await stub.fetch('https://internal/count');
+  return this.json(await response.json());
+}
+```
+
+### With Background Jobs
+
+```typescript
+import { JobRunner } from 'nomo/jobs';
+
+async triggerJob() {
+  const runner = new JobRunner({ env: this.env, ctx: this.ctx });
+  await runner.enqueue('SendEmailJob', { to: this.body.email });
+  return this.json({ queued: true });
+}
 ```

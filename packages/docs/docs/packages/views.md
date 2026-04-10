@@ -1,87 +1,87 @@
 # Views
 
-JSX-based view rendering for Nomo applications.
+JSX-based view rendering for server-rendered HTML responses.
 
-## Basic Usage
+## BaseView
 
 ```typescript
-import { BaseView, BaseLayout } from 'nomo/views';
+import { BaseView } from 'nomo/views';
 
-// Define a view component
-class UserView extends BaseView {
-  render(data: { user: { name: string; email: string } }) {
+export class PostView extends BaseView<{ post: Post }> {
+  render() {
+    const { post } = this.props;
     return (
-      <div class="user-profile">
-        <h1>{data.user.name}</h1>
-        <p>{data.user.email}</p>
-      </div>
+      <article class="post">
+        <h1>{post.title}</h1>
+        <div class="content">{post.content}</div>
+        <p class="meta">By {post.authorName} on {post.createdAt}</p>
+      </article>
     );
   }
 }
-
-// Use in controller
-return this.render({
-  view: UserView,
-  data: { user: { name: 'John', email: 'john@example.com' } }
-});
 ```
 
-## Layouts
+## BaseLayout
 
 ```typescript
 import { BaseLayout } from 'nomo/views';
 
-class MainLayout extends BaseLayout {
+export class ApplicationLayout extends BaseLayout {
   render(content: string, data: any) {
     return (
       <html>
         <head>
-          <title>{data.title || 'Nomo App'}</title>
+          <title>{data.title || 'My App'}</title>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
         </head>
         <body>
-          <nav>Navigation</nav>
+          <nav>
+            <a href="/">Home</a>
+            <a href="/posts">Posts</a>
+          </nav>
           <main>{content}</main>
-          <footer>Footer</footer>
+          <footer>&copy; 2024</footer>
         </body>
       </html>
     );
   }
 }
-
-// Use with view
-return this.render({
-  view: UserView,
-  layout: MainLayout,
-  data: { user: userData }
-});
 ```
 
-## JSON/XML Views
+## Usage in Controller
+
+```typescript
+async show() {
+  const post = await this.service.getPost(this.params.id);
+  
+  return this.render({
+    view: PostView,
+    layout: ApplicationLayout,
+    data: { title: post.title, post }
+  });
+}
+```
+
+## BaseDtoView (JSON/XML)
 
 ```typescript
 import { BaseDtoView } from 'nomo/views';
 
-class UserDtoView extends BaseDtoView {
-  static renderJson(user: any) {
+export class PostDtoView extends BaseDtoView {
+  static renderJson(post: Post) {
     return {
-      id: user.id,
-      name: user.name,
-      email: user.email
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      excerpt: post.excerpt,
+      author: { id: post.authorId },
+      createdAt: post.createdAt?.toISOString()
     };
   }
 
-  static renderXml(user: any) {
-    return `<user><id>${user.id}</id><name>${user.name}</name></user>`;
+  static renderXml(post: Post) {
+    return `<post><id>${post.id}</id><title>${post.title}</title></post>`;
   }
 }
 ```
-
-## View Options
-
-| Option | Description |
-|--------|-------------|
-| `view` | View component class |
-| `layout` | Layout component class |
-| `data` | Data to pass to view |
-| `json` | Direct JSON response |
-| `html` | Direct HTML response |

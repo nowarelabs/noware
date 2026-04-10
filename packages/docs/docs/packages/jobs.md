@@ -1,50 +1,63 @@
 # Jobs
 
-Background job processing for Nomo applications.
+Background job processing for asynchronous tasks.
 
-## Basic Usage
+## QueueJob
 
 ```typescript
-import { BaseJob, JobRunner } from 'nomo/jobs';
+import { QueueJob } from 'nomo/jobs';
 
-class SendEmailJob extends BaseJob {
+export class SendEmailJob extends QueueJob<{ to: string; subject: string; body: string }> {
   static queue = 'emails';
   static retryLimit = 3;
+  static timeout = 30;
 
-  async perform(data: { to: string; subject: string; body: string }) {
-    // Send email logic
-    await sendEmail(data.to, data.subject, data.body);
+  async perform() {
+    await sendEmail(this.params.to, this.params.subject, this.params.body);
   }
 }
-
-// Run job
-const runner = new JobRunner({ env, ctx });
-await runner.enqueue(SendEmailJob, { to: 'user@example.com', subject: 'Hello', body: '...' });
 ```
 
-## Job Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `queue` | `string` | Queue name |
-| `retryLimit` | `number` | Maximum retry attempts |
-| `timeout` | `number` | Job timeout in seconds |
-| `delay` | `number` | Delay before execution |
-
-## Processing Jobs
+## WorkflowJob
 
 ```typescript
-const handler = new JobHandler({
-  env,
-  queues: {
-    emails: SendEmailJob,
-    notifications: NotificationJob
+import { WorkflowJob } from 'nomo/jobs';
+
+export class UserOnboardingWorkflow extends WorkflowJob<{ userId: string; email: string }> {
+  async perform(ctx) {
+    await this.step('create_account', async () => {
+      // Create account
+    }, ctx);
+    
+    await this.sleep(5); // Wait 5 seconds
+    
+    await this.step('send_welcome', async () => {
+      await sendEmail(ctx.params.email, 'Welcome!');
+    }, ctx);
   }
+}
+```
+
+## JobDispatcher
+
+```typescript
+import { JobDispatcher } from 'nomo/jobs';
+
+const dispatcher = new JobDispatcher({
+  emails: SendEmailJob,
+  notifications: NotificationJob
 });
 
-export default {
-  async fetch(request, env, ctx) {
-    return handler.handle(request);
-  }
-};
+// In worker
+export default class AppWorker extends BaseWorker<Env> {
+  dispatcher = dispatcher;
+}
+```
+
+## Triggering Jobs
+
+```typescript
+// From controller
+const runner = new JobRunner({ env: this.env, ctx: this.ctx });
+await runner.enqueue('SendEmailJob', { to: 'user@example.com', subject: 'Hi!' });
 ```

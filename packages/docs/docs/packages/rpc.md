@@ -1,45 +1,51 @@
 # RPC
 
-RPC over HTTP for Nomo applications.
+Remote Procedure Call over HTTP for inter-service communication.
 
-## Basic Usage
+## BaseResourceRpcTarget
 
 ```typescript
-import { createRpcRouter } from 'nomo/rpc';
+import { BaseResourceRpcTarget } from 'nomo/rpc';
+import { RouterContext } from 'nomo/router';
+import { PostsController } from '../controllers/posts_controller';
 
-const rpc = createRpcRouter({
-  methods: {
-    user: {
-      async getUser(id: string) {
-        return { id, name: 'John' };
-      },
-      async createUser(data: { name: string; email: string }) {
-        return { id: '1', ...data };
-      }
-    }
+export class PostsRpc extends BaseResourceRpcTarget<Env, RouterContext<Env, any>, PostsController> {
+  protected controllerClass = PostsController;
+}
+```
+
+## RPC Controller
+
+```typescript
+import { BaseController } from 'nomo/controllers';
+import { newWorkersRpcResponse } from 'nomo/rpc';
+
+export class PostsRpcController extends BaseController<Env, ExecutionContext> {
+  async rpc() {
+    return newWorkersRpcResponse(
+      this.request,
+      new PostsRpc(this.request, this.env, this.ctx)
+    );
   }
-});
+}
+```
 
-export default rpc;
+## Router Setup
+
+```typescript
+// In routes.ts
+this.namespace('rpc', (rpc) => {
+  rpc.post('/posts', PostsRpcController.action('rpc'));
+});
 ```
 
 ## Client
 
 ```typescript
-import { createRpcClient } from 'nomo/rpc';
-
-const client = createRpcClient({
-  baseUrl: 'https://my-worker.workers.dev/rpc'
+// Call RPC from another service
+const response = await this.fetch('https://worker.example.com/rpc/posts', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'X-RPC-Method': 'create' },
+  body: JSON.stringify({ title: 'New Post', content: 'Content' })
 });
-
-// Call methods
-const user = await client.user.getUser('1');
-const newUser = await client.user.createUser({ name: 'Jane', email: 'jane@example.com' });
 ```
-
-## Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `methods` | `Record<string, object>` | RPC method definitions |
-| `baseUrl` | `string` | Server base URL (client) |

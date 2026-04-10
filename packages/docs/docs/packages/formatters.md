@@ -1,41 +1,24 @@
 # Formatters
 
-Output formatting utilities for Nomo applications.
+Output formatting for responses.
 
-## Basic Usage
+## BaseFormatter
 
 ```typescript
-import { Formatter } from 'nomo/formatters';
+import { BaseFormatter } from 'nomo/formatters';
 
-class DateFormatter extends Formatter<Date> {
+export class DateFormatter extends BaseFormatter<Date> {
   format(): string {
-    const date = this.data as Date;
-    return date.toISOString();
+    return (this.data as Date).toISOString();
   }
 }
 
-// Use in controller
-const formatted = this.format(DateFormatter, new Date());
-```
-
-## Common Formatters
-
-```typescript
-// Currency
-class CurrencyFormatter extends Formatter<number> {
+export class CurrencyFormatter extends BaseFormatter<number> {
   format(): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(this.data as number);
-  }
-}
-
-// Relative time
-class RelativeTimeFormatter extends Formatter<Date> {
-  format(): string {
-    const diff = Date.now() - (this.data as Date).getTime();
-    // Return relative time string
   }
 }
 ```

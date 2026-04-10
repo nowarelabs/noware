@@ -1,21 +1,23 @@
 # Durable Objects
 
-Utilities for working with Cloudflare Durable Objects.
+Stateful coordination for real-time features and distributed state.
 
-## Basic Usage
+## BaseDurableObject
 
 ```typescript
-import { DurableObject } from 'nomo/durable-objects';
+import { BaseDurableObject } from 'nomo/durable-objects';
 
-export class ChatRoom extends DurableObject {
+export class ChatRoomDO extends BaseDurableObject {
   async onMessage(message: string) {
-    const state = await this.storage.get('messages') || [];
-    state.push(message);
-    await this.storage.put('messages', state);
+    const messages = await this.storage.get('messages') || [];
+    messages.push(message);
+    await this.storage.put('messages', messages);
   }
 
   async onConnect(request: Request): Promise<Response> {
-    return new Response('WebSocket connection established');
+    const [client, server] = new WebSocketPair();
+    this.addClient(client);
+    return new Response(null, { status: 101, webSocket: server });
   }
 }
 ```
@@ -23,41 +25,30 @@ export class ChatRoom extends DurableObject {
 ## Storage Methods
 
 ```typescript
-// Get value
-const value = await this.storage.get('key');
-
-// Set value
+// Get/Set
+await this.storage.get('key');
 await this.storage.put('key', 'value');
-
-// Delete value
 await this.storage.delete('key');
 
-// List keys
+// List
 const keys = await this.storage.list();
 
-// Transactions
-await this.storage.transaction(async (tx) => {
-  const count = await tx.get('count') || 0;
-  await tx.put('count', count + 1);
-});
+// Alarms
+await this.storage.setAlarm(Date.now() + 60000); // 1 minute
+async alarm() { /* handle alarm */ }
 ```
 
-## Alarms
+## With Drizzle ORM
 
 ```typescript
-// Set alarm (runs after specified delay)
-await this.storage.setAlarm(Date.now() + 60000); // 1 minute
+import { drizzle } from 'drizzle-orm/durable-object-sqlite';
 
-// Handle alarm
-async alarm() {
-  // Do something
+export class BlogDO extends BaseDurableObject {
+  db: any;
+
+  constructor(state, env) {
+    super(state, env);
+    this.db = drizzle(this.storage, { schema });
+  }
 }
 ```
-
-## Options
-
-| Method | Description |
-|--------|-------------|
-| `onMessage(msg)` | Handle incoming message |
-| `onConnect(req)` | Handle WebSocket connect |
-| `alarm()` | Handle scheduled alarm |

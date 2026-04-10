@@ -34,7 +34,7 @@ export default defineConfig({
     
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Guide', link: '/packages/overview' },
+      { text: 'Guide', link: '/packages/getting-started' },
       { text: 'API', link: '/packages/controllers' }
     ],
     

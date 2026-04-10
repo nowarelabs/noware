@@ -1,63 +1,30 @@
 # Validators
 
-Input validation utilities for Nomo applications.
+Input validation using Zod schemas.
 
-## Basic Usage
+## BaseValidator
 
 ```typescript
-import { Validator, z } from 'nomo/validators';
+import { BaseValidator } from 'nomo/validators';
+import { z } from 'zod';
 
-class UserValidator extends Validator<{ name: string; email: string }> {
-  validate(): { name: string; email: string } {
-    const data = this.data as any;
-    
-    if (!data.name || data.name.length < 2) {
-      throw new Error('Name must be at least 2 characters');
-    }
-    
-    if (!data.email || !data.email.includes('@')) {
-      throw new Error('Invalid email');
-    }
-    
-    return { name: data.name, email: data.email };
-  }
+export class PostsValidator extends BaseValidator {
+  protected schema = z.object({
+    title: z.string().min(1).max(200),
+    content: z.string().min(1),
+    slug: z.string().regex(/^[a-z0-9-]+$/),
+    published: z.boolean().optional(),
+    authorId: z.string().uuid()
+  });
 }
-
-// Use in controller
-const user = this.validate(UserValidator, this.body);
 ```
 
-## Zod Integration
+## Usage in Controller
 
 ```typescript
-import { z } from 'nomo/validators';
-
-const UserSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  age: z.number().optional()
-});
-
-// Validate
-const data = UserSchema.parse(requestBody);
-```
-
-## Custom Validators
-
-```typescript
-class PasswordValidator extends Validator<string> {
-  validate(): string {
-    const password = this.data as string;
-    
-    if (password.length < 8) {
-      throw new Error('Password must be at least 8 characters');
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-      throw new Error('Password must contain uppercase letter');
-    }
-    
-    return password;
-  }
+export class PostsController extends BaseResourceController {
+  static beforeActions = [
+    { validate: PostsValidator, only: ['create', 'update'] }
+  ];
 }
 ```

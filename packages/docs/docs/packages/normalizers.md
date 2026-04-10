@@ -1,31 +1,31 @@
 # Normalizers
 
-Data normalization utilities for Nomo applications.
+Data transformation and sanitization.
 
-## Basic Usage
+## BaseNormalizer
 
 ```typescript
-import { Normalizer } from 'nomo/normalizers';
+import { BaseNormalizer } from 'nomo/normalizers';
 
-class UserNormalizer extends Normalizer<{ id: string; displayName: string; avatarUrl: string }> {
-  normalize(): { id: string; displayName: string; avatarUrl: string } {
-    const data = this.data as any;
-    
+export class PostsNormalizer extends BaseNormalizer {
+  normalize() {
     return {
-      id: String(data.id),
-      displayName: data.name || data.email?.split('@')[0],
-      avatarUrl: data.avatar?.url || `https://api.dicebear.com/7.x/initials/svg?seed=${data.name}`
+      ...this.data,
+      title: this.data.title?.trim(),
+      slug: this.data.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      content: this.data.content?.trim()
     };
   }
 }
-
-// Use in controller
-const normalized = this.normalize(UserNormalizer, rawData);
 ```
 
-## Use Cases
+## Usage
 
-- Transform API responses to internal format
-- Sanitize user input
-- Convert between data formats
-- Flatten nested objects
+```typescript
+// Automatic via controller hooks
+export class PostsController extends BaseResourceController {
+  static beforeActions = [
+    { normalize: PostsNormalizer, only: ['create', 'update'] }
+  ];
+}
+```
