@@ -34,10 +34,49 @@ Nomo is a modular monorepo with packages for building serverless applications on
 | `nomo/result` | Result/Either type |
 | `nomo/shared` | Shared utilities |
 
+## Installation
+
+::: code-group
+
+```bash [npm]
+npm install nomo
+```
+
+```bash [pnpm]
+pnpm add nomo
+```
+
+```bash [yarn]
+yarn add nomo
+```
+
+```bash [bun]
+bun add nomo
+```
+
+```bash [deno]
+deno add nomo
+```
+
+:::
+
 ## Usage
 
-```bash
-# Install all packages
+::: code-group
+
+```bash [npm]
+# Install dependencies
+npm install
+
+# Build a specific package
+cd packages/controllers && npm run build
+
+# Run tests
+npm test
+```
+
+```bash [pnpm]
+# Install dependencies
 pnpm install
 
 # Build a specific package
@@ -46,3 +85,38 @@ cd packages/controllers && pnpm build
 # Run tests
 pnpm test
 ```
+
+```bash [yarn]
+# Install dependencies
+yarn install
+
+# Build a specific package
+cd packages/controllers && yarn build
+
+# Run tests
+yarn test
+```
+
+```bash [bun]
+# Install dependencies
+bun install
+
+# Build a specific package
+cd packages/controllers && bun run build
+
+# Run tests
+bun test
+```
+
+```bash [deno]
+# Install dependencies
+deno install
+
+# Build a specific package
+cd packages/controllers && deno task build
+
+# Run tests
+deno task test
+```
+
+:::

@@ -2,19 +2,48 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   description: "Nomo framework documentation",
+  
+  // Markdown configuration
+  markdown: {
+    lineNumbers: true,
+    theme: {
+      light: 'github-light',
+      dark: 'github-dark'
+    }
+  },
+  
   themeConfig: {
     siteTitle: "",
     logo: { light: '/assets/nomo.png', dark: '/assets/nomo-dark.png' },
+    
+    // Search
+    search: {
+      provider: 'local'
+    },
+    
+    // Social links
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/nowarelabs/nomo' }
+    ],
+    
+    // Table of contents
+    outline: {
+      level: [2, 3],
+      label: 'On this page'
+    },
+    
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/packages/overview' },
       { text: 'API', link: '/packages/controllers' }
     ],
+    
     sidebar: [
       {
         text: 'Getting Started',
         items: [
-          { text: 'Overview', link: '/packages/overview' }
+          { text: 'Overview', link: '/packages/overview' },
+          { text: 'Architecture', link: '/packages/architecture' }
         ]
       },
       {
@@ -62,7 +91,24 @@ export default defineConfig({
           { text: 'Shared', link: '/packages/shared' }
         ]
       }
-    ]
+    ],
+    
+    // Edit link
+    editLink: {
+      text: 'Edit this page',
+      pattern: 'https://github.com/nowarelabs/nomo/edit/main/packages/docs/docs/:path'
+    },
+    
+    // Last updated
+    lastUpdated: {
+      text: 'Last updated'
+    },
+    
+    // Footer
+    footer: {
+      message: 'Released under the MIT License.',
+      copyright: 'Copyright © 2024-present Nomo Framework'
+    }
   },
   head: [
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],

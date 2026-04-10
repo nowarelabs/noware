@@ -38,4 +38,4 @@ Nomo follows a layered architecture:
 - **Services** - Business logic
 - **Models** - Data access layer
 
-[Learn more about the architecture →](/packages/overview)
+[Learn more about the architecture →](/packages/architecture)
