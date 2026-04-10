@@ -600,7 +600,7 @@ export abstract class BaseResourceController<
     return conditions;
   }
 
-  protected getTitle(item?: TSelect): string {
+  protected getTitle(): string {
     return this.controller_name.replace("Controller", "");
   }
 
@@ -759,7 +759,8 @@ export abstract class BaseResourceController<
     }
     try {
       return (await this.ctx.parseJson()) || {};
-    } catch (_e) {
+    } catch (e) {
+      console.log(e);
       return {};
     }
   }

@@ -496,7 +496,9 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       });
       provider.register();
       Router.tracingInitialized = true;
-    } catch (_e) {}
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   draw(DrawerClass: new (router: unknown, prefix: string) => { draw: () => void }) {
@@ -1002,7 +1004,8 @@ export class Router<Env = unknown, Ctx = ExecutionContext> {
       try {
         const body = await request.json();
         (ctx as unknown).validJson = parseNestedParams(body as unknown);
-      } catch (_e) {
+      } catch (e) {
+        console.log(e);
         return new Response("Malformed JSON", { status: 400 });
       }
     }

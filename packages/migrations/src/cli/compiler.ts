@@ -37,7 +37,6 @@ export class MigrationCompiler {
 
       const tempDbPath = path.resolve(process.cwd(), ".nomo/temp_compile.db");
       const metadataPath = path.resolve(process.cwd(), ".nomo/temp_metadata.json");
-      const { execSync } = await import("node:child_process");
 
       // Clean up unknown existing temp files
       await fs.rm(path.dirname(metadataPath), { force: true }).catch(() => {});

@@ -44,7 +44,7 @@ describe("MigrationRunner", () => {
 
   it("ensures migrations table exists", async () => {
     await runner.ensureMigrationsTable();
-    expect(mockDb.run).toHaveBeenCalledWith(expect.unknownthing());
+    expect(mockDb.run).toHaveBeenCalledWith(expect.anything());
   });
 
   it("runs pending migrations up", async () => {
@@ -60,9 +60,6 @@ describe("MigrationRunner", () => {
     await runner.use(migrations).up();
 
     expect(mockDb.run).not.toHaveBeenCalledWith(expect.stringContaining("20260101000000"));
-    // Wait, let's be more specific
-    const insertCalls = mockDb.run.mock.calls.filter((c: unknown) => c[0]?.sql?.includes("INSERT"));
-    // Since we are mocking drizzle-orm sql, it might be an object
   });
 
   it("rolls back specific number of steps", async () => {

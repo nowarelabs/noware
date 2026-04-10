@@ -74,7 +74,7 @@ describe("Scaffold Generator Helpers", () => {
 
     it("handles -y suffix", () => {
       expect(pluralize("Category")).toBe("Categories");
-      expect(pluralize("Compunknown")).toBe("Companies");
+      expect(pluralize("Company")).toBe("Companies");
     });
 
     it("handles -s suffix", () => {

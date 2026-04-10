@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { DurableObjectBaseDelegate } from "../delegate";
 
 export interface QueueConfig<T = unknown> {

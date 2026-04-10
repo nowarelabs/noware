@@ -276,8 +276,6 @@ export class FluentQuery<
   }
 
   private async loadRelations(results: TSelect[]): Promise<TSelect[]> {
-    const tableName = getTableName(this.table);
-
     for (const relationName of this.loadWith) {
       const rel = this.relationships[relationName];
       if (!rel) {
@@ -292,21 +290,20 @@ export class FluentQuery<
         // Each row may have related data in columns prefixed with relation name
         const grouped = new Map<unknown, unknown[]>();
         const relTableName = rel.model;
-        const pk = rel.type === "belongs_to" ? `${relTableName}_id` : "id";
 
         for (const row of results) {
-          const rowunknown = row as unknown;
-          const parentId = rowunknown.id;
+          const unknownRow = row as unknown;
+          const parentId = unknownRow.id;
 
           // Find the related row by checking for prefixed columns
           const relColumns: unknown = {};
           let hasRelatedData = false;
 
-          for (const key of Object.keys(rowunknown)) {
+          for (const key of Object.keys(unknownRow)) {
             if (key.startsWith(`${relTableName}_`)) {
               const originalKey = key.substring(relTableName.length + 1);
-              relColumns[originalKey] = rowunknown[key];
-              if (rowunknown[key] !== null && rowunknown[key] !== undefined) {
+              relColumns[originalKey] = unknownRow[key];
+              if (unknownRow[key] !== null && unknownRow[key] !== undefined) {
                 hasRelatedData = true;
               }
             }
@@ -1118,7 +1115,7 @@ export abstract class BaseModel<
     };
   }
 
-  async add(id: number | string, relation: string, relatedId: number | string): Promise<TSelect> {
+  async add(id: number | string, relation: string): Promise<TSelect> {
     this.logger?.info(`[ADD] ${getTableName(this.table)}#${id} to ${relation}`);
     return this.findBy({ id } as unknown) as Promise<TSelect>;
   }

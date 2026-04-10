@@ -1,4 +1,4 @@
-import { type Result, ok, safeAsync } from "nomo/result";
+import { type Result, safeAsync } from "nomo/result";
 import * as fs from "node:fs/promises";
 import * as path from "pathe";
 import { CodeBuilder } from "./builder";

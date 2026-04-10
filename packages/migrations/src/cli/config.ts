@@ -1,5 +1,4 @@
 import * as fs from "node:fs/promises";
-import * as path from "pathe";
 import { Result, ok, err, tryAsync } from "nomo/result";
 
 export interface MigrationEntry {

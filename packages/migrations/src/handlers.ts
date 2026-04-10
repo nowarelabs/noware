@@ -286,31 +286,31 @@ export const STANDARD_HANDLERS: Record<string, HandlerFunc> = {
     return ok(sql.statement().append(sql.key("DROP INDEX IF EXISTS "), sql.id(idxName)));
   },
 
-  changeColumn: (action) => {
+  changeColumn: (_action) => {
     console.warn(
       `ALTER TABLE CHANGE COLUMN is not supported in SQLite. Use migrate-reflect to rebuild the table.`,
     );
     return ok(null);
   },
 
-  changeColumnDefault: (action) => {
+  changeColumnDefault: (_action) => {
     console.warn(`ALTER TABLE ALTER COLUMN SET DEFAULT is not supported in SQLite.`);
     return ok(null);
   },
 
-  changeColumnNull: (action) => {
+  changeColumnNull: (_action) => {
     console.warn(`ALTER TABLE ALTER COLUMN SET NOT NULL is not supported in SQLite.`);
     return ok(null);
   },
 
-  addForeignKey: (action) => {
+  addForeignKey: (_action) => {
     console.warn(
       `ALTER TABLE ADD FOREIGN KEY is not supported in SQLite. Define them in createTable.`,
     );
     return ok(null);
   },
 
-  removeForeignKey: (action) => {
+  removeForeignKey: (_action) => {
     console.warn(`ALTER TABLE DROP FOREIGN KEY is not supported in SQLite.`);
     return ok(null);
   },

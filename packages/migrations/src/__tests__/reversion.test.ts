@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { Migration } from "../index";
-import { SqlGenerator } from "../sql";
 import { type Result, ok } from "nomo/result";
 
 class ReversibleMigration extends Migration {
@@ -36,8 +35,6 @@ class ExplicitMigration extends Migration {
 }
 
 describe("Migration Reversibility", () => {
-  const sql = new SqlGenerator();
-
   it("automatically reverses standard commands in the correct order", async () => {
     const mockDb = {
       run: vi.fn().mockResolvedValue(ok({})),

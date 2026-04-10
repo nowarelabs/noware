@@ -51,7 +51,9 @@ export const syncCommand = defineCommand({
     try {
       const content = await fs.readFile(metadataPath, "utf-8");
       metadata = JSON.parse(content);
-    } catch (_e) {}
+    } catch (e) {
+        console.log(e);
+      }
 
     const reflector = new SchemaReflector({
       outDir: args.out,
