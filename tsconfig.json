@@ -1,0 +1,26 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/assets" },
+    { "path": "packages/controllers" },
+    { "path": "packages/domains" },
+    { "path": "packages/durable_objects" },
+    { "path": "packages/entrypoints" },
+    { "path": "packages/formatters" },
+    { "path": "packages/jobs" },
+    { "path": "packages/logger" },
+    { "path": "packages/maintenance" },
+    { "path": "packages/migrations" },
+    { "path": "packages/models" },
+    { "path": "packages/normalizers" },
+    { "path": "packages/result" },
+    { "path": "packages/router" },
+    { "path": "packages/rpc" },
+    { "path": "packages/scripts" },
+    { "path": "packages/services" },
+    { "path": "packages/shared" },
+    { "path": "packages/sql" },
+    { "path": "packages/validators" },
+    { "path": "packages/views" }
+  ]
+}

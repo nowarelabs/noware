@@ -5,7 +5,14 @@
   "description": "nomo framework - production-grade TypeScript framework for Cloudflare Workers",
   "type": "module",
   "scripts": {
-    "publish": "node scripts/publish.js"
+    "publish": "node scripts/publish.js",
+    "format:check": "oxlint --import --jsx --typescript --format",
+    "format": "oxlint --import --jsx --typescript --format --write",
+    "lint": "oxlint --import --jsx --typescript",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc --build"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
@@ -14,9 +21,6 @@
     "typescript": "^5.5.2",
     "vite-plus": "latest",
     "vitest": "^4.0.0"
-  },
-  "engines": {
-    "node": ">=22.0.0"
   },
   "packageManager": "pnpm@10.33.0"
 }
