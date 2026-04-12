@@ -301,8 +301,6 @@ importers:
         specifier: ^4.0.0
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.5.2)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)
 
-  packages/nofo: {}
-
   packages/normalizers:
     devDependencies:
       typescript:
@@ -427,13 +425,6 @@ importers:
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.5.2)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)
 
   packages/shared:
-    dependencies:
-      '@asteasolutions/zod-to-openapi':
-        specifier: ^8.4.0
-        version: 8.5.0(zod@4.3.6)
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20260203.0
