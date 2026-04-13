@@ -1,7 +1,7 @@
 {
-  "name": "nomo/gateways",
+  "name": "noware-gateways",
   "version": "1.0.0",
-  "description": "BaseInfrastructureAdapter for external service integrations",
+  "description": "BaseInfrastructureAdapter for external services",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -13,10 +13,12 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "nomo/ports": "workspace:*"
+    "noware-ports": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240603.0",

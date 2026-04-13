@@ -1,5 +1,5 @@
 {
-  "name": "nomo/assets",
+  "name": "noware-assets",
   "version": "1.0.0",
   "description": "Asset pipeline for nomo applications with HTMLRewriter support",
   "main": "dist/index.js",

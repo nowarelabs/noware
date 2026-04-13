@@ -1,5 +1,5 @@
 {
-  "name": "nomo/jobs",
+  "name": "noware-jobs",
   "version": "1.0.0",
   "description": "Rails-adjacent jobs (Queues) for nomo applications",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "nomo/logger": "workspace:*"
+    "noware-logger": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",

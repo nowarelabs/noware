@@ -1,5 +1,5 @@
 {
-  "name": "nomo/entrypoints",
+  "name": "noware-entrypoints",
   "version": "1.0.0",
   "description": "Rails-adjacent entrypoints for nomo applications",
   "main": "dist/index.js",
@@ -13,8 +13,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "nomo/jobs": "workspace:*",
-    "nomo/router": "workspace:*"
+    "noware-jobs": "workspace:*",
+    "noware-router": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",

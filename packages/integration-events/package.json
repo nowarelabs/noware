@@ -1,7 +1,7 @@
 {
-  "name": "nomo/integration-events",
+  "name": "noware-integration-events",
   "version": "1.0.0",
-  "description": "BaseIntegrationEvent, cross-context broadcast for nomo",
+  "description": "BaseIntegrationEvent for cross-context events",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -13,7 +13,9 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240603.0",

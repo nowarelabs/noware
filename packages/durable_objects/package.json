@@ -1,5 +1,5 @@
 {
-  "name": "nomo/durable-objects",
+  "name": "noware-durable-objects",
   "version": "1.0.0",
   "description": "Traceable Durable Objects for nomo applications",
   "main": "dist/index.js",
@@ -15,8 +15,8 @@
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",
     "drizzle-orm": "^0.45.1",
-    "nomo/logger": "workspace:*",
-    "nomo/router": "workspace:*"
+    "noware-logger": "workspace:*",
+    "noware-router": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

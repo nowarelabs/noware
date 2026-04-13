@@ -1,19 +1,22 @@
 {
   "name": "nomo",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "nomo framework - production-grade TypeScript framework for Cloudflare Workers",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "publish": "node scripts/publish.js",
-    "format": "oxfmt",
-    "format:check": "oxfmt --check",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
-    "typecheck": "tsc --noEmit",
+    "build": "pnpm -r run build",
+    "dev": "pnpm -r run dev",
+    "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc --build"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
@@ -23,6 +26,5 @@
     "typescript": "^5.5.2",
     "vite-plus": "latest",
     "vitest": "^4.0.0"
-  },
-  "packageManager": "pnpm@10.33.0"
+  }
 }

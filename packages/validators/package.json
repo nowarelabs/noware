@@ -1,5 +1,5 @@
 {
-  "name": "nomo/validators",
+  "name": "noware-validators",
   "version": "1.0.0",
   "description": "Validators for nomo applications",
   "main": "dist/index.js",

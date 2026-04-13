@@ -1,5 +1,5 @@
 {
-  "name": "nomo/views",
+  "name": "noware-views",
   "version": "1.0.0",
   "description": "Rails-adjacent views (UI/Components) for nomo applications",
   "main": "dist/index.js",

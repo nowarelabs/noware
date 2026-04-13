@@ -1,5 +1,5 @@
 {
-  "name": "nomo/scripts",
+  "name": "noware-scripts",
   "version": "1.0.0",
   "description": "Scripts for nomo applications",
   "main": "dist/index.js",

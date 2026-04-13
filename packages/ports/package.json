@@ -1,5 +1,5 @@
 {
-  "name": "nomo/ports",
+  "name": "noware-ports",
   "version": "1.0.0",
   "description": "BasePort interfaces for hexagonal architecture",
   "main": "dist/index.js",
@@ -13,7 +13,9 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240603.0",

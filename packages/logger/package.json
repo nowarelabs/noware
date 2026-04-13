@@ -1,5 +1,5 @@
 {
-  "name": "nomo/logger",
+  "name": "noware-logger",
   "version": "1.0.0",
   "description": "Logger for nomo applications",
   "main": "dist/index.js",

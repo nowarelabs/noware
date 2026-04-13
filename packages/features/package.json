@@ -1,7 +1,7 @@
 {
-  "name": "nomo/features",
+  "name": "noware-features",
   "version": "1.0.0",
-  "description": "FeatureHandler, Feature contracts, and orchestration layer for nomo",
+  "description": "BaseFeatureHandler, orchestration layer for nomo",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -13,22 +13,16 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "lint": "eslint src",
-    "format": "prettier --write src"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "nomo/rpc": "workspace:*"
+    "noware-rpc": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240603.0",
     "typescript": "^5.4.5",
-    "tsup": "^8.1.0",
-    "vitest": "^1.6.0",
-    "eslint": "^8.57.0",
-    "prettier": "^3.3.2"
+    "tsup": "^8.1.0"
   }
 }

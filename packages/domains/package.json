@@ -1,5 +1,5 @@
 {
-  "name": "nomo/domains",
+  "name": "noware-domains",
   "version": "1.0.0",
   "description": "Rails-adjacent domains (Workflows) for nomo applications",
   "main": "dist/index.js",

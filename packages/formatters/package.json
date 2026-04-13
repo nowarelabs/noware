@@ -1,5 +1,5 @@
 {
-  "name": "nomo/formatters",
+  "name": "noware-formatters",
   "version": "1.0.0",
   "description": "Formatters for nomo applications",
   "main": "dist/index.js",

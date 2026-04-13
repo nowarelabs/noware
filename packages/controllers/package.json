@@ -1,5 +1,5 @@
 {
-  "name": "nomo/controllers",
+  "name": "noware-controllers",
   "version": "1.0.0",
   "description": "Rails-adjacent controllers for nomo applications",
   "main": "dist/index.js",
@@ -14,11 +14,11 @@
   },
   "dependencies": {
     "http-status": "^2.1.0",
-    "nomo/assets": "workspace:*",
-    "nomo/logger": "workspace:*",
-    "nomo/models": "workspace:*",
-    "nomo/router": "workspace:*",
-    "nomo/views": "workspace:*"
+    "noware-assets": "workspace:*",
+    "noware-logger": "workspace:*",
+    "noware-models": "workspace:*",
+    "noware-router": "workspace:*",
+    "noware-views": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",

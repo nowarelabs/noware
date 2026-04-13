@@ -1,5 +1,5 @@
 {
-  "name": "nomo/rpc",
+  "name": "noware-rpc",
   "version": "1.0.0",
   "description": "RPC for nomo applications",
   "main": "dist/index.js",
@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",
-    "nomo/controllers": "workspace:*",
-    "nomo/logger": "workspace:*",
-    "nomo/result": "workspace:*",
-    "nomo/router": "workspace:*"
+    "noware-controllers": "workspace:*",
+    "noware-logger": "workspace:*",
+    "noware-result": "workspace:*",
+    "noware-router": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.0",

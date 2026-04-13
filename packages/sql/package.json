@@ -1,5 +1,5 @@
 {
-  "name": "nomo/sql",
+  "name": "noware-sql",
   "version": "1.0.0",
   "description": "Core SQL construction DSL for nomo applications",
   "main": "dist/index.js",
@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "nomo/result": "workspace:*"
+    "noware-result": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.0",

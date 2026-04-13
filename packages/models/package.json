@@ -1,5 +1,5 @@
 {
-  "name": "nomo/models",
+  "name": "noware-models",
   "version": "1.0.0",
   "description": "Rails-adjacent models for nomo applications",
   "main": "dist/index.js",
@@ -16,10 +16,10 @@
     "@asteasolutions/zod-to-openapi": "^8.4.0",
     "@cloudflare/workers-types": "^4.20260219.0",
     "drizzle-orm": "^0.45.1",
-    "nomo/logger": "workspace:*",
-    "nomo/result": "workspace:*",
-    "nomo/router": "workspace:*",
-    "nomo/sql": "workspace:*",
+    "noware-logger": "workspace:*",
+    "noware-result": "workspace:*",
+    "noware-router": "workspace:*",
+    "noware-sql": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

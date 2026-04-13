@@ -1,7 +1,7 @@
 {
-  "name": "nomo/query",
+  "name": "noware-query",
   "version": "1.0.0",
-  "description": "BaseQueryController and BaseQueryProjection for optimized reads",
+  "description": "BaseQueryController and BaseQueryProjection for reads",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -13,8 +13,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

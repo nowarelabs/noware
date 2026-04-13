@@ -1,7 +1,7 @@
 {
-  "name": "nomo/plugins",
+  "name": "noware-plugins",
   "version": "1.0.0",
-  "description": "BaseGlobalPlugin for aspect-oriented cross-cutting concerns",
+  "description": "BaseGlobalPlugin for cross-cutting concerns",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -13,8 +13,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
