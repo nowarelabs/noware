@@ -1,0 +1,23 @@
+{
+  "name": "nomo/persistence",
+  "version": "1.0.0",
+  "description": "BasePersistence, data access driver for D1/SQLite/KV",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240603.0",
+    "typescript": "^5.4.5",
+    "tsup": "^8.1.0"
+  }
+}
