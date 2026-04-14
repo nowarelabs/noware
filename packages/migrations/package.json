@@ -1,17 +1,48 @@
 {
   "name": "noware-migrations",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Migration system for Standard Gauge",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/nowarelabs/noware#readme",
+  "bugs": {
+    "url": "https://github.com/nowarelabs/noware/issues"
+  },
+  "license": "MIT",
+  "author": "Noware Labs <nowarelabs.com@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nowarelabs/noware.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit"
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "noware-result": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260203.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "bumpp": "^11.0.1",
+    "typescript": "^6.0.2",
+    "vite-plus": "^0.1.14"
+  },
+  "peerDependencies": {
+  },
+  "optionalDependencies": {
   }
 }

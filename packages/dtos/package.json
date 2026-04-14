@@ -1,7 +1,7 @@
 {
-  "name": "dtos",
-  "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
+  "name": "noware-dtos",
+  "version": "0.0.1",
+  "description": "DTOs for Standard Gauge",
   "homepage": "https://github.com/nowarelabs/noware#readme",
   "bugs": {
     "url": "https://github.com/nowarelabs/noware/issues"
@@ -34,17 +34,15 @@
     "noware-result": "workspace:*"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260203.0",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",
-    "noware-result": "workspace:*",
     "typescript": "^6.0.2",
     "vite-plus": "^0.1.14"
   },
   "peerDependencies": {
-    "noware-result": "workspace:*"
   },
   "optionalDependencies": {
-    "noware-result": "workspace:*"
   }
 }
