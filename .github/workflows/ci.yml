@@ -16,10 +16,7 @@ jobs:
         with:
           node-version: '22'
           cache: true
-      - run: |
-          for pkg in packages/*/; do
-            vp test
-          done
+      - run: vp test
 
   build:
     name: Build
@@ -31,10 +28,7 @@ jobs:
         with:
           node-version: '22'
           cache: true
-      - run: |
-          for pkg in packages/*/; do
-            vp pack
-          done
+      - run: vp pack
 
   publish:
     name: Publish
@@ -48,8 +42,8 @@ jobs:
           node-version: '22'
           cache: true
       - run: |
-          for pkg in packages/*/; do
-            npm publish
+          for dir in packages/*; do
+            (cd "$dir" && npm publish)
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
