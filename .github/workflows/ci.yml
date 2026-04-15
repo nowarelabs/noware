@@ -11,13 +11,14 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
           cache: true
       - run: |
-          ls packages | while read pkg; do
-            (cd "packages/$pkg" && vp test)
+          for pkg in packages/*/; do
+            vp test
           done
 
   build:
@@ -25,13 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     steps:
+      - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
           cache: true
       - run: |
-          ls packages | while read pkg; do
-            (cd "packages/$pkg" && vp pack)
+          for pkg in packages/*/; do
+            vp pack
           done
 
   publish:
@@ -40,13 +42,14 @@ jobs:
     needs: [build]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     steps:
+      - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
           cache: true
       - run: |
-          ls packages | while read pkg; do
-            (cd "packages/$pkg" && npm publish)
+          for pkg in packages/*/; do
+            npm publish
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
