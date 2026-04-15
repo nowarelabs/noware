@@ -6,27 +6,28 @@
  * Connection: Extends functionality at static points
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export interface Plugin {
-  name: string;
-  install(): void;
-}
-
-export class PluginRegistry<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BasePlugin<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Model = unknown,
 > {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
-
-  static plugins: Plugin[] = [];
-
-  static register(plugin: Plugin): void {
-    plugin.install();
-    this.plugins.push(plugin);
-  }
 }

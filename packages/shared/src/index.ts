@@ -31,7 +31,7 @@ export interface Context {
   passThroughOnException(): void;
 }
 
-export type Env = Record<string, unknown>;
+export type EnvLike = Record<string, unknown>;
 
 export type RequestLike = FlattenedRequest;
 

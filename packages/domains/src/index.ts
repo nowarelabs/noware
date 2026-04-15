@@ -6,18 +6,27 @@
  * Connection: Defines core domain types
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export type Entity<T = unknown> = {
-  id: string;
-} & T;
+export class BaseDomain<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
 
-export type ValueObject<T = unknown> = T;
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
 
-export class EntityFactory {
   constructor(
-    protected request?: RequestLike,
-    protected env?: Record<string, unknown>,
-    protected ctx?: ContextLike,
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 }

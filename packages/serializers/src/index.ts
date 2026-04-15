@@ -6,20 +6,28 @@
  * Connection: Serialize/deserialize data
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export class Serializer {
+export class BaseSerializer<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Model = unknown,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
-    protected request?: RequestLike,
-    protected env?: Record<string, unknown>,
-    protected ctx?: ContextLike,
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
-
-  serialize(data: unknown): string {
-    return JSON.stringify(data);
-  }
-
-  deserialize(data: string): unknown {
-    return JSON.parse(data);
-  }
 }

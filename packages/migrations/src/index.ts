@@ -6,15 +6,27 @@
  * Connection: Used by BasePersistence for schema changes
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class Migration {
+export class BaseMigration<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Record<string, unknown>,
+    protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
-  abstract up(): Promise<void>;
-  abstract down(): Promise<void>;
 }

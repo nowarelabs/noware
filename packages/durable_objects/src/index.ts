@@ -9,33 +9,27 @@
  * Other types use noware-shared for runtime-agnostic compatibility.
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export type DurableObjectState = {
-  id: {
-    name: string;
-    toString(): string;
-  };
-  storage: {
-    get<T>(key: string): Promise<T | undefined>;
-    put(key: string, value: unknown): Promise<void>;
-    delete(key: string): Promise<boolean>;
-    list<T>(options?: {
-      prefix?: string;
-      limit?: number;
-    }): Promise<{ keys: Array<{ name: string }> }>;
-  };
-};
+export class BaseDurableObject<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
 
-export abstract class DurableObject {
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
-    protected state: DurableObjectState,
-    protected env: Record<string, unknown>,
-    protected request?: RequestLike,
-    protected ctx?: ContextLike,
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
-
-  async fetch(request: RequestLike): Promise<Response> {
-    throw new Error("Not implemented");
-  }
 }

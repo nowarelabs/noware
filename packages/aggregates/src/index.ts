@@ -13,32 +13,32 @@
  * - eventAppliers: Array<(event) => void>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseAggregate<
-  State = unknown,
-  Event = unknown,
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseAggregate<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Event = unknown,
 > {
-  static commandHandlers: Map<string, unknown> = new Map();
-  static eventAppliers: Map<string, unknown> = new Map();
-  
-  protected state: State = {} as State;
-  protected events: Event[] = [];
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract event: Event;
 
   constructor(
-    protected id: string,
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  protected apply(event: Event): void {
-    this.events.push(event);
-  }
-
-  getEvents(): Event[] {
-    return this.events;
-  }
+  protected abstract getEvent(): Event;
 }

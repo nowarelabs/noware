@@ -6,19 +6,27 @@
  * Connection: External system event handlers
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export interface IntegrationEvent {
-  type: string;
-  payload: unknown;
-  source: string;
-  timestamp: Date;
-}
+export class BaseIntegrationEvent<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
 
-export abstract class BaseIntegrationHandler {
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Record<string, unknown>,
+    protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
 }

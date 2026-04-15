@@ -4,7 +4,7 @@
  * Standard Gauge: CQRS Read Side (Tier 2)
  *
  * Connection Flow:
- * BaseRpcServer → BaseQueryProjection → BasePersistence
+ * BaseRpcServer → BaseQuery → BasePersistence
  *
  * Connection: This layer → BasePersistence (RCSM - ONE call only)
  *
@@ -12,23 +12,32 @@
  * - eventHandlers: Array<(event) => void>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseQueryProjection<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseQuery<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Persistence = unknown,
 > {
-  static eventHandlers: Array<(event: unknown) => void> = [];
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract persistence: Persistence;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  async onEvent(_event: unknown): Promise<void> {}
-
-  async materialize(_entityId: string): Promise<unknown> {
-    return null;
-  }
+  protected abstract getPersistence(): Persistence;
 }

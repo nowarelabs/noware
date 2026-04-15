@@ -9,18 +9,33 @@
  * - components: Map<string, ViewComponent>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseView {
-  static components: Map<string, unknown> = new Map();
+export class BaseView<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Component = unknown,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract component: Component;
 
   constructor(
     protected request: RequestLike,
-    protected env: Record<string, unknown>,
+    protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
 
-  static render(data: unknown): string {
-    return "";
-  }
+  protected abstract getComponent(): Component;
 }
+

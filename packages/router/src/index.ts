@@ -12,21 +12,32 @@
  * - routes: RouteConfig[]
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseRouter<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseRouter<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Rpc = unknown,
 > {
-  static routes: unknown[] = [];
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract rpc: Rpc;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  async handle(_request: RequestLike): Promise<Response> {
-    throw new Error("Not implemented");
-  }
+  protected abstract getRpc(): Rpc;
 }

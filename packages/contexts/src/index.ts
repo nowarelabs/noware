@@ -12,23 +12,33 @@
  * - modules: Map<string, BaseModule>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseContext<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseContext<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Module = unknown,
 > {
-  static modules: Map<string, unknown> = new Map();
-  
-  protected modules: Map<string, unknown> = new Map();
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract module: Module;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  async loadModule(name: string, module: unknown): Promise<void> {
-    this.modules.set(name, module);
-  }
+  protected abstract getModule(): Module;
 }
+

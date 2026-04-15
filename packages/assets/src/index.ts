@@ -9,19 +9,27 @@
  * - loaders: Record<string, LoaderFunction>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export class AssetPipeline {
-  static loaders: Record<string, unknown> = {};
+export class BaseAsset<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
 
   constructor(
-    protected config: unknown,
-    protected request?: RequestLike,
-    protected env?: Record<string, unknown>,
-    protected ctx?: ContextLike,
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
-
-  get(_path: string): string | null {
-    return null;
-  }
 }

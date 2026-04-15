@@ -13,27 +13,33 @@
  * - afterActions: HookConfig[]
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseController<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseService<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
   Service = unknown,
 > {
-  static beforeActions: unknown[] = [];
-  static afterActions: unknown[] = [];
-  
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   protected abstract service: Service;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
   protected abstract getService(): Service;
-
-  async runAction(_name: string): Promise<Response> {
-    throw new Error("Not implemented");
-  }
 }
+

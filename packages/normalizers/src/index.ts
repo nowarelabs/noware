@@ -6,19 +6,27 @@
  * Connection: Used by controllers to normalize input
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export interface Normalizer<T = unknown> {
-  normalize(data: unknown): T;
-}
-
-export abstract class BaseNormalizer<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseNormalizer<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
 > {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 }

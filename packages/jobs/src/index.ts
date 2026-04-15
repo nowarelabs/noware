@@ -9,21 +9,27 @@
  * - jobs: Map<string, JobHandler>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class JobDispatcher<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseJob<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
 > {
-  static jobs: Map<string, unknown> = new Map();
-  
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
-
-  async dispatch(_jobName: string, _payload: unknown): Promise<void> {
-    throw new Error("Not implemented");
-  }
 }

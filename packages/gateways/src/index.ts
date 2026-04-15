@@ -6,19 +6,27 @@
  * Connection: Implements Port interfaces from noware-ports
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class Gateway<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseGateway<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
 > {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
-
-  async execute(_input: unknown): Promise<unknown> {
-    throw new Error("Not implemented");
-  }
 }

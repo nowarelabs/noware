@@ -6,18 +6,28 @@
  * Connection: CLI tools for project setup
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export const GENERATORS = {
-  controller: (name: string) => `// Controller template`,
-  service: (name: string) => `// Service template`,
-  model: (name: string) => `// Model template`,
-};
+export class BaseScript<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Model = unknown,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
 
-export class ScriptRunner {
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
-    protected request?: RequestLike,
-    protected env?: Record<string, unknown>,
-    protected ctx?: ContextLike,
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 }

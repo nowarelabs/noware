@@ -6,19 +6,27 @@
  * Connection: Defines interfaces that gateways must implement
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export interface Adapter<T = unknown> {
-  execute(input: unknown): Promise<T>;
-}
-
-export abstract class BaseAdapter<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseAdapter<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
 > {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 }

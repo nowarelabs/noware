@@ -1,30 +1,41 @@
 /**
- * noware-features - BaseFeatureHandler
+ * noware-features - BaseFeature
  *
  * Standard Gauge: Feature Orchestration Layer (can call multiple RCSM chains)
  *
  * Connection Flow:
- * BaseFeatureHandler → BaseController[] (multiple RCSM chains allowed)
+ * BaseFeature → BaseRpc[] (multiple RCSM chains allowed)
  *
  * Static Plugin Points:
- * - controllers: Map<string, BaseController>
+ * - rpcs: Map<string, BaseRpc>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseFeatureHandler<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseFeature<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Rpc = unknown,
 > {
-  static controllers: Map<string, unknown> = new Map();
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract rpc: Rpc;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  async handle(_input: unknown): Promise<unknown> {
-    throw new Error("Not implemented");
-  }
+  protected abstract getRpc(): Rpc;
 }

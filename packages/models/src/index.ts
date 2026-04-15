@@ -13,22 +13,31 @@
  * - relations: Record<string, RelationConfig>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseModel<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseModel<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
   Persistence = unknown,
 > {
-  static columnTypes: Record<string, string> = {};
-  static relations: Record<string, unknown> = {};
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
 
   protected abstract persistence: Persistence;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
   protected abstract getPersistence(): Persistence;

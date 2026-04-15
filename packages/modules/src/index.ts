@@ -12,20 +12,32 @@
  * - handlers: Map<string, BaseFeatureHandler>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseModule<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseModule<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Feature = unknown,
 > {
-  static handlers: Map<string, unknown> = new Map();
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract Feature: Feature;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  async load(): Promise<void> {}
-  async unload(): Promise<void> {}
+  protected abstract getFeature(): Feature;
 }

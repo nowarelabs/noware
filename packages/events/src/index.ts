@@ -9,15 +9,27 @@
  * - handlers: Map<string, EventHandler[]>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export class EventEmitter {
+export class BaseEvent<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Record<string, unknown>,
+    protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
-  on(event: string, handler: unknown): void {}
-  emit(event: string, data: unknown): void {}
 }

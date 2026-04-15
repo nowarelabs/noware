@@ -6,16 +6,27 @@
  * Connection: System health checks, cleanup
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export class Maintenance {
+export class BaseMaintenance<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
   constructor(
     protected request: RequestLike,
-    protected env: Record<string, unknown>,
+    protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
-  async healthCheck(): Promise<boolean> {
-    return true;
-  }
 }

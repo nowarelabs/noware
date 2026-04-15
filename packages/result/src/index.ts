@@ -6,22 +6,27 @@
  * Connection: Used by all layers for error handling
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+export class BaseResult<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
 
-export function ok<T>(value: T): Result<T> {
-  return { ok: true, value };
-}
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
 
-export function err<T>(error: string): Result<T> {
-  return { ok: false, error };
-}
-
-export class ResultFactory {
   constructor(
-    protected request?: RequestLike,
-    protected env?: Record<string, unknown>,
-    protected ctx?: ContextLike,
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 }

@@ -1,13 +1,32 @@
 /**
- * noware-entrypoints - BaseWorker
+ * noware-entrypoints - BaseEntrypoint
  *
  * Standard Gauge: Worker Entry Point (Tier 2)
  *
  * Connection: Handles incoming requests, delegates to Router
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseWorker<Env extends Record<string, unknown> = Record<string, unknown>> {
-  abstract fetch(request: RequestLike, env: Env, ctx: ContextLike): Promise<Response>;
+export class BaseEntrypoint<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+> {
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  constructor(
+    protected request: RequestLike,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
+  ) {}
 }

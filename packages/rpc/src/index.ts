@@ -1,10 +1,10 @@
 /**
- * noware-rpc - BaseRpcServer
+ * noware-rpc - BaseRpc
  *
- * Standard Gauge: RPC Server (Tier 2)
+ * Standard Gauge: RPC  (Tier 2)
  *
  * Connection Flow:
- * BaseRpcServer → BaseFeatureHandler → BaseController
+ * BaseRpc → BaseFeatureHandler → BaseController
  *
  * Connection: This layer → BaseFeatureHandler (ONE call only)
  *
@@ -12,21 +12,32 @@
  * - handlers: Map<string, BaseFeatureHandler>
  */
 
-import type { RequestLike, ContextLike } from "noware-shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike
+} from "noware-shared";
 
-export abstract class BaseRpcServer<
-  Env extends Record<string, unknown> = Record<string, unknown>,
+export class BaseRpc<
   Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+  Request extends RequestLike = RequestLike,
+  Feature = unknown,
 > {
-  static handlers: Map<string, unknown> = new Map();
+  static beforeHooks: unknown[] = [];
+  static afterHooks: unknown[] = [];
+
+  protected request: RequestLike;
+  protected env: EnvLike;
+  protected ctx: ContextLike;
+
+  protected abstract feature: Feature;
 
   constructor(
     protected request: RequestLike,
-    protected env: Env,
-    protected ctx: Ctx,
+    protected env: EnvLike,
+    protected ctx: ContextLike,
   ) {}
 
-  async handle(_request: Request): Promise<Response> {
-    throw new Error("Not implemented");
-  }
+  protected abstract getFeature(): Feature;
 }
