@@ -16,11 +16,76 @@ jobs:
         with:
           node-version: '22'
           cache: true
-      - run: vp install
       - run: |
-          for dir in packages/adapters packages/aggregates packages/assets packages/contexts packages/controllers packages/domains packages/dtos packages/durable_objects packages/entrypoints packages/events packages/features packages/formatters packages/gateways packages/integration-events packages/jobs packages/logger packages/maintenance packages/migrations packages/models packages/modules packages/normalizers packages/persistence packages/plugins packages/ports packages/query packages/result packages/rpc packages/router packages/scripts packages/serializers packages/services packages/shared packages/sql packages/validators packages/views; do
-            (cd "$dir" && vp test)
-          done
+          cd packages/adapters && vp test
+      - run: |
+          cd packages/aggregates && vp test
+      - run: |
+          cd packages/assets && vp test
+      - run: |
+          cd packages/contexts && vp test
+      - run: |
+          cd packages/controllers && vp test
+      - run: |
+          cd packages/domains && vp test
+      - run: |
+          cd packages/dtos && vp test
+      - run: |
+          cd packages/durable_objects && vp test
+      - run: |
+          cd packages/entrypoints && vp test
+      - run: |
+          cd packages/events && vp test
+      - run: |
+          cd packages/features && vp test
+      - run: |
+          cd packages/formatters && vp test
+      - run: |
+          cd packages/gateways && vp test
+      - run: |
+          cd packages/integration-events && vp test
+      - run: |
+          cd packages/jobs && vp test
+      - run: |
+          cd packages/logger && vp test
+      - run: |
+          cd packages/maintenance && vp test
+      - run: |
+          cd packages/migrations && vp test
+      - run: |
+          cd packages/models && vp test
+      - run: |
+          cd packages/modules && vp test
+      - run: |
+          cd packages/normalizers && vp test
+      - run: |
+          cd packages/persistence && vp test
+      - run: |
+          cd packages/plugins && vp test
+      - run: |
+          cd packages/ports && vp test
+      - run: |
+          cd packages/query && vp test
+      - run: |
+          cd packages/result && vp test
+      - run: |
+          cd packages/rpc && vp test
+      - run: |
+          cd packages/router && vp test
+      - run: |
+          cd packages/scripts && vp test
+      - run: |
+          cd packages/serializers && vp test
+      - run: |
+          cd packages/services && vp test
+      - run: |
+          cd packages/shared && vp test
+      - run: |
+          cd packages/sql && vp test
+      - run: |
+          cd packages/validators && vp test
+      - run: |
+          cd packages/views && vp test
 
   build:
     name: Build
@@ -32,11 +97,76 @@ jobs:
         with:
           node-version: '22'
           cache: true
-      - run: vp install
       - run: |
-          for dir in packages/adapters packages/aggregates packages/assets packages/contexts packages/controllers packages/domains packages/dtos packages/durable_objects packages/entrypoints packages/events packages/features packages/formatters packages/gateways packages/integration-events packages/jobs packages/logger packages/maintenance packages/migrations packages/models packages/modules packages/normalizers packages/persistence packages/plugins packages/ports packages/query packages/result packages/rpc packages/router packages/scripts packages/serializers packages/services packages/shared packages/sql packages/validators packages/views; do
-            (cd "$dir" && vp pack)
-          done
+          cd packages/adapters && vp pack
+      - run: |
+          cd packages/aggregates && vp pack
+      - run: |
+          cd packages/assets && vp pack
+      - run: |
+          cd packages/contexts && vp pack
+      - run: |
+          cd packages/controllers && vp pack
+      - run: |
+          cd packages/domains && vp pack
+      - run: |
+          cd packages/dtos && vp pack
+      - run: |
+          cd packages/durable_objects && vp pack
+      - run: |
+          cd packages/entrypoints && vp pack
+      - run: |
+          cd packages/events && vp pack
+      - run: |
+          cd packages/features && vp pack
+      - run: |
+          cd packages/formatters && vp pack
+      - run: |
+          cd packages/gateways && vp pack
+      - run: |
+          cd packages/integration-events && vp pack
+      - run: |
+          cd packages/jobs && vp pack
+      - run: |
+          cd packages/logger && vp pack
+      - run: |
+          cd packages/maintenance && vp pack
+      - run: |
+          cd packages/migrations && vp pack
+      - run: |
+          cd packages/models && vp pack
+      - run: |
+          cd packages/modules && vp pack
+      - run: |
+          cd packages/normalizers && vp pack
+      - run: |
+          cd packages/persistence && vp pack
+      - run: |
+          cd packages/plugins && vp pack
+      - run: |
+          cd packages/ports && vp pack
+      - run: |
+          cd packages/query && vp pack
+      - run: |
+          cd packages/result && vp pack
+      - run: |
+          cd packages/rpc && vp pack
+      - run: |
+          cd packages/router && vp pack
+      - run: |
+          cd packages/scripts && vp pack
+      - run: |
+          cd packages/serializers && vp pack
+      - run: |
+          cd packages/services && vp pack
+      - run: |
+          cd packages/shared && vp pack
+      - run: |
+          cd packages/sql && vp pack
+      - run: |
+          cd packages/validators && vp pack
+      - run: |
+          cd packages/views && vp pack
 
   publish:
     name: Publish
