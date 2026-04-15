@@ -18,7 +18,7 @@ import type {
   RequestLike
 } from "noware-shared";
 
-export class BaseQuery<
+export abstract class BaseQuery<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
@@ -26,11 +26,7 @@ export class BaseQuery<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-
-  protected request: RequestLike;
-  protected env: EnvLike;
-  protected ctx: ContextLike;
-
+  
   protected abstract persistence: Persistence;
 
   constructor(
@@ -38,6 +34,5 @@ export class BaseQuery<
     protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
   protected abstract getPersistence(): Persistence;
 }

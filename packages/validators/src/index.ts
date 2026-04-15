@@ -20,10 +20,6 @@ export class BaseValidator<
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
 
-  protected request: RequestLike;
-  protected env: EnvLike;
-  protected ctx: ContextLike;
-
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,

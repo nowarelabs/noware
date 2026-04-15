@@ -11,7 +11,7 @@ import type {
   RequestLike
 } from "noware-shared";
 
-export class BaseService<
+export abstract class BaseService<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
@@ -19,11 +19,7 @@ export class BaseService<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-
-  protected request: RequestLike;
-  protected env: EnvLike;
-  protected ctx: ContextLike;
-
+  
   protected abstract model: Model;
 
   constructor(
@@ -31,6 +27,5 @@ export class BaseService<
     protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
   protected abstract getModel(): Model;
 }

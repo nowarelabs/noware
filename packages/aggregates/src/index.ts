@@ -19,7 +19,7 @@ import type {
   RequestLike
 } from "noware-shared";
 
-export class BaseAggregate<
+export abstract class BaseAggregate<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
@@ -27,11 +27,7 @@ export class BaseAggregate<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-
-  protected request: RequestLike;
-  protected env: EnvLike;
-  protected ctx: ContextLike;
-
+  
   protected abstract event: Event;
 
   constructor(
@@ -39,6 +35,5 @@ export class BaseAggregate<
     protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
   protected abstract getEvent(): Event;
 }

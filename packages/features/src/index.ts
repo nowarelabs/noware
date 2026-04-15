@@ -16,7 +16,7 @@ import type {
   RequestLike
 } from "noware-shared";
 
-export class BaseFeature<
+export abstract class BaseFeature<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
@@ -24,11 +24,7 @@ export class BaseFeature<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-
-  protected request: RequestLike;
-  protected env: EnvLike;
-  protected ctx: ContextLike;
-
+  
   protected abstract rpc: Rpc;
 
   constructor(
@@ -36,6 +32,5 @@ export class BaseFeature<
     protected env: EnvLike,
     protected ctx: ContextLike,
   ) {}
-
   protected abstract getRpc(): Rpc;
 }
