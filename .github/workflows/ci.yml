@@ -173,12 +173,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
           cache: true
+          registry-url: 'https://registry.npmjs.org/'
+      - run: |
+          cd packages/shared && vp install && npm publish
       - run: |
           cd packages/adapters && vp install && npm publish
       - run: |
@@ -242,12 +247,8 @@ jobs:
       - run: |
           cd packages/services && vp install && npm publish
       - run: |
-          cd packages/shared && vp install && npm publish
-      - run: |
           cd packages/sql && vp install && npm publish
       - run: |
           cd packages/validators && vp install && npm publish
       - run: |
           cd packages/views && vp install && npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
