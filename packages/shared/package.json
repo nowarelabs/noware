@@ -1,6 +1,6 @@
 {
   "name": "noware-shared",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Shared types for Standard Gauge - Request, Env, Context",
   "homepage": "https://github.com/nowarelabs/noware#readme",
   "bugs": {
