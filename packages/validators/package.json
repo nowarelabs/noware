@@ -1,5 +1,5 @@
 {
-  "name": "noware-validators",
+  "name": "@nowarelabs/validators",
   "version": "0.0.1",
   "description": "BaseValidator for Standard Gauge",
   "homepage": "https://github.com/nowarelabs/noware#readme",
@@ -31,7 +31,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "noware-shared": "0.0.1"
+    "@nowarelabs/shared": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

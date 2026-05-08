@@ -154,7 +154,7 @@ app/
 
 ### Maps to Existing Noware Packages
 
-| Directory | Package (noware-*) | Base Classes |
+| Directory | Package (@nowarelabs/*) | Base Classes |
 | :--- | :--- | :--- |
 | `core/commands/controllers` | `controllers` | `BaseController`, `BaseResourceController` |
 | `core/commands/services` | `services` | `BaseService` |
