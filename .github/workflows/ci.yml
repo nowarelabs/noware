@@ -173,8 +173,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
@@ -186,73 +184,143 @@ jobs:
           echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
           echo "always-auth=true" >> ~/.npmrc
       - run: npm whoami
-      - run: |
-          cd packages/shared && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/adapters && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/aggregates && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/assets && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/contexts && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/controllers && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/domains && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/dtos && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/durable_objects && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/entrypoints && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/events && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/features && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/formatters && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/gateways && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/integration-events && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/jobs && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/logger && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/maintenance && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/migrations && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/models && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/modules && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/normalizers && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/persistence && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/plugins && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/ports && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/query && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/result && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/rpc && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/router && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/scripts && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/serializers && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/services && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/sql && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/validators && vp install && npm publish --provenance --access public
-      - run: |
-          cd packages/views && vp install && npm publish --provenance --access public
+      - name: publish-shared
+        run: cd packages/shared && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-adapters
+        run: cd packages/adapters && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-aggregates
+        run: cd packages/aggregates && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-assets
+        run: cd packages/assets && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-contexts
+        run: cd packages/contexts && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-controllers
+        run: cd packages/controllers && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-domains
+        run: cd packages/domains && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-dtos
+        run: cd packages/dtos && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-durable_objects
+        run: cd packages/durable_objects && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-entrypoints
+        run: cd packages/entrypoints && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-events
+        run: cd packages/events && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-features
+        run: cd packages/features && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-formatters
+        run: cd packages/formatters && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-gateways
+        run: cd packages/gateways && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-integration-events
+        run: cd packages/integration-events && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-jobs
+        run: cd packages/jobs && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-logger
+        run: cd packages/logger && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-maintenance
+        run: cd packages/maintenance && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-migrations
+        run: cd packages/migrations && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-models
+        run: cd packages/models && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-modules
+        run: cd packages/modules && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-normalizers
+        run: cd packages/normalizers && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-persistence
+        run: cd packages/persistence && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-plugins
+        run: cd packages/plugins && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-ports
+        run: cd packages/ports && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-query
+        run: cd packages/query && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-result
+        run: cd packages/result && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-rpc
+        run: cd packages/rpc && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-router
+        run: cd packages/router && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-scripts
+        run: cd packages/scripts && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-serializers
+        run: cd packages/serializers && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-services
+        run: cd packages/services && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-sql
+        run: cd packages/sql && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-validators
+        run: cd packages/validators && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: publish-views
+        run: cd packages/views && vp install && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
