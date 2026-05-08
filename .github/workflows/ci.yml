@@ -181,9 +181,9 @@ jobs:
         with:
           node-version: '22'
           cache: true
-      - run: |
-          npm config set //registry.npmjs.org/:_authToken ${NODE_AUTH_TOKEN}
-          npm config set registry https://registry.npmjs.org/
+      - uses: actions/setup-node@v4
+        with:
+          registry-url: 'https://registry.npmjs.org/'
       - run: npm whoami
       - name: publish-shared
         run: cd packages/shared && vp install && npm publish --provenance --access public
