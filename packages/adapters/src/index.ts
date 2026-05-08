@@ -1,16 +1,8 @@
 /**
  * noware-adapters - Adapters
- *
- * Standard Gauge: Adapters (implementation layer)
- *
- * Connection: Defines interfaces that gateways must implement
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "noware-shared";
 
 export class BaseAdapter<
   Ctx extends ContextLike = ContextLike,
@@ -19,6 +11,7 @@ export class BaseAdapter<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
+  static aroundHooks: unknown[] = [];
 
   constructor(
     protected request: RequestLike,
