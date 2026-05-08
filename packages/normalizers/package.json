@@ -31,7 +31,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "noware-shared": "workspace:*"
+    "noware-shared": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
