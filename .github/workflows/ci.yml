@@ -14,8 +14,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: '22'
+          node-version: "22"
           cache: true
+      - run: |
+          cd packages/shared && vp install && vp test
       - run: |
           cd packages/adapters && vp install && vp test
       - run: |
@@ -79,8 +81,6 @@ jobs:
       - run: |
           cd packages/services && vp install && vp test
       - run: |
-          cd packages/shared && vp install && vp test
-      - run: |
           cd packages/sql && vp install && vp test
       - run: |
           cd packages/validators && vp install && vp test
@@ -95,8 +95,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: '22'
+          node-version: "22"
           cache: true
+      - run: vp install
+      - run: |
+          cd packages/shared && vp install && vp run build
       - run: |
           cd packages/adapters && vp install && vp run build
       - run: |
@@ -160,8 +163,6 @@ jobs:
       - run: |
           cd packages/services && vp install && vp run build
       - run: |
-          cd packages/shared && vp install && vp run build
-      - run: |
           cd packages/sql && vp install && vp run build
       - run: |
           cd packages/validators && vp install && vp run build
@@ -183,359 +184,394 @@ jobs:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: '22'
+          node-version: "22"
           cache: true
       - uses: actions/setup-node@v4
         with:
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
       - run: npm whoami
+
       - name: publish-shared
         run: |
           cd packages/shared
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/shared@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-adapters
         run: |
           cd packages/adapters
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/adapters@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-aggregates
         run: |
           cd packages/aggregates
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/aggregates@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-assets
         run: |
           cd packages/assets
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/assets@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-contexts
         run: |
           cd packages/contexts
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/contexts@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-controllers
         run: |
           cd packages/controllers
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/controllers@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-domains
         run: |
           cd packages/domains
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/domains@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-dtos
         run: |
           cd packages/dtos
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/dtos@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-durable_objects
         run: |
           cd packages/durable_objects
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/durable_objects@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-entrypoints
         run: |
           cd packages/entrypoints
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/entrypoints@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-events
         run: |
           cd packages/events
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/events@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-features
         run: |
           cd packages/features
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/features@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-formatters
         run: |
           cd packages/formatters
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/formatters@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-gateways
         run: |
           cd packages/gateways
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/gateways@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-integration-events
         run: |
           cd packages/integration-events
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/integration-events@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-jobs
         run: |
           cd packages/jobs
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/jobs@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-logger
         run: |
           cd packages/logger
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/logger@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-maintenance
         run: |
           cd packages/maintenance
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/maintenance@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-migrations
         run: |
           cd packages/migrations
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/migrations@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-models
         run: |
           cd packages/models
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/models@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-modules
         run: |
           cd packages/modules
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/modules@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-normalizers
         run: |
           cd packages/normalizers
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/normalizers@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-persistence
         run: |
           cd packages/persistence
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/persistence@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-plugins
         run: |
           cd packages/plugins
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/plugins@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-ports
         run: |
           cd packages/ports
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/ports@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-query
         run: |
           cd packages/query
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/query@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-result
         run: |
           cd packages/result
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/result@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-rpc
         run: |
           cd packages/rpc
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/rpc@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-router
         run: |
           cd packages/router
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/router@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-scripts
         run: |
           cd packages/scripts
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/scripts@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-serializers
         run: |
           cd packages/serializers
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/serializers@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-services
         run: |
           cd packages/services
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/services@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-sql
         run: |
           cd packages/sql
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/sql@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-validators
         run: |
           cd packages/validators
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/validators@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
 
       - name: publish-views
         run: |
           cd packages/views
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if ! npm view @nowarelabs/views@$CURRENT_VERSION version > /dev/null 2>&1; then
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
             vp install && npm publish --provenance --access public
           else
-            echo "Version $CURRENT_VERSION already published, skipping..."
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
           fi
-
