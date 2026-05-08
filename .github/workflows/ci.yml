@@ -181,74 +181,78 @@ jobs:
         with:
           node-version: '22'
           cache: true
-          registry-url: 'https://registry.npmjs.org/'
       - run: |
-          cd packages/shared && vp install && npm publish
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          echo "always-auth=true" >> ~/.npmrc
+      - run: npm whoami
       - run: |
-          cd packages/adapters && vp install && npm publish
+          cd packages/shared && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/aggregates && vp install && npm publish
+          cd packages/adapters && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/assets && vp install && npm publish
+          cd packages/aggregates && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/contexts && vp install && npm publish
+          cd packages/assets && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/controllers && vp install && npm publish
+          cd packages/contexts && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/domains && vp install && npm publish
+          cd packages/controllers && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/dtos && vp install && npm publish
+          cd packages/domains && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/durable_objects && vp install && npm publish
+          cd packages/dtos && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/entrypoints && vp install && npm publish
+          cd packages/durable_objects && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/events && vp install && npm publish
+          cd packages/entrypoints && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/features && vp install && npm publish
+          cd packages/events && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/formatters && vp install && npm publish
+          cd packages/features && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/gateways && vp install && npm publish
+          cd packages/formatters && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/integration-events && vp install && npm publish
+          cd packages/gateways && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/jobs && vp install && npm publish
+          cd packages/integration-events && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/logger && vp install && npm publish
+          cd packages/jobs && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/maintenance && vp install && npm publish
+          cd packages/logger && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/migrations && vp install && npm publish
+          cd packages/maintenance && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/models && vp install && npm publish
+          cd packages/migrations && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/modules && vp install && npm publish
+          cd packages/models && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/normalizers && vp install && npm publish
+          cd packages/modules && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/persistence && vp install && npm publish
+          cd packages/normalizers && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/plugins && vp install && npm publish
+          cd packages/persistence && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/ports && vp install && npm publish
+          cd packages/plugins && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/query && vp install && npm publish
+          cd packages/ports && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/result && vp install && npm publish
+          cd packages/query && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/rpc && vp install && npm publish
+          cd packages/result && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/router && vp install && npm publish
+          cd packages/rpc && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/scripts && vp install && npm publish
+          cd packages/router && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/serializers && vp install && npm publish
+          cd packages/scripts && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/services && vp install && npm publish
+          cd packages/serializers && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/sql && vp install && npm publish
+          cd packages/services && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/validators && vp install && npm publish
+          cd packages/sql && vp install && npm publish --provenance --access public
       - run: |
-          cd packages/views && vp install && npm publish
+          cd packages/validators && vp install && npm publish --provenance --access public
+      - run: |
+          cd packages/views && vp install && npm publish --provenance --access public
