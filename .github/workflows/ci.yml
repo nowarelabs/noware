@@ -182,9 +182,9 @@ jobs:
           node-version: '22'
           cache: true
       - run: |
-          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
-          echo "always-auth=true" >> ~/.npmrc
+          npm config set //registry.npmjs.org/:_authToken ${NODE_AUTH_TOKEN}
+          npm config set registry https://registry.npmjs.org/
+          npm config set always-auth true
       - run: npm whoami
       - name: publish-shared
         run: cd packages/shared && vp install && npm publish --provenance --access public
