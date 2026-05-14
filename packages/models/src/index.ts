@@ -13,11 +13,7 @@
  * - relations: Record<string, RelationConfig>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseModel<
   Ctx extends ContextLike = ContextLike,
@@ -27,7 +23,7 @@ export abstract class BaseModel<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract persistence: Persistence;
 
   constructor(

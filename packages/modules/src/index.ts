@@ -12,11 +12,7 @@
  * - handlers: Map<string, BaseFeatureHandler>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseModule<
   Ctx extends ContextLike = ContextLike,
@@ -26,7 +22,7 @@ export abstract class BaseModule<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract feature: Feature;
 
   constructor(

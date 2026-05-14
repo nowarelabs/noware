@@ -10,11 +10,7 @@
  * - rpcs: Map<string, BaseRpc>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseFeature<
   Ctx extends ContextLike = ContextLike,
@@ -24,7 +20,7 @@ export abstract class BaseFeature<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract rpc: Rpc;
 
   constructor(

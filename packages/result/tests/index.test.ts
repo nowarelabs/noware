@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "noware-shared";
+import type { ContextLike } from "@nowarelabs/shared";
 import { ok, err, ResultFactory, BaseResult } from "../src/index.ts";
 
 describe("Result", () => {
@@ -31,7 +31,10 @@ describe("BaseResult", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const result = new BaseResult(mockRequest, mockEnv, mockCtx);
     expect(result).toBeDefined();

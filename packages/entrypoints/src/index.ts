@@ -6,11 +6,7 @@
  * Connection: Handles incoming requests, delegates to Router
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseEntrypoint<
   Ctx extends ContextLike = ContextLike,

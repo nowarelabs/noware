@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "noware-shared";
+import type { ContextLike } from "@nowarelabs/shared";
 import { BaseJob } from "../src/index.ts";
 
 describe("BaseJob", () => {
@@ -10,7 +10,10 @@ describe("BaseJob", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = { QUEUE: {} } as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const job = new TestJob(mockRequest, mockEnv, mockCtx);
 

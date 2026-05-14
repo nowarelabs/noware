@@ -6,11 +6,7 @@
  * Connection: Used by controllers to normalize input
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseNormalizer<
   Ctx extends ContextLike = ContextLike,

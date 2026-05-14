@@ -2,7 +2,7 @@
  * noware-adapters - Adapters
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseAdapter<
   Ctx extends ContextLike = ContextLike,

@@ -6,11 +6,7 @@
  * Connection: Define data transfer structures
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class Dto {
   constructor(

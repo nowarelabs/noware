@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import type { ContextLike } from "noware-shared";
+import type { ContextLike } from "@nowarelabs/shared";
 import { IntegrationEvent, BaseIntegrationEvent } from "../src/index.ts";
 
 describe("IntegrationEvent", () => {
@@ -21,7 +21,10 @@ describe("BaseIntegrationEvent", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const handler = new BaseIntegrationEvent(mockRequest, mockEnv, mockCtx);
     expect(handler).toBeDefined();

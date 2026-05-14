@@ -6,11 +6,7 @@
  * Connection: Used by BasePersistence for database queries
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class QueryBuilder {
   constructor(

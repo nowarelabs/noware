@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "noware-shared";
+import type { ContextLike } from "@nowarelabs/shared";
 import { Validator, BaseValidator } from "../src/index.ts";
 
 describe("Validator", () => {
@@ -23,7 +23,10 @@ describe("BaseValidator", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const validator = new TestValidator(mockRequest, mockEnv, mockCtx);
 
@@ -33,7 +36,10 @@ describe("BaseValidator", () => {
   test("validate can be overridden", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const validator = new TestValidator(mockRequest, mockEnv, mockCtx);
     const result = validator.validate({ name: "test" });

@@ -12,11 +12,7 @@
  * - modules: Map<string, BaseModule>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseContext<
   Ctx extends ContextLike = ContextLike,
@@ -26,7 +22,7 @@ export abstract class BaseContext<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract module: Module;
 
   constructor(
@@ -36,4 +32,3 @@ export abstract class BaseContext<
   ) {}
   protected abstract getModule(): Module;
 }
-

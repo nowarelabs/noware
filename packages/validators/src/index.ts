@@ -6,16 +6,12 @@
  * Connection: Used by controllers to validate input
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseValidator<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike
+  Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];

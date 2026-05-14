@@ -6,16 +6,12 @@
  * Connection: Used by BasePersistence for schema changes
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class Migration {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected request: RequestLike;
   protected env: EnvLike;
   protected ctx: ContextLike;

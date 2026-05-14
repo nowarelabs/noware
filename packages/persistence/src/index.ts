@@ -13,11 +13,7 @@
  * - dialects: Record<string, Dialect>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BasePersistence<
   Ctx extends ContextLike = ContextLike,
@@ -26,7 +22,7 @@ export class BasePersistence<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected db: unknown;
 
   constructor(
@@ -35,4 +31,3 @@ export class BasePersistence<
     protected ctx: ContextLike,
   ) {}
 }
-

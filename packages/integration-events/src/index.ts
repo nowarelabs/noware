@@ -6,11 +6,7 @@
  * Connection: External system event handlers
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export interface IntegrationEvent {
   type: string;

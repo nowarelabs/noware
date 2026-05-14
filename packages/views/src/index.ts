@@ -9,11 +9,7 @@
  * - components: Map<string, ViewComponent>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseView<
   Ctx extends ContextLike = ContextLike,
@@ -23,7 +19,7 @@ export abstract class BaseView<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
- 
+
   protected abstract component: Component;
 
   constructor(
@@ -34,4 +30,3 @@ export abstract class BaseView<
 
   protected abstract getComponent(): Component;
 }
-

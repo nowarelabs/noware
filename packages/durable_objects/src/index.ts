@@ -9,11 +9,7 @@
  * Other types use noware-shared for runtime-agnostic compatibility.
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export type DurableObjectState = {
   id: {

@@ -6,11 +6,7 @@
  * Connection: Implements Port interfaces from noware-ports
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseGateway<
   Ctx extends ContextLike = ContextLike,

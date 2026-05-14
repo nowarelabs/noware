@@ -6,11 +6,7 @@
  * Connection: Used by all layers for error handling
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -33,7 +29,7 @@ export class ResultFactory {
 export class BaseResult<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike
+  Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];

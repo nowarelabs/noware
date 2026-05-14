@@ -6,11 +6,7 @@
  * Connection: Used by all layers for logging
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export enum LogLevel {
   DEBUG = 0,

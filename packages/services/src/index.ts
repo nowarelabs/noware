@@ -5,11 +5,7 @@
 
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseService<
   Ctx extends ContextLike = ContextLike,
@@ -19,7 +15,7 @@ export abstract class BaseService<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract model: Model;
 
   constructor(

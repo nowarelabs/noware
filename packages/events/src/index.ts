@@ -9,11 +9,7 @@
  * - handlers: Map<string, EventHandler[]>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class EventEmitter {
   constructor(

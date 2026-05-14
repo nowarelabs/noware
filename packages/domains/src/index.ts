@@ -6,11 +6,7 @@
  * Connection: Defines core domain types
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseDomain<
   Ctx extends ContextLike = ContextLike,

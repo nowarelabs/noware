@@ -6,11 +6,7 @@
  * Connection: System health checks, cleanup
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class Maintenance {
   constructor(

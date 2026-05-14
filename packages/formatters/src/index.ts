@@ -6,11 +6,7 @@
  * Connection: Used by controllers to format output
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseFormatter<
   Ctx extends ContextLike = ContextLike,

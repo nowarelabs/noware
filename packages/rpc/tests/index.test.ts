@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "noware-shared";
+import type { ContextLike } from "@nowarelabs/shared";
 import { BaseRpc, BaseRpcServer } from "../src/index.ts";
 
 describe("BaseRpcServer", () => {
@@ -12,18 +12,26 @@ describe("BaseRpcServer", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = { DB: {} } as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const server = new TestRpcServer(mockRequest, mockEnv, mockCtx);
 
     expect(server).toBeDefined();
-    expect((server as unknown as { request: Request }).request).toBe(mockRequest);
+    expect((server as unknown as { request: Request }).request).toBe(
+      mockRequest,
+    );
   });
 
   test("handle can be overridden", async () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const server = new TestRpcServer(mockRequest, mockEnv, mockCtx);
 

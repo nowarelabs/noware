@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "noware-shared";
+import type { ContextLike } from "@nowarelabs/shared";
 import { Normalizer, BaseNormalizer } from "../src/index.ts";
 
 describe("Normalizer", () => {
@@ -22,7 +22,10 @@ describe("BaseNormalizer", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const normalizer = new TestNormalizer(mockRequest, mockEnv, mockCtx);
 
@@ -32,7 +35,10 @@ describe("BaseNormalizer", () => {
   test("normalize can be overridden", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as ContextLike;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as ContextLike;
 
     const normalizer = new TestNormalizer(mockRequest, mockEnv, mockCtx);
     const result = normalizer.normalize({ name: "test" });

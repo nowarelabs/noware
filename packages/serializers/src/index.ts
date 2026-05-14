@@ -6,11 +6,7 @@
  * Connection: Serialize/deserialize data
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class Serializer {
   constructor(

@@ -6,11 +6,7 @@
  * Connection: Extends functionality at static points
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export interface Plugin {
   name: string;

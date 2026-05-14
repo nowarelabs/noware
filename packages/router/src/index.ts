@@ -12,11 +12,7 @@
  * - routes: RouteConfig[]
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseRouter<
   Ctx extends ContextLike = ContextLike,
@@ -26,7 +22,7 @@ export abstract class BaseRouter<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract rpc: Rpc;
 
   constructor(

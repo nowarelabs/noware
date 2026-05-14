@@ -6,11 +6,7 @@
  * Connection: Defines interfaces that gateways must implement
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BasePort<
   Ctx extends ContextLike = ContextLike,

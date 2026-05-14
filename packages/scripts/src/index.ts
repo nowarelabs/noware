@@ -6,11 +6,7 @@
  * Connection: CLI tools for project setup
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export const GENERATORS = {
   controller: (name: string) => `// Controller template`,

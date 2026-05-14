@@ -9,11 +9,7 @@
  * - loaders: Record<string, LoaderFunction>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export class BaseAsset<
   Ctx extends ContextLike = ContextLike,

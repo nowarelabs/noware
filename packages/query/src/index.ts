@@ -12,11 +12,7 @@
  * - eventHandlers: Array<(event) => void>
  */
 
-import type {
-  EnvLike,
-  ContextLike,
-  RequestLike
-} from "noware-shared";
+import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseQuery<
   Ctx extends ContextLike = ContextLike,
@@ -26,7 +22,7 @@ export abstract class BaseQuery<
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
-  
+
   protected abstract persistence: Persistence;
 
   constructor(
