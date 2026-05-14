@@ -83,6 +83,8 @@ jobs:
       - run: |
           cd packages/sql && vp install && vp test
       - run: |
+          cd packages/usecases && vp install && vp test
+      - run: |
           cd packages/validators && vp install && vp test
       - run: |
           cd packages/views && vp install && vp test
@@ -164,6 +166,8 @@ jobs:
           cd packages/services && vp install && vp run build
       - run: |
           cd packages/sql && vp install && vp run build
+      - run: |
+          cd packages/usecases && vp install && vp run build
       - run: |
           cd packages/validators && vp install && vp run build
       - run: |
@@ -546,6 +550,17 @@ jobs:
       - name: publish-sql
         run: |
           cd packages/sql
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
+            vp install && npm publish --provenance --access public
+          else
+            echo "Version $CURRENT_VERSION of $PACKAGE_NAME already published, skipping..."
+          fi
+
+      - name: publish-usecases
+        run: |
+          cd packages/usecases
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           if ! npm view $PACKAGE_NAME@$CURRENT_VERSION version > /dev/null 2>&1; then
