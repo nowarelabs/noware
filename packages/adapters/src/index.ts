@@ -1,8 +1,5 @@
 /**
  * adapters - Hexagonal Architecture Adapter Framework
- *
- * Convention: Adapters ONLY translate. Business logic lives in Ports.
- * Philosophy: Separation of concerns enforced by design, not documentation.
  */
 
 import type { EnvLike, ContextLike, RequestLike, HookOptions, Port } from "@nowarelabs/shared";
@@ -16,10 +13,6 @@ type BodyInit =
   | ArrayBuffer
   | null
   | undefined;
-
-// ============================================================================
-// Core Types - The Hexagonal Standard
-// ============================================================================
 
 export interface AdapterRequest {
   method: string;
@@ -61,27 +54,11 @@ export type AroundHookFunction<T = any> = (
   next: () => Promise<AdapterResponse>,
 ) => Promise<AdapterResponse>;
 
-// Hook options are imported from shared
-
 export interface RegisteredHook<T = any> {
   fn: HookFunction<T> | AfterHookFunction<T> | AroundHookFunction<T>;
   options?: HookOptions;
 }
 
-// ============================================================================
-// DrivingAdapter - HTTP/CLI → Domain (Inbound)
-// ============================================================================
-
-/**
- * DrivingAdapter: Translates external requests into domain operations
- *
- * Convention: One adapter per use case or tight mapping
- * Responsibility: ONLY translation, NO business logic
- *
- * @template TInput - The domain input type (what your use case needs)
- * @template TOutput - The domain output type (what your use case returns)
- * @template TPort - The port interface this adapter drives
- */
 export abstract class DrivingAdapter<
   TInput = unknown,
   TOutput = unknown,
@@ -89,15 +66,12 @@ export abstract class DrivingAdapter<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
 > {
-  // Class-level hooks (Rails-style)
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
   static aroundHooks: RegisteredHook[] = [];
 
-  // The Port - injected, not implemented here
   protected port: TPort;
 
-  // Context available to adapters
   protected context: AdapterContext<Ctx, Env>;
   protected request: AdapterRequest;
   protected params: Record<string, string>;
@@ -117,41 +91,9 @@ export abstract class DrivingAdapter<
     };
   }
 
-  // ============================================================================
-  // THE CONTRACT - Developers MUST implement these
-  // ============================================================================
-
-  /**
-   * Map external request to domain input
-   * This is PURE TRANSLATION - no business logic!
-   *
-   * @example
-   * protected async mapInput(req: AdapterRequest): Promise<CreateUserInput> {
-   *   return {
-   *     email: req.body.email,
-   *     name: req.body.name,
-   *   };
-   * }
-   */
   protected abstract mapInput(req: AdapterRequest): Promise<TInput> | TInput;
 
-  /**
-   * Map domain output to external response
-   * This is PURE TRANSLATION - no business logic!
-   *
-   * @example
-   * protected mapOutput(output: User): AdapterResponse {
-   *   return this.json({
-   *     id: output.id,
-   *     email: output.email
-   *   }, 201);
-   * }
-   */
   protected abstract mapOutput(output: TOutput): AdapterResponse;
-
-  // ============================================================================
-  // Hook Registration - The Rails Convention
-  // ============================================================================
 
   static before<T extends DrivingAdapter>(fn: HookFunction<T>, options?: HookOptions): void {
     this.beforeHooks.push({ fn: fn as HookFunction, options });
@@ -177,35 +119,17 @@ export abstract class DrivingAdapter<
     this.aroundHooks = this.aroundHooks.filter((h) => h.fn !== fn);
   }
 
-  // ============================================================================
-  // Execution - The Hexagonal Flow
-  // ============================================================================
-
-  /**
-   * Execute the adapter lifecycle:
-   * 1. Run before hooks (translation concerns: auth, validation format, etc.)
-   * 2. Translate request → domain input (mapInput)
-   * 3. Call the port (domain logic)
-   * 4. Translate domain output → response (mapOutput)
-   * 5. Run after hooks (translation concerns: logging, headers, etc.)
-   */
   async execute(): Promise<Response> {
     try {
-      // 1. Before hooks (can short-circuit)
       const beforeResult = await this.runBeforeHooks();
       if (beforeResult) {
         return this.toResponse(beforeResult);
       }
 
-      // 2. Run the main flow through around hooks
       let response = await this.runAroundHooks(async () => {
-        // 2a. TRANSLATE: External → Domain
         const input = await this.mapInput(this.request);
-
-        // 2b. EXECUTE: Call the port (THE HEXAGON)
         const result = await this.port.execute(input);
 
-        // 2c. TRANSLATE: Domain → External
         if (!result.success) {
           return this.handleDomainError(result.error);
         }
@@ -213,19 +137,13 @@ export abstract class DrivingAdapter<
         return this.mapOutput(result.data);
       });
 
-      // 3. After hooks (can transform response)
       response = await this.runAfterHooks(response);
 
-      // 4. Convert to Web Response
       return this.toResponse(response);
     } catch (error) {
       return this.handleError(error);
     }
   }
-
-  // ============================================================================
-  // Internal Framework Logic
-  // ============================================================================
 
   protected buildRequest(request: RequestLike): AdapterRequest {
     const url = new URL(request.url);
@@ -283,10 +201,6 @@ export abstract class DrivingAdapter<
     await this.parseBody();
     return this.request.body as T;
   }
-
-  // ============================================================================
-  // Response Helpers - For Translation Only
-  // ============================================================================
 
   protected json(
     data: unknown,
@@ -367,13 +281,7 @@ export abstract class DrivingAdapter<
     return this.json(body, 500);
   }
 
-  // ============================================================================
-  // Hook Execution
-  // ============================================================================
-
   private shouldRunHook(options?: HookOptions): boolean {
-    // For driving adapters, hooks always run (no action concept)
-    // If you need conditional hooks, use hook logic itself
     return true;
   }
 
@@ -469,8 +377,6 @@ export abstract class DrivingAdapter<
   }
 
   protected handleDomainError(error: Error): AdapterResponse {
-    // Default error handling for domain errors
-    // Adapters should override this if they need specific status codes
     return this.internalServerError(error.message);
   }
 
@@ -484,27 +390,6 @@ export abstract class DrivingAdapter<
   }
 }
 
-// ============================================================================
-// DrivenAdapter - Domain → Infrastructure (Outbound)
-// ============================================================================
-
-/**
- * DrivenAdapter: Translates domain requests into infrastructure calls
- *
- * Convention: Implements a Port interface
- * Responsibility: ONLY translation to/from external systems
- *
- * @example
- * class PostgresUserRepository extends DrivenAdapter implements UserRepositoryPort {
- *   async findById(id: string): Promise<User | null> {
- *     // Translate domain request → SQL
- *     const row = await this.db.query('SELECT * FROM users WHERE id = $1', [id]);
- *
- *     // Translate SQL result → domain entity
- *     return row ? this.toDomain(row) : null;
- *   }
- * }
- */
 export abstract class DrivenAdapter<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
@@ -526,4 +411,3 @@ export abstract class DrivenAdapter<
     this.ctx.waitUntil(promise);
   }
 }
-
