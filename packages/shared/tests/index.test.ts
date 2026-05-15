@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import { FlattenedRequest, Context, Env } from "../src/index.ts";
+import { FlattenedRequest, Context, EnvLike } from "../src/index.ts";
 
 describe("FlattenedRequest", () => {
   test("RequestLike type is compatible with global Request", () => {
@@ -51,9 +51,9 @@ describe("Context", () => {
   });
 });
 
-describe("Env", () => {
-  test("Env type is a record of unknown values", () => {
-    const env: Env = {
+describe("EnvLike", () => {
+  test("EnvLike type is a record of unknown values", () => {
+    const env: EnvLike = {
       DB: {},
       KV: {},
       API_KEY: "secret",
@@ -64,13 +64,13 @@ describe("Env", () => {
     expect(env.API_KEY).toBe("secret");
   });
 
-  test("Env can be used as type for env parameter", () => {
-    function handleEnv(env: Env): string[] {
+  test("EnvLike can be used as type for env parameter", () => {
+    function handleEnvLike(env: EnvLike): string[] {
       return Object.keys(env);
     }
 
     const env = { DATABASE_URL: "postgres://..." };
-    expect(handleEnv(env)).toContain("DATABASE_URL");
+    expect(handleEnvLike(env)).toContain("DATABASE_URL");
   });
 });
 
@@ -96,18 +96,18 @@ describe("Runtime Compatibility", () => {
   });
 
   test("Compatible context can be used with Standard Gauge", () => {
-    const mockEnv = { DB: "database" };
+    const mockEnvLike = { DB: "database" };
     const mockCtx: Context = {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
     };
 
-    function worker(request: FlattenedRequest, env: Env, ctx: Context) {
+    function worker(request: FlattenedRequest, env: EnvLike, ctx: Context) {
       return new Response("OK");
     }
 
     const request = new Request("http://localhost");
-    const response = worker(request, mockEnv, mockCtx);
+    const response = worker(request, mockEnvLike, mockCtx);
 
     expect(response.status).toBe(200);
   });

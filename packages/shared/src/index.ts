@@ -29,3 +29,16 @@ export type EnvLike = Record<string, unknown>;
 export type RequestLike = FlattenedRequest;
 
 export type ContextLike = Context;
+
+export type UseCaseResult<TOutput, TError = Error> =
+  | { success: true; data: TOutput; status: "delivered" }
+  | { success: false; error: TError; status: "abandoned" };
+
+export interface HookOptions {
+  only?: string[];
+  except?: string[];
+}
+
+export interface Port<TInput = unknown, TOutput = unknown> {
+  execute(input: TInput): Promise<UseCaseResult<TOutput>>;
+}

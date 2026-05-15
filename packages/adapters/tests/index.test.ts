@@ -1,40 +1,52 @@
 import { describe, expect, test } from "vite-plus/test";
-import { Adapter, BaseAdapter } from "../src/index.ts";
+import { DrivingAdapter } from "../src/index.ts";
+import type { Port } from "@nowarelabs/shared";
 
-describe("Adapter", () => {
-  test("Adapter interface requires execute method", () => {
-    const adapter: Adapter<string> = {
-      execute: async (_input: unknown) => "result",
-    };
+describe("DrivingAdapter", () => {
+  interface TestInput {
+    foo: string;
+  }
+  interface TestOutput {
+    bar: string;
+  }
 
-    expect(adapter.execute).toBeDefined();
-  });
-});
-
-describe("BaseAdapter", () => {
-  class TestAdapter extends BaseAdapter {
-    async execute(_input: unknown) {
-      return "result";
+  class MockPort implements Port<TestInput, TestOutput> {
+    async execute(input: TestInput) {
+      return { success: true as const, data: { bar: input.foo }, status: "delivered" as const };
     }
   }
 
-  test("constructor accepts request, env, ctx", () => {
-    const mockRequest = new Request("http://localhost");
-    const mockEnv = { DB: {} } as Record<string, unknown>;
-    const mockCtx = {} as any;
+  class TestAdapter extends DrivingAdapter<TestInput, TestOutput, MockPort> {
+    protected async mapInput(req: any): Promise<TestInput> {
+      return { foo: "bar" };
+    }
+    protected mapOutput(output: TestOutput) {
+      return this.json(output);
+    }
+  }
 
-    const adapter = new TestAdapter(mockRequest, mockEnv, mockCtx);
+  test("can be instantiated with port, request, env, ctx", () => {
+    const mockPort = new MockPort();
+    const mockRequest = new Request("http://localhost");
+    const mockEnv = {} as any;
+    const mockCtx = { waitUntil: () => {} } as any;
+
+    const adapter = new TestAdapter(mockPort, mockRequest, mockEnv, mockCtx);
 
     expect(adapter).toBeDefined();
   });
 
-  test("execute can be overridden", async () => {
+  test("execute runs the full lifecycle", async () => {
+    const mockPort = new MockPort();
     const mockRequest = new Request("http://localhost");
-    const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = {} as any;
+    const mockEnv = {} as any;
+    const mockCtx = { waitUntil: () => {} } as any;
 
-    const adapter = new TestAdapter(mockRequest, mockEnv, mockCtx);
-    const result = await adapter.execute("input");
-    expect(result).toBe("result");
+    const adapter = new TestAdapter(mockPort, mockRequest, mockEnv, mockCtx);
+    const response = await adapter.execute();
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ bar: "bar" });
   });
 });

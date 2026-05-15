@@ -1,21 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
-import { Port, BasePort } from "../src/index.ts";
-
-describe("Port", () => {
-  test("Port interface requires execute method", () => {
-    const port: Port<string> = {
-      execute: async (_input: unknown) => "result",
-    };
-
-    expect(port.execute).toBeDefined();
-  });
-});
+import type { ContextLike, Port, UseCaseResult } from "@nowarelabs/shared";
+import { BasePort } from "../src/index.ts";
 
 describe("BasePort", () => {
-  class TestPort extends BasePort {
-    async execute(_input: unknown) {
-      return "result";
+  class TestPort extends BasePort<string, string> {
+    async execute(input: string): Promise<UseCaseResult<string>> {
+      return { success: true, data: input, status: "delivered" };
     }
   }
 
@@ -32,7 +22,7 @@ describe("BasePort", () => {
     expect(port).toBeDefined();
   });
 
-  test("execute can be overridden", async () => {
+  test("execute returns delivered result on success", async () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
     const mockCtx = {
@@ -41,7 +31,11 @@ describe("BasePort", () => {
     } as ContextLike;
 
     const port = new TestPort(mockRequest, mockEnv, mockCtx);
-    const result = await port.execute("input");
-    expect(result).toBe("result");
+    const result = await port.execute("hello");
+    expect(result.success).toBe(true);
+    expect(result.status).toBe("delivered");
+    if (result.success) {
+      expect(result.data).toBe("hello");
+    }
   });
 });
