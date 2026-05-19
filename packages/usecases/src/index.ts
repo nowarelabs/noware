@@ -1,5 +1,5 @@
 /**
- * noware-ports - Port Interfaces and Base Use Case
+ * noware-usecases - Base Use Case Implementation
  *
  * Based on Alistair Cockburn's Goal-Based Model:
  * - Ports define WHAT the system can do (the contract)
@@ -7,7 +7,16 @@
  * - Every goal has two outcomes: Delivered (success) or Abandoned (failure)
  */
 
-import type { UseCaseResult, HookOptions } from "@nowarelabs/shared";
+import type {
+  UseCaseResult,
+  HookOptions,
+  EnvLike,
+  ContextLike,
+  HookFunction,
+  AfterHookFunction,
+  AroundHookFunction,
+  RegisteredHook,
+} from "@nowarelabs/shared";
 
 /**
  * Helper to create a successful result
@@ -31,8 +40,6 @@ export function abandoned<T = never>(error: Error | string): UseCaseResult<T> {
   };
 }
 
-// HookOptions imported from shared
-
 // ============================================================================
 // BaseUseCase - The Implementation (The Plug)
 // ============================================================================
@@ -50,75 +57,138 @@ export function abandoned<T = never>(error: Error | string): UseCaseResult<T> {
  *
  * @template TInput - What the goal needs
  * @template TOutput - What the goal produces
- *
- * @example
- * class RegisterUserUseCase extends BaseUseCase<UserRegistration, UserAccount> {
- *   protected async perform(input: UserRegistration): Promise<UserAccount> {
- *     // Main Success Scenario here
- *     const user = await this.userRepo.create(input);
- *     return user;
- *   }
- * }
  */
-export abstract class BaseUseCase<TInput = unknown, TOutput = unknown> {
-  // Hooks for observability and cross-cutting concerns
-  static beforeHooks: Array<{
-    fn: (useCase: any, input: any) => void | Promise<void>;
-    options?: HookOptions;
-  }> = [];
+export abstract class BaseUseCase<
+  TInput = unknown,
+  TOutput = unknown,
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+> {
+  static beforeHooks: RegisteredHook[] = [];
+  static afterHooks: RegisteredHook[] = [];
+  static aroundHooks: RegisteredHook[] = [];
 
-  static afterHooks: Array<{
-    fn: (useCase: any, result: UseCaseResult<any>) => void | Promise<void>;
-    options?: HookOptions;
-  }> = [];
+  protected env?: Env;
+  protected ctx?: Ctx;
+  protected metadata: Record<string, unknown> = {};
+  public input?: TInput;
 
-  static aroundHooks: Array<{
-    fn: (
-      useCase: any,
-      input: any,
-      next: () => Promise<UseCaseResult<any>>,
-    ) => Promise<UseCaseResult<any>>;
-    options?: HookOptions;
-  }> = [];
+  constructor(env?: Env, ctx?: Ctx) {
+    this.env = env;
+    this.ctx = ctx;
+  }
+
+  // ============================================================================
+  // Hook Registration
+  // ============================================================================
+
+  static before<T extends BaseUseCase>(fn: HookFunction<T>, options?: HookOptions): void {
+    this.beforeHooks.push({ fn: fn as HookFunction, options });
+  }
+
+  static after<T extends BaseUseCase>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+    this.afterHooks.push({ fn: fn as AfterHookFunction, options });
+  }
+
+  static around<T extends BaseUseCase>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+    this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
+  }
+
+  static skipBefore<T extends BaseUseCase>(fn: HookFunction<T>): void {
+    this.beforeHooks = this.beforeHooks.filter((h) => h.fn !== fn);
+  }
+
+  static skipAfter<T extends BaseUseCase>(fn: AfterHookFunction<T>): void {
+    this.afterHooks = this.afterHooks.filter((h) => h.fn !== fn);
+  }
+
+  static skipAround<T extends BaseUseCase>(fn: AroundHookFunction<T>): void {
+    this.aroundHooks = this.aroundHooks.filter((h) => h.fn !== fn);
+  }
+
+  // ============================================================================
+  // Hook Execution
+  // ============================================================================
+
+  protected shouldRunHook(_options?: HookOptions): boolean {
+    return true;
+  }
+
+  protected async beforeExecute(): Promise<UseCaseResult<TOutput> | void> {
+    // Convention: override in subclasses
+  }
+
+  protected async afterExecute(_result: any): Promise<any> {
+    // Convention: override in subclasses
+  }
+
+  protected async runBeforeHooks<R = any>(): Promise<R | null> {
+    const instanceResult = await this.beforeExecute();
+    if (instanceResult) return instanceResult as R;
+
+    const constructor = this.constructor as typeof BaseUseCase;
+    for (const { fn, options } of constructor.beforeHooks) {
+      if (!this.shouldRunHook(options)) continue;
+      const result = await (fn as HookFunction)(this);
+      if (result !== undefined && result !== null) return result as R;
+    }
+    return null;
+  }
+
+  protected async runAfterHooks<R = any>(result: R): Promise<R> {
+    let currentResult = result;
+    const instanceResult = await this.afterExecute(currentResult as any);
+    if (instanceResult) currentResult = instanceResult as any;
+
+    const constructor = this.constructor as typeof BaseUseCase;
+    for (const { fn, options } of constructor.afterHooks) {
+      if (!this.shouldRunHook(options)) continue;
+      const hookResult = await (fn as AfterHookFunction)(this, currentResult);
+      if (hookResult !== undefined && hookResult !== null) currentResult = hookResult as R;
+    }
+    return currentResult;
+  }
+
+  protected async runAroundHooks<R = any>(action: () => Promise<R>): Promise<R> {
+    const constructor = this.constructor as typeof BaseUseCase;
+    const applicableHooks = constructor.aroundHooks.filter(({ options }) =>
+      this.shouldRunHook(options),
+    );
+
+    if (applicableHooks.length === 0) return action();
+
+    let index = 0;
+    const next = async (): Promise<R> => {
+      if (index >= applicableHooks.length) return action();
+      const { fn } = applicableHooks[index++];
+      return (fn as AroundHookFunction)(this, next);
+    };
+
+    return next();
+  }
 
   // ============================================================================
   // The Main Entry Point - Cockburn's Goal Lifecycle
   // ============================================================================
 
-  /**
-   * Execute the goal with full lifecycle management
-   *
-   * This handles:
-   * 1. Before hooks (logging, validation setup, etc.)
-   * 2. The main success scenario (perform)
-   * 3. Exception handling (goal abandonment)
-   * 4. After hooks (cleanup, notifications, etc.)
-   */
   async execute(input: TInput): Promise<UseCaseResult<TOutput>> {
+    this.input = input;
     try {
-      // Run before hooks
-      await this.runBeforeHooks(input);
+      const beforeResult = await this.runBeforeHooks<UseCaseResult<TOutput>>();
+      if (beforeResult) return beforeResult;
 
-      // Run the main flow through around hooks
-      const result = await this.runAroundHooks(input, async () => {
+      const result = await this.runAroundHooks(async () => {
         try {
-          // THE MAIN SUCCESS SCENARIO
+          await this.validate(input);
           const data = await this.perform(input);
-
-          // Goal Delivered
           return delivered(data);
         } catch (error) {
-          // Goal Abandoned
           return this.handleGoalAbandonment(error, input);
         }
       });
 
-      // Run after hooks
-      await this.runAfterHooks(result);
-
-      return result;
+      return await this.runAfterHooks(result);
     } catch (error) {
-      // Catastrophic failure
       return abandoned(error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -127,49 +197,18 @@ export abstract class BaseUseCase<TInput = unknown, TOutput = unknown> {
   // The Developer's Playground - Override This
   // ============================================================================
 
-  /**
-   * The Main Success Scenario
-   *
-   * This is where developers write their business logic.
-   * Should contain ONLY the happy path.
-   *
-   * @throws Error to abandon the goal (triggers handleGoalAbandonment)
-   */
   protected abstract perform(input: TInput): Promise<TOutput>;
 
   // ============================================================================
   // Extension Points
   // ============================================================================
 
-  /**
-   * Handle goal abandonment (Cockburn's "Extensions")
-   *
-   * Override this to customize how different failures are handled
-   *
-   * @example
-   * protected handleGoalAbandonment(error: unknown, input: TInput) {
-   *   if (error instanceof ValidationError) {
-   *     return abandoned(new Error(`Invalid data: ${error.message}`));
-   *   }
-   *   if (error instanceof NotFoundError) {
-   *     return abandoned(new Error("Resource not found"));
-   *   }
-   *   return super.handleGoalAbandonment(error, input);
-   * }
-   */
-  protected handleGoalAbandonment(error: unknown, input: TInput): UseCaseResult<TOutput> {
+  protected handleGoalAbandonment(error: unknown, _input: TInput): UseCaseResult<TOutput> {
     const err = error instanceof Error ? error : new Error(String(error));
-
     return abandoned(err);
   }
 
-  /**
-   * Validate input before performing the use case
-   * Override this for precondition checks
-   *
-   * @throws Error if validation fails
-   */
-  protected async validate(input: TInput): Promise<void> {
+  protected async validate(_input: TInput): Promise<void> {
     // Override in subclasses
   }
 
@@ -177,19 +216,6 @@ export abstract class BaseUseCase<TInput = unknown, TOutput = unknown> {
   // Sub-Interaction Helpers - For Recursive Use Cases
   // ============================================================================
 
-  /**
-   * Execute a sub-use case and handle its result
-   *
-   * This is for when one use case calls another (subfunction level)
-   * Follows Cockburn's recursive model
-   *
-   * @example
-   * const paymentResult = await this.subInteraction(
-   *   this.processPayment,
-   *   { amount: 100 }
-   * );
-   * // paymentResult is unwrapped on success, throws on failure
-   */
   protected async subInteraction<TSubInput, TSubOutput>(
     subUseCase: BaseUseCase<TSubInput, TSubOutput>,
     input: TSubInput,
@@ -197,24 +223,12 @@ export abstract class BaseUseCase<TInput = unknown, TOutput = unknown> {
     const result = await subUseCase.execute(input);
 
     if (!result.success) {
-      // Goal abandoned at sub-level, propagate to parent
       throw new SubGoalAbandonedError(`Sub-goal failed: ${result.error.message}`, result.error);
     }
 
     return result.data;
   }
 
-  /**
-   * Execute a sub-use case and get the raw result
-   * Use this when you want to handle the failure yourself (pivot/retry)
-   *
-   * @example
-   * const result = await this.trySubInteraction(this.processPayment, data);
-   * if (!result.success) {
-   *   // Try alternative payment method
-   *   return this.tryAlternativePayment(data);
-   * }
-   */
   protected async trySubInteraction<TSubInput, TSubOutput>(
     subUseCase: BaseUseCase<TSubInput, TSubOutput>,
     input: TSubInput,
@@ -223,76 +237,27 @@ export abstract class BaseUseCase<TInput = unknown, TOutput = unknown> {
   }
 
   // ============================================================================
-  // Hook Registration - Rails-style
+  // Infrastructure Helpers
   // ============================================================================
 
-  static beforeExecute<T extends BaseUseCase>(
-    fn: (useCase: T, input: any) => void | Promise<void>,
-    options?: HookOptions,
-  ): void {
-    this.beforeHooks.push({ fn: fn as any, options });
+  protected getEnv<T = unknown>(key: string, defaultValue?: T): T | undefined {
+    if (!this.env) return defaultValue;
+    const value = this.env[key];
+    return value !== undefined ? (value as T) : defaultValue;
   }
 
-  static afterExecute<T extends BaseUseCase>(
-    fn: (useCase: T, result: UseCaseResult<any>) => void | Promise<void>,
-    options?: HookOptions,
-  ): void {
-    this.afterHooks.push({ fn: fn as any, options });
-  }
-
-  static aroundExecute<T extends BaseUseCase>(
-    fn: (
-      useCase: T,
-      input: any,
-      next: () => Promise<UseCaseResult<any>>,
-    ) => Promise<UseCaseResult<any>>,
-    options?: HookOptions,
-  ): void {
-    this.aroundHooks.push({ fn: fn as any, options });
-  }
-
-  // ============================================================================
-  // Hook Execution - Internal
-  // ============================================================================
-
-  private async runBeforeHooks(input: TInput): Promise<void> {
-    const constructor = this.constructor as typeof BaseUseCase;
-
-    for (const { fn } of constructor.beforeHooks) {
-      await fn(this, input);
+  protected waitUntil(promise: Promise<unknown>): void {
+    if (this.ctx) {
+      this.ctx.waitUntil(promise);
     }
   }
 
-  private async runAfterHooks(result: UseCaseResult<TOutput>): Promise<void> {
-    const constructor = this.constructor as typeof BaseUseCase;
-
-    for (const { fn } of constructor.afterHooks) {
-      await fn(this, result);
-    }
+  protected setMetadata(key: string, value: unknown): void {
+    this.metadata[key] = value;
   }
 
-  private async runAroundHooks(
-    input: TInput,
-    action: () => Promise<UseCaseResult<TOutput>>,
-  ): Promise<UseCaseResult<TOutput>> {
-    const constructor = this.constructor as typeof BaseUseCase;
-    const hooks = constructor.aroundHooks;
-
-    if (hooks.length === 0) {
-      return action();
-    }
-
-    let index = 0;
-    const next = async (): Promise<UseCaseResult<TOutput>> => {
-      if (index >= hooks.length) {
-        return action();
-      }
-
-      const { fn } = hooks[index++];
-      return fn(this, input, next);
-    };
-
-    return next();
+  protected getMetadata<T = unknown>(key: string): T | undefined {
+    return this.metadata[key] as T;
   }
 }
 
@@ -300,10 +265,6 @@ export abstract class BaseUseCase<TInput = unknown, TOutput = unknown> {
 // Custom Errors
 // ============================================================================
 
-/**
- * Thrown when a sub-goal is abandoned
- * Helps track the chain of failures in recursive use cases
- */
 export class SubGoalAbandonedError extends Error {
   constructor(
     message: string,
@@ -314,9 +275,6 @@ export class SubGoalAbandonedError extends Error {
   }
 }
 
-/**
- * Thrown when validation fails
- */
 export class ValidationError extends Error {
   constructor(
     message: string,
@@ -327,9 +285,6 @@ export class ValidationError extends Error {
   }
 }
 
-/**
- * Thrown when a resource is not found
- */
 export class NotFoundError extends Error {
   constructor(
     public readonly resource: string,
@@ -340,9 +295,6 @@ export class NotFoundError extends Error {
   }
 }
 
-/**
- * Thrown when an operation is not authorized
- */
 export class UnauthorizedError extends Error {
   constructor(message = "Unauthorized") {
     super(message);
@@ -350,9 +302,6 @@ export class UnauthorizedError extends Error {
   }
 }
 
-/**
- * Thrown when a business rule is violated
- */
 export class BusinessRuleError extends Error {
   constructor(
     message: string,

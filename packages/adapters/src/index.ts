@@ -1,8 +1,18 @@
 /**
- * adapters - Hexagonal Architecture Adapter Framework
+ * adapters
  */
 
-import type { EnvLike, ContextLike, RequestLike, HookOptions, Port } from "@nowarelabs/shared";
+import type {
+  EnvLike,
+  ContextLike,
+  RequestLike,
+  HookOptions,
+  Port,
+  HookFunction,
+  AfterHookFunction,
+  AroundHookFunction,
+  RegisteredHook,
+} from "@nowarelabs/shared";
 
 type BodyInit =
   | string
@@ -39,24 +49,179 @@ export interface AdapterContext<
   request: AdapterRequest;
 }
 
-// Hook types
-export type HookFunction<T = any> = (
-  adapter: T,
-) => void | Promise<void> | AdapterResponse | Promise<AdapterResponse>;
+export abstract class BaseAdapter<
+  Ctx extends ContextLike = ContextLike,
+  Env extends EnvLike = EnvLike,
+> {
+  static beforeHooks: RegisteredHook[] = [];
+  static afterHooks: RegisteredHook[] = [];
+  static aroundHooks: RegisteredHook[] = [];
 
-export type AfterHookFunction<T = any> = (
-  adapter: T,
-  response: AdapterResponse,
-) => void | Promise<void> | AdapterResponse | Promise<AdapterResponse>;
+  protected env: Env;
+  protected ctx: Ctx;
+  protected metadata: Record<string, unknown> = {};
 
-export type AroundHookFunction<T = any> = (
-  adapter: T,
-  next: () => Promise<AdapterResponse>,
-) => Promise<AdapterResponse>;
+  constructor(env: Env, ctx: Ctx) {
+    this.env = env;
+    this.ctx = ctx;
+  }
 
-export interface RegisteredHook<T = any> {
-  fn: HookFunction<T> | AfterHookFunction<T> | AroundHookFunction<T>;
-  options?: HookOptions;
+  protected setMetadata(key: string, value: unknown): void {
+    this.metadata[key] = value;
+  }
+
+  protected getMetadata<T = unknown>(key: string): T | undefined {
+    return this.metadata[key] as T;
+  }
+
+  static before<T extends BaseAdapter>(fn: HookFunction<T>, options?: HookOptions): void {
+    this.beforeHooks.push({ fn: fn as HookFunction, options });
+  }
+
+  static after<T extends BaseAdapter>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+    this.afterHooks.push({ fn: fn as AfterHookFunction, options });
+  }
+
+  static around<T extends BaseAdapter>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+    this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
+  }
+
+  static skipBefore<T extends BaseAdapter>(fn: HookFunction<T>): void {
+    this.beforeHooks = this.beforeHooks.filter((h) => h.fn !== fn);
+  }
+
+  static skipAfter<T extends BaseAdapter>(fn: AfterHookFunction<T>): void {
+    this.afterHooks = this.afterHooks.filter((h) => h.fn !== fn);
+  }
+
+  static skipAround<T extends BaseAdapter>(fn: AroundHookFunction<T>): void {
+    this.aroundHooks = this.aroundHooks.filter((h) => h.fn !== fn);
+  }
+
+  protected shouldRunHook(_options?: HookOptions): boolean {
+    return true;
+  }
+
+  protected async beforeExecute(): Promise<AdapterResponse | void> {
+    // Convention: override in subclasses
+  }
+
+  protected async afterExecute(_result: any): Promise<any> {
+    // Convention: override in subclasses
+  }
+
+  protected async runBeforeHooks<R = any>(): Promise<R | null> {
+    const instanceResult = await this.beforeExecute();
+    if (instanceResult) return instanceResult as R;
+
+    const constructor = this.constructor as typeof BaseAdapter;
+
+    for (const { fn, options } of constructor.beforeHooks) {
+      if (!this.shouldRunHook(options)) continue;
+
+      const result = await (fn as HookFunction)(this);
+      if (result !== undefined && result !== null) {
+        return result as R;
+      }
+    }
+
+    return null;
+  }
+
+  protected async runAfterHooks<R = any>(result: R): Promise<R> {
+    let currentResult = result;
+
+    const instanceResult = await this.afterExecute(currentResult);
+    if (instanceResult) currentResult = instanceResult as R;
+
+    const constructor = this.constructor as typeof BaseAdapter;
+
+    for (const { fn, options } of constructor.afterHooks) {
+      if (!this.shouldRunHook(options)) continue;
+
+      const hookResult = await (fn as AfterHookFunction)(this, currentResult);
+      if (hookResult !== undefined && hookResult !== null) {
+        currentResult = hookResult as R;
+      }
+    }
+
+    return currentResult;
+  }
+
+  protected async runAroundHooks<R = any>(action: () => Promise<R>): Promise<R> {
+    const constructor = this.constructor as typeof BaseAdapter;
+    const applicableHooks = constructor.aroundHooks.filter(({ options }) =>
+      this.shouldRunHook(options),
+    );
+
+    if (applicableHooks.length === 0) {
+      return action();
+    }
+
+    let index = 0;
+    const next = async (): Promise<R> => {
+      if (index >= applicableHooks.length) {
+        return action();
+      }
+
+      const { fn } = applicableHooks[index++];
+      return (fn as AroundHookFunction)(this, next);
+    };
+
+    return next();
+  }
+
+  protected json(
+    data: unknown,
+    status = 200,
+    headers: Record<string, string> = {},
+  ): AdapterResponse {
+    return {
+      status,
+      headers: { "content-type": "application/json", ...headers },
+      body: data,
+    };
+  }
+
+  protected internalServerError(
+    message: string | object = "Internal Server Error",
+  ): AdapterResponse {
+    const body = typeof message === "string" ? { error: message } : message;
+    return this.json(body, 500);
+  }
+
+  protected unprocessableEntity(errors: unknown = "Unprocessable Entity"): AdapterResponse {
+    return this.json({ errors }, 422);
+  }
+
+  protected notFound(message: string | object = "Not Found"): AdapterResponse {
+    const body = typeof message === "string" ? { error: message } : message;
+    return this.json(body, 404);
+  }
+
+  protected unauthorized(message: string | object = "Unauthorized"): AdapterResponse {
+    const body = typeof message === "string" ? { error: message } : message;
+    return this.json(body, 401);
+  }
+
+  protected forbidden(message: string | object = "Forbidden"): AdapterResponse {
+    const body = typeof message === "string" ? { error: message } : message;
+    return this.json(body, 403);
+  }
+
+  protected badRequest(message: string | object = "Bad Request"): AdapterResponse {
+    const body = typeof message === "string" ? { error: message } : message;
+    return this.json(body, 400);
+  }
+
+  protected getEnv<T = unknown>(key: string, defaultValue?: T): T | undefined {
+    const value = this.env[key];
+    return value !== undefined ? (value as T) : defaultValue;
+  }
+
+  protected waitUntil(promise: Promise<unknown>): void {
+    this.ctx.waitUntil(promise);
+  }
 }
 
 export abstract class DrivingAdapter<
@@ -65,11 +230,7 @@ export abstract class DrivingAdapter<
   TPort extends Port<TInput, TOutput> = Port<TInput, TOutput>,
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
-> {
-  static beforeHooks: RegisteredHook[] = [];
-  static afterHooks: RegisteredHook[] = [];
-  static aroundHooks: RegisteredHook[] = [];
-
+> extends BaseAdapter<Ctx, Env> {
   protected port: TPort;
 
   protected context: AdapterContext<Ctx, Env>;
@@ -79,6 +240,7 @@ export abstract class DrivingAdapter<
   protected headers: Record<string, string>;
 
   constructor(port: TPort, request: RequestLike, env: Env, ctx: Ctx) {
+    super(env, ctx);
     this.port = port;
     this.request = this.buildRequest(request);
     this.params = {};
@@ -89,39 +251,25 @@ export abstract class DrivingAdapter<
       ctx,
       request: this.request,
     };
+
+    // Convention: Auto-populate common metadata
+    this.setMetadata("method", this.request.method);
+    this.setMetadata("url", this.request.url);
   }
 
-  protected abstract mapInput(req: AdapterRequest): Promise<TInput> | TInput;
-
-  protected abstract mapOutput(output: TOutput): AdapterResponse;
-
-  static before<T extends DrivingAdapter>(fn: HookFunction<T>, options?: HookOptions): void {
-    this.beforeHooks.push({ fn: fn as HookFunction, options });
+  protected async mapInput(_req: AdapterRequest): Promise<TInput> {
+    // Convention: default to body mapping
+    return await this.body<TInput>();
   }
 
-  static after<T extends DrivingAdapter>(fn: AfterHookFunction<T>, options?: HookOptions): void {
-    this.afterHooks.push({ fn: fn as AfterHookFunction, options });
-  }
-
-  static around<T extends DrivingAdapter>(fn: AroundHookFunction<T>, options?: HookOptions): void {
-    this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
-  }
-
-  static skipBefore<T extends DrivingAdapter>(fn: HookFunction<T>): void {
-    this.beforeHooks = this.beforeHooks.filter((h) => h.fn !== fn);
-  }
-
-  static skipAfter<T extends DrivingAdapter>(fn: AfterHookFunction<T>): void {
-    this.afterHooks = this.afterHooks.filter((h) => h.fn !== fn);
-  }
-
-  static skipAround<T extends DrivingAdapter>(fn: AroundHookFunction<T>): void {
-    this.aroundHooks = this.aroundHooks.filter((h) => h.fn !== fn);
+  protected mapOutput(output: TOutput): AdapterResponse {
+    // Convention: default to JSON response
+    return this.json(output);
   }
 
   async execute(): Promise<Response> {
     try {
-      const beforeResult = await this.runBeforeHooks();
+      const beforeResult = await this.runBeforeHooks<AdapterResponse>();
       if (beforeResult) {
         return this.toResponse(beforeResult);
       }
@@ -202,18 +350,6 @@ export abstract class DrivingAdapter<
     return this.request.body as T;
   }
 
-  protected json(
-    data: unknown,
-    status = 200,
-    headers: Record<string, string> = {},
-  ): AdapterResponse {
-    return {
-      status,
-      headers: { "content-type": "application/json", ...headers },
-      body: data,
-    };
-  }
-
   protected html(
     content: string,
     status = 200,
@@ -250,93 +386,18 @@ export abstract class DrivingAdapter<
     return { status: 204, headers, body: null };
   }
 
-  protected notFound(message: string | object = "Not Found"): AdapterResponse {
-    const body = typeof message === "string" ? { error: message } : message;
-    return this.json(body, 404);
-  }
+  protected handleDomainError(error: any): AdapterResponse {
+    // Convention: automatic mapping of domain error patterns to status codes
+    const status = error.status || error.statusCode || (error.code === "NOT_FOUND" ? 404 : 500);
+    const message = error.message || "Internal Server Error";
 
-  protected unauthorized(message: string | object = "Unauthorized"): AdapterResponse {
-    const body = typeof message === "string" ? { error: message } : message;
-    return this.json(body, 401);
-  }
+    if (status === 404) return this.notFound(message);
+    if (status === 401) return this.unauthorized(message);
+    if (status === 403) return this.forbidden(message);
+    if (status === 400) return this.badRequest(message);
+    if (status === 422) return this.unprocessableEntity(message);
 
-  protected forbidden(message: string | object = "Forbidden"): AdapterResponse {
-    const body = typeof message === "string" ? { error: message } : message;
-    return this.json(body, 403);
-  }
-
-  protected badRequest(message: string | object = "Bad Request"): AdapterResponse {
-    const body = typeof message === "string" ? { error: message } : message;
-    return this.json(body, 400);
-  }
-
-  protected unprocessableEntity(errors: unknown = "Unprocessable Entity"): AdapterResponse {
-    return this.json({ errors }, 422);
-  }
-
-  protected internalServerError(
-    message: string | object = "Internal Server Error",
-  ): AdapterResponse {
-    const body = typeof message === "string" ? { error: message } : message;
-    return this.json(body, 500);
-  }
-
-  private shouldRunHook(options?: HookOptions): boolean {
-    return true;
-  }
-
-  private async runBeforeHooks(): Promise<AdapterResponse | null> {
-    const constructor = this.constructor as typeof DrivingAdapter;
-
-    for (const { fn, options } of constructor.beforeHooks) {
-      if (!this.shouldRunHook(options)) continue;
-
-      const result = await (fn as HookFunction)(this);
-      if (result && typeof result === "object" && "status" in result) {
-        return result as AdapterResponse;
-      }
-    }
-
-    return null;
-  }
-
-  private async runAfterHooks(response: AdapterResponse): Promise<AdapterResponse> {
-    const constructor = this.constructor as typeof DrivingAdapter;
-    let currentResponse = response;
-
-    for (const { fn, options } of constructor.afterHooks) {
-      if (!this.shouldRunHook(options)) continue;
-
-      const result = await (fn as AfterHookFunction)(this, currentResponse);
-      if (result && typeof result === "object" && "status" in result) {
-        currentResponse = result as AdapterResponse;
-      }
-    }
-
-    return currentResponse;
-  }
-
-  private async runAroundHooks(action: () => Promise<AdapterResponse>): Promise<AdapterResponse> {
-    const constructor = this.constructor as typeof DrivingAdapter;
-    const applicableHooks = constructor.aroundHooks.filter(({ options }) =>
-      this.shouldRunHook(options),
-    );
-
-    if (applicableHooks.length === 0) {
-      return action();
-    }
-
-    let index = 0;
-    const next = async (): Promise<AdapterResponse> => {
-      if (index >= applicableHooks.length) {
-        return action();
-      }
-
-      const { fn } = applicableHooks[index++];
-      return (fn as AroundHookFunction)(this, next);
-    };
-
-    return next();
+    return this.internalServerError(message);
   }
 
   protected toResponse(adapterResponse: AdapterResponse): Response {
@@ -375,39 +436,21 @@ export abstract class DrivingAdapter<
 
     return this.toResponse(this.internalServerError());
   }
-
-  protected handleDomainError(error: Error): AdapterResponse {
-    return this.internalServerError(error.message);
-  }
-
-  protected getEnv<T = unknown>(key: string, defaultValue?: T): T | undefined {
-    const value = this.context.env[key];
-    return value !== undefined ? (value as T) : defaultValue;
-  }
-
-  protected waitUntil(promise: Promise<unknown>): void {
-    this.context.ctx.waitUntil(promise);
-  }
 }
 
 export abstract class DrivenAdapter<
   Ctx extends ContextLike = ContextLike,
   Env extends EnvLike = EnvLike,
-> {
-  protected env: Env;
-  protected ctx: Ctx;
+> extends BaseAdapter<Ctx, Env> {
+  protected abstract handleExternalError(error: unknown): Error;
 
-  constructor(env: Env, ctx: Ctx) {
-    this.env = env;
-    this.ctx = ctx;
-  }
-
-  protected getEnv<T = unknown>(key: string, defaultValue?: T): T | undefined {
-    const value = this.env[key];
-    return value !== undefined ? (value as T) : defaultValue;
-  }
-
-  protected waitUntil(promise: Promise<unknown>): void {
-    this.ctx.waitUntil(promise);
+  protected async call<T = unknown>(action: () => Promise<T>): Promise<T> {
+    try {
+      await this.runBeforeHooks();
+      const result = await this.runAroundHooks(action);
+      return await this.runAfterHooks(result);
+    } catch (error) {
+      throw this.handleExternalError(error);
+    }
   }
 }

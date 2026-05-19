@@ -42,3 +42,18 @@ export interface HookOptions {
 export interface Port<TInput = unknown, TOutput = unknown> {
   execute(input: TInput): Promise<UseCaseResult<TOutput>>;
 }
+
+export type HookFunction<T = any, R = any> = (instance: T) => R | Promise<R> | void | Promise<void>;
+export type AfterHookFunction<T = any, R = any> = (
+  instance: T,
+  result: R,
+) => R | Promise<R> | void | Promise<void>;
+export type AroundHookFunction<T = any, R = any> = (
+  instance: T,
+  next: () => Promise<R>,
+) => Promise<R>;
+
+export interface RegisteredHook<T = any, R = any> {
+  fn: HookFunction<T, R> | AfterHookFunction<T, R> | AroundHookFunction<T, R>;
+  options?: HookOptions;
+}
