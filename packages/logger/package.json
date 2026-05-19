@@ -31,7 +31,8 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@nowarelabs/shared": "workspace:*"
+    "@nowarelabs/shared": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
