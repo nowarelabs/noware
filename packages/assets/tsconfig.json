@@ -1,12 +1,18 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["es2023"],
+    "lib": [
+      "esnext"
+    ],
     "moduleDetection": "force",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
-    "types": ["node"],
+    "types": [
+      "node",
+      "bun",
+      "@cloudflare/workers-types"
+    ],
     "strict": true,
     "noUnusedLocals": true,
     "declaration": true,
@@ -17,5 +23,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }
