@@ -1,17 +1,3 @@
-/**
- * noware-router - BaseRouter
- *
- * Standard Gauge: Router (Tier 2)
- *
- * Connection Flow:
- * BaseRouter → BaseRpcServer → BaseFeatureHandler
- *
- * Connection: This layer → BaseRpcServer (ONE call only)
- *
- * Static Plugin Points:
- * - routes: RouteConfig[]
- */
-
 import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseRouter<

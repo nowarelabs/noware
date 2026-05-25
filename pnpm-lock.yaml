@@ -726,6 +726,9 @@ importers:
 
   packages/sql:
     dependencies:
+      '@nowarelabs/result':
+        specifier: workspace:*
+        version: link:../result
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
