@@ -1,7 +1,7 @@
 {
-  "name": "@nowarelabs/cfour",
+  "name": "@nowarelabs/depends",
   "version": "0.0.1",
-  "description": "C4 model library",
+  "description": "Dependencies for Standard Gauge",
   "homepage": "https://github.com/nowarelabs/noware#readme",
   "bugs": {
     "url": "https://github.com/nowarelabs/noware/issues"
