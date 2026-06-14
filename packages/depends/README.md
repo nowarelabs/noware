@@ -1,11 +1,12 @@
 # @nowarelabs/depends
 
-A predictable, registry-based dependency injection system for Standard Gauge applications. Combines a service locator with typed keys, lazy resolution, and a natural DSL for registration.
+A predictable, registry-based dependency injection system for Standard Gauge applications. Two layers: a **Rails-inspired DSL** for everyday use, and **primitives** underneath for framework authors and edge cases.
 
 **Standard Gauge Position:** Cross-cutting (used by all layers)
 
 ## Features
 
+- **Rails-inspired DSL** — `container()`, `scope()`, `fake()`, `uses()`. No decorators, no decorator config.
 - **Typed keys** — `DependencyKey<T>` with optional lazy default factories
 - **Chain-of-responsibility** — Parent registries for scoped overrides (request-level, test-level)
 - **Self-keyed types** — `KeyedDependency<T>` lets instances carry their own key
@@ -13,7 +14,7 @@ A predictable, registry-based dependency injection system for Standard Gauge app
 - **Auto-attach** — Registering a `BaseDepends` subclass automatically injects the registry
 - **Fluent registration DSL** — `DependencyRegistry.build(give => ...)`
 - **Thin — zero runtime dependencies** beyond `@nowarelabs/shared` types
-- **No decorators** — no reflection, no TS experimental decorators
+- **No decorators, no reflection**
 
 ## Installation
 
@@ -21,70 +22,147 @@ A predictable, registry-based dependency injection system for Standard Gauge app
 npm install @nowarelabs/depends
 ```
 
-## Quick Start
+## Quick Start (DSL)
 
-### 1. Define Keys
+The DSL is the 90% layer — enough for most applications. When you need more control, the primitives are a single import away.
+
+### 1. Declare Dependencies
+
+```typescript
+import { DependsOn, container, uses, DependencyKey } from "@nowarelabs/depends";
+
+class EmailService extends DependsOn {
+  send(to: string, subject: string) {
+    return `Emailed ${to}: ${subject}`;
+  }
+}
+
+class ReportService extends DependsOn {
+  private db = uses(DependencyKey.named<Database>("Database"));
+  private email = uses(EmailService);
+
+  run() {
+    this.db.query("SELECT 1");
+    return this.email.send("admin@co.com", "Report");
+  }
+}
+```
+
+### 2. Bootstrap
+
+```typescript
+const app = container({
+  Logger: () => new ConsoleLogger(),
+  Database: () => new PostgresDatabase(env.DATABASE_URL),
+  services: [EmailService, ReportService],
+});
+```
+
+### 3. Use
+
+```typescript
+const report = app.resolve(ReportService);
+report.run();
+```
+
+### 4. Scope (per-request overrides)
+
+```typescript
+const req = app.scope({
+  Logger: () => new RequestScopedLogger(requestId),
+});
+```
+
+### 5. Fake (testing)
+
+```typescript
+const { resolve } = app.fake({
+  Database: () => new MockDatabase(),
+});
+
+report = resolve(ReportService);
+```
+
+---
+
+## DSL Reference
+
+### `container(config)`
+
+Creates a registry from a plain config object. Named entries are factory functions called eagerly at bootstrap. The `services` key registers class constructors — instances are created and their `uses()` calls resolve against the active container context.
+
+```typescript
+const app = container({
+  Logger: () => new ConsoleLogger(),
+  Database: () => new PostgresDatabase(),
+  services: [EmailService, ReportService],
+});
+```
+
+### `uses(source)`
+
+A standalone function (no `this.` needed) that resolves a dependency at construction time. Accepts either a `DependencyKey<T>` or a class constructor previously registered in the `services` array.
+
+```typescript
+class ReportService extends DependsOn {
+  private db = uses(Keys.Database); // DependencyKey
+  private email = uses(EmailService); // class reference
+}
+```
+
+`uses()` only works inside a `container()` or `scope()` call — outside those it throws.
+
+### `DependsOn`
+
+Marker base class for DI-managed services. Extending it is optional (any class registered via `services` works), but self-documents that the class participates in DI.
+
+### `registry.resolve(source)`
+
+Resolves a dependency by `DependencyKey` or class constructor.
+
+```typescript
+app.resolve(ReportService).run();
+app.resolve(Keys.Database);
+```
+
+### `registry.scope(config)`
+
+Creates a child registry that inherits all parent registrations and can override named factories. Parent is unmodified.
+
+```typescript
+const req = app.scope({
+  Logger: () => new RequestScopedLogger(id),
+});
+
+req.resolve(Keys.Logger); // RequestScopedLogger
+req.resolve(Keys.Database); // PostgresDatabase (inherited)
+app.resolve(Keys.Logger); // ConsoleLogger (unaffected)
+```
+
+### `registry.fake(config)`
+
+Returns `{ resolve }` — a function that resolves against a scoped registry with faked overrides. No full registry object, just resolve what you need. Ideal for tests.
+
+```typescript
+const { resolve } = app.fake({
+  Database: () => new MockDatabase(),
+});
+
+resolve(Keys.Database); // MockDatabase
+resolve(ReportService); // real ReportService (inherited)
+```
+
+---
+
+## Primitives Reference
+
+The primitives are the framework-author layer. Use them when the DSL's conventions don't fit — custom lifetimes, programmatic registration, complex scoping.
+
+### Defining Keys
 
 ```typescript
 import { DependencyKey } from "@nowarelabs/depends";
 
-interface Logger {
-  log(message: string): void;
-}
-
-interface Database {
-  query(sql: string): unknown[];
-}
-
-export const Keys = {
-  Logger: DependencyKey.named<Logger>("logger"),
-  Database: DependencyKey.named<Database>("database"),
-  // With a lazy default factory (used when nothing is registered):
-  Cache: DependencyKey.named<CacheClient>("cache", () => new MemoryCache()),
-};
-```
-
-### 2. Create a Registry
-
-```typescript
-import { DependencyRegistry } from "@nowarelabs/depends";
-
-const registry = DependencyRegistry.build((give) => {
-  give(Keys.Logger, new ConsoleLogger());
-  give(Keys.Database, new PostgresDatabase());
-});
-```
-
-### 3. Use in a Class
-
-```typescript
-import { BaseDepends, DependencyKey } from "@nowarelabs/depends";
-
-class UserService extends BaseDepends {
-  private get logger() {
-    return this.inject(Keys.Logger);
-  }
-
-  private get db() {
-    return this.inject(Keys.Database);
-  }
-
-  async findUser(id: string) {
-    this.logger.log(`finding user ${id}`);
-    return this.db.query(`SELECT * FROM users WHERE id = '${id}'`);
-  }
-}
-
-registry.register(Keys.UserService, new UserService());
-```
-
-**Important:** Use getters with `inject()`, not field initializers. Field initializers run during `new`, before the registry is attached. Getters are evaluated lazily — the registry will be available by the time the property is accessed. This mirrors Swift's `@Dependency` property wrapper behaviour.
-
-## Defining Keys
-
-Keys are lightweight identifiers that pair a unique name with a type and an optional factory for lazy default resolution.
-
-```typescript
 // Minimal key (no default — must be registered)
 const Key = new DependencyKey<MyType>("my.key");
 
@@ -96,139 +174,71 @@ const Key = DependencyKey.named<MyType>("my.key");
 const Key = DependencyKey.named<MyType>("my.key", () => new MyType());
 ```
 
-The factory is called at most once, the first time `resolve()` is called and no explicit registration exists. The result is cached in the registry.
+The factory is called at most once and cached.
 
-## DependencyRegistry
-
-### Creating a Registry
+### DependencyRegistry
 
 ```typescript
-// Empty
-const registry = new DependencyRegistry();
+import { DependencyRegistry } from "@nowarelabs/depends";
 
-// With parent for chain-of-responsibility
+// Create
+const registry = new DependencyRegistry();
 const registry = new DependencyRegistry(parentRegistry);
 
-// With builder DSL (recommended for app bootstrap)
+// Builder DSL (recommended for app bootstrap)
 const registry = DependencyRegistry.build((give) => {
   give(Keys.Logger, new ConsoleLogger());
-  give(Keys.Database, new PostgresDatabase());
+  give(new EmailService()); // KeyedDependency — key inferred
 });
 
-// With builder DSL and parent
-const registry = DependencyRegistry.build((give) => {
-  give(Keys.Logger, new ConsoleLogger());
-}, parentRegistry);
-```
-
-### Registering Dependencies
-
-```typescript
-// By key + instance (explicit)
+// Register
 registry.register(Keys.Logger, new ConsoleLogger());
-
-// KeyedDependency (self-keyed — no key argument needed)
-registry.register(new EmailService());
-
-// Builder callback
+registry.register(new EmailService()); // KeyedDependency
 registry.register((give) => {
   give(Keys.Logger, new ConsoleLogger());
-  give(new EmailService());
 });
 
-// Method chaining
-registry
-  .register(Keys.Logger, new ConsoleLogger())
-  .register(Keys.Database, new PostgresDatabase());
-```
-
-### Resolving Dependencies
-
-```typescript
+// Resolve
 const logger = registry.resolve(Keys.Logger);
-logger.log("hello");
 
-// With KeyedDependency, resolve by the key stored on the class:
-const email = registry.resolve(EmailService.key);
-email.send("user@example.com", "Welcome");
-```
+// Chain-of-responsibility: checks self → parent → key factory → throw
 
-Resolution follows the chain-of-responsibility:
-1. Check this registry's storage
-2. If not found, delegate to the parent registry
-3. If no parent and the key has a factory, call it and cache the result
-4. Otherwise, throw
-
-### Checking, Unregistering, Clearing
-
-```typescript
-registry.has(Keys.Logger);       // boolean
+// Unregister / clear / has
 registry.unregister(Keys.Logger);
-registry.clear();                 // removes all entries
-```
+registry.clear();
+registry.has(Keys.Logger);
 
-### Fork
-
-Creates a child registry that inherits all parent entries. Safe to mutate without affecting the parent — ideal for per-request scoping or integration tests.
-
-```typescript
+// Fork (child registry, safe to mutate)
 const testRegistry = appRegistry.fork();
-testRegistry.register(Keys.Database, new MockDatabase());
-
-appRegistry.resolve(Keys.Database);   // unchanged
-testRegistry.resolve(Keys.Database);  // MockDatabase
 ```
 
-## BaseDepends
+### BaseDepends
 
-Extend `BaseDepends` to give a class access to the dependency registry. The registry is automatically attached when the instance is registered via `DependencyRegistry.register()`.
-
-### inject()
-
-Use `inject()` in getters for lazy resolution:
+Extend `BaseDepends` to get `inject()` (lazy, use in getters) and lifecycle hooks.
 
 ```typescript
+import { BaseDepends } from "@nowarelabs/depends";
+
 class MyService extends BaseDepends {
   private get logger() {
     return this.inject(Keys.Logger);
   }
-}
-```
 
-### Lifecycle Hooks
-
-```typescript
-class MyService extends BaseDepends {
   protected setup(): void {
-    // Called once when the registry is first attached.
-    // Dependencies are available via inject().
-    this.inject(Keys.Cache).set("warmed", true);
+    // Called once when registry is first attached.
   }
 
   protected didAttach(): void {
-    // Called after setup(), when this instance has been fully
-    // registered in the DependencyRegistry.
+    // Called after registration in the DependencyRegistry.
   }
 }
 ```
 
-### Standalone inject() Utility
+**Important:** Use getters with `inject()`, not field initializers. Field initializers run during `new`, before the registry is attached. Getters are evaluated lazily — this mirrors Swift's `@Dependency` property wrapper.
 
-Works on any `DependsProvider`:
+### KeyedDependency
 
-```typescript
-import { inject } from "@nowarelabs/depends";
-
-class ConfigService extends BaseDepends {
-  get cfg(): string {
-    return inject(this, DependencyKey.named<string>("config", () => "default"));
-  }
-}
-```
-
-## KeyedDependency
-
-Dependencies that carry their own key. This mirrors the Swift `KeyedDependency` protocol and lets you register without passing an explicit key.
+Dependencies that carry their own key, enabling registration without an explicit key argument.
 
 ```typescript
 import type { KeyedDependency } from "@nowarelabs/depends";
@@ -237,112 +247,68 @@ class EmailService extends BaseDepends implements KeyedDependency<EmailService> 
   static readonly key = DependencyKey.named<EmailService>("email.service");
   readonly dependencyKey = EmailService.key;
 
-  send(to: string, subject: string): void { /* ... */ }
+  send(to: string, subject: string): void {
+    /* ... */
+  }
 }
 
-// Register without explicit key:
 registry.register(new EmailService());
-
-// Resolve by static key:
-const email = registry.resolve(EmailService.key);
+registry.resolve(EmailService.key);
 ```
-
-### Builder DSL with KeyedDependency
-
-```typescript
-DependencyRegistry.build((give) => {
-  give(Keys.Logger, new ConsoleLogger());  // explicit key
-  give(new EmailService());                // keyed — key inferred
-  give(new SmsService());                  // keyed — key inferred
-});
-```
-
-## Parent Registry (Scoping)
-
-Child registries delegate unresolved lookups to their parent. This enables layered scoping — for example, an application-level registry with per-request overrides.
-
-```typescript
-const appRegistry = new DependencyRegistry();
-appRegistry.register(Keys.Database, new PostgresDatabase());
-appRegistry.register(Keys.Logger, new ConsoleLogger());
-
-// Request-scoped override:
-const reqRegistry = new DependencyRegistry(appRegistry);
-reqRegistry.register(Keys.Logger, new RequestScopedLogger());
-
-reqRegistry.resolve(Keys.Logger);   // RequestScopedLogger (from child)
-reqRegistry.resolve(Keys.Database); // PostgresDatabase (from parent)
-appRegistry.resolve(Keys.Logger);   // ConsoleLogger (unaffected)
-```
-
-## Usage with Standard Gauge Layers
-
-Because `BaseDepends` is independent of the request/context types, it composes naturally with any layer:
-
-```typescript
-class AuthController extends BaseController {
-  private get auth() {
-    return this.inject(Keys.Auth);
-  }
-
-  async handle() {
-    const user = await this.auth.authenticate(this.request);
-    return this.json(user);
-  }
-}
-```
-
-The registry is typically bootstrapped at the application entry point and passed through the layer hierarchy or stored in the execution context.
 
 ## API Reference
 
 ### DependencyKey\<T\>
 
-| Member | Signature | Description |
-|--------|-----------|-------------|
-| `constructor` | `(name: string, factory?: () => T)` | Create a key |
+| Member         | Signature                                             | Description              |
+| -------------- | ----------------------------------------------------- | ------------------------ |
+| `constructor`  | `(name: string, factory?: () => T)`                   | Create a key             |
 | `static named` | `(name: string, factory?: () => T): DependencyKey<T>` | Create a key (shorthand) |
-| `name` | `string` | Unique identifier |
-| `factory` | `(() => T) \| undefined` | Optional lazy default |
+| `name`         | `string`                                              | Unique identifier        |
+| `factory`      | `(() => T) \| undefined`                              | Optional lazy default    |
 
 ### DependencyRegistry
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `constructor(parent?)` | — | Create registry, optionally with parent |
-| `static build(builder, parent?)` | `DependencyRegistry` | Create via DSL callback |
-| `register(key, instance)` | `this` | Register by key |
-| `register(instance)` | `this` | Register a KeyedDependency |
-| `register(builder)` | `this` | Register via DSL callback |
-| `resolve(key)` | `T` | Resolve by key (chain-of-responsibility) |
-| `unregister(key)` | `void` | Remove a registration |
-| `clear()` | `void` | Remove all registrations |
-| `has(key)` | `boolean` | Check if key is registered |
-| `fork()` | `DependencyRegistry` | Create child registry |
+| Method                           | Returns              | Description                              |
+| -------------------------------- | -------------------- | ---------------------------------------- |
+| `constructor(parent?)`           | —                    | Create registry, optionally with parent  |
+| `static build(builder, parent?)` | `DependencyRegistry` | Create via DSL callback                  |
+| `register(key, instance)`        | `this`               | Register by key                          |
+| `register(instance)`             | `this`               | Register a KeyedDependency               |
+| `register(builder)`              | `this`               | Register via DSL callback                |
+| `resolve(key)`                   | `T`                  | Resolve by key (chain-of-responsibility) |
+| `unregister(key)`                | `void`               | Remove a registration                    |
+| `clear()`                        | `void`               | Remove all registrations                 |
+| `has(key)`                       | `boolean`            | Check if key is registered               |
+| `fork()`                         | `DependencyRegistry` | Create child registry                    |
 
 ### BaseDepends (abstract)
 
-| Member | Signature | Description |
-|--------|-----------|-------------|
-| `dependencies` | `DependencyRegistry` | The attached registry (falls back to empty) |
-| `setDependencyRegistry` | `(registry) => void` | Called by registry on registration |
-| `inject(key)` | `T` | Resolve a dependency |
-| `setup()` | `void` | Lifecycle hook (override) |
-| `didAttach()` | `void` | Lifecycle hook (override) |
+| Member                  | Signature            | Description                                 |
+| ----------------------- | -------------------- | ------------------------------------------- |
+| `dependencies`          | `DependencyRegistry` | The attached registry (falls back to empty) |
+| `setDependencyRegistry` | `(registry) => void` | Called by registry on registration          |
+| `inject(key)`           | `T`                  | Resolve a dependency                        |
+| `setup()`               | `void`               | Lifecycle hook (override)                   |
+| `didAttach()`           | `void`               | Lifecycle hook (override)                   |
 
 ### KeyedDependency\<T\>
 
-| Member | Signature | Description |
-|--------|-----------|-------------|
+| Member          | Signature          | Description                           |
+| --------------- | ------------------ | ------------------------------------- |
 | `dependencyKey` | `DependencyKey<T>` | The key associated with this instance |
 
-### Utilities
+### DSL
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `provide(key, instance)` | `{ key, instance }` | Create a key/instance pair |
-| `inject(target, key)` | `T` | Resolve from any DependsProvider |
-| `toKeyed(instance)` | `AnyKeyedDependency` | Type-erase a KeyedDependency |
+| Export                             | Signature     | Description                           |
+| ---------------------------------- | ------------- | ------------------------------------- |
+| `container(config)`                | `Registry`    | Bootstrap registry from config        |
+| `Registry.create(config, parent?)` | `Registry`    | Static factory for Registry           |
+| `registry.scope(config)`           | `Registry`    | Create scoped child                   |
+| `registry.fake(config)`            | `{ resolve }` | Create faked resolve function         |
+| `registry.resolve(source)`         | `T`           | Resolve by key or class               |
+| `uses(source)`                     | `T`           | Resolve during bootstrap (standalone) |
+| `DependsOn`                        | `class`       | Marker base class for services        |
 
 ## Development
 

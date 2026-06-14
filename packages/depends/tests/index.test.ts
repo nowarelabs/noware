@@ -8,6 +8,9 @@ import {
   toKeyed,
   provide,
   inject,
+  DependsOn,
+  uses,
+  container,
 } from "../src/index.ts";
 
 // ============================================================================
@@ -612,5 +615,385 @@ describe("real-world scenarios", () => {
 
     expect(registry.resolve(authKey).login()).toBe("token");
     expect(registry.resolve(apiKey).fetch()).toBe("data");
+  });
+});
+
+// ============================================================================
+// Container & Named Factories
+// ============================================================================
+
+describe("container()", () => {
+  test("creates a registry from named factories", () => {
+    const registry = container({
+      greeting: () => "hello",
+      count: () => 42,
+    });
+
+    expect(registry.resolve(DependencyKey.named<string>("greeting"))).toBe("hello");
+    expect(registry.resolve(DependencyKey.named<number>("count"))).toBe(42);
+  });
+
+  test("factory is called eagerly at bootstrap", () => {
+    let calls = 0;
+    const registry = container({
+      counter: () => ++calls,
+    });
+
+    expect(calls).toBe(1);
+    void registry.resolve(DependencyKey.named<number>("counter"));
+    expect(calls).toBe(1); // cached, not called again
+  });
+
+  test("multiple named factories", () => {
+    const registry = container({
+      Logger: () => {
+        const log: Logger = { log: (_m: string) => {} };
+        return log;
+      },
+      Database: () => {
+        const db: Database = { query: () => ["result"] };
+        return db;
+      },
+    });
+
+    const log = registry.resolve(DependencyKey.named<Logger>("Logger"));
+    const db = registry.resolve(DependencyKey.named<Database>("Database"));
+    expect(log).toBeDefined();
+    expect(db.query("x")).toEqual(["result"]);
+  });
+});
+
+// ============================================================================
+// Services
+// ============================================================================
+
+describe("container() with services", () => {
+  test("registers and resolves services", () => {
+    class Mailer {
+      send(_to: string) {
+        return "sent";
+      }
+    }
+
+    const registry = container({
+      services: [Mailer],
+    });
+
+    const mailer = registry.resolve(Mailer);
+    expect(mailer.send("a@b.com")).toBe("sent");
+  });
+
+  test("multiple services registered", () => {
+    class Mailer {
+      send() {
+        return "mail";
+      }
+    }
+    class Pusher {
+      push() {
+        return "push";
+      }
+    }
+
+    const registry = container({
+      services: [Mailer, Pusher],
+    });
+
+    expect(registry.resolve(Mailer).send()).toBe("mail");
+    expect(registry.resolve(Pusher).push()).toBe("push");
+  });
+
+  test("service class extends DependsOn", () => {
+    class MyService extends DependsOn {
+      greet() {
+        return "hi";
+      }
+    }
+
+    const registry = container({
+      services: [MyService],
+    });
+
+    expect(registry.resolve(MyService).greet()).toBe("hi");
+  });
+});
+
+// ============================================================================
+// uses()
+// ============================================================================
+
+describe("uses()", () => {
+  test("resolves named dependency during bootstrap", () => {
+    class Greeter extends DependsOn {
+      greeting = uses(DependencyKey.named<string>("msg"));
+    }
+
+    const registry = container({
+      msg: () => "hello world",
+      services: [Greeter],
+    });
+
+    expect(registry.resolve(Greeter).greeting).toBe("hello world");
+  });
+
+  test("resolves another service during bootstrap", () => {
+    class Logger {
+      log(_msg: string) {}
+    }
+
+    class Greeter extends DependsOn {
+      logger = uses(Logger);
+      greet() {
+        this.logger.log("called greet");
+        return "hi";
+      }
+    }
+
+    const registry = container({
+      services: [Logger, Greeter],
+    });
+
+    expect(registry.resolve(Greeter).greet()).toBe("hi");
+  });
+
+  test("multiple uses() in one service", () => {
+    class Logger {
+      log(_msg: string) {}
+    }
+    class Config {
+      get name() {
+        return "test-app";
+      }
+    }
+
+    class App extends DependsOn {
+      log = uses(Logger);
+      cfg = uses(Config);
+    }
+
+    const registry = container({
+      services: [Logger, Config, App],
+    });
+
+    const app = registry.resolve(App);
+    expect(app.log).toBeInstanceOf(Logger);
+    expect(app.cfg).toBeInstanceOf(Config);
+  });
+
+  test("uses() factory and services together", () => {
+    class Logger {
+      log(_msg: string) {}
+    }
+
+    class Greeter extends DependsOn {
+      logger = uses(Logger);
+      greeting = uses(DependencyKey.named<string>("greeting"));
+    }
+
+    const registry = container({
+      greeting: () => "hello",
+      services: [Logger, Greeter],
+    });
+
+    const greeter = registry.resolve(Greeter);
+    expect(greeter.greeting).toBe("hello");
+    expect(greeter.logger).toBeInstanceOf(Logger);
+  });
+
+  test("throws when uses() called outside container context", () => {
+    expect(() => {
+      uses(DependencyKey.named<string>("fail"));
+    }).toThrow();
+  });
+});
+
+// ============================================================================
+// Registry.resolve()
+// ============================================================================
+
+describe("Registry.resolve()", () => {
+  test("resolves by DependencyKey", () => {
+    const registry = container({
+      key: () => "value",
+    });
+
+    expect(registry.resolve(DependencyKey.named<string>("key"))).toBe("value");
+  });
+
+  test("resolves by class constructor", () => {
+    class MyService {}
+
+    const registry = container({
+      services: [MyService],
+    });
+
+    expect(registry.resolve(MyService)).toBeInstanceOf(MyService);
+  });
+
+  test("throws for unregistered class", () => {
+    class Unregistered {}
+
+    const registry = container({});
+
+    expect(() => registry.resolve(Unregistered)).toThrow();
+  });
+});
+
+// ============================================================================
+// Scope
+// ============================================================================
+
+describe("Registry.scope()", () => {
+  test("scoped registry overrides named factories", () => {
+    const registry = container({
+      greeting: () => "parent",
+    });
+
+    const scoped = registry.scope({
+      greeting: () => "child",
+    });
+
+    expect(scoped.resolve(DependencyKey.named<string>("greeting"))).toBe("child");
+  });
+
+  test("parent is unmodified after scope", () => {
+    const registry = container({
+      greeting: () => "parent",
+    });
+
+    void registry.scope({
+      greeting: () => "child",
+    });
+
+    expect(registry.resolve(DependencyKey.named<string>("greeting"))).toBe("parent");
+  });
+
+  test("scoped registry falls through to parent", () => {
+    const registry = container({
+      parentOnly: () => "from-parent",
+    });
+
+    const scoped = registry.scope({});
+
+    expect(scoped.resolve(DependencyKey.named<string>("parentOnly"))).toBe("from-parent");
+  });
+});
+
+// ============================================================================
+// Fake
+// ============================================================================
+
+describe("Registry.fake()", () => {
+  test("fake returns resolve function with overrides", () => {
+    const registry = container({
+      greeting: () => "real",
+    });
+
+    const { resolve } = registry.fake({
+      greeting: () => "fake",
+    });
+
+    expect(resolve(DependencyKey.named<string>("greeting"))).toBe("fake");
+  });
+
+  test("fake falls through to parent for non-overridden keys", () => {
+    const registry = container({
+      real: () => "real-value",
+    });
+
+    const { resolve } = registry.fake({
+      fake: () => "fake-value",
+    });
+
+    expect(resolve(DependencyKey.named<string>("real"))).toBe("real-value");
+  });
+
+  test("parent is unmodified after fake", () => {
+    const registry = container({
+      greeting: () => "original",
+    });
+
+    void registry.fake({
+      greeting: () => "fake",
+    });
+
+    expect(registry.resolve(DependencyKey.named<string>("greeting"))).toBe("original");
+  });
+});
+
+// ============================================================================
+// Integration: Full Example
+// ============================================================================
+
+describe("integration", () => {
+  test("end-to-end: the user's exact DSL", () => {
+    const Keys = {
+      Database: DependencyKey.named<Database>("Database"),
+    };
+
+    class EmailService extends DependsOn {
+      send(_to: string, _subject: string) {
+        return "queued";
+      }
+    }
+
+    class ReportService extends DependsOn {
+      private db = uses(Keys.Database);
+      private email = uses(EmailService);
+
+      run() {
+        this.db.query("SELECT 1");
+        return this.email.send("admin@co.com", "Report");
+      }
+    }
+
+    const registry = container({
+      Database: () => {
+        const db: Database = { query: () => ["row"] };
+        return db;
+      },
+      services: [EmailService, ReportService],
+    });
+
+    const result = registry.resolve(ReportService).run();
+    expect(result).toBe("queued");
+  });
+
+  test("scoped overrides in integration", () => {
+    const Keys = {
+      Logger: DependencyKey.named<Logger>("Logger"),
+    };
+
+    class Mailer extends DependsOn {
+      private log = uses(Keys.Logger);
+      send() {
+        this.log.log("sending");
+        return "sent";
+      }
+    }
+
+    let calls: string[] = [];
+
+    const registry = container({
+      Logger: () => {
+        const log: Logger = { log: (m) => calls.push(m) };
+        return log;
+      },
+      services: [Mailer],
+    });
+
+    registry.resolve(Mailer).send();
+    expect(calls).toEqual(["sending"]);
+
+    // Scoped creates new instances from the factory
+    const scoped = registry.scope({
+      Logger: () => {
+        const log: Logger = { log: (m) => calls.push(`scoped: ${m}`) };
+        return log;
+      },
+    });
+
+    // Mailer was constructed in parent scope, its Logger reference is already captured
+    void scoped.resolve(Mailer);
   });
 });

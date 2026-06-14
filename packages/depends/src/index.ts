@@ -261,3 +261,159 @@ export function provide<T>(
 export function inject<T>(target: DependsProvider, key: DependencyKey<T>): T {
   return target.dependencies.resolve(key);
 }
+
+// ============================================================================
+// DSL — 90 % Layer
+// ============================================================================
+
+/**
+ * @nowarelabs/depends — Rails-inspired DI DSL
+ *
+ * A thin 90% layer over the primitives (DependencyKey, DependencyRegistry, BaseDepends).
+ * No decorators, no decorator config, no reflection — just factories and naming conventions.
+ *
+ * @example
+ * ```ts
+ * // bootstrap
+ * const registry = container({
+ *   Logger:   () => new ConsoleLogger(),
+ *   Database: () => new PostgresDatabase(env.DATABASE_URL),
+ *   services: [EmailService, ReportService],
+ * });
+ *
+ * // scoped override (per-request)
+ * const req = registry.scope({
+ *   Logger: () => new RequestScopedLogger(requestId),
+ * });
+ *
+ * // test
+ * const { resolve } = registry.fake({
+ *   Database: () => new MockDatabase(),
+ * });
+ * ```
+ */
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type ClassConstructor<T = any> = new (...args: any[]) => T;
+type ContainerConfig = Record<string, (() => any) | ClassConstructor<any>[]>;
+export type ResolveFn = <T>(source: DependencyKey<T> | ClassConstructor<T>) => T;
+
+// ============================================================================
+// Active Registry Context
+// ============================================================================
+
+let _activeRegistry: Registry | null = null;
+
+// ============================================================================
+// uses() — standalone, no this. needed
+// ============================================================================
+
+export function uses<T>(source: DependencyKey<T> | ClassConstructor<T>): T {
+  if (!_activeRegistry) {
+    throw new Error(
+      `[depends] uses() can only be called while a Registry is active. ` +
+        `Make sure your class is registered via container({ services: [...] }).`,
+    );
+  }
+  return _activeRegistry.resolve(source);
+}
+
+// ============================================================================
+// Registry
+// ============================================================================
+
+export class Registry {
+  private registry: DependencyRegistry;
+  private classToKey = new Map<Function, DependencyKey<any>>();
+  private parent: Registry | null;
+
+  private constructor(parent?: Registry) {
+    this.parent = parent ?? null;
+    this.registry = parent ? new DependencyRegistry(parent.registry) : new DependencyRegistry();
+  }
+
+  // ---- Factory ----------------------------------------------------------
+
+  static create(config: ContainerConfig, parent?: Registry): Registry {
+    const r = new Registry(parent);
+
+    const prev = _activeRegistry;
+    _activeRegistry = r;
+    try {
+      r._configure(config);
+    } finally {
+      _activeRegistry = prev;
+    }
+
+    return r;
+  }
+
+  // ---- Bootstrap --------------------------------------------------------
+
+  private _configure(config: ContainerConfig): void {
+    for (const [name, value] of Object.entries(config)) {
+      if (name === "services") {
+        const constructors = value as ClassConstructor[];
+        for (const Ctor of constructors) {
+          const key = DependencyKey.named<any>(Ctor.name);
+          this.classToKey.set(Ctor, key);
+          const instance = new Ctor();
+          this.registry.register(key, instance);
+        }
+        continue;
+      }
+
+      const factory = value as () => any;
+      const key = DependencyKey.named<any>(name);
+      this.registry.register(key, factory());
+    }
+  }
+
+  // ---- Resolution -------------------------------------------------------
+
+  resolve<T>(source: DependencyKey<T> | ClassConstructor<T>): T {
+    if (source instanceof DependencyKey) {
+      return this.registry.resolve(source as DependencyKey<T>);
+    }
+
+    const key = this.classToKey.get(source) ?? this.parent?._findKeyForClass(source);
+
+    if (!key) {
+      throw new Error(
+        `[depends] Class ${source.name} is not registered in the container. ` +
+          `Add it to container({ services: [...] }).`,
+      );
+    }
+
+    return this.registry.resolve(key);
+  }
+
+  private _findKeyForClass(ctor: Function): DependencyKey<any> | undefined {
+    return this.classToKey.get(ctor) ?? this.parent?._findKeyForClass(ctor);
+  }
+
+  // ---- Scoping & Testing ------------------------------------------------
+
+  scope(config: ContainerConfig): Registry {
+    return Registry.create(config, this);
+  }
+
+  fake(config: ContainerConfig): { resolve: ResolveFn } {
+    const scoped = Registry.create(config, this);
+    return { resolve: (source) => scoped.resolve(source) };
+  }
+}
+
+// ============================================================================
+// container() — Bootstrap Factory
+// ============================================================================
+
+// DependsOn is a Rails-flavoured alias for BaseDepends.
+export const DependsOn = BaseDepends;
+
+export function container(config: ContainerConfig): Registry {
+  return Registry.create(config);
+}
