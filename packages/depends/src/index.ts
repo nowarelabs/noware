@@ -315,7 +315,7 @@ export function uses<T>(source: DependencyKey<T> | ClassConstructor<T>): T {
   if (!_activeRegistry) {
     throw new Error(
       `[depends] uses() can only be called while a Registry is active. ` +
-        `Make sure your class is registered via container({ services: [...] }).`,
+        `Make sure your class is registered via container() or scope().`,
     );
   }
   return _activeRegistry.resolve(source);
@@ -327,6 +327,7 @@ export function uses<T>(source: DependencyKey<T> | ClassConstructor<T>): T {
 
 // ---- Bootstrap (not exported — use container()/scope()/fake()) ------------
 
+/** Creates a Registry and runs its _configure with _activeRegistry set. */
 function _bootstrap(config: ContainerConfig, parent?: Registry): Registry {
   const r = new Registry(parent);
 

@@ -61,7 +61,7 @@ const registry = container({
 ### 3. Use
 
 ```typescript
-const report = app.resolve(ReportService);
+const report = registry.resolve(ReportService);
 report.run();
 ```
 
@@ -305,9 +305,9 @@ registry.resolve(EmailService.key);
 | Export                     | Signature     | Description                                                    |
 | -------------------------- | ------------- | -------------------------------------------------------------- |
 | `container(config)`        | `Registry`    | Bootstrap registry from config                                 |
+| `registry.resolve(source)` | `T`           | Resolve by key or class                                        |
 | `registry.scope(config)`   | `Registry`    | Create scoped child                                            |
 | `registry.fake(config)`    | `{ resolve }` | Create faked resolve function                                  |
-| `registry.resolve(source)` | `T`           | Resolve by key or class                                        |
 | `uses(source)`             | `T`           | Resolve eagerly at construction time                           |
 | `DependsOn`                | `class`       | Marker base class (alias for BaseDepends, extends it directly) |
 
