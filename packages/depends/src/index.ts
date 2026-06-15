@@ -1,8 +1,8 @@
 /**
  * @nowarelabs/depends - Dependency Injection for Standard Gauge
  *
- * A predictable, registry-based dependency injection system.
- * Combines service locator with typed keys and a natural DSL.
+ * A predictable, registry-based dependency injection system for Standard Gauge.
+ * Combines convention-driven wiring with typed keys and a natural DSL.
  *
  * Core Concepts:
  * - DependencyKey<T>: A typed key with optional default factory
