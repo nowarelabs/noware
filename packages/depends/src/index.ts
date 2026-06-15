@@ -297,8 +297,8 @@ export function inject<T>(target: DependsProvider, key: DependencyKey<T>): T {
 // Types
 // ============================================================================
 
-type ClassConstructor<T = any> = new (...args: any[]) => T;
-type ContainerConfig = Record<string, (() => any) | ClassConstructor<any>[]>;
+export type ClassConstructor<T = any> = new () => T;
+export type ContainerConfig = Record<string, (() => any) | ClassConstructor<any>[]>;
 export type ResolveFn = <T>(source: DependencyKey<T> | ClassConstructor<T>) => T;
 
 // ============================================================================
@@ -325,50 +325,61 @@ export function uses<T>(source: DependencyKey<T> | ClassConstructor<T>): T {
 // Registry
 // ============================================================================
 
+// ---- Bootstrap (not exported — use container()/scope()/fake()) ------------
+
+function _bootstrap(config: ContainerConfig, parent?: Registry): Registry {
+  const r = new Registry(parent);
+
+  const prev = _activeRegistry;
+  _activeRegistry = r;
+  try {
+    r._configure(config);
+  } finally {
+    _activeRegistry = prev;
+  }
+
+  return r;
+}
+
 export class Registry {
   private registry: DependencyRegistry;
   private classToKey = new Map<Function, DependencyKey<any>>();
   private parent: Registry | null;
 
-  private constructor(parent?: Registry) {
+  /** @internal */
+  constructor(parent?: Registry) {
     this.parent = parent ?? null;
     this.registry = parent ? new DependencyRegistry(parent.registry) : new DependencyRegistry();
   }
 
-  // ---- Factory ----------------------------------------------------------
-
-  static create(config: ContainerConfig, parent?: Registry): Registry {
-    const r = new Registry(parent);
-
-    const prev = _activeRegistry;
-    _activeRegistry = r;
-    try {
-      r._configure(config);
-    } finally {
-      _activeRegistry = prev;
-    }
-
-    return r;
-  }
-
   // ---- Bootstrap --------------------------------------------------------
 
-  private _configure(config: ContainerConfig): void {
+  /** @internal */
+  _configure(config: ContainerConfig): void {
+    const constructors: ClassConstructor[] = [];
+
     for (const [name, value] of Object.entries(config)) {
       if (name === "services") {
-        const constructors = value as ClassConstructor[];
-        for (const Ctor of constructors) {
-          const key = DependencyKey.named<any>(Ctor.name);
-          this.classToKey.set(Ctor, key);
-          const instance = new Ctor();
-          this.registry.register(key, instance);
-        }
+        constructors.push(...(value as ClassConstructor[]));
         continue;
       }
 
       const factory = value as () => any;
       const key = DependencyKey.named<any>(name);
       this.registry.register(key, factory());
+    }
+
+    // pass 1 — register all keys so classToKey is populated before any constructor runs
+    for (const Ctor of constructors) {
+      const key = DependencyKey.named<any>(Ctor.name);
+      this.classToKey.set(Ctor, key);
+    }
+
+    // pass 2 — construct and register instances
+    for (const Ctor of constructors) {
+      const key = this.classToKey.get(Ctor)!;
+      const instance = new Ctor();
+      this.registry.register(key, instance);
     }
   }
 
@@ -398,22 +409,18 @@ export class Registry {
   // ---- Scoping & Testing ------------------------------------------------
 
   scope(config: ContainerConfig): Registry {
-    return Registry.create(config, this);
+    return _bootstrap(config, this);
   }
 
   fake(config: ContainerConfig): { resolve: ResolveFn } {
-    const scoped = Registry.create(config, this);
+    const scoped = _bootstrap(config, this);
     return { resolve: (source) => scoped.resolve(source) };
   }
 }
 
-// ============================================================================
-// container() — Bootstrap Factory
-// ============================================================================
-
 // DependsOn is a Rails-flavoured alias for BaseDepends.
-export const DependsOn = BaseDepends;
+export abstract class DependsOn extends BaseDepends {}
 
 export function container(config: ContainerConfig): Registry {
-  return Registry.create(config);
+  return _bootstrap(config);
 }

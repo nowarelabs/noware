@@ -756,6 +756,22 @@ describe("uses()", () => {
     expect(registry.resolve(Greeter).greet()).toBe("hi");
   });
 
+  test("services must be ordered by dependency — dependent before dependency throws", () => {
+    class Logger {
+      log(_msg: string) {}
+    }
+
+    class Greeter extends DependsOn {
+      logger = uses(Logger);
+    }
+
+    expect(() => {
+      container({
+        services: [Greeter, Logger],
+      });
+    }).toThrow();
+  });
+
   test("multiple uses() in one service", () => {
     class Logger {
       log(_msg: string) {}
@@ -877,6 +893,21 @@ describe("Registry.scope()", () => {
 
     expect(scoped.resolve(DependencyKey.named<string>("parentOnly"))).toBe("from-parent");
   });
+
+  test("scope resolves service classes from parent", () => {
+    class Mailer {
+      send() {
+        return "sent";
+      }
+    }
+
+    const registry = container({
+      services: [Mailer],
+    });
+
+    const scoped = registry.scope({});
+    expect(scoped.resolve(Mailer)).toBeInstanceOf(Mailer);
+  });
 });
 
 // ============================================================================
@@ -918,6 +949,21 @@ describe("Registry.fake()", () => {
     });
 
     expect(registry.resolve(DependencyKey.named<string>("greeting"))).toBe("original");
+  });
+
+  test("fake resolves service classes from parent", () => {
+    class Mailer {
+      send() {
+        return "sent";
+      }
+    }
+
+    const registry = container({
+      services: [Mailer],
+    });
+
+    const { resolve } = registry.fake({});
+    expect(resolve(Mailer)).toBeInstanceOf(Mailer);
   });
 });
 
@@ -985,7 +1031,6 @@ describe("integration", () => {
     registry.resolve(Mailer).send();
     expect(calls).toEqual(["sending"]);
 
-    // Scoped creates new instances from the factory
     const scoped = registry.scope({
       Logger: () => {
         const log: Logger = { log: (m) => calls.push(`scoped: ${m}`) };
@@ -993,7 +1038,9 @@ describe("integration", () => {
       },
     });
 
-    // Mailer was constructed in parent scope, its Logger reference is already captured
-    void scoped.resolve(Mailer);
+    // Mailer was constructed in parent scope — its Logger reference was
+    // eagerly captured. The scoped Logger override has no effect on it.
+    scoped.resolve(Mailer).send();
+    expect(calls).toEqual(["sending", "sending"]);
   });
 });

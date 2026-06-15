@@ -89,7 +89,7 @@ report = resolve(ReportService);
 
 ### `container(config)`
 
-Creates a registry from a plain config object. Named entries are factory functions called eagerly at bootstrap. The `services` key registers class constructors — instances are created and their `uses()` calls resolve against the active container context.
+Creates a registry from a plain config object. Named entries are factory functions called eagerly at bootstrap. The `services` key registers class constructors — instances are created (with no constructor arguments) and their `uses()` calls resolve against the active container context.
 
 ```typescript
 const registry = container({
@@ -101,7 +101,7 @@ const registry = container({
 
 ### `uses(source)`
 
-A standalone function (no `this.` needed) that resolves a dependency at construction time. Accepts either a `DependencyKey<T>` or a class constructor previously registered in the `services` array.
+A standalone function (no `this.` needed) that resolves a dependency eagerly at construction time. Accepts either a `DependencyKey<T>` or a class constructor registered in the `services` array.
 
 ```typescript
 class ReportService extends DependsOn {
@@ -112,9 +112,11 @@ class ReportService extends DependsOn {
 
 `uses()` only works inside a `container()` or `scope()` call — outside those it throws.
 
+**Important:** `uses()` resolves eagerly — the dependency is captured when the field initializer runs (inside `new Ctor()`). For class references in `services`, dependents must appear _after_ their dependencies in the array. Named `container()` factories are always registered before services and can be referenced by `DependencyKey` in any order.
+
 ### `DependsOn`
 
-Marker base class for DI-managed services. Extending it is optional (any class registered via `services` works), but self-documents that the class participates in DI.
+Marker base class for DI-managed services. Alias for `BaseDepends` — extends it directly, so `inject()`, `setup()`, and `didAttach()` are all available. Extending it is optional (any class registered via `services` works), but self-documents that the class participates in DI.
 
 ### `registry.resolve(source)`
 
@@ -127,7 +129,7 @@ app.resolve(Keys.Database);
 
 ### `registry.scope(config)`
 
-Creates a child registry that inherits all parent registrations and can override named factories. Parent is unmodified.
+Creates a child registry that inherits all parent registrations and can override named factories. Parent is unmodified. Lazy `scope()` override of a named factory affects only newly-resolved callers — services already constructed in the parent hold their original eagerly-resolved reference.
 
 ```typescript
 const req = app.scope({
@@ -141,7 +143,7 @@ app.resolve(Keys.Logger); // ConsoleLogger (unaffected)
 
 ### `registry.fake(config)`
 
-Returns `{ resolve }` — a function that resolves against a scoped registry with faked overrides. No full registry object, just resolve what you need. Ideal for tests.
+Returns `{ resolve }` — a function that resolves against a scoped registry with faked overrides. No full registry object, just resolve what you need. Ideal for tests. Note that services already constructed in the parent hold their eagerly-resolved references, so fakes only affect fresh resolutions.
 
 ```typescript
 const { resolve } = app.fake({
@@ -300,15 +302,14 @@ registry.resolve(EmailService.key);
 
 ### DSL
 
-| Export                             | Signature     | Description                           |
-| ---------------------------------- | ------------- | ------------------------------------- |
-| `container(config)`                | `Registry`    | Bootstrap registry from config        |
-| `Registry.create(config, parent?)` | `Registry`    | Static factory for Registry           |
-| `registry.scope(config)`           | `Registry`    | Create scoped child                   |
-| `registry.fake(config)`            | `{ resolve }` | Create faked resolve function         |
-| `registry.resolve(source)`         | `T`           | Resolve by key or class               |
-| `uses(source)`                     | `T`           | Resolve during bootstrap (standalone) |
-| `DependsOn`                        | `class`       | Marker base class for services        |
+| Export                     | Signature     | Description                                                    |
+| -------------------------- | ------------- | -------------------------------------------------------------- |
+| `container(config)`        | `Registry`    | Bootstrap registry from config                                 |
+| `registry.scope(config)`   | `Registry`    | Create scoped child                                            |
+| `registry.fake(config)`    | `{ resolve }` | Create faked resolve function                                  |
+| `registry.resolve(source)` | `T`           | Resolve by key or class                                        |
+| `uses(source)`             | `T`           | Resolve eagerly at construction time                           |
+| `DependsOn`                | `class`       | Marker base class (alias for BaseDepends, extends it directly) |
 
 ## Development
 
