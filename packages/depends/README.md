@@ -51,7 +51,7 @@ class ReportService extends DependsOn {
 ### 2. Bootstrap
 
 ```typescript
-const app = container({
+const registry = container({
   Logger: () => new ConsoleLogger(),
   Database: () => new PostgresDatabase(env.DATABASE_URL),
   services: [EmailService, ReportService],
@@ -92,7 +92,7 @@ report = resolve(ReportService);
 Creates a registry from a plain config object. Named entries are factory functions called eagerly at bootstrap. The `services` key registers class constructors — instances are created and their `uses()` calls resolve against the active container context.
 
 ```typescript
-const app = container({
+const registry = container({
   Logger: () => new ConsoleLogger(),
   Database: () => new PostgresDatabase(),
   services: [EmailService, ReportService],
