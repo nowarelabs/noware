@@ -1,206 +1,256 @@
 /**
- * @nowarelabs/depends - Usage Examples
+ * @nowarelabs/depends — Usage Examples
  *
- * These examples cover every pattern in the library.
+ * This file shows every pattern in the library and how it composes
+ * within the Nomo framework. Three layers:
+ *
+ *   1. Framework plumbing   — what Nomo itself ships (developer never writes this)
+ *   2. Developer app        — controllers, services, models (the user's code)
+ *   3. Entry point          — export default { fetch } (Cloudflare Worker)
+ *
  * Run with: `vp exec src/example.ts`
  */
 
-import { BaseDepends, DependencyKey, DependencyRegistry, inject } from "./index.ts";
+import {
+  DependsOn,
+  uses,
+  container,
+  type ContainerConfig,
+  DependencyKey,
+  DependencyRegistry,
+  BaseDepends,
+} from "./index.ts";
 import type { KeyedDependency } from "./index.ts";
 
-function demo(): void {
-  // ==========================================================================
-  // 1. Defining Keys
-  // ==========================================================================
+// =============================================================================
+// Layer 1 — Framework Plumbing (shipped by Nomo, developer never writes this)
+// =============================================================================
 
-  const Keys = {
-    Logger: DependencyKey.named<Logger>("logger"),
-    Database: DependencyKey.named<Database>("database"),
-    Auth: DependencyKey.named<Authorizer>("auth", () => new DefaultAuthorizer()),
-    Cache: DependencyKey.named<CacheClient>("cache", () => new MemoryCache()),
-  };
+// --- Platform Adapter (one per platform) ------------------------------------
+// Translates the platform's env object into Standard Gauge container config.
+// Developers never see env directly — the framework handles it.
 
-  // ==========================================================================
-  // 2. Defining Dependencies
-  // ==========================================================================
+interface PlatformAdapter<E = unknown> {
+  bootstrap(env: E): ContainerConfig;
+}
 
-  interface Logger {
-    info(msg: string): void;
-    error(msg: string): void;
+class CloudflareAdapter implements PlatformAdapter<{ DB: unknown; KV: unknown; AI: unknown }> {
+  bootstrap(env: { DB: unknown; KV: unknown; AI: unknown }): ContainerConfig {
+    return {
+      Database: () => new D1Database(env.DB),
+      Cache: () => new KVCache(env.KV),
+      AI: () => new AIAdapter(env.AI),
+    };
   }
+}
 
-  interface Database {
-    query(sql: string): ReadonlyArray<Record<string, unknown>>;
+// To add a new platform, write an adapter that translates its env:
+//   class NodeAdapter implements PlatformAdapter { ... }
+//   class FlyAdapter  implements PlatformAdapter { ... }
+// The developer never changes their services — just the adapter import.
+
+// --- Platform implementations -----------------------------------------------
+
+class D1Database {
+  constructor(_binding: unknown) {}
+  query(sql: string): unknown[] {
+    console.log(`  [D1] ${sql}`);
+    return [{ id: "1", name: "Alice" }];
   }
+}
 
-  interface Authorizer {
-    authorize(token: string): boolean;
+class KVCache {
+  constructor(_binding: unknown) {}
+}
+
+class AIAdapter {
+  constructor(_binding: unknown) {}
+}
+
+// --- RCSM Resolver (framework internals) -------------------------------------
+// The RCSM chain (Controller → Service → Model) is a fixed one-per-layer
+// pattern. The framework auto-wires it from uses() declarations — no manual
+// new Service(...) in constructors.
+
+interface Logger {
+  log(message: string): void;
+}
+
+interface Database {
+  query(sql: string): unknown[];
+}
+
+class ConsoleLogger implements Logger {
+  log(message: string): void {
+    console.log(`  [LOG] ${message}`);
   }
+}
 
-  interface CacheClient {
-    get(key: string): unknown;
-    set(key: string, value: unknown): void;
-  }
-
-  class ConsoleLogger implements Logger {
-    info(msg: string): void {
-      console.log(`[INFO] ${msg}`);
-    }
-    error(msg: string): void {
-      console.error(`[ERROR] ${msg}`);
-    }
-  }
-
-  class PostgresDatabase implements Database {
-    query(_sql: string): ReadonlyArray<Record<string, unknown>> {
-      return [];
-    }
-  }
-
-  class DefaultAuthorizer implements Authorizer {
-    authorize(_token: string): boolean {
-      return true;
-    }
-  }
-
-  class MemoryCache implements CacheClient {
-    private store = new Map<string, unknown>();
-    get(key: string): unknown {
-      return this.store.get(key);
-    }
-    set(key: string, value: unknown): void {
-      this.store.set(key, value);
-    }
-  }
-
-  // ==========================================================================
-  // 3. Service Using BaseDepends
-  // ==========================================================================
-
-  class UserService extends BaseDepends {
-    private get logger(): Logger {
-      return this.inject(Keys.Logger);
-    }
-
-    private get db(): Database {
-      return this.inject(Keys.Database);
-    }
-
-    findUser(_id: string): ReadonlyArray<Record<string, unknown>> {
-      this.logger.info(`finding user`);
-      return this.db.query(`SELECT * FROM users`);
-    }
-  }
-
-  // ==========================================================================
-  // 4. Using setup() for Post-Dependency Initialisation
-  // ==========================================================================
-
-  class CacheWarmingService extends BaseDepends {
-    private get cache(): CacheClient {
-      return this.inject(Keys.Cache);
-    }
-
-    protected setup(): void {
-      this.cache.set("warmed", true);
-    }
-  }
-
-  // ==========================================================================
-  // 5. KeyedDependency - Self-Keyed Types
-  // ==========================================================================
-
-  class EmailService extends BaseDepends implements KeyedDependency<EmailService> {
-    static readonly key = DependencyKey.named<EmailService>("email.service");
-    readonly dependencyKey = EmailService.key;
-
-    send(_to: string, _subject: string): void {
-      /* ... */
-    }
-  }
-
-  class SmsService extends BaseDepends implements KeyedDependency<SmsService> {
-    static readonly key = DependencyKey.named<SmsService>("sms.service");
-    readonly dependencyKey = SmsService.key;
-
-    send(_to: string, _message: string): void {
-      /* ... */
-    }
-  }
-
-  // ==========================================================================
-  // 6. Creating a Registry
-  // ==========================================================================
-
-  const registry = DependencyRegistry.build((give) => {
-    give(Keys.Logger, new ConsoleLogger());
-    give(Keys.Database, new PostgresDatabase());
-    give(Keys.Cache, new MemoryCache());
-    give(Keys.Auth, new DefaultAuthorizer());
-    give(new EmailService());
-    give(new SmsService());
-    give(DependencyKey.named<UserService>("user-service"), new UserService());
-    give(DependencyKey.named<CacheWarmingService>("cache-warmer"), new CacheWarmingService());
+// The framework's fetch handler — called once per request.
+// This is COMPLETELY internal — the developer never sees it.
+async function handleRequest<E>(
+  adapter: PlatformAdapter<E>,
+  _request: Request,
+  env: E,
+  _ctx: unknown,
+): Promise<Response> {
+  const registry = container({
+    // Platform bindings (from the adapter)
+    ...adapter.bootstrap(env),
+    // Framework services (ConsoleLogger for non-production, etc.)
+    Logger: () => new ConsoleLogger(),
+    // Developer's services are registered by convention
+    // (auto-discovered from file paths — see Layer 2)
+    services: [UsersController, UsersService, PostsService],
   });
 
-  // ==========================================================================
-  // 7. Resolving Dependencies
-  // ==========================================================================
+  // Router is resolved from the registry
+  const router = registry.resolve(Router);
+  return router.handle();
+}
 
-  const logger = registry.resolve(Keys.Logger);
-  logger.info("app started");
+// =============================================================================
+// Layer 2 — Developer App (the user writes this)
+// =============================================================================
 
-  void registry.resolve(Keys.Auth);
-  void registry.resolve(Keys.Cache);
-  void registry.resolve(EmailService.key);
-  void registry.resolve<UserService>(DependencyKey.named<UserService>("user-service"));
+// --- Services ----------------------------------------------------------------
+// Instead of:
+//   constructor(req, env, ctx) {
+//     super(req, env, ctx);
+//     this.db = env.DB;
+//     this.posts = new PostModel(this.db, this.req, this.env, this.ctx);
+//   }
+//
+// They write:
 
-  // ==========================================================================
-  // 8. Parent Registry (Chain-of-Responsibility)
-  // ==========================================================================
+class UsersService extends DependsOn {
+  private db = uses(DependencyKey.named<Database>("Database"));
+  private log = uses(DependencyKey.named<Logger>("Logger"));
 
-  const appRegistry = new DependencyRegistry();
-  appRegistry.register(Keys.Database, new PostgresDatabase());
-  appRegistry.register(Keys.Logger, new ConsoleLogger());
-
-  const requestRegistry = new DependencyRegistry(appRegistry);
-  requestRegistry.register(Keys.Logger, new ConsoleLogger());
-
-  void requestRegistry.resolve(Keys.Logger);
-  void requestRegistry.resolve(Keys.Database);
-
-  // ==========================================================================
-  // 9. Scoped Testing with Fork
-  // ==========================================================================
-
-  const testRegistry = appRegistry.fork();
-  const testDb: Database = { query: () => [{ id: "test-1" }] };
-  testRegistry.register(Keys.Database, testDb);
-  void testRegistry.resolve(Keys.Database).query("SELECT 1");
-
-  // ==========================================================================
-  // 10. Checking, Unregistering, Clearing
-  // ==========================================================================
-
-  void registry.has(Keys.Logger);
-  registry.unregister(Keys.Logger);
-  registry.clear();
-
-  // ==========================================================================
-  // 11. Standalone inject() Utility
-  // ==========================================================================
-
-  class ConfigService extends BaseDepends {
-    get cfg(): string {
-      return inject(
-        this,
-        DependencyKey.named<string>("config", () => "default"),
-      );
-    }
+  all() {
+    this.log.log("UsersService.all");
+    return this.db.query("SELECT * FROM users");
   }
+}
 
-  const configService = new ConfigService();
-  void configService.cfg;
+class PostsService extends DependsOn {
+  private db = uses(DependencyKey.named<Database>("Database"));
+
+  all() {
+    return this.db.query("SELECT * FROM posts");
+  }
+}
+
+// --- Controllers -------------------------------------------------------------
+// Same pattern — no manual service wiring.
+
+class UsersController {
+  private users = uses(UsersService);
+
+  index() {
+    return this.users.all();
+  }
+}
+
+// --- Router (resolved by the framework) --------------------------------------
+
+class Router {
+  private users = uses(UsersController);
+
+  handle() {
+    console.log("Router.handle");
+    console.log(`  Users: ${JSON.stringify(this.users.index())}`);
+    return new Response("ok", { status: 200 });
+  }
+}
+
+// =============================================================================
+// Layer 3 — Entry Point (user's wrangler.toml / server.ts)
+// =============================================================================
+
+// This is the ONLY Cloudflare-specific file the developer writes.
+// No env, no bindings, no container() — just the adapter choice.
+//
+// export default {
+//   async fetch(request, env, ctx) {
+//     return handleRequest(new CloudflareAdapter(), request, env, ctx);
+//   },
+// };
+
+function demo(): void {
+  console.log("=== Nomo + @nowarelabs/depends ===\n");
+
+  const request = new Request("https://example.com/users");
+  const cloudflareEnv = { DB: {}, KV: {}, AI: {} };
+
+  void handleRequest(new CloudflareAdapter(), request, cloudflareEnv, {});
 }
 
 demo();
+
+// =============================================================================
+// Testing — scope() and fake() in test files
+// =============================================================================
+
+function testDemo(): void {
+  console.log("\n=== Testing ===\n");
+
+  const registry = container({
+    Database: () => new D1Database("test"),
+    Logger: () => new ConsoleLogger(),
+    services: [UsersService],
+  });
+
+  // Fake the database without touching UsersService:
+  const { resolve } = registry.fake({
+    Database: () => {
+      const mock: Database = { query: () => [{ id: "mock-user" }] };
+      return mock;
+    },
+  });
+
+  const users = resolve(UsersService);
+  users.all();
+}
+
+testDemo();
+
+// =============================================================================
+// Primitives — available when conventions don't fit
+// =============================================================================
+
+function primitivesDemo(): void {
+  console.log("\n=== Primitives ===\n");
+
+  const Keys = {
+    Logger: DependencyKey.named<Logger>("logger"),
+  };
+
+  class Notifier extends BaseDepends {
+    private get logger(): Logger {
+      return this.inject(Keys.Logger);
+    }
+    notify(msg: string): void {
+      this.logger.log(msg);
+    }
+  }
+
+  class EmailService extends BaseDepends implements KeyedDependency<EmailService> {
+    static readonly key = DependencyKey.named<EmailService>("email");
+    readonly dependencyKey = EmailService.key;
+  }
+
+  const registry = DependencyRegistry.build((give) => {
+    give(Keys.Logger, new ConsoleLogger());
+    give(new EmailService());
+    give(DependencyKey.named<Notifier>("notifier"), new Notifier());
+  });
+
+  registry.resolve(Keys.Logger).log("primitives demo running");
+  void registry.resolve(EmailService.key);
+
+  const testRegistry = registry.fork();
+  void testRegistry.resolve(Keys.Logger);
+}
+
+primitivesDemo();
