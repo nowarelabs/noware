@@ -1,9 +1,9 @@
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, RouterContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseRouter<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends RouterContext = RouterContext,
   Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike
+  Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
@@ -11,6 +11,6 @@ export abstract class BaseRouter<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

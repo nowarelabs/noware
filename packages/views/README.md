@@ -72,7 +72,7 @@ export class ApplicationLayout extends BaseLayout {
 import { BaseLayout } from "@nowarelabs/views";
 
 const html = BaseLayout.withLayout(ApplicationLayout, WelcomeView, {
-  name: "Vance"
+  name: "Vance",
 });
 ```
 
@@ -148,14 +148,22 @@ Built-in helpers for common asset tags:
 
 ```typescript
 // Stylesheet
-{this.stylesheet_link_tag("/assets/app.css")}
-{this.stylesheet_link_tag("https://cdn.example.com/normalize.css")}
+{
+  this.stylesheet_link_tag("/assets/app.css");
+}
+{
+  this.stylesheet_link_tag("https://cdn.example.com/normalize.css");
+}
 
 // JavaScript
-{this.javascript_include_tag("/assets/app.js", { defer: true })}
+{
+  this.javascript_include_tag("/assets/app.js", { defer: true });
+}
 
 // Images
-{this.image_tag("/logo.png", { alt: "Logo", width: "200" })}
+{
+  this.image_tag("/logo.png", { alt: "Logo", width: "200" });
+}
 ```
 
 ### Conditional Rendering
@@ -196,10 +204,10 @@ const MultiElement = () => (
 ### Style Objects
 
 ```typescript
-<div style={{ 
-  backgroundColor: "blue", 
+<div style={{
+  backgroundColor: "blue",
   fontSize: "16px",
-  padding: "20px" 
+  padding: "20px"
 }}>
   Styled content
 </div>
@@ -219,27 +227,23 @@ interface Env {
 }
 
 export default {
-  async fetch(
-    request: Request, 
-    env: Env, 
-    ctx: ExecutionContext
-  ): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const html = BaseLayout.withLayout(
       ApplicationLayout,
       HomeView,
       { title: "Welcome" },
       request as any,
       env as any,
-      ctx as any
+      ctx as any,
     );
 
     return new Response(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=3600"
-      }
+        "Cache-Control": "public, max-age=3600",
+      },
     });
-  }
+  },
 };
 ```
 
@@ -309,12 +313,14 @@ const html = renderView(WelcomeView, { name: "Alice" });
 Base class for all view components.
 
 **Properties:**
+
 - `props: Props` - Component properties
 - `request?: RequestLike` - Current request
 - `env?: EnvLike` - Environment variables
 - `ctx?: ContextLike` - Execution context
 
 **Methods:**
+
 - `abstract render(): string` - Must be implemented by subclasses
 - `content_for(name: string, content: string): string` - Store content for layouts
 - `toString(): string` - Render to HTML string
@@ -324,12 +330,14 @@ Base class for all view components.
 Base class for all layout components.
 
 **Properties:**
+
 - `content: string` - Main view content
 - `request?: RequestLike` - Current request
 - `env?: EnvLike` - Environment variables
 - `ctx?: ContextLike` - Execution context
 
 **Methods:**
+
 - `abstract render(): string` - Must be implemented by subclasses
 - `yield_content(name: string): string` - Retrieve stored content
 - `stylesheet_link_tag(href: string, options?): string` - Generate stylesheet tag
@@ -338,6 +346,7 @@ Base class for all layout components.
 - `toString(): string` - Render to HTML string
 
 **Static Methods:**
+
 - `withLayout<L, V, P>(LayoutClass, ViewClass, props, request?, env?, ctx?): string` - Render view within layout
 
 ### Functions
@@ -381,9 +390,9 @@ class UserView extends BaseView<UserProps> {
 }
 
 // TypeScript enforces correct props
-const html = renderView(UserView, { 
+const html = renderView(UserView, {
   name: "Alice",
-  email: "alice@example.com" 
+  email: "alice@example.com"
 });
 ```
 
@@ -391,14 +400,14 @@ const html = renderView(UserView, {
 
 ## 11. Comparison with Other Solutions
 
-| Feature | @nowarelabs/views | React SSR | Preact | HTMX |
-|---------|-------------------|-----------|--------|------|
-| Zero Dependencies | ✅ | ❌ | ❌ | ❌ |
-| Direct String Output | ✅ | ❌ | ❌ | ❌ |
-| No Virtual DOM | ✅ | ❌ | ❌ | ✅ |
-| Edge Optimized | ✅ | ❌ | ✅ | ❌ |
-| Class-Based Views | ✅ | ❌ | ❌ | N/A |
-| Layout Pattern | ✅ | ❌ | ❌ | ❌ |
+| Feature              | @nowarelabs/views | React SSR | Preact | HTMX |
+| -------------------- | ----------------- | --------- | ------ | ---- |
+| Zero Dependencies    | ✅                | ❌        | ❌     | ❌   |
+| Direct String Output | ✅                | ❌        | ❌     | ❌   |
+| No Virtual DOM       | ✅                | ❌        | ❌     | ✅   |
+| Edge Optimized       | ✅                | ❌        | ✅     | ❌   |
+| Class-Based Views    | ✅                | ❌        | ❌     | N/A  |
+| Layout Pattern       | ✅                | ❌        | ❌     | ❌   |
 
 ---
 

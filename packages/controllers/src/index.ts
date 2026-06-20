@@ -13,10 +13,10 @@
  * - afterActions: HookConfig[]
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ControllerContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseController<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ControllerContext = ControllerContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
   Service = unknown,
@@ -29,7 +29,7 @@ export abstract class BaseController<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
   protected abstract getService(): Service;
 }

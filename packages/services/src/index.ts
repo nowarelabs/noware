@@ -5,10 +5,10 @@
 
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ServiceContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseService<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ServiceContext = ServiceContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
   Model = unknown,
@@ -21,7 +21,7 @@ export abstract class BaseService<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
   protected abstract getModel(): Model;
 }

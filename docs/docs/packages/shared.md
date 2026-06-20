@@ -27,7 +27,7 @@ interface RequestLike extends Body {
 
 ### ContextLike
 
-A minimal context interface with `waitUntil` and `passThroughOnException`. These are the only two methods available across all serverless platforms.
+The portable root — available on Cloudflare, Node.js, Bun, and Deno.
 
 ```typescript
 import type { ContextLike } from "@nowarelabs/shared";
@@ -35,6 +35,64 @@ import type { ContextLike } from "@nowarelabs/shared";
 interface ContextLike {
   waitUntil(promise: Promise<any>): void;
   passThroughOnException(): void;
+}
+```
+
+### Layer-Specific Contexts
+
+Each Standard Gauge layer has a dedicated context interface that extends `ContextLike` with layer-relevant properties. The base classes (`BaseController`, `BaseService`, `BaseModel`, `BaseView`) already constrain their generic `Ctx` to the correct type, so types are inferred automatically.
+
+#### RouterContext
+
+```typescript
+import type { RouterContext } from "@nowarelabs/shared";
+
+interface RouterContext extends ContextLike {
+  readonly params: Record<string, string>;
+}
+```
+
+#### ControllerContext
+
+```typescript
+import type { ControllerContext } from "@nowarelabs/shared";
+
+interface ControllerContext extends ContextLike {
+  readonly currentUser?: unknown;
+  readonly session?: Record<string, unknown>;
+}
+```
+
+#### ServiceContext
+
+```typescript
+import type { ServiceContext } from "@nowarelabs/shared";
+
+interface ServiceContext extends ContextLike {
+  readonly transactionId: string;
+  readonly logger?: unknown;
+}
+```
+
+#### ModelContext
+
+```typescript
+import type { ModelContext } from "@nowarelabs/shared";
+
+interface ModelContext extends ContextLike {
+  readonly logger?: unknown;
+  readonly transaction?: unknown;
+}
+```
+
+#### ViewContext
+
+```typescript
+import type { ViewContext } from "@nowarelabs/shared";
+
+interface ViewContext extends ContextLike {
+  readonly currentUser?: unknown;
+  readonly flash?: Record<string, unknown>;
 }
 ```
 
@@ -89,6 +147,11 @@ The runtime utilities help adapt platform-native objects to the Standard Gauge t
 ```typescript
 import {
   createContext,
+  createControllerContext,
+  createServiceContext,
+  createModelContext,
+  createViewContext,
+  createRouterContext,
   fromCloudflareRequest,
   fromCloudflareContext,
   fromCloudflareEnv,
@@ -99,15 +162,34 @@ import {
 } from "@nowarelabs/shared";
 ```
 
-### createContext
+### Layer Context Factories
 
-Creates a `ContextLike` with no-op `waitUntil` and `passThroughOnException` handlers. Use this outside Cloudflare (Node.js, Bun, Deno) where no native execution context exists.
+Each factory creates a context matching the layer's interface with sensible defaults. These are the primary way to create contexts outside Cloudflare.
+
+| Factory | Returns | Defaults |
+|---|---|---|
+| `createContext()` | `ContextLike` | noop `waitUntil` / `passThroughOnException` |
+| `createControllerContext()` | `ControllerContext` | `currentUser: undefined`, `session: {}` |
+| `createServiceContext()` | `ServiceContext` | `transactionId: crypto.randomUUID()`, `logger: undefined` |
+| `createModelContext()` | `ModelContext` | `logger: undefined`, `transaction: undefined` |
+| `createViewContext()` | `ViewContext` | `currentUser: undefined`, `flash: {}` |
+| `createRouterContext()` | `RouterContext` | `params: {}` |
+
+Each factory also has an `enhance*` variant that takes an existing `ContextLike` and overlays additional properties:
 
 ```typescript
-import { createContext } from "@nowarelabs/shared";
+import { createContext, enhanceControllerContext } from "@nowarelabs/shared";
+
+const base = createContext();
+const ctx = enhanceControllerContext(base, { currentUser: { id: "123" } });
+// ctx satisfies ControllerContext — currentUser is set, others use defaults
+```
+
+```typescript
+import { createServiceContext } from "@nowarelabs/shared";
 
 // In a Bun or Deno HTTP handler
-const ctx = createContext();
+const ctx = createServiceContext();
 await handle(request, env, ctx);
 ```
 
@@ -203,15 +285,42 @@ const ctx: ContextLike = executionContext;
 const env: EnvLike = cfEnv;
 ```
 
-On other runtimes, use the adapter functions when conversion logic is required, or a direct cast when the source already satisfies the interface:
+On other runtimes, use the layer context factories instead of `createContext()`:
 
 ```typescript
-// ✅ Bun/Deno: Request satisfies RequestLike, cast is safe
-const req = request as RequestLike;
-
-// Cloudflare: identity cast (explicit but zero-cost)
-const req = fromCloudflareRequest(cfRequest);
-
-// Only Node's IncomingMessage needs real conversion
-const req = fromNodeIncomingMessage(nodeReq, body);
+// ✅ Bun/Deno: use layer-specific factory
+const ctx = createControllerContext();  // has currentUser, session, waitUntil
+const env = fromWebEnv({ DB: "..." });
+const req = fromWebRequest(request);
 ```
+
+```typescript
+// ✅ Node.js: convert request, use service context
+const req = fromNodeIncomingMessage(nodeReq, body);
+const ctx = createServiceContext();  // has transactionId, logger
+```
+
+```typescript
+// ✅ Custom: start from base and enhance
+const base = createContext();
+const ctx = enhanceControllerContext(base, {
+  currentUser: { id: "456", role: "admin" },
+});
+```
+
+## Generic Type Flow
+
+Each Standard Gauge base class constrains `Ctx` to its layer context. Because every layer context extends `ContextLike`, the Cloudflare native `ExecutionContext` satisfies any constraint structurally:
+
+```
+Cloudflare `ExecutionContext`
+  → satisfies: ContextLike ✓
+  → satisfies: ControllerContext ✓  (no currentUser/session — optional)
+  → satisfies: ServiceContext   ✓  (no transactionId — required!)
+
+// Note: ServiceContext requires `transactionId: string`.
+// On Cloudflare, use `enhanceServiceContext(executionContext, { transactionId: "..." })`
+// or set it via middleware. Off Cloudflare, `createServiceContext()` handles it.
+```
+
+Off-Cloudflare, use the factory matching the layer you're in. The context flows through all layers — each layer sees the same object but only accesses the properties relevant to it:

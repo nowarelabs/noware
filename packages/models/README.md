@@ -41,7 +41,15 @@ interface UserInsert {
   email: string;
 }
 
-export class UserModel extends BaseModel<ContextLike, EnvLike, RequestLike, any, any, User, UserInsert> {
+export class UserModel extends BaseModel<
+  ContextLike,
+  EnvLike,
+  RequestLike,
+  any,
+  any,
+  User,
+  UserInsert
+> {
   static tableName = "users";
 
   protected persistence: any;
@@ -97,15 +105,15 @@ const users = await userModel.all();
 const users = await userModel.where({ status: "active" }).all();
 
 // Comparison operators
-await userModel.where({ age: { gt: 18 } }).all();        // >
-await userModel.where({ age: { gte: 18 } }).all();       // >=
-await userModel.where({ age: { lt: 65 } }).all();        // <
-await userModel.where({ age: { lte: 65 } }).all();       // <=
+await userModel.where({ age: { gt: 18 } }).all(); // >
+await userModel.where({ age: { gte: 18 } }).all(); // >=
+await userModel.where({ age: { lt: 65 } }).all(); // <
+await userModel.where({ age: { lte: 65 } }).all(); // <=
 await userModel.where({ status: { neq: "deleted" } }).all(); // !=
-await userModel.where({ status: { eq: "active" } }).all();   // =
+await userModel.where({ status: { eq: "active" } }).all(); // =
 
 // NULL checks
-await userModel.where({ deleted_at: null }).all();       // IS NULL
+await userModel.where({ deleted_at: null }).all(); // IS NULL
 
 // LIKE
 await userModel.where({ name: { like: "%John%" } }).all();
@@ -124,10 +132,12 @@ query.orWhere({ role: "admin" });
 const users = await query.all();
 
 // Callback-style complex conditions
-await userModel.where((q) => {
-  q.where({ status: "active" });
-  q.orWhere({ role: "admin" });
-}).all();
+await userModel
+  .where((q) => {
+    q.where({ status: "active" });
+    q.orWhere({ role: "admin" });
+  })
+  .all();
 ```
 
 ### Ordering, Limiting, and Pagination
@@ -148,7 +158,7 @@ const user = await userModel.findBy({ email: "alice@example.com" });
 // Find all by conditions with options
 const users = await userModel.findAllBy(
   { status: "active" },
-  { orderBy: { column: "name", direction: "ASC" }, limit: 10, offset: 0 }
+  { orderBy: { column: "name", direction: "ASC" }, limit: 10, offset: 0 },
 );
 
 // Pagination
@@ -163,10 +173,14 @@ const result = await userModel.paginate({ page: 1, perPage: 10 });
 const emails = await userModel.pluck("email");
 
 // With conditions and options
-const emails = await userModel.pluck("email", { status: "active" }, {
-  orderBy: { column: "name" },
-  limit: 10,
-});
+const emails = await userModel.pluck(
+  "email",
+  { status: "active" },
+  {
+    orderBy: { column: "name" },
+    limit: 10,
+  },
+);
 ```
 
 ### Counting
@@ -241,24 +255,24 @@ Register callbacks that run at specific points during CRUD operations.
 
 ### Available Events
 
-| Event | When |
-|-------|------|
-| `beforeValidation` | Before validation runs |
-| `afterValidation` | After validation passes |
-| `beforeSave` | Before any save (create or update) |
-| `afterSave` | After any save completes |
-| `beforeCreate` | Before creating a record |
-| `afterCreate` | After creating a record |
-| `beforeUpdate` | Before updating a record |
-| `afterUpdate` | After updating a record |
-| `beforeDestroy` | Before deleting a record |
-| `afterDestroy` | After deleting a record |
-| `afterCommit` | After successful commit |
-| `afterCreateCommit` | After create commit |
-| `afterUpdateCommit` | After update commit |
-| `afterSaveCommit` | After save commit |
-| `afterDestroyCommit` | After destroy commit |
-| `afterRollback` | On rollback/failure |
+| Event                | When                               |
+| -------------------- | ---------------------------------- |
+| `beforeValidation`   | Before validation runs             |
+| `afterValidation`    | After validation passes            |
+| `beforeSave`         | Before any save (create or update) |
+| `afterSave`          | After any save completes           |
+| `beforeCreate`       | Before creating a record           |
+| `afterCreate`        | After creating a record            |
+| `beforeUpdate`       | Before updating a record           |
+| `afterUpdate`        | After updating a record            |
+| `beforeDestroy`      | Before deleting a record           |
+| `afterDestroy`       | After deleting a record            |
+| `afterCommit`        | After successful commit            |
+| `afterCreateCommit`  | After create commit                |
+| `afterUpdateCommit`  | After update commit                |
+| `afterSaveCommit`    | After save commit                  |
+| `afterDestroyCommit` | After destroy commit               |
+| `afterRollback`      | On rollback/failure                |
 
 ### Registering Callbacks
 
@@ -385,14 +399,14 @@ const user = await userModel.findWith(
   {
     posts: { model: "PostModel", foreignKey: "user_id" },
     profile: { model: "ProfileModel", foreignKey: "user_id" },
-  }
+  },
 );
 
 // Find all with included relations
 const users = await userModel.findAllWith(
   { status: "active" },
   { posts: { model: "PostModel", foreignKey: "user_id" } },
-  { orderBy: { column: "name" }, limit: 10 }
+  { orderBy: { column: "name" }, limit: 10 },
 );
 ```
 
@@ -466,7 +480,13 @@ sql.join(parts, sep)     // Join parts with separator
 The package provides custom error classes for common database errors.
 
 ```typescript
-import { ConflictError, ConstraintError, BadRequestError, CallbackAbortError, ABORT } from "@nowarelabs/models";
+import {
+  ConflictError,
+  ConstraintError,
+  BadRequestError,
+  CallbackAbortError,
+  ABORT,
+} from "@nowarelabs/models";
 
 // Errors are automatically thrown by queryExec:
 // - ConflictError: UNIQUE constraint failed
@@ -483,13 +503,13 @@ this.beforeCreate((data) => {
 
 The model layer works with any database that provides one of these interfaces:
 
-| Method | Compatible With |
-|--------|----------------|
-| `db.execSql(sql)` | Custom SQL executors |
-| `db.prepare(sql).all()` | Cloudflare D1, better-sqlite3 |
-| `db.all({ sql })` | Durable Objects, custom APIs |
-| `db.exec(sql).toArray()` | SQLite WASM |
-| `db.select().from()` | Drizzle-like query builders |
+| Method                   | Compatible With               |
+| ------------------------ | ----------------------------- |
+| `db.execSql(sql)`        | Custom SQL executors          |
+| `db.prepare(sql).all()`  | Cloudflare D1, better-sqlite3 |
+| `db.all({ sql })`        | Durable Objects, custom APIs  |
+| `db.exec(sql).toArray()` | SQLite WASM                   |
+| `db.select().from()`     | Drizzle-like query builders   |
 
 ## Logger
 
@@ -509,61 +529,61 @@ logger.warn("Deprecated method called");
 
 ### BaseModel
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `create(data)` | `Promise<TSelect>` | Create a new record |
-| `find(id)` | `Promise<TSelect \| null>` | Find record by ID |
-| `update(id, data)` | `Promise<TSelect>` | Update a record |
-| `delete(id)` | `Promise<boolean>` | Delete a record |
-| `all()` | `Promise<TSelect[]>` | Get all records |
-| `query()` | `FluentQuery` | Start a fluent query |
-| `where(conditions)` | `FluentQuery` | Add WHERE clause |
-| `select(...columns)` | `FluentQuery` | Select columns |
-| `orderBy(col, dir)` | `FluentQuery` | Order results |
-| `limit(n)` | `FluentQuery` | Limit results |
-| `offset(n)` | `FluentQuery` | Offset results |
-| `with(...relations)` | `FluentQuery` | Eager load relations |
-| `count()` | `Promise<number>` | Count records |
-| `countBy(conditions)` | `Promise<number>` | Count with conditions |
-| `findBy(conditions)` | `Promise<TSelect \| null>` | Find one by conditions |
-| `findAllBy(conditions, opts)` | `Promise<TSelect[]>` | Find many by conditions |
-| `findByIds(ids)` | `Promise<TSelect[]>` | Find by array of IDs |
-| `firstBy(conditions)` | `Promise<TSelect \| null>` | Find first by conditions |
-| `pluck(column, cond, opts)` | `Promise<any[]>` | Get column values |
-| `paginate(params)` | `Promise<PaginatedResult>` | Paginated results |
-| `search(term, columns)` | `FluentQuery` | Full-text search |
-| `trash(id)` | `Promise<TSelect>` | Soft delete |
-| `restore(id)` | `Promise<TSelect>` | Restore soft deleted |
-| `hide(id)` | `Promise<TSelect>` | Hide record |
-| `unhide(id)` | `Promise<TSelect>` | Unhide record |
-| `flag(id)` | `Promise<TSelect>` | Flag record |
-| `unflag(id)` | `Promise<TSelect>` | Unflag record |
-| `retire(id)` | `Promise<TSelect>` | Retire record |
-| `unretire(id)` | `Promise<TSelect>` | Unretire record |
-| `purge(id)` | `Promise<boolean>` | Permanent delete |
-| `transaction(fn)` | `Promise<T>` | Wrap in transaction |
+| Method                        | Returns                    | Description              |
+| ----------------------------- | -------------------------- | ------------------------ |
+| `create(data)`                | `Promise<TSelect>`         | Create a new record      |
+| `find(id)`                    | `Promise<TSelect \| null>` | Find record by ID        |
+| `update(id, data)`            | `Promise<TSelect>`         | Update a record          |
+| `delete(id)`                  | `Promise<boolean>`         | Delete a record          |
+| `all()`                       | `Promise<TSelect[]>`       | Get all records          |
+| `query()`                     | `FluentQuery`              | Start a fluent query     |
+| `where(conditions)`           | `FluentQuery`              | Add WHERE clause         |
+| `select(...columns)`          | `FluentQuery`              | Select columns           |
+| `orderBy(col, dir)`           | `FluentQuery`              | Order results            |
+| `limit(n)`                    | `FluentQuery`              | Limit results            |
+| `offset(n)`                   | `FluentQuery`              | Offset results           |
+| `with(...relations)`          | `FluentQuery`              | Eager load relations     |
+| `count()`                     | `Promise<number>`          | Count records            |
+| `countBy(conditions)`         | `Promise<number>`          | Count with conditions    |
+| `findBy(conditions)`          | `Promise<TSelect \| null>` | Find one by conditions   |
+| `findAllBy(conditions, opts)` | `Promise<TSelect[]>`       | Find many by conditions  |
+| `findByIds(ids)`              | `Promise<TSelect[]>`       | Find by array of IDs     |
+| `firstBy(conditions)`         | `Promise<TSelect \| null>` | Find first by conditions |
+| `pluck(column, cond, opts)`   | `Promise<any[]>`           | Get column values        |
+| `paginate(params)`            | `Promise<PaginatedResult>` | Paginated results        |
+| `search(term, columns)`       | `FluentQuery`              | Full-text search         |
+| `trash(id)`                   | `Promise<TSelect>`         | Soft delete              |
+| `restore(id)`                 | `Promise<TSelect>`         | Restore soft deleted     |
+| `hide(id)`                    | `Promise<TSelect>`         | Hide record              |
+| `unhide(id)`                  | `Promise<TSelect>`         | Unhide record            |
+| `flag(id)`                    | `Promise<TSelect>`         | Flag record              |
+| `unflag(id)`                  | `Promise<TSelect>`         | Unflag record            |
+| `retire(id)`                  | `Promise<TSelect>`         | Retire record            |
+| `unretire(id)`                | `Promise<TSelect>`         | Unretire record          |
+| `purge(id)`                   | `Promise<boolean>`         | Permanent delete         |
+| `transaction(fn)`             | `Promise<T>`               | Wrap in transaction      |
 
 ### FluentQuery
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `select(...cols)` | `this` | Select columns |
-| `where(conditions)` | `this` | Add AND condition |
-| `orWhere(conditions)` | `this` | Add OR condition |
-| `orderBy(col, dir)` | `this` | Order by column |
-| `limit(n)` | `this` | Set limit |
-| `offset(n)` | `this` | Set offset |
-| `with(...rels)` | `this` | Eager load relations |
-| `withJoins(...rels)` | `this` | Load via JOINs |
-| `withSeparateQueries(...rels)` | `this` | Load via separate queries |
-| `join(table, on)` | `this` | Add JOIN clause |
-| `all()` | `Promise<TSelect[]>` | Execute and get all |
-| `first()` | `Promise<TSelect \| null>` | Get first result |
-| `count()` | `Promise<number>` | Count results |
-| `pluck(column)` | `Promise<TSelect[K][]>` | Get column values |
-| `toSql()` | `string` | Get generated SQL |
-| `clone()` | `FluentQuery` | Clone the query |
-| `paginate(params)` | `Promise<PaginatedResult>` | Paginate results |
+| Method                         | Returns                    | Description               |
+| ------------------------------ | -------------------------- | ------------------------- |
+| `select(...cols)`              | `this`                     | Select columns            |
+| `where(conditions)`            | `this`                     | Add AND condition         |
+| `orWhere(conditions)`          | `this`                     | Add OR condition          |
+| `orderBy(col, dir)`            | `this`                     | Order by column           |
+| `limit(n)`                     | `this`                     | Set limit                 |
+| `offset(n)`                    | `this`                     | Set offset                |
+| `with(...rels)`                | `this`                     | Eager load relations      |
+| `withJoins(...rels)`           | `this`                     | Load via JOINs            |
+| `withSeparateQueries(...rels)` | `this`                     | Load via separate queries |
+| `join(table, on)`              | `this`                     | Add JOIN clause           |
+| `all()`                        | `Promise<TSelect[]>`       | Execute and get all       |
+| `first()`                      | `Promise<TSelect \| null>` | Get first result          |
+| `count()`                      | `Promise<number>`          | Count results             |
+| `pluck(column)`                | `Promise<TSelect[K][]>`    | Get column values         |
+| `toSql()`                      | `string`                   | Get generated SQL         |
+| `clone()`                      | `FluentQuery`              | Clone the query           |
+| `paginate(params)`             | `Promise<PaginatedResult>` | Paginate results          |
 
 ## Development
 

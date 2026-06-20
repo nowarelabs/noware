@@ -37,9 +37,7 @@ describe("BaseView", () => {
     } as ContextLike;
 
     const view = new TestView(mockProps, mockRequest, mockEnv, mockCtx);
-    expect(
-      (view as unknown as { getComponent: () => object }).getComponent(),
-    ).toEqual({});
+    expect((view as unknown as { getComponent: () => object }).getComponent()).toEqual({});
   });
 
   test("static hooks exist", () => {
@@ -84,13 +82,7 @@ describe("BaseLayout withLayout integration", () => {
 
 describe("renderView utility", () => {
   test("renders a view without layout", () => {
-    const output = renderView(
-      SimpleView,
-      { message: "World" },
-      undefined,
-      undefined,
-      mockContext,
-    );
+    const output = renderView(SimpleView, { message: "World" }, undefined, undefined, mockContext);
     expect(output).toBe("<p>World</p>");
   });
 });

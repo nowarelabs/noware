@@ -24,6 +24,50 @@ export interface ContextLike {
   passThroughOnException(): void;
 }
 
+/**
+ * Context available at the router layer.
+ * Carries URL parameters extracted during route matching.
+ */
+export interface RouterContext extends ContextLike {
+  readonly params: Record<string, string>;
+}
+
+/**
+ * Context available at the controller layer.
+ * Carries authentication and session state set by middleware.
+ */
+export interface ControllerContext extends ContextLike {
+  readonly currentUser?: unknown;
+  readonly session?: Record<string, unknown>;
+}
+
+/**
+ * Context available at the service layer.
+ * Carries tracing and observability primitives.
+ */
+export interface ServiceContext extends ContextLike {
+  readonly transactionId: string;
+  readonly logger?: unknown;
+}
+
+/**
+ * Context available at the model layer.
+ * Carries database transaction state and logger.
+ */
+export interface ModelContext extends ContextLike {
+  readonly logger?: unknown;
+  readonly transaction?: unknown;
+}
+
+/**
+ * Context available at the view layer.
+ * Carries user state and flash messages for templates.
+ */
+export interface ViewContext extends ContextLike {
+  readonly currentUser?: unknown;
+  readonly flash?: Record<string, unknown>;
+}
+
 export type EnvLike = Record<string, unknown>;
 
 export type UseCaseResult<TOutput, TError = Error> =
@@ -54,6 +98,61 @@ export type AroundHookFunction<T = any, R = any> = (
 export interface RegisteredHook<T = any, R = any> {
   fn: HookFunction<T, R> | AfterHookFunction<T, R> | AroundHookFunction<T, R>;
   options?: HookOptions;
+}
+
+export function createControllerContext(): ControllerContext {
+  return { ...createContext(), currentUser: undefined, session: {} };
+}
+
+export function enhanceControllerContext(
+  ctx: ContextLike,
+  overrides?: Partial<Pick<ControllerContext, "currentUser" | "session">>,
+): ControllerContext {
+  return { ...ctx, currentUser: undefined, session: {}, ...overrides };
+}
+
+export function createServiceContext(): ServiceContext {
+  return { ...createContext(), transactionId: crypto.randomUUID(), logger: undefined };
+}
+
+export function enhanceServiceContext(
+  ctx: ContextLike,
+  overrides?: Partial<Pick<ServiceContext, "transactionId" | "logger">>,
+): ServiceContext {
+  return { ...ctx, transactionId: crypto.randomUUID(), logger: undefined, ...overrides };
+}
+
+export function createModelContext(): ModelContext {
+  return { ...createContext(), logger: undefined, transaction: undefined };
+}
+
+export function enhanceModelContext(
+  ctx: ContextLike,
+  overrides?: Partial<Pick<ModelContext, "logger" | "transaction">>,
+): ModelContext {
+  return { ...ctx, logger: undefined, transaction: undefined, ...overrides };
+}
+
+export function createViewContext(): ViewContext {
+  return { ...createContext(), currentUser: undefined, flash: {} };
+}
+
+export function enhanceViewContext(
+  ctx: ContextLike,
+  overrides?: Partial<Pick<ViewContext, "currentUser" | "flash">>,
+): ViewContext {
+  return { ...ctx, currentUser: undefined, flash: {}, ...overrides };
+}
+
+export function createRouterContext(): RouterContext {
+  return { ...createContext(), params: {} };
+}
+
+export function enhanceRouterContext(
+  ctx: ContextLike,
+  overrides?: Partial<Pick<RouterContext, "params">>,
+): RouterContext {
+  return { ...ctx, params: {}, ...overrides };
 }
 
 export function createContext(): ContextLike {

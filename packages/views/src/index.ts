@@ -8,7 +8,7 @@
  * - Full TypeScript/TSX support
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ContextLike, ViewContext, RequestLike } from "@nowarelabs/shared";
 
 /**
  * JSX Runtime Types
@@ -50,8 +50,20 @@ export function h(
 
   // Self-closing tags
   const voidElements = [
-    "area", "base", "br", "col", "embed", "hr", "img", "input",
-    "link", "meta", "param", "source", "track", "wbr"
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
   ];
 
   if (voidElements.includes(tag)) {
@@ -185,9 +197,9 @@ export function image_tag(src: string, options: Record<string, any> = {}): strin
  */
 export abstract class BaseView<
   Props = {},
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ViewContext = ViewContext,
   Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike
+  Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
@@ -198,7 +210,7 @@ export abstract class BaseView<
     props: Props,
     protected request?: Request,
     protected env?: Env,
-    protected ctx?: Ctx
+    protected ctx?: Ctx,
   ) {
     this.props = props;
   }
@@ -232,7 +244,7 @@ export abstract class BaseView<
     props: any,
     request?: RequestLike,
     env?: EnvLike,
-    ctx?: ContextLike
+    ctx?: ContextLike,
   ): T {
     return new this(props, request, env, ctx);
   }
@@ -242,9 +254,9 @@ export abstract class BaseView<
  * BaseLayout - Foundation for layout components
  */
 export abstract class BaseLayout<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ViewContext = ViewContext,
   Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike
+  Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
@@ -255,7 +267,7 @@ export abstract class BaseLayout<
     content: string,
     protected request?: Request,
     protected env?: Env,
-    protected ctx?: Ctx
+    protected ctx?: Ctx,
   ) {
     this.content = content;
   }
@@ -306,14 +318,19 @@ export abstract class BaseLayout<
   static withLayout<
     L extends BaseLayout,
     V extends BaseView<any>,
-    P = V extends BaseView<infer Props> ? Props : {}
+    P = V extends BaseView<infer Props> ? Props : {},
   >(
-    LayoutClass: new (content: string, request?: RequestLike, env?: EnvLike, ctx?: ContextLike) => L,
+    LayoutClass: new (
+      content: string,
+      request?: RequestLike,
+      env?: EnvLike,
+      ctx?: ContextLike,
+    ) => L,
     ViewClass: new (props: P, request?: RequestLike, env?: EnvLike, ctx?: ContextLike) => V,
     props: P,
     request?: RequestLike,
     env?: EnvLike,
-    ctx?: ContextLike
+    ctx?: ContextLike,
   ): string {
     // Clear content registry for fresh render
     contentRegistry.clear();
@@ -335,7 +352,7 @@ export abstract class BaseLayout<
     content: string,
     request?: RequestLike,
     env?: EnvLike,
-    ctx?: ContextLike
+    ctx?: ContextLike,
   ): T {
     return new this(content, request, env, ctx);
   }
@@ -344,12 +361,15 @@ export abstract class BaseLayout<
 /**
  * Render a view without a layout
  */
-export function renderView<V extends BaseView<any>, P = V extends BaseView<infer Props> ? Props : {}>(
+export function renderView<
+  V extends BaseView<any>,
+  P = V extends BaseView<infer Props> ? Props : {},
+>(
   ViewClass: new (props: P, request?: RequestLike, env?: EnvLike, ctx?: ContextLike) => V,
   props: P,
   request?: RequestLike,
   env?: EnvLike,
-  ctx?: ContextLike
+  ctx?: ContextLike,
 ): string {
   contentRegistry.clear();
   const view = new ViewClass(props, request, env, ctx);

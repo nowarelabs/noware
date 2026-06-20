@@ -4,11 +4,7 @@ import { BaseEntrypoint } from "../src/index.ts";
 
 describe("BaseEntrypoint", () => {
   class TestEntrypoint extends BaseEntrypoint {
-    async fetch(
-      _request: globalThis.Request,
-      _env: Record<string, unknown>,
-      _ctx: any,
-    ) {
+    async fetch(_request: globalThis.Request, _env: Record<string, unknown>, _ctx: any) {
       return new Response("OK");
     }
   }

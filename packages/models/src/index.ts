@@ -1,4 +1,4 @@
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ModelContext, RequestLike } from "@nowarelabs/shared";
 
 // The unified generic type for `this.db`
 export type DatabaseInstance = any;
@@ -18,7 +18,7 @@ export class SqlPart {
   constructor(
     public type: string,
     public value: any,
-  ) { }
+  ) {}
 }
 
 export class Statement {
@@ -898,7 +898,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
 }
 
 export abstract class BaseModel<
-  _Ctx extends ContextLike = ContextLike,
+  Ctx extends ModelContext = ModelContext,
   _Env extends EnvLike = EnvLike,
   _Request extends RequestLike = RequestLike,
   Persistence = any,
@@ -924,7 +924,7 @@ export abstract class BaseModel<
   public table: any;
   protected request!: RequestLike;
   protected env!: EnvLike;
-  protected ctx!: ContextLike;
+  protected ctx!: Ctx;
 
   private _db?: DatabaseInstance;
   public req: any;

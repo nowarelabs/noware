@@ -4,6 +4,11 @@ import {
   ContextLike,
   EnvLike,
   createContext,
+  createControllerContext,
+  createServiceContext,
+  createModelContext,
+  createViewContext,
+  createRouterContext,
   fromCloudflareRequest,
   fromCloudflareContext,
   fromCloudflareEnv,
@@ -193,5 +198,42 @@ describe("fromNodeIncomingMessage", () => {
     const req = fromNodeIncomingMessage(nodeReq);
     expect(req.url).toBe("http://localhost/");
     expect(req.method).toBe("GET");
+  });
+});
+
+describe("Layer Context Factories", () => {
+  test("createControllerContext returns a ControllerContext", () => {
+    const ctx = createControllerContext();
+    expect(ctx.waitUntil).toBeDefined();
+    expect(ctx.passThroughOnException).toBeDefined();
+    expect(ctx.currentUser).toBeUndefined();
+    expect(ctx.session).toEqual({});
+  });
+
+  test("createServiceContext returns a ServiceContext with transactionId", () => {
+    const ctx = createServiceContext();
+    expect(ctx.waitUntil).toBeDefined();
+    expect(typeof ctx.transactionId).toBe("string");
+    expect(ctx.transactionId.length).toBeGreaterThan(0);
+  });
+
+  test("createModelContext returns a ModelContext", () => {
+    const ctx = createModelContext();
+    expect(ctx.waitUntil).toBeDefined();
+    expect(ctx.logger).toBeUndefined();
+    expect(ctx.transaction).toBeUndefined();
+  });
+
+  test("createViewContext returns a ViewContext", () => {
+    const ctx = createViewContext();
+    expect(ctx.waitUntil).toBeDefined();
+    expect(ctx.currentUser).toBeUndefined();
+    expect(ctx.flash).toEqual({});
+  });
+
+  test("createRouterContext returns a RouterContext", () => {
+    const ctx = createRouterContext();
+    expect(ctx.waitUntil).toBeDefined();
+    expect(ctx.params).toEqual({});
   });
 });

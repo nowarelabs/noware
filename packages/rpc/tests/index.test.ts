@@ -20,9 +20,7 @@ describe("BaseRpcServer", () => {
     const server = new TestRpcServer(mockRequest, mockEnv, mockCtx);
 
     expect(server).toBeDefined();
-    expect((server as unknown as { request: Request }).request).toBe(
-      mockRequest,
-    );
+    expect((server as unknown as { request: Request }).request).toBe(mockRequest);
   });
 
   test("handle can be overridden", async () => {
