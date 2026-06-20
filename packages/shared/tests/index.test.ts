@@ -1,22 +1,26 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import { FlattenedRequest, Context, EnvLike } from "../src/index.ts";
+import {
+  RequestLike,
+  ContextLike,
+  EnvLike,
+  createContext,
+  fromCloudflareRequest,
+  fromCloudflareContext,
+  fromCloudflareEnv,
+  fromWebRequest,
+  fromNodeIncomingMessage,
+} from "../src/index.ts";
 
-describe("FlattenedRequest", () => {
-  test("RequestLike type is compatible with global Request", () => {
-    const request: FlattenedRequest = new Request("http://localhost");
+describe("RequestLike", () => {
+  test("RequestLike is compatible with global Request", () => {
+    const request: RequestLike = new Request("http://localhost");
     expect(request).toBeDefined();
     expect(request.url).toBe("http://localhost/");
     expect(request.method).toBe("GET");
   });
 
-  test("FlattenedRequest accepts optional cf property", () => {
-    const mockCf = { country: "US", colo: "SFO" };
-    const request = new Request("http://localhost") as FlattenedRequest<typeof mockCf>;
-    expect(request).toBeDefined();
-  });
-
-  test("RequestLike can be used as type for request parameter", () => {
-    function handleRequest(req: FlattenedRequest): string {
+  test("RequestLike works as parameter type", () => {
+    function handleRequest(req: RequestLike): string {
       return req.method;
     }
 
@@ -25,29 +29,30 @@ describe("FlattenedRequest", () => {
   });
 });
 
-describe("Context", () => {
-  test("Context type requires waitUntil method", () => {
-    const ctx: Context = {
-      waitUntil: vi.fn(),
-      passThroughOnException: vi.fn(),
-    };
+describe("ContextLike", () => {
+  test("ContextLike type requires waitUntil and passThroughOnException", () => {
+    const waitUntil = vi.fn();
+    const passThroughOnException = vi.fn();
+    const _ctx: ContextLike = { waitUntil, passThroughOnException };
 
-    expect(ctx.waitUntil).toBeDefined();
-    expect(ctx.passThroughOnException).toBeDefined();
+    expect(waitUntil).toBeDefined();
+    expect(passThroughOnException).toBeDefined();
   });
 
   test("ContextLike can be used as type for context parameter", () => {
-    function handleContext(ctx: Context): void {
+    const waitUntil = vi.fn();
+
+    function handleContext(ctx: ContextLike): void {
       ctx.waitUntil(Promise.resolve());
     }
 
-    const mockCtx = {
-      waitUntil: vi.fn(),
+    const mockCtx: ContextLike = {
+      waitUntil,
       passThroughOnException: vi.fn(),
     };
 
     handleContext(mockCtx);
-    expect(mockCtx.waitUntil).toHaveBeenCalled();
+    expect(waitUntil).toHaveBeenCalled();
   });
 });
 
@@ -75,34 +80,26 @@ describe("EnvLike", () => {
 });
 
 describe("Runtime Compatibility", () => {
-  test("Cloudflare Request implements FlattenedRequest", () => {
-    const cfRequest = new Request("http://localhost", {
-      headers: { "Content-Type": "application/json" },
-    });
-
-    const typedRequest: FlattenedRequest = cfRequest;
-    expect(typedRequest.headers.get("content-type")).toBe("application/json");
-  });
-
-  test("Node.js/Bun Request (when available) implements FlattenedRequest", () => {
+  test("RequestLike carries standard Request properties", () => {
     const request = new Request("http://localhost/api", {
       method: "POST",
       body: JSON.stringify({ name: "test" }),
+      headers: { "Content-Type": "application/json" },
     });
 
-    const typedRequest: FlattenedRequest = request;
-    expect(typedRequest.url).toContain("/api");
-    expect(typedRequest.method).toBe("POST");
+    expect(request.url).toContain("/api");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("content-type")).toBe("application/json");
   });
 
-  test("Compatible context can be used with Standard Gauge", () => {
+  test("Compatible context can be used with worker pattern", () => {
     const mockEnvLike = { DB: "database" };
-    const mockCtx: Context = {
+    const mockCtx: ContextLike = {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
     };
 
-    function worker(request: FlattenedRequest, env: EnvLike, ctx: Context) {
+    function worker(_request: RequestLike, _env: EnvLike, _ctx: ContextLike) {
       return new Response("OK");
     }
 
@@ -110,5 +107,91 @@ describe("Runtime Compatibility", () => {
     const response = worker(request, mockEnvLike, mockCtx);
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe("createContext", () => {
+  test("returns a ContextLike with noop waitUntil and passThroughOnException", () => {
+    const ctx = createContext();
+    expect(ctx.waitUntil).toBeDefined();
+    expect(ctx.passThroughOnException).toBeDefined();
+    expect(() => ctx.waitUntil(Promise.resolve())).not.toThrow();
+    expect(() => ctx.passThroughOnException()).not.toThrow();
+  });
+});
+
+describe("fromCloudflareRequest", () => {
+  test("converts a Cloudflare RequestLike to RequestLike", () => {
+    const cfRequest = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { "x-test": "value" },
+    });
+    const req = fromCloudflareRequest(cfRequest);
+    expect(req.url).toContain("/api");
+    expect(req.method).toBe("POST");
+    expect(req.headers.get("x-test")).toBe("value");
+  });
+});
+
+describe("fromCloudflareContext", () => {
+  test("converts a Cloudflare ExecutionContext-like object to ContextLike", () => {
+    const mockCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+      props: {},
+    };
+    const ctx = fromCloudflareContext(mockCtx);
+    expect(ctx.waitUntil).toBe(mockCtx.waitUntil);
+    expect(ctx.passThroughOnException).toBe(mockCtx.passThroughOnException);
+  });
+});
+
+describe("fromCloudflareEnv", () => {
+  test("converts a Cloudflare env object to EnvLike", () => {
+    const env = { DB: "database", KV: "namespace" };
+    const result = fromCloudflareEnv(env);
+    expect(result.DB).toBe("database");
+    expect(result.KV).toBe("namespace");
+  });
+});
+
+describe("fromWebRequest", () => {
+  test("converts a standard Request to RequestLike", () => {
+    const request = new Request("http://localhost/test", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+    });
+    const req = fromWebRequest(request);
+    expect(req.url).toContain("/test");
+    expect(req.method).toBe("PUT");
+    expect(req.headers.get("content-type")).toBe("application/json");
+  });
+});
+
+describe("fromNodeIncomingMessage", () => {
+  test("converts a Node IncomingMessage-like object to RequestLike", () => {
+    const nodeReq = {
+      method: "POST",
+      url: "/api/data?q=1",
+      headers: {
+        host: "example.com",
+        "content-type": "application/json",
+        "x-custom": ["a", "b"],
+      },
+      socket: { encrypted: true },
+    };
+
+    const req = fromNodeIncomingMessage(nodeReq, new TextEncoder().encode('{"key":"value"}'));
+    expect(req.url).toBe("https://example.com/api/data?q=1");
+    expect(req.method).toBe("POST");
+    expect(req.headers.get("host")).toBe("example.com");
+    expect(req.headers.get("x-custom")).toBe("a, b");
+  });
+
+  test("handles missing optional fields", () => {
+    const nodeReq = { headers: {} };
+    const req = fromNodeIncomingMessage(nodeReq);
+    expect(req.url).toBe("http://localhost/");
+    expect(req.method).toBe("GET");
   });
 });

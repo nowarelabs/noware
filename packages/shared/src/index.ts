@@ -1,30 +1,30 @@
-export interface FlattenedRequest<Cf = unknown> {
+export interface Body {
   readonly body: ReadableStream<Uint8Array> | null;
   readonly bodyUsed: boolean;
-  readonly headers: Headers;
-  readonly method: string;
-  readonly url: string;
-  readonly signal: AbortSignal;
-  readonly cf?: Cf;
-
-  json<T = unknown>(): Promise<T>;
-  text(): Promise<string>;
   arrayBuffer(): Promise<ArrayBuffer>;
   blob(): Promise<Blob>;
   formData(): Promise<FormData>;
-  clone(): FlattenedRequest<Cf>;
+  json(): Promise<any>;
+  text(): Promise<string>;
 }
 
-export interface Context {
-  waitUntil(promise: Promise<unknown>): void;
+export interface RequestLike extends Body {
+  clone(): RequestLike;
+  readonly method: string;
+  readonly url: string;
+  readonly headers: Headers;
+  readonly redirect: string;
+  readonly signal: AbortSignal;
+  readonly integrity: string;
+  readonly keepalive: boolean;
+}
+
+export interface ContextLike {
+  waitUntil(promise: Promise<any>): void;
   passThroughOnException(): void;
 }
 
 export type EnvLike = Record<string, unknown>;
-
-export type RequestLike = FlattenedRequest;
-
-export type ContextLike = Context;
 
 export type UseCaseResult<TOutput, TError = Error> =
   | { success: true; data: TOutput; status: "delivered" }
@@ -40,10 +40,12 @@ export interface Port<TInput = unknown, TOutput = unknown> {
 }
 
 export type HookFunction<T = any, R = any> = (instance: T) => R | Promise<R> | void | Promise<void>;
+
 export type AfterHookFunction<T = any, R = any> = (
   instance: T,
   result: R,
 ) => R | Promise<R> | void | Promise<void>;
+
 export type AroundHookFunction<T = any, R = any> = (
   instance: T,
   next: () => Promise<R>,
@@ -54,56 +56,97 @@ export interface RegisteredHook<T = any, R = any> {
   options?: HookOptions;
 }
 
-// // Think about rewriting part of shared as below
-// export class RouterTrieNode {
-//   children: Record<string, RouterTrieNode>;
-//   methodHandlers: Record<string, Function>;
-//   isParam: boolean;
-//   isWildcard: boolean;
-//   paramName: string | null;
+export function createContext(): ContextLike {
+  return {
+    waitUntil: () => {},
+    passThroughOnException: () => {},
+  };
+}
 
-//   constructor() {
-//     this.children = Object.create(null);
-//     this.methodHandlers = Object.create(null);
-//     this.isParam = false;
-//     this.isWildcard = false;
-//     this.paramName = null;
-//   }
-// }
+export function createContextWith<T>(
+  ctx: ContextLike,
+  props: T,
+): ContextLike & { readonly props: T } {
+  return Object.assign(ctx, { props });
+}
 
-// export type RouterContextSource = 
-//   | 'http'
-//   | 'rpc'
-//   | 'durable_object'
-//   | 'workflow'
-//   | 'queue'
-//   | 'service'
-//   | 'model';
+export function fromCloudflareRequest(request: {
+  readonly body: ReadableStream<Uint8Array> | null;
+  readonly bodyUsed: boolean;
+  readonly method: string;
+  readonly url: string;
+  readonly headers: Headers;
+  readonly redirect: string;
+  readonly signal: AbortSignal;
+  readonly integrity: string;
+  readonly keepalive: boolean;
+  clone(): any;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  blob(): Promise<Blob>;
+  formData(): Promise<FormData>;
+  json(): Promise<any>;
+  text(): Promise<string>;
+}): RequestLike {
+  return request as unknown as RequestLike;
+}
 
-// export interface RouterContext<
-//   Env = any,
-//   Ctx = ExecutionContext,
-// > extends Record<string, any> {
-//   requestId: string;
-//   params: Record<string, string>;
-//   query: Record<string, any>;
-//   headers: Record<string, string>;
-//   env: Env;
-//   executionCtx: Ctx;
-//   logger: Logger;
-//   isCapnwebRpc: boolean;
-//   source: RouterContextSource;
-//   sourceMetadata?: Record<string, any>;
-//   json: <T = any>(data: T, init?: ResponseInit) => Response;
-//   text: (data: string, init?: ResponseInit) => Response;
-//   html: (data: string, init?: ResponseInit) => Response;
-//   redirect: (url: string, status?: number) => Response;
-//   cache: (seconds: number) => void;
-//   parseJson: <T = any>() => Promise<T | null>;
-//   fetch: (
-//     input: string | Request | URL,
-//     init?: RequestInit,
-//   ) => Promise<Response>;
-//   rewrite: (response: Response, handlers: Record<string, any>) => Response;
-//   router: IRouter<Env, Ctx>;
-// }
+export function fromCloudflareContext(ctx: {
+  waitUntil(promise: Promise<any>): void;
+  passThroughOnException(): void;
+  readonly props: unknown;
+}): ContextLike {
+  return ctx as ContextLike;
+}
+
+export function fromCloudflareEnv<T extends Record<string, unknown>>(env: T): EnvLike {
+  return env;
+}
+
+export function fromWebRequest(request: Request): RequestLike {
+  return request as RequestLike;
+}
+
+export function fromWebContext(): ContextLike {
+  return createContext();
+}
+
+export function fromWebEnv<T extends Record<string, unknown>>(env: T): EnvLike {
+  return env;
+}
+
+interface NodeIncomingMessage {
+  method?: string;
+  url?: string;
+  headers: Record<string, string | string[] | undefined>;
+  socket?: { encrypted?: boolean };
+}
+
+export function fromNodeIncomingMessage(
+  nodeReq: NodeIncomingMessage,
+  body?: Uint8Array,
+): RequestLike {
+  const protocol = (nodeReq.socket as { encrypted?: boolean } | undefined)?.encrypted
+    ? "https"
+    : "http";
+  const host = Array.isArray(nodeReq.headers.host)
+    ? nodeReq.headers.host[0]
+    : (nodeReq.headers.host ?? "localhost");
+  const url = `${protocol}://${host}${nodeReq.url ?? "/"}`;
+  const method = nodeReq.method ?? "GET";
+
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(nodeReq.headers)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) headers.append(key, v);
+    } else {
+      headers.set(key, value);
+    }
+  }
+
+  return new Request(url, {
+    method,
+    headers,
+    body: method !== "GET" && method !== "HEAD" ? (body ?? null) : null,
+  }) as RequestLike;
+}
