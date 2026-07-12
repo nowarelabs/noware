@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { IntegrationEventContext } from "@nowarelabs/shared";
 import { IntegrationEvent, BaseIntegrationEvent } from "../src/index.ts";
 
 describe("IntegrationEvent", () => {
@@ -24,7 +24,7 @@ describe("BaseIntegrationEvent", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as IntegrationEventContext;
 
     const handler = new BaseIntegrationEvent(mockRequest, mockEnv, mockCtx);
     expect(handler).toBeDefined();

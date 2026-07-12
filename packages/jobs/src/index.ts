@@ -9,10 +9,10 @@
  * - jobs: Map<string, JobHandler>
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, JobContext, RequestLike } from "@nowarelabs/shared";
 
 export class BaseJob<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends JobContext = JobContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -22,6 +22,6 @@ export class BaseJob<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

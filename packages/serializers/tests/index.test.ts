@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { SerializerContext } from "@nowarelabs/shared";
 import { Serializer, BaseSerializer } from "../src/index.ts";
 
 describe("Serializer", () => {
@@ -30,7 +30,7 @@ describe("BaseSerializer", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as SerializerContext;
 
     const serializer = new BaseSerializer(mockRequest, mockEnv, mockCtx);
     expect(serializer).toBeDefined();

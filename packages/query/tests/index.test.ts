@@ -22,12 +22,8 @@ describe("BaseQuery", () => {
     const query = new TestQuery(mockRequest, mockEnv, mockCtx);
 
     expect(query).toBeDefined();
-    expect((query as unknown as { request: Request }).request).toBe(
-      mockRequest,
-    );
-    expect((query as unknown as { env: Record<string, unknown> }).env).toBe(
-      mockEnv,
-    );
+    expect((query as unknown as { request: Request }).request).toBe(mockRequest);
+    expect((query as unknown as { env: Record<string, unknown> }).env).toBe(mockEnv);
   });
 
   test("getPersistence returns the persistence", () => {
@@ -40,9 +36,7 @@ describe("BaseQuery", () => {
 
     const query = new TestQuery(mockRequest, mockEnv, mockCtx);
 
-    expect(
-      (query as unknown as { getPersistence: () => object }).getPersistence(),
-    ).toEqual({});
+    expect((query as unknown as { getPersistence: () => object }).getPersistence()).toEqual({});
   });
 
   test("static hooks exist", () => {

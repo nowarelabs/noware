@@ -1,74 +1,63 @@
-export interface Body {
-  readonly body: ReadableStream<Uint8Array> | null;
-  readonly bodyUsed: boolean;
-  arrayBuffer(): Promise<ArrayBuffer>;
-  blob(): Promise<Blob>;
-  formData(): Promise<FormData>;
-  json(): Promise<any>;
-  text(): Promise<string>;
-}
+import type { ContextLike, RequestLike, EnvLike } from "@nowarelabs/contexts";
+import { createContext } from "@nowarelabs/contexts";
 
-export interface RequestLike extends Body {
-  clone(): RequestLike;
-  readonly method: string;
-  readonly url: string;
-  readonly headers: Headers;
-  readonly redirect: string;
-  readonly signal: AbortSignal;
-  readonly integrity: string;
-  readonly keepalive: boolean;
-}
+export type {
+  Body,
+  RequestLike,
+  EnvLike,
+  ContextLike,
+  RouterContext,
+  ControllerContext,
+  ServiceContext,
+  ModelContext,
+  ViewContext,
+  EntrypointContext,
+  FeatureContext,
+  AdapterRequest,
+  AdapterResponse,
+  AdapterContext,
+  ModuleContext,
+  RpcContext,
+  IntegrationEventContext,
+  UseCaseContext,
+  PortContext,
+  AggregateContext,
+  EventContext,
+  QueryContext,
+  GatewayContext,
+  PersistenceContext,
+  SqlContext,
+  MigrationContext,
+  LoggerContext,
+  JobContext,
+  AssetContext,
+  DurableObjectContext,
+  CfourContext,
+  DtoContext,
+  NormalizerContext,
+  ValidatorContext,
+  FormatterContext,
+  SerializerContext,
+  MaintenanceContext,
+  PluginContext,
+  ScriptContext,
+  DomainContext,
+} from "@nowarelabs/contexts";
 
-export interface ContextLike {
-  waitUntil(promise: Promise<any>): void;
-  passThroughOnException(): void;
-}
-
-/**
- * Context available at the router layer.
- * Carries URL parameters extracted during route matching.
- */
-export interface RouterContext extends ContextLike {
-  readonly params: Record<string, string>;
-}
-
-/**
- * Context available at the controller layer.
- * Carries authentication and session state set by middleware.
- */
-export interface ControllerContext extends ContextLike {
-  readonly currentUser?: unknown;
-  readonly session?: Record<string, unknown>;
-}
-
-/**
- * Context available at the service layer.
- * Carries tracing and observability primitives.
- */
-export interface ServiceContext extends ContextLike {
-  readonly transactionId: string;
-  readonly logger?: unknown;
-}
-
-/**
- * Context available at the model layer.
- * Carries database transaction state and logger.
- */
-export interface ModelContext extends ContextLike {
-  readonly logger?: unknown;
-  readonly transaction?: unknown;
-}
-
-/**
- * Context available at the view layer.
- * Carries user state and flash messages for templates.
- */
-export interface ViewContext extends ContextLike {
-  readonly currentUser?: unknown;
-  readonly flash?: Record<string, unknown>;
-}
-
-export type EnvLike = Record<string, unknown>;
+export {
+  createContext,
+  createContextWith,
+  createRouterContext,
+  createControllerContext,
+  createServiceContext,
+  createModelContext,
+  createViewContext,
+  enhanceRouterContext,
+  enhanceControllerContext,
+  enhanceServiceContext,
+  enhanceModelContext,
+  enhanceViewContext,
+} from "@nowarelabs/contexts";
 
 export type UseCaseResult<TOutput, TError = Error> =
   | { success: true; data: TOutput; status: "delivered" }
@@ -100,73 +89,49 @@ export interface RegisteredHook<T = any, R = any> {
   options?: HookOptions;
 }
 
-export function createControllerContext(): ControllerContext {
-  return { ...createContext(), currentUser: undefined, session: {} };
+export async function runBeforeHooks<T, R = any>(
+  instance: T,
+  hooks: readonly RegisteredHook<T, R>[],
+  shouldRun?: (options?: HookOptions) => boolean,
+): Promise<R | null> {
+  for (const { fn, options } of hooks) {
+    if (shouldRun && !shouldRun(options)) continue;
+    const result = await (fn as HookFunction<T, R>)(instance);
+    if (result !== undefined && result !== null) return result as R;
+  }
+  return null;
 }
 
-export function enhanceControllerContext(
-  ctx: ContextLike,
-  overrides?: Partial<Pick<ControllerContext, "currentUser" | "session">>,
-): ControllerContext {
-  return { ...ctx, currentUser: undefined, session: {}, ...overrides };
+export async function runAfterHooks<T, R>(
+  instance: T,
+  hooks: readonly RegisteredHook<T, R>[],
+  result: R,
+  shouldRun?: (options?: HookOptions) => boolean,
+): Promise<R> {
+  let current = result;
+  for (const { fn, options } of hooks) {
+    if (shouldRun && !shouldRun(options)) continue;
+    const hookResult = await (fn as AfterHookFunction<T, R>)(instance, current);
+    if (hookResult !== undefined && hookResult !== null) current = hookResult as R;
+  }
+  return current;
 }
 
-export function createServiceContext(): ServiceContext {
-  return { ...createContext(), transactionId: crypto.randomUUID(), logger: undefined };
-}
-
-export function enhanceServiceContext(
-  ctx: ContextLike,
-  overrides?: Partial<Pick<ServiceContext, "transactionId" | "logger">>,
-): ServiceContext {
-  return { ...ctx, transactionId: crypto.randomUUID(), logger: undefined, ...overrides };
-}
-
-export function createModelContext(): ModelContext {
-  return { ...createContext(), logger: undefined, transaction: undefined };
-}
-
-export function enhanceModelContext(
-  ctx: ContextLike,
-  overrides?: Partial<Pick<ModelContext, "logger" | "transaction">>,
-): ModelContext {
-  return { ...ctx, logger: undefined, transaction: undefined, ...overrides };
-}
-
-export function createViewContext(): ViewContext {
-  return { ...createContext(), currentUser: undefined, flash: {} };
-}
-
-export function enhanceViewContext(
-  ctx: ContextLike,
-  overrides?: Partial<Pick<ViewContext, "currentUser" | "flash">>,
-): ViewContext {
-  return { ...ctx, currentUser: undefined, flash: {}, ...overrides };
-}
-
-export function createRouterContext(): RouterContext {
-  return { ...createContext(), params: {} };
-}
-
-export function enhanceRouterContext(
-  ctx: ContextLike,
-  overrides?: Partial<Pick<RouterContext, "params">>,
-): RouterContext {
-  return { ...ctx, params: {}, ...overrides };
-}
-
-export function createContext(): ContextLike {
-  return {
-    waitUntil: () => {},
-    passThroughOnException: () => {},
+export async function runAroundHooks<T, R>(
+  instance: T,
+  hooks: readonly RegisteredHook<T, R>[],
+  action: () => Promise<R>,
+  shouldRun?: (options?: HookOptions) => boolean,
+): Promise<R> {
+  const applicable = hooks.filter((h) => !shouldRun || shouldRun(h.options));
+  if (applicable.length === 0) return action();
+  let index = 0;
+  const next = async (): Promise<R> => {
+    if (index >= applicable.length) return action();
+    const { fn } = applicable[index++];
+    return (fn as AroundHookFunction<T, R>)(instance, next);
   };
-}
-
-export function createContextWith<T>(
-  ctx: ContextLike,
-  props: T,
-): ContextLike & { readonly props: T } {
-  return Object.assign(ctx, { props });
+  return next();
 }
 
 export function fromCloudflareRequest(request: {

@@ -12,7 +12,12 @@ import type {
   AfterHookFunction,
   AroundHookFunction,
   RegisteredHook,
+  AdapterRequest,
+  AdapterResponse,
+  AdapterContext,
 } from "@nowarelabs/shared";
+
+export type { AdapterRequest, AdapterResponse, AdapterContext } from "@nowarelabs/shared";
 
 type BodyInit =
   | string
@@ -23,31 +28,6 @@ type BodyInit =
   | ArrayBuffer
   | null
   | undefined;
-
-export interface AdapterRequest {
-  method: string;
-  url: string;
-  headers: Record<string, string>;
-  params: Record<string, string>;
-  query: Record<string, string>;
-  body: unknown;
-  raw: RequestLike;
-}
-
-export interface AdapterResponse {
-  status: number;
-  headers: Record<string, string>;
-  body: unknown;
-}
-
-export interface AdapterContext<
-  Ctx extends ContextLike = ContextLike,
-  Env extends EnvLike = EnvLike,
-> {
-  env: Env;
-  ctx: Ctx;
-  request: AdapterRequest;
-}
 
 export abstract class BaseAdapter<
   Ctx extends ContextLike = ContextLike,

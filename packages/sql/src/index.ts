@@ -1,4 +1,4 @@
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, SqlContext, RequestLike } from "@nowarelabs/shared";
 import { type Result, ok, safe, all, tagged } from "@nowarelabs/result";
 
 export type Dialect = "sqlite" | "postgres" | "mysql";
@@ -115,9 +115,7 @@ export class Identifier extends SqlPart {
   }
 
   toSql(strategy: DialectStrategy): Result<SqlOutput> {
-    return safe(() =>
-      ok(tagged("sql")({ value: strategy.quoteIdentifier(this.name) })),
-    );
+    return safe(() => ok(tagged("sql")({ value: strategy.quoteIdentifier(this.name) })));
   }
 }
 
@@ -127,9 +125,7 @@ export class Literal extends SqlPart {
   }
 
   toSql(strategy: DialectStrategy): Result<SqlOutput> {
-    return safe(() =>
-      ok(tagged("sql")({ value: strategy.quoteLiteral(this.value) })),
-    );
+    return safe(() => ok(tagged("sql")({ value: strategy.quoteLiteral(this.value) })));
   }
 }
 
@@ -234,12 +230,10 @@ export class Composite extends SqlPart {
   }
 
   toSql(strategy: DialectStrategy): Result<SqlOutput> {
-    return all(this.parts.map((part) => part.toSql(strategy))).transform(
-      (results) => {
-        const sql = results.map((r) => r.value).join("");
-        return tagged("sql")({ value: sql });
-      },
-    );
+    return all(this.parts.map((part) => part.toSql(strategy))).transform((results) => {
+      const sql = results.map((r) => r.value).join("");
+      return tagged("sql")({ value: sql });
+    });
   }
 }
 
@@ -307,9 +301,7 @@ export const sql = {
       ]),
   },
   with: (recursive: boolean = false) => {
-    const start = recursive
-      ? new Keyword("WITH RECURSIVE ")
-      : new Keyword("WITH ");
+    const start = recursive ? new Keyword("WITH RECURSIVE ") : new Keyword("WITH ");
     return {
       as: (name: string, query: string | SqlPart) =>
         new Composite([
@@ -343,10 +335,7 @@ export const sql = {
     return {
       doNothing: () => new Composite([...parts, new Keyword(" DO NOTHING")]),
       doUpdate: (set: Record<string, any>) => {
-        const updateParts: SqlPart[] = [
-          ...parts,
-          new Keyword(" DO UPDATE SET "),
-        ];
+        const updateParts: SqlPart[] = [...parts, new Keyword(" DO UPDATE SET ")];
         const entries = Object.entries(set).map(([k, v]) => {
           const valPart = v instanceof SqlPart ? v : sql.val(v);
           return sql.composite(sql.id(k), sql.op(" = "), valPart);
@@ -358,8 +347,7 @@ export const sql = {
   },
   join: (parts: SqlPart[], separator: string | SqlPart) => {
     const joinedParts: SqlPart[] = [];
-    const sep =
-      typeof separator === "string" ? new Punctuation(separator) : separator;
+    const sep = typeof separator === "string" ? new Punctuation(separator) : separator;
     parts.forEach((part, i) => {
       joinedParts.push(part);
       if (i < parts.length - 1) joinedParts.push(sep);
@@ -375,7 +363,7 @@ export class QueryBuilder {
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: SqlContext,
   ) {}
 
   /** Append a raw {@link SqlPart}. */
@@ -427,12 +415,7 @@ export class QueryBuilder {
   /** VALUES (…) builder. */
   values(...vals: (unknown | SqlPart)[]): this {
     const parts = vals.map((v) => (v instanceof SqlPart ? v : sql.val(v)));
-    this.parts.push(
-      sql.key("VALUES"),
-      sql.op("("),
-      sql.join(parts, sql.op(", ")),
-      sql.op(")"),
-    );
+    this.parts.push(sql.key("VALUES"), sql.op("("), sql.join(parts, sql.op(", ")), sql.op(")"));
     return this;
   }
 
@@ -448,7 +431,7 @@ export class QueryBuilder {
 }
 
 export class BaseSql<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends SqlContext = SqlContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -458,17 +441,17 @@ export class BaseSql<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 
   /** Register a before‑hook */
   static addBeforeHook(hook: (...args: any[]) => any) {
     // Ensure this class has its own copy of the hooks array
-    if (!Object.prototype.hasOwnProperty.call(this, 'beforeHooks')) {
-      Object.defineProperty(this, 'beforeHooks', {
+    if (!Object.prototype.hasOwnProperty.call(this, "beforeHooks")) {
+      Object.defineProperty(this, "beforeHooks", {
         value: [],
         writable: true,
-        configurable: true
+        configurable: true,
       });
     }
     this.beforeHooks.push(hook);
@@ -477,11 +460,11 @@ export class BaseSql<
   /** Register an after‑hook */
   static addAfterHook(hook: (...args: any[]) => any) {
     // Ensure this class has its own copy of the hooks array
-    if (!Object.prototype.hasOwnProperty.call(this, 'afterHooks')) {
-      Object.defineProperty(this, 'afterHooks', {
+    if (!Object.prototype.hasOwnProperty.call(this, "afterHooks")) {
+      Object.defineProperty(this, "afterHooks", {
         value: [],
         writable: true,
-        configurable: true
+        configurable: true,
       });
     }
     this.afterHooks.push(hook);

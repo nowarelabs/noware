@@ -13,10 +13,10 @@
  * - eventAppliers: Array<(event) => void>
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, AggregateContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseAggregate<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends AggregateContext = AggregateContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
   Event = unknown,
@@ -29,7 +29,7 @@ export abstract class BaseAggregate<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
   protected abstract getEvent(): Event;
 }

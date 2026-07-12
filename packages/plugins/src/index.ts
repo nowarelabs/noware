@@ -6,7 +6,7 @@
  * Connection: Extends functionality at static points
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, PluginContext, RequestLike } from "@nowarelabs/shared";
 
 export interface Plugin {
   name: string;
@@ -14,7 +14,7 @@ export interface Plugin {
 }
 
 export class BasePlugin<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends PluginContext = PluginContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
   Model = unknown,
@@ -25,6 +25,6 @@ export class BasePlugin<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

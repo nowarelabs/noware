@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { PersistenceContext } from "@nowarelabs/shared";
 import { BasePersistence } from "../src/index.ts";
 
 describe("BasePersistence", () => {
@@ -13,18 +13,14 @@ describe("BasePersistence", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as PersistenceContext;
 
     const persistence = new TestPersistence(mockRequest, mockEnv, mockCtx);
 
     expect(persistence).toBeDefined();
-    expect((persistence as unknown as { request: Request }).request).toBe(
-      mockRequest,
-    );
-    expect(
-      (persistence as unknown as { env: Record<string, unknown> }).env,
-    ).toBe(mockEnv);
-    expect((persistence as unknown as { ctx: ContextLike }).ctx).toBe(mockCtx);
+    expect((persistence as unknown as { request: Request }).request).toBe(mockRequest);
+    expect((persistence as unknown as { env: Record<string, unknown> }).env).toBe(mockEnv);
+    expect((persistence as unknown as { ctx: PersistenceContext }).ctx).toBe(mockCtx);
   });
 
   test("static hooks exist", () => {

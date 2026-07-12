@@ -6,10 +6,10 @@
  * Connection: Used by controllers to normalize input
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, NormalizerContext, RequestLike } from "@nowarelabs/shared";
 
 export class BaseNormalizer<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends NormalizerContext = NormalizerContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -19,6 +19,6 @@ export class BaseNormalizer<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

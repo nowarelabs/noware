@@ -12,10 +12,10 @@
  * - handlers: Map<string, BaseFeatureHandler>
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ModuleContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseModule<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ModuleContext = ModuleContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
   Feature = unknown,
@@ -28,7 +28,7 @@ export abstract class BaseModule<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
   protected abstract getFeature(): Feature;
 }

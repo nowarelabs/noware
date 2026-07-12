@@ -1,15 +1,18 @@
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, CfourContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class BaseCfour<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends CfourContext = CfourContext,
   Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike
+  Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: unknown[] = [];
   static afterHooks: unknown[] = [];
 
   private static _workspaces: Map<string, C4Workspace> = new Map([
-    ["default", { name: "Default Workspace", people: [], softwareSystems: [], relationships: [], views: [] }]
+    [
+      "default",
+      { name: "Default Workspace", people: [], softwareSystems: [], relationships: [], views: [] },
+    ],
   ]);
 
   private static _listeners: Set<(workspaceName: string) => void> = new Set();
@@ -68,11 +71,16 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Container to a Software System. */
-  static addContainer(container: Omit<C4Container, "kind"> & { kind?: "Container" | "Queue" | "Topic" }, workspaceName = "default") {
+  static addContainer(
+    container: Omit<C4Container, "kind"> & { kind?: "Container" | "Queue" | "Topic" },
+    workspaceName = "default",
+  ) {
     const ws = this.getWorkspace(workspaceName);
     const system = ws.softwareSystems.find((s) => s.id === container.systemId);
     if (!system) {
-      throw new Error(`Software System with id "${container.systemId}" not found in workspace "${workspaceName}".`);
+      throw new Error(
+        `Software System with id "${container.systemId}" not found in workspace "${workspaceName}".`,
+      );
     }
     system.containers = system.containers || [];
     system.containers.push({ ...container, kind: container.kind ?? "Container" });
@@ -99,7 +107,9 @@ export abstract class BaseCfour<
     }
 
     if (!container) {
-      throw new Error(`Container with id "${component.containerId}" not found in workspace "${workspaceName}".`);
+      throw new Error(
+        `Container with id "${component.containerId}" not found in workspace "${workspaceName}".`,
+      );
     }
 
     container.components = container.components || [];
@@ -108,7 +118,10 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Code Element to a Component. */
-  static addCodeElement(codeElement: Omit<C4CodeElement, "kind"> & { kind?: C4CodeElementKind }, workspaceName = "default") {
+  static addCodeElement(
+    codeElement: Omit<C4CodeElement, "kind"> & { kind?: C4CodeElementKind },
+    workspaceName = "default",
+  ) {
     const ws = this.getWorkspace(workspaceName);
     let component: C4Component | undefined;
     for (const system of ws.softwareSystems) {
@@ -120,7 +133,9 @@ export abstract class BaseCfour<
     }
 
     if (!component) {
-      throw new Error(`Component with id "${codeElement.componentId}" not found in workspace "${workspaceName}".`);
+      throw new Error(
+        `Component with id "${codeElement.componentId}" not found in workspace "${workspaceName}".`,
+      );
     }
 
     component.codeElements = component.codeElements || [];
@@ -138,10 +153,14 @@ export abstract class BaseCfour<
   }
 
   /** Updates an existing element's properties. */
-  static updateElement(id: string, patch: Partial<Omit<C4Node, "id" | "kind">>, workspaceName = "default") {
+  static updateElement(
+    id: string,
+    patch: Partial<Omit<C4Node, "id" | "kind">>,
+    workspaceName = "default",
+  ) {
     const ws = this.getWorkspace(workspaceName);
     const flat = flattenWorkspace(ws);
-    const node = flat.nodes.find(n => n.id === id);
+    const node = flat.nodes.find((n) => n.id === id);
     if (node) {
       Object.assign(node, patch);
       this._notify(workspaceName);
@@ -151,21 +170,21 @@ export abstract class BaseCfour<
   /** Removes an element and all its children/relationships. */
   static removeElement(id: string, workspaceName = "default") {
     const ws = this.getWorkspace(workspaceName);
-    
+
     // Remove from people
-    ws.people = ws.people.filter(p => p.id !== id);
-    
+    ws.people = ws.people.filter((p) => p.id !== id);
+
     // Remove from systems/containers/components/code
-    ws.softwareSystems = ws.softwareSystems.filter(s => s.id !== id);
+    ws.softwareSystems = ws.softwareSystems.filter((s) => s.id !== id);
     for (const system of ws.softwareSystems) {
       if (system.containers) {
-        system.containers = system.containers.filter(c => c.id !== id);
+        system.containers = system.containers.filter((c) => c.id !== id);
         for (const container of system.containers) {
           if (container.components) {
-            container.components = container.components.filter(cp => cp.id !== id);
+            container.components = container.components.filter((cp) => cp.id !== id);
             for (const component of container.components) {
               if (component.codeElements) {
-                component.codeElements = component.codeElements.filter(ce => ce.id !== id);
+                component.codeElements = component.codeElements.filter((ce) => ce.id !== id);
               }
             }
           }
@@ -174,8 +193,8 @@ export abstract class BaseCfour<
     }
 
     // Remove associated relationships
-    ws.relationships = ws.relationships.filter(r => r.sourceId !== id && r.destinationId !== id);
-    
+    ws.relationships = ws.relationships.filter((r) => r.sourceId !== id && r.destinationId !== id);
+
     this._notify(workspaceName);
   }
 
@@ -218,7 +237,10 @@ export abstract class BaseCfour<
    * Generates a structured catalog of network flows for a given tag.
    * Returns a list of relationships with source/destination names and tech.
    */
-  static getFlowCatalog(tag: string, workspaceName = "default"): Array<{
+  static getFlowCatalog(
+    tag: string,
+    workspaceName = "default",
+  ): Array<{
     id: string;
     source: string;
     destination: string;
@@ -230,8 +252,8 @@ export abstract class BaseCfour<
     const nodeMap = buildNodeMap(flat);
 
     return ws.relationships
-      .filter(r => r.tags?.includes(tag))
-      .map(r => ({
+      .filter((r) => r.tags?.includes(tag))
+      .map((r) => ({
         id: r.id,
         source: nodeMap.get(r.sourceId)?.name ?? r.sourceId,
         destination: nodeMap.get(r.destinationId)?.name ?? r.destinationId,
@@ -249,33 +271,57 @@ export abstract class BaseCfour<
    * Generates a legend for a given view.
    * Scans all elements and relationships in the view to identify unique kinds and technologies.
    */
-  static getLegend(view: C4View, workspaceName = "default"): {
+  static getLegend(
+    view: C4View,
+    workspaceName = "default",
+  ): {
     elements: Array<{ kind: C4ElementKind; technology?: string; icon?: string }>;
-    relationships: Array<{ description: string; technology?: string; lineStyle: "solid" | "dashed" }>;
+    relationships: Array<{
+      description: string;
+      technology?: string;
+      lineStyle: "solid" | "dashed";
+    }>;
   } {
     const ws = this.getWorkspace(workspaceName);
     const flat = flattenWorkspace(ws);
     const nodeMap = buildNodeMap(flat);
-    const relMap = new Map(flat.relationships.map(r => [r.id, r]));
+    const relMap = new Map(flat.relationships.map((r) => [r.id, r]));
 
-    const elementLegend = new Map<string, { kind: C4ElementKind; technology?: string; icon?: string }>();
+    const elementLegend = new Map<
+      string,
+      { kind: C4ElementKind; technology?: string; icon?: string }
+    >();
     for (const ve of view.elements) {
       const node = nodeMap.get(ve.elementId);
       if (node) {
         const key = `${node.kind}-${getTechnology(node) || ""}-${node.icon || ""}`;
-        elementLegend.set(key, { kind: node.kind, technology: getTechnology(node), icon: node.icon });
+        elementLegend.set(key, {
+          kind: node.kind,
+          technology: getTechnology(node),
+          icon: node.icon,
+        });
       }
     }
 
-    const relationshipLegend = new Map<string, { description: string; technology?: string; lineStyle: "solid" | "dashed" }>();
+    const relationshipLegend = new Map<
+      string,
+      { description: string; technology?: string; lineStyle: "solid" | "dashed" }
+    >();
     for (const vr of view.relationships) {
       const rel = relMap.get(vr.relationshipId);
       if (rel) {
-        const lineStyle = (rel.codeRelationshipKind === "Implements" || rel.codeRelationshipKind === "Depends" || rel.codeRelationshipKind === "Realizes")
-          ? "dashed"
-          : "solid";
+        const lineStyle =
+          rel.codeRelationshipKind === "Implements" ||
+          rel.codeRelationshipKind === "Depends" ||
+          rel.codeRelationshipKind === "Realizes"
+            ? "dashed"
+            : "solid";
         const key = `${rel.description}-${rel.technology || ""}-${lineStyle}`;
-        relationshipLegend.set(key, { description: rel.description || "Relationship", technology: rel.technology, lineStyle });
+        relationshipLegend.set(key, {
+          description: rel.description || "Relationship",
+          technology: rel.technology,
+          lineStyle,
+        });
       }
     }
 
@@ -289,42 +335,79 @@ export abstract class BaseCfour<
    * Lints a view or workspace against the Software Architecture Diagram Review Checklist.
    * Returns a list of checklist violations.
    */
-  static lint(view?: C4View, workspaceName = "default"): Array<{ check: string; message: string; category: "General" | "Elements" | "Relationships" }> {
+  static lint(
+    view?: C4View,
+    workspaceName = "default",
+  ): Array<{ check: string; message: string; category: "General" | "Elements" | "Relationships" }> {
     const ws = this.getWorkspace(workspaceName);
-    const violations: Array<{ check: string; message: string; category: "General" | "Elements" | "Relationships" }> = [];
+    const violations: Array<{
+      check: string;
+      message: string;
+      category: "General" | "Elements" | "Relationships";
+    }> = [];
 
     // General Checks
     if (view) {
       if (!view.title) {
-        violations.push({ category: "General", check: "Does the diagram have a title?", message: `View "${view.id}" is missing a title.` });
+        violations.push({
+          category: "General",
+          check: "Does the diagram have a title?",
+          message: `View "${view.id}" is missing a title.`,
+        });
       }
       if (!view.description) {
-        violations.push({ category: "General", check: "Do you understand the diagram scope?", message: `View "${view.id}" is missing a description explaining its scope.` });
+        violations.push({
+          category: "General",
+          check: "Do you understand the diagram scope?",
+          message: `View "${view.id}" is missing a description explaining its scope.`,
+        });
       }
     }
 
-    const flat = view ? {
-      nodes: flattenWorkspace(ws).nodes.filter(n => view.elements.some(ve => ve.elementId === n.id)),
-      relationships: ws.relationships.filter(r => view.relationships.some(vr => vr.relationshipId === r.id))
-    } : flattenWorkspace(ws);
+    const flat = view
+      ? {
+          nodes: flattenWorkspace(ws).nodes.filter((n) =>
+            view.elements.some((ve) => ve.elementId === n.id),
+          ),
+          relationships: ws.relationships.filter((r) =>
+            view.relationships.some((vr) => vr.relationshipId === r.id),
+          ),
+        }
+      : flattenWorkspace(ws);
 
     // Elements Checks
     for (const node of flat.nodes) {
       if (!node.description) {
-        violations.push({ category: "Elements", check: "Do you understand what every element does?", message: `Element "${node.name}" (${node.id}) is missing a description.` });
+        violations.push({
+          category: "Elements",
+          check: "Do you understand what every element does?",
+          message: `Element "${node.name}" (${node.id}) is missing a description.`,
+        });
       }
       if (!getTechnology(node) && node.kind !== "Person" && node.kind !== "SoftwareSystem") {
-        violations.push({ category: "Elements", check: "Do you understand the technology choices?", message: `Element "${node.name}" is missing technology details.` });
+        violations.push({
+          category: "Elements",
+          check: "Do you understand the technology choices?",
+          message: `Element "${node.name}" is missing technology details.`,
+        });
       }
     }
 
     // Relationship Checks
     for (const rel of flat.relationships) {
       if (!rel.description) {
-        violations.push({ category: "Relationships", check: "Does every arrow have a label?", message: `Relationship "${rel.id}" is missing a descriptive label.` });
+        violations.push({
+          category: "Relationships",
+          check: "Does every arrow have a label?",
+          message: `Relationship "${rel.id}" is missing a descriptive label.`,
+        });
       }
       if (!rel.technology) {
-        violations.push({ category: "Relationships", check: "Do you understand the technology choices?", message: `Relationship from "${rel.sourceId}" to "${rel.destinationId}" is missing technology/protocol details.` });
+        violations.push({
+          category: "Relationships",
+          check: "Do you understand the technology choices?",
+          message: `Relationship from "${rel.sourceId}" to "${rel.destinationId}" is missing technology/protocol details.`,
+        });
       }
     }
 
@@ -332,17 +415,23 @@ export abstract class BaseCfour<
   }
 
   /** Updates a node position in a specific view. */
-  static updateViewPosition(viewId: string, elementId: string, x: number, y: number, workspaceName = "default") {
+  static updateViewPosition(
+    viewId: string,
+    elementId: string,
+    x: number,
+    y: number,
+    workspaceName = "default",
+  ) {
     const ws = this.getWorkspace(workspaceName);
-    let view = ws.views?.find(v => v.id === viewId);
-    
+    let view = ws.views?.find((v) => v.id === viewId);
+
     if (!view) {
       // Create view if it doesn't exist (e.g. first time dragging in a generated view)
       // We might need more context here to build a proper view, but for now we'll assume it exists
       return;
     }
 
-    let ve = view.elements.find(e => e.elementId === elementId);
+    let ve = view.elements.find((e) => e.elementId === elementId);
     if (!ve) {
       ve = { elementId, x, y };
       view.elements.push(ve);
@@ -350,7 +439,7 @@ export abstract class BaseCfour<
       ve.x = x;
       ve.y = y;
     }
-    
+
     this._notify(workspaceName);
   }
 
@@ -358,7 +447,7 @@ export abstract class BaseCfour<
   static saveView(view: C4View, workspaceName = "default") {
     const ws = this.getWorkspace(workspaceName);
     ws.views = ws.views || [];
-    const idx = ws.views.findIndex(v => v.id === view.id);
+    const idx = ws.views.findIndex((v) => v.id === view.id);
     if (idx >= 0) {
       ws.views[idx] = view;
     } else {
@@ -395,12 +484,12 @@ export abstract class BaseCfour<
       tags?: string[];
       search?: string; // search in name/description
     },
-    workspaceName = "default"
+    workspaceName = "default",
   ): C4Node[] {
     const ws = this.getWorkspace(workspaceName);
     const flat = flattenWorkspace(ws);
-    
-    return flat.nodes.filter(node => {
+
+    return flat.nodes.filter((node) => {
       if (filter.kind && node.kind !== filter.kind) return false;
       if (filter.owner && node.owner !== filter.owner) return false;
       if (filter.technology) {
@@ -408,7 +497,7 @@ export abstract class BaseCfour<
         if (!tech?.toLowerCase().includes(filter.technology.toLowerCase())) return false;
       }
       if (filter.tags && filter.tags.length > 0) {
-        if (!node.tags || !filter.tags.every(t => node.tags!.includes(t))) return false;
+        if (!node.tags || !filter.tags.every((t) => node.tags!.includes(t))) return false;
       }
       if (filter.search) {
         const search = filter.search.toLowerCase();
@@ -426,26 +515,40 @@ export abstract class BaseCfour<
    * Validates the integrity of the workspace.
    * Returns a list of errors found (dangling relationships, etc).
    */
-  static validate(workspaceName = "default"): Array<{ id: string; message: string; severity: "error" | "warning" }> {
+  static validate(
+    workspaceName = "default",
+  ): Array<{ id: string; message: string; severity: "error" | "warning" }> {
     const ws = this.getWorkspace(workspaceName);
     const flat = flattenWorkspace(ws);
-    const nodeIds = new Set(flat.nodes.map(n => n.id));
+    const nodeIds = new Set(flat.nodes.map((n) => n.id));
     const errors: Array<{ id: string; message: string; severity: "error" | "warning" }> = [];
 
     // Check relationships
     for (const rel of ws.relationships) {
       if (!nodeIds.has(rel.sourceId)) {
-        errors.push({ id: rel.id, message: `Dangling relationship: Source node "${rel.sourceId}" not found.`, severity: "error" });
+        errors.push({
+          id: rel.id,
+          message: `Dangling relationship: Source node "${rel.sourceId}" not found.`,
+          severity: "error",
+        });
       }
       if (!nodeIds.has(rel.destinationId)) {
-        errors.push({ id: rel.id, message: `Dangling relationship: Destination node "${rel.destinationId}" not found.`, severity: "error" });
+        errors.push({
+          id: rel.id,
+          message: `Dangling relationship: Destination node "${rel.destinationId}" not found.`,
+          severity: "error",
+        });
       }
     }
 
     // Check for "empty" systems/containers
     for (const system of ws.softwareSystems) {
       if (!system.containers || system.containers.length === 0) {
-        errors.push({ id: system.id, message: `Software System "${system.name}" has no containers.`, severity: "warning" });
+        errors.push({
+          id: system.id,
+          message: `Software System "${system.name}" has no containers.`,
+          severity: "warning",
+        });
       }
     }
 
@@ -456,29 +559,41 @@ export abstract class BaseCfour<
    * Helper to register a framework "Building Block" as a Container.
    * If the "Framework" system doesn't exist, it is created.
    */
-  static addBuildingBlock(packageId: string, name: string, description?: string, technology?: string, workspaceName = "default") {
+  static addBuildingBlock(
+    packageId: string,
+    name: string,
+    description?: string,
+    technology?: string,
+    workspaceName = "default",
+  ) {
     const ws = this.getWorkspace(workspaceName);
     let frameworkSystem = ws.softwareSystems.find((s) => s.id === "framework");
     if (!frameworkSystem) {
-      this.addSoftwareSystem({
-        id: "framework",
-        name: "Framework",
-        description: "The core application framework building blocks.",
-      }, workspaceName);
+      this.addSoftwareSystem(
+        {
+          id: "framework",
+          name: "Framework",
+          description: "The core application framework building blocks.",
+        },
+        workspaceName,
+      );
       frameworkSystem = ws.softwareSystems.find((s) => s.id === "framework")!;
     }
 
     // Check if container already exists to avoid duplicates during hot-reloading
-    const existing = frameworkSystem.containers?.find(c => c.id === packageId);
+    const existing = frameworkSystem.containers?.find((c) => c.id === packageId);
     if (existing) return;
 
-    this.addContainer({
-      id: packageId,
-      name,
-      description,
-      technology,
-      systemId: "framework",
-    }, workspaceName);
+    this.addContainer(
+      {
+        id: packageId,
+        name,
+        description,
+        technology,
+        systemId: "framework",
+      },
+      workspaceName,
+    );
   }
 
   /**
@@ -500,29 +615,35 @@ export abstract class BaseCfour<
 
     // Try to infer parent and kind
     if (config.kind === "Component" || (!config.kind && config.parentId)) {
-      this.addComponent({
-        id,
-        name,
-        description: config.description,
-        technology: config.technology,
-        containerId: config.parentId!,
-      }, workspaceName);
+      this.addComponent(
+        {
+          id,
+          name,
+          description: config.description,
+          technology: config.technology,
+          containerId: config.parentId!,
+        },
+        workspaceName,
+      );
     } else if (config.kind && CODE_ELEMENT_KINDS.has(config.kind)) {
-      this.addCodeElement({
-        id,
-        name,
-        description: config.description,
-        technology: config.technology,
-        componentId: config.parentId!,
-        kind: config.kind as C4CodeElementKind,
-      }, workspaceName);
+      this.addCodeElement(
+        {
+          id,
+          name,
+          description: config.description,
+          technology: config.technology,
+          componentId: config.parentId!,
+          kind: config.kind as C4CodeElementKind,
+        },
+        workspaceName,
+      );
     }
   }
 
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }
 
@@ -765,8 +886,8 @@ export function diffWorkspaces(before: C4Workspace, after: C4Workspace): C4Works
   const beforeNodes = buildNodeMap(flatBefore);
   const afterNodes = buildNodeMap(flatAfter);
 
-  const beforeRels = new Map(flatBefore.relationships.map(r => [r.id, r]));
-  const afterRels = new Map(flatAfter.relationships.map(r => [r.id, r]));
+  const beforeRels = new Map(flatBefore.relationships.map((r) => [r.id, r]));
+  const afterRels = new Map(flatAfter.relationships.map((r) => [r.id, r]));
 
   const diffNodes: C4DiffResult<C4Node> = { added: [], removed: [], modified: [] };
   const diffRels: C4DiffResult<C4Relationship> = { added: [], removed: [], modified: [] };
@@ -850,12 +971,7 @@ export interface C4Workspace {
 // ----------------------------------------------------------------
 
 /** Any node-like element in the C4 model. */
-export type C4Node =
-  | C4Person
-  | C4SoftwareSystem
-  | C4Container
-  | C4Component
-  | C4CodeElement;
+export type C4Node = C4Person | C4SoftwareSystem | C4Container | C4Component | C4CodeElement;
 
 /** Everything in a C4 workspace, flattened. */
 export interface C4FlatModel {
@@ -869,11 +985,11 @@ export interface C4FlatModel {
 
 export type C4ViewKind =
   | "SystemContext" // Level 1 — one software system + neighbours
-  | "Container"     // Level 2 — containers inside one software system
-  | "Component"     // Level 3 — components inside one container
-  | "Code"          // Level 4 — code elements inside one component
-  | "Dynamic"       // Sequence / collaboration diagram
-  | "Deployment";   // Runtime environment
+  | "Container" // Level 2 — containers inside one software system
+  | "Component" // Level 3 — components inside one container
+  | "Code" // Level 4 — code elements inside one component
+  | "Dynamic" // Sequence / collaboration diagram
+  | "Deployment"; // Runtime environment
 
 export interface C4ViewElement {
   /** References an element id. */
@@ -960,19 +1076,13 @@ export interface C4ToReactFlowOptions {
    * Called for each node so callers can override position, style,
    * or any React Flow node property before it is returned.
    */
-  nodeTransformer?: (
-    node: C4ReactFlowNode,
-    c4Element: C4Node
-  ) => C4ReactFlowNode;
+  nodeTransformer?: (node: C4ReactFlowNode, c4Element: C4Node) => C4ReactFlowNode;
 
   /**
    * Called for each edge so callers can override style, label,
    * or any React Flow edge property.
    */
-  edgeTransformer?: (
-    edge: C4ReactFlowEdge,
-    c4Relationship: C4Relationship
-  ) => C4ReactFlowEdge;
+  edgeTransformer?: (edge: C4ReactFlowEdge, c4Relationship: C4Relationship) => C4ReactFlowEdge;
 
   /**
    * Default node dimensions used as a starting point.
@@ -1001,25 +1111,31 @@ export interface C4ToReactFlowOptions {
 // ----------------------------------------------------------------
 
 const CODE_ELEMENT_KINDS = new Set<C4ElementKind>([
-  "Class", "Interface", "AbstractClass", "Enum", "Function", "Table", "Object",
+  "Class",
+  "Interface",
+  "AbstractClass",
+  "Enum",
+  "Function",
+  "Table",
+  "Object",
 ]);
 
 const DEFAULT_DIMENSIONS: Record<C4ElementKind, { width: number; height: number }> = {
-  Person:         { width: 140, height: 120 },
+  Person: { width: 140, height: 120 },
   SoftwareSystem: { width: 200, height: 120 },
-  Container:      { width: 200, height: 100 },
-  Queue:          { width: 200, height: 100 },
-  Topic:          { width: 200, height: 100 },
-  Component:      { width: 180, height:  90 },
+  Container: { width: 200, height: 100 },
+  Queue: { width: 200, height: 100 },
+  Topic: { width: 200, height: 100 },
+  Component: { width: 180, height: 90 },
   // Level 4 — height is intentionally flexible; callers should override
   // based on member count. These are sensible starting points.
-  Class:          { width: 220, height: 160 },
-  Interface:      { width: 220, height: 120 },
-  AbstractClass:  { width: 220, height: 160 },
-  Enum:           { width: 180, height: 120 },
-  Function:       { width: 180, height:  80 },
-  Table:          { width: 220, height: 160 },
-  Object:         { width: 200, height: 120 },
+  Class: { width: 220, height: 160 },
+  Interface: { width: 220, height: 120 },
+  AbstractClass: { width: 220, height: 160 },
+  Enum: { width: 180, height: 120 },
+  Function: { width: 180, height: 80 },
+  Table: { width: 220, height: 160 },
+  Object: { width: 200, height: 120 },
 };
 
 // ----------------------------------------------------------------
@@ -1030,20 +1146,20 @@ const CONTAINER_KINDS = new Set<C4ElementKind>(["Container", "Queue", "Topic"]);
 
 function getTechnology(el: C4Node): string | undefined {
   if (CONTAINER_KINDS.has(el.kind)) return (el as C4Container).technology;
-  if (el.kind === "Component")    return (el as C4Component).technology;
+  if (el.kind === "Component") return (el as C4Component).technology;
   if (CODE_ELEMENT_KINDS.has(el.kind)) return (el as C4CodeElement).technology;
   return undefined;
 }
 
 function getExternal(el: C4Node): boolean | undefined {
-  if (el.kind === "Person")         return (el as C4Person).external;
+  if (el.kind === "Person") return (el as C4Person).external;
   if (el.kind === "SoftwareSystem") return (el as C4SoftwareSystem).external;
   return undefined;
 }
 
 function getParentId(el: C4Node): string | undefined {
   if (CONTAINER_KINDS.has(el.kind)) return (el as C4Container).systemId;
-  if (el.kind === "Component")         return (el as C4Component).containerId;
+  if (el.kind === "Component") return (el as C4Component).containerId;
   if (CODE_ELEMENT_KINDS.has(el.kind)) return (el as C4CodeElement).componentId;
   return undefined;
 }
@@ -1070,7 +1186,11 @@ function canDrill(el: C4Node): boolean {
 /**
  * Checks if a node is a child of a given parent node (or any of the given parent nodes).
  */
-function isDescendantOf(nodeMap: Map<string, C4Node>, parentIds: string | string[], nodeId: string): boolean {
+function isDescendantOf(
+  nodeMap: Map<string, C4Node>,
+  parentIds: string | string[],
+  nodeId: string,
+): boolean {
   const targets = Array.isArray(parentIds) ? new Set(parentIds) : new Set([parentIds]);
   let currentId: string | undefined = nodeId;
   while (currentId) {
@@ -1085,7 +1205,11 @@ function isDescendantOf(nodeMap: Map<string, C4Node>, parentIds: string | string
 /**
  * Finds the highest visible ancestor of a node that is present in a set of allowed IDs.
  */
-function getVisibleAncestor(nodeMap: Map<string, C4Node>, allowedIds: Set<string>, nodeId: string): string | undefined {
+function getVisibleAncestor(
+  nodeMap: Map<string, C4Node>,
+  allowedIds: Set<string>,
+  nodeId: string,
+): string | undefined {
   if (allowedIds.has(nodeId)) return nodeId;
   let currentId: string | undefined = nodeId;
   while (currentId) {
@@ -1149,7 +1273,7 @@ function buildNodeMap(flat: C4FlatModel): Map<string, C4Node> {
 export function c4ToReactFlow(
   workspace: C4Workspace,
   view?: C4View,
-  options: C4ToReactFlowOptions = {}
+  options: C4ToReactFlowOptions = {},
 ): { nodes: C4ReactFlowNode[]; edges: C4ReactFlowEdge[] } {
   const {
     nodeTransformer,
@@ -1171,7 +1295,7 @@ export function c4ToReactFlow(
     ? new Map(
         view.elements
           .filter((ve) => ve.x !== undefined && ve.y !== undefined)
-          .map((ve) => [ve.elementId, { x: ve.x!, y: ve.y! }])
+          .map((ve) => [ve.elementId, { x: ve.x!, y: ve.y! }]),
       )
     : new Map();
 
@@ -1189,7 +1313,7 @@ export function c4ToReactFlow(
 
     const dims = {
       ...DEFAULT_DIMENSIONS[el.kind],
-      ...(nodeDimensions[el.kind] ?? {}),
+      ...nodeDimensions[el.kind],
     };
 
     const position = viewElementPositions.get(id) ?? { x: autoX, y: 0 };
@@ -1221,9 +1345,7 @@ export function c4ToReactFlow(
       },
       width: dims.width,
       height: dims.height,
-      ...(parentId
-        ? { parentId, extent: "parent" as const }
-        : {}),
+      ...(parentId ? { parentId, extent: "parent" as const } : {}),
     };
 
     if (nodeTransformer) {
@@ -1254,9 +1376,7 @@ export function c4ToReactFlow(
     // For now, we skip self-loops created by roll-up.
     if (effectiveSourceId === effectiveTargetId && rel.sourceId !== rel.destinationId) continue;
 
-    const label = [rel.description, rel.technology]
-      .filter(Boolean)
-      .join("\n");
+    const label = [rel.description, rel.technology].filter(Boolean).join("\n");
 
     let rfEdge: C4ReactFlowEdge = {
       id: rel.id,
@@ -1290,10 +1410,7 @@ export function c4ToReactFlow(
 // (all persons + the target system + its direct neighbours)
 // ----------------------------------------------------------------
 
-export function buildSystemContextView(
-  workspace: C4Workspace,
-  systemId: string
-): C4View {
+export function buildSystemContextView(workspace: C4Workspace, systemId: string): C4View {
   const flat = flattenWorkspace(workspace);
   const nodeMap = buildNodeMap(flat);
   const relatedSystemIds = new Set<string>();
@@ -1301,17 +1418,27 @@ export function buildSystemContextView(
   // Find relationships that touch the target system or its descendants
   const viewRelIds: string[] = [];
   for (const rel of flat.relationships) {
-    const isSourceTarget = rel.sourceId === systemId || isDescendantOf(nodeMap, systemId, rel.sourceId);
-    const isDestTarget = rel.destinationId === systemId || isDescendantOf(nodeMap, systemId, rel.destinationId);
+    const isSourceTarget =
+      rel.sourceId === systemId || isDescendantOf(nodeMap, systemId, rel.sourceId);
+    const isDestTarget =
+      rel.destinationId === systemId || isDescendantOf(nodeMap, systemId, rel.destinationId);
 
     if (isSourceTarget || isDestTarget) {
       viewRelIds.push(rel.id);
-      
+
       // We need to find which "top-level" systems to include in the view
       // based on these deep relationships.
-      const sourceAncestor = getVisibleAncestor(nodeMap, new Set(workspace.softwareSystems.map(s => s.id)), rel.sourceId);
-      const destAncestor = getVisibleAncestor(nodeMap, new Set(workspace.softwareSystems.map(s => s.id)), rel.destinationId);
-      
+      const sourceAncestor = getVisibleAncestor(
+        nodeMap,
+        new Set(workspace.softwareSystems.map((s) => s.id)),
+        rel.sourceId,
+      );
+      const destAncestor = getVisibleAncestor(
+        nodeMap,
+        new Set(workspace.softwareSystems.map((s) => s.id)),
+        rel.destinationId,
+      );
+
       if (sourceAncestor) relatedSystemIds.add(sourceAncestor);
       if (destAncestor) relatedSystemIds.add(destAncestor);
     }
@@ -1319,9 +1446,7 @@ export function buildSystemContextView(
 
   // Always include all persons
   const personIds = workspace.people.map((p) => p.id);
-  const elementIds = [
-    ...new Set([systemId, ...personIds, ...relatedSystemIds]),
-  ];
+  const elementIds = [...new Set([systemId, ...personIds, ...relatedSystemIds])];
 
   return {
     id: `system-context-${systemId}`,
@@ -1337,10 +1462,7 @@ export function buildSystemContextView(
 // Convenience: build a Component view for a given container
 // ----------------------------------------------------------------
 
-export function buildComponentView(
-  workspace: C4Workspace,
-  containerId: string
-): C4View {
+export function buildComponentView(workspace: C4Workspace, containerId: string): C4View {
   const flat = flattenWorkspace(workspace);
   const componentIds = flat.nodes
     .filter((n) => n.kind === "Component" && (n as C4Component).containerId === containerId)
@@ -1355,8 +1477,7 @@ export function buildComponentView(
     }
   }
 
-  const containerName =
-    flat.nodes.find((n) => n.id === containerId)?.name ?? containerId;
+  const containerName = flat.nodes.find((n) => n.id === containerId)?.name ?? containerId;
 
   return {
     id: `component-${containerId}`,
@@ -1373,17 +1494,12 @@ export function buildComponentView(
 // All C4CodeElement nodes inside the component + their relationships.
 // ----------------------------------------------------------------
 
-export function buildCodeView(
-  workspace: C4Workspace,
-  componentId: string
-): C4View {
+export function buildCodeView(workspace: C4Workspace, componentId: string): C4View {
   const flat = flattenWorkspace(workspace);
 
   const codeElementIds = flat.nodes
     .filter(
-      (n) =>
-        CODE_ELEMENT_KINDS.has(n.kind) &&
-        (n as C4CodeElement).componentId === componentId
+      (n) => CODE_ELEMENT_KINDS.has(n.kind) && (n as C4CodeElement).componentId === componentId,
     )
     .map((n) => n.id);
 
@@ -1396,8 +1512,7 @@ export function buildCodeView(
     }
   }
 
-  const componentName =
-    flat.nodes.find((n) => n.id === componentId)?.name ?? componentId;
+  const componentName = flat.nodes.find((n) => n.id === componentId)?.name ?? componentId;
 
   return {
     id: `code-${componentId}`,
@@ -1413,13 +1528,10 @@ export function buildCodeView(
 // Convenience: build a Container view for a given software system
 // ----------------------------------------------------------------
 
-export function buildContainerView(
-  workspace: C4Workspace,
-  systemId: string
-): C4View {
+export function buildContainerView(workspace: C4Workspace, systemId: string): C4View {
   const flat = flattenWorkspace(workspace);
   const nodeMap = buildNodeMap(flat);
-  
+
   const system = workspace.softwareSystems.find((s) => s.id === systemId);
   const internalContainerIds = (system?.containers ?? []).map((c) => c.id);
   const containerSet = new Set(internalContainerIds);
@@ -1428,8 +1540,12 @@ export function buildContainerView(
   const neighborIds = new Set<string>();
 
   for (const rel of flat.relationships) {
-    const isSourceInternal = containerSet.has(rel.sourceId) || isDescendantOf(nodeMap, Array.from(containerSet), rel.sourceId);
-    const isDestInternal = containerSet.has(rel.destinationId) || isDescendantOf(nodeMap, Array.from(containerSet), rel.destinationId);
+    const isSourceInternal =
+      containerSet.has(rel.sourceId) ||
+      isDescendantOf(nodeMap, Array.from(containerSet), rel.sourceId);
+    const isDestInternal =
+      containerSet.has(rel.destinationId) ||
+      isDescendantOf(nodeMap, Array.from(containerSet), rel.destinationId);
 
     if (isSourceInternal || isDestInternal) {
       viewRelIds.push(rel.id);
@@ -1437,11 +1553,19 @@ export function buildContainerView(
       // Find visible neighbors (top-level systems or persons)
       const allowedNeighborKinds = new Set(["SoftwareSystem", "Person"]);
       const neighborCandidateIds = new Set(
-        flat.nodes.filter(n => allowedNeighborKinds.has(n.kind)).map(n => n.id)
+        flat.nodes.filter((n) => allowedNeighborKinds.has(n.kind)).map((n) => n.id),
       );
 
-      const sourceVisible = getVisibleAncestor(nodeMap, new Set([...internalContainerIds, ...neighborCandidateIds]), rel.sourceId);
-      const destVisible = getVisibleAncestor(nodeMap, new Set([...internalContainerIds, ...neighborCandidateIds]), rel.destinationId);
+      const sourceVisible = getVisibleAncestor(
+        nodeMap,
+        new Set([...internalContainerIds, ...neighborCandidateIds]),
+        rel.sourceId,
+      );
+      const destVisible = getVisibleAncestor(
+        nodeMap,
+        new Set([...internalContainerIds, ...neighborCandidateIds]),
+        rel.destinationId,
+      );
 
       if (sourceVisible && !containerSet.has(sourceVisible)) neighborIds.add(sourceVisible);
       if (destVisible && !containerSet.has(destVisible)) neighborIds.add(destVisible);
@@ -1464,14 +1588,9 @@ export function buildContainerView(
  * Convenience: build a Team view for a given team.
  * Includes all nodes owned by the team and their direct neighbors.
  */
-export function buildTeamView(
-  workspace: C4Workspace,
-  teamName: string
-): C4View {
+export function buildTeamView(workspace: C4Workspace, teamName: string): C4View {
   const flat = flattenWorkspace(workspace);
-  const ownedNodeIds = new Set(
-    flat.nodes.filter(n => n.owner === teamName).map(n => n.id)
-  );
+  const ownedNodeIds = new Set(flat.nodes.filter((n) => n.owner === teamName).map((n) => n.id));
 
   const elementIds = new Set<string>(ownedNodeIds);
   const relationshipIds = new Set<string>();
@@ -1492,8 +1611,8 @@ export function buildTeamView(
     kind: "Dynamic", // Team views are dynamic perspectives
     title: `Team View — ${teamName}`,
     scopeId: teamName,
-    elements: Array.from(elementIds).map(id => ({ elementId: id })),
-    relationships: Array.from(relationshipIds).map(id => ({ relationshipId: id })),
+    elements: Array.from(elementIds).map((id) => ({ elementId: id })),
+    relationships: Array.from(relationshipIds).map((id) => ({ relationshipId: id })),
   };
 }
 
@@ -1501,11 +1620,7 @@ export function buildTeamView(
  * Builds an ephemeral "Flow View" based on tags.
  * Includes all relationships tagged with the given tag and their involved nodes.
  */
-export function buildFlowView(
-  workspace: C4Workspace,
-  tag: string,
-  title?: string
-): C4View {
+export function buildFlowView(workspace: C4Workspace, tag: string, title?: string): C4View {
   const flat = flattenWorkspace(workspace);
   const relationshipIds = new Set<string>();
   const elementIds = new Set<string>();
@@ -1523,7 +1638,7 @@ export function buildFlowView(
     kind: "Dynamic",
     title: title || `Flow Perspective — ${tag}`,
     scopeId: tag,
-    elements: Array.from(elementIds).map(id => ({ elementId: id })),
-    relationships: Array.from(relationshipIds).map(id => ({ relationshipId: id })),
+    elements: Array.from(elementIds).map((id) => ({ elementId: id })),
+    relationships: Array.from(relationshipIds).map((id) => ({ relationshipId: id })),
   };
 }

@@ -6,7 +6,7 @@
  * Connection: External system event handlers
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, IntegrationEventContext, RequestLike } from "@nowarelabs/shared";
 
 export interface IntegrationEvent {
   type: string;
@@ -16,7 +16,7 @@ export interface IntegrationEvent {
 }
 
 export class BaseIntegrationEvent<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends IntegrationEventContext = IntegrationEventContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -26,6 +26,6 @@ export class BaseIntegrationEvent<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

@@ -6,13 +6,13 @@
  * Connection: Define data transfer structures
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, DtoContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class Dto {
   constructor(
     protected request?: RequestLike,
     protected env?: EnvLike,
-    protected ctx?: ContextLike,
+    protected ctx?: DtoContext,
   ) {}
 
   toJSON(): Record<string, unknown> {
@@ -25,7 +25,7 @@ export abstract class Dto {
 }
 
 export class BaseDto<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends DtoContext = DtoContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -35,6 +35,6 @@ export class BaseDto<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

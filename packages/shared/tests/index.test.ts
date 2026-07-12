@@ -9,6 +9,9 @@ import {
   createModelContext,
   createViewContext,
   createRouterContext,
+  runBeforeHooks,
+  runAfterHooks,
+  runAroundHooks,
   fromCloudflareRequest,
   fromCloudflareContext,
   fromCloudflareEnv,
@@ -118,8 +121,9 @@ describe("Runtime Compatibility", () => {
 describe("createContext", () => {
   test("returns a ContextLike with noop waitUntil and passThroughOnException", () => {
     const ctx = createContext();
-    expect(ctx.waitUntil).toBeDefined();
-    expect(ctx.passThroughOnException).toBeDefined();
+    const { waitUntil, passThroughOnException } = ctx;
+    expect(waitUntil).toBeDefined();
+    expect(passThroughOnException).toBeDefined();
     expect(() => ctx.waitUntil(Promise.resolve())).not.toThrow();
     expect(() => ctx.passThroughOnException()).not.toThrow();
   });
@@ -146,8 +150,9 @@ describe("fromCloudflareContext", () => {
       props: {},
     };
     const ctx = fromCloudflareContext(mockCtx);
-    expect(ctx.waitUntil).toBe(mockCtx.waitUntil);
-    expect(ctx.passThroughOnException).toBe(mockCtx.passThroughOnException);
+    const { waitUntil, passThroughOnException } = ctx;
+    expect(waitUntil).toBe(mockCtx.waitUntil);
+    expect(passThroughOnException).toBe(mockCtx.passThroughOnException);
   });
 });
 
@@ -204,36 +209,118 @@ describe("fromNodeIncomingMessage", () => {
 describe("Layer Context Factories", () => {
   test("createControllerContext returns a ControllerContext", () => {
     const ctx = createControllerContext();
-    expect(ctx.waitUntil).toBeDefined();
-    expect(ctx.passThroughOnException).toBeDefined();
+    const { waitUntil, passThroughOnException } = ctx;
+    expect(waitUntil).toBeDefined();
+    expect(passThroughOnException).toBeDefined();
     expect(ctx.currentUser).toBeUndefined();
     expect(ctx.session).toEqual({});
   });
 
   test("createServiceContext returns a ServiceContext with transactionId", () => {
     const ctx = createServiceContext();
-    expect(ctx.waitUntil).toBeDefined();
+    const { waitUntil } = ctx;
+    expect(waitUntil).toBeDefined();
     expect(typeof ctx.transactionId).toBe("string");
     expect(ctx.transactionId.length).toBeGreaterThan(0);
   });
 
   test("createModelContext returns a ModelContext", () => {
     const ctx = createModelContext();
-    expect(ctx.waitUntil).toBeDefined();
+    const { waitUntil } = ctx;
+    expect(waitUntil).toBeDefined();
     expect(ctx.logger).toBeUndefined();
     expect(ctx.transaction).toBeUndefined();
   });
 
   test("createViewContext returns a ViewContext", () => {
     const ctx = createViewContext();
-    expect(ctx.waitUntil).toBeDefined();
+    const { waitUntil } = ctx;
+    expect(waitUntil).toBeDefined();
     expect(ctx.currentUser).toBeUndefined();
     expect(ctx.flash).toEqual({});
   });
 
   test("createRouterContext returns a RouterContext", () => {
     const ctx = createRouterContext();
-    expect(ctx.waitUntil).toBeDefined();
+    const { waitUntil } = ctx;
+    expect(waitUntil).toBeDefined();
     expect(ctx.params).toEqual({});
+  });
+});
+
+describe("HookEngine", () => {
+  test("runBeforeHooks returns null when no hooks short-circuit", async () => {
+    const hooks = [{ fn: (_i: {}) => undefined }, { fn: (_i: {}) => {} }];
+    const result = await runBeforeHooks({}, hooks);
+    expect(result).toBeNull();
+  });
+
+  test("runBeforeHooks short-circuits on first non-null return", async () => {
+    const order: number[] = [];
+    const hooks = [
+      {
+        fn: () => {
+          order.push(1);
+        },
+      },
+      {
+        fn: () => {
+          order.push(2);
+          return "short";
+        },
+      },
+      {
+        fn: () => {
+          order.push(3);
+        },
+      },
+    ];
+    const result = await runBeforeHooks({}, hooks);
+    expect(result).toBe("short");
+    expect(order).toEqual([1, 2]);
+  });
+
+  test("runBeforeHooks respects shouldRun filter", async () => {
+    const fn = vi.fn();
+    const hooks = [
+      { fn, options: { only: ["create"] } },
+      { fn, options: { only: ["update"] } },
+    ];
+    await runBeforeHooks({}, hooks, (o) => o?.only?.includes("create") ?? true);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  test("runAfterHooks transforms result through pipeline", async () => {
+    const hooks = [{ fn: (_i: {}, r: number) => r + 1 }, { fn: (_i: {}, r: number) => r * 2 }];
+    const result = await runAfterHooks({}, hooks, 5);
+    expect(result).toBe(12); // (5 + 1) * 2
+  });
+
+  test("runAroundHooks nests in onion order", async () => {
+    const order: string[] = [];
+    const hooks = [
+      {
+        fn: async (_i: {}, next: () => Promise<string>) => {
+          order.push("before1");
+          const r = await next();
+          order.push("after1");
+          return r;
+        },
+      },
+      {
+        fn: async (_i: {}, next: () => Promise<string>) => {
+          order.push("before2");
+          const r = await next();
+          order.push("after2");
+          return r;
+        },
+      },
+    ];
+    const result = await runAroundHooks({}, hooks, async () => {
+      order.push("action");
+      return "done";
+    });
+    expect(result).toBe("done");
+    expect(order).toEqual(["before1", "before2", "action", "after2", "after1"]);
   });
 });

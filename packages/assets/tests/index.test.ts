@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { AssetContext } from "@nowarelabs/shared";
 import { BaseAsset } from "../src/index.ts";
 
 describe("BaseAsset", () => {
@@ -9,7 +9,7 @@ describe("BaseAsset", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as AssetContext;
 
     const asset = new BaseAsset(mockRequest, mockEnv, mockCtx);
     expect(asset).toBeDefined();
@@ -22,15 +22,15 @@ describe("BaseAsset", () => {
 
   // Test the protected methods by creating a subclass
   test("can extend BaseAsset and access protected members", () => {
-    class TestAsset extends BaseAsset<ContextLike, any, Request> {
+    class TestAsset extends BaseAsset<AssetContext, any, Request> {
       public getOptions() {
         return this.options;
       }
-      
+
       public testResolveAssetPath(name: string) {
         return this.resolveAssetPath(name);
       }
-      
+
       public testGenerateInjectionString() {
         return this["generateInjectionString"]();
       }
@@ -41,14 +41,14 @@ describe("BaseAsset", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as AssetContext;
 
     const asset = new TestAsset(mockRequest, mockEnv, mockCtx, {
       styles: ["test.css"],
       scripts: ["app.js"],
       publicPrefix: "/static/",
       vendorPrefix: "/vendors/",
-      manifest: { "test.css": "test.a1b2c3.css" }
+      manifest: { "test.css": "test.a1b2c3.css" },
     });
 
     // Test options

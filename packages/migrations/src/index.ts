@@ -6,7 +6,7 @@
  * Connection: Used by BasePersistence for schema changes
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, MigrationContext, RequestLike } from "@nowarelabs/shared";
 
 export abstract class Migration {
   static beforeHooks: unknown[] = [];
@@ -14,12 +14,12 @@ export abstract class Migration {
 
   protected request: RequestLike;
   protected env: EnvLike;
-  protected ctx: ContextLike;
+  protected ctx: MigrationContext;
 
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: MigrationContext,
   ) {}
 
   abstract up(): Promise<void>;
@@ -27,7 +27,7 @@ export abstract class Migration {
 }
 
 export class BaseMigration<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends MigrationContext = MigrationContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -37,6 +37,6 @@ export class BaseMigration<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

@@ -1,7 +1,7 @@
 import { context, trace } from "@opentelemetry/api";
 import type {
   EnvLike,
-  ContextLike,
+  LoggerContext,
   RequestLike,
   HookOptions,
   HookFunction,
@@ -32,7 +32,7 @@ export interface LogEntry {
 }
 
 export abstract class BaseLogger<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends LoggerContext = LoggerContext,
   Env extends EnvLike = EnvLike,
 > {
   static beforeHooks: RegisteredHook[] = [];
@@ -139,7 +139,7 @@ export abstract class BaseLogger<
 }
 
 export class Logger<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends LoggerContext = LoggerContext,
   Env extends EnvLike = EnvLike,
 > extends BaseLogger<Ctx, Env> {
   public static ENVIRONMENT = "production";

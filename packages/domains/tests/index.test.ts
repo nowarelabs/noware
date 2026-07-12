@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { DomainContext } from "@nowarelabs/shared";
 import { Entity, ValueObject, BaseDomain } from "../src/index.ts";
 
 describe("Entity", () => {
@@ -28,7 +28,7 @@ describe("BaseDomain", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as DomainContext;
 
     const domain = new BaseDomain(mockRequest, mockEnv, mockCtx);
     expect(domain).toBeDefined();

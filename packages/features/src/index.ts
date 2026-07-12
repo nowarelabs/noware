@@ -18,23 +18,15 @@ import type {
   ContextLike,
   RequestLike,
   UseCaseResult,
+  FeatureContext,
   HookOptions as FeatureHookOptions,
 } from "@nowarelabs/shared";
+
+export type { FeatureContext } from "@nowarelabs/shared";
 
 // ============================================================================
 // Core Types
 // ============================================================================
-
-export interface FeatureContext<
-  Ctx extends ContextLike = ContextLike,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
-> {
-  env: Env;
-  ctx: Ctx;
-  request: Request;
-  metadata?: Record<string, unknown>;
-}
 
 // FeatureHookOptions is aliased from HookOptions in imports
 

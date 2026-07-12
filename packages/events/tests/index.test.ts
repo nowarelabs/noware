@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { EventContext } from "@nowarelabs/shared";
 import { BaseEvent, EventEmitter } from "../src/index.ts";
 
 describe("EventEmitter", () => {
@@ -30,7 +30,7 @@ describe("BaseEvent", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as EventContext;
 
     const event = new BaseEvent(mockRequest, mockEnv, mockCtx);
     expect(event).toBeDefined();

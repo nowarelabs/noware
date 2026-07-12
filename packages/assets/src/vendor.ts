@@ -29,7 +29,8 @@ export class VendorManager {
         if (pkgJson.exports && pkgJson.exports["."]) {
           const exports = pkgJson.exports["."];
           const conditionalEntry = exports.import || exports.default || exports;
-          entry = typeof conditionalEntry === "object" ? conditionalEntry.default : conditionalEntry;
+          entry =
+            typeof conditionalEntry === "object" ? conditionalEntry.default : conditionalEntry;
         }
 
         if (!entry || typeof entry !== "string") {
@@ -89,7 +90,10 @@ export class VendorManager {
   private resolvePackage(pkgName: string): { pkgPath: string; pkgJson: any } {
     try {
       const jsonPath = this.requireInstance.resolve(`${pkgName}/package.json`);
-      return { pkgPath: path.dirname(jsonPath), pkgJson: JSON.parse(fs.readFileSync(jsonPath, "utf-8")) };
+      return {
+        pkgPath: path.dirname(jsonPath),
+        pkgJson: JSON.parse(fs.readFileSync(jsonPath, "utf-8")),
+      };
     } catch {
       const entryFile = this.requireInstance.resolve(pkgName);
       let currentDir = path.dirname(entryFile);

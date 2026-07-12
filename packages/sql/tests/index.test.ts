@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { SqlContext } from "@nowarelabs/shared";
 import {
   // Dialect strategies
   SqliteStrategy,
@@ -31,7 +31,7 @@ import {
 // Shared test fixtures
 // ---------------------------------------------------------------------------
 
-const mockCtx: ContextLike = {
+const mockCtx: SqlContext = {
   waitUntil: () => {},
   passThroughOnException: () => {},
 };
@@ -335,7 +335,7 @@ describe("sql.onConflict()", () => {
   test("DO UPDATE SET merges specified columns", () => {
     const part = sql.onConflict("email").doUpdate({ name: "Alice", updated_at: sql.raw("NOW()") });
     expect(toSqlText(part)).toBe(
-      "ON CONFLICT \"email\" DO UPDATE SET \"name\" = 'Alice', \"updated_at\" = NOW()",
+      'ON CONFLICT "email" DO UPDATE SET "name" = \'Alice\', "updated_at" = NOW()',
     );
   });
 });
@@ -372,8 +372,9 @@ describe("QueryBuilder – SELECT queries", () => {
   });
 
   test("SELECT with raw WHERE (common pattern)", () => {
-    const q = builder()
-      .rawSql("SELECT id, name FROM users WHERE active = 1 ORDER BY name ASC LIMIT 10");
+    const q = builder().rawSql(
+      "SELECT id, name FROM users WHERE active = 1 ORDER BY name ASC LIMIT 10",
+    );
     expect(q.toSql()).toBe(
       "SELECT id, name FROM users WHERE active = 1 ORDER BY name ASC LIMIT 10",
     );
@@ -392,9 +393,7 @@ describe("QueryBuilder – SELECT queries", () => {
 
 describe("QueryBuilder – INSERT queries", () => {
   test("basic INSERT INTO … VALUES", () => {
-    const q = builder()
-      .insertInto("users", ["name", "email"])
-      .values("Alice", "alice@example.com");
+    const q = builder().insertInto("users", ["name", "email"]).values("Alice", "alice@example.com");
     expect(q.toSql()).toBe(
       `INSERT INTO"users"("name", "email")VALUES('Alice', 'alice@example.com')`,
     );
@@ -404,22 +403,19 @@ describe("QueryBuilder – INSERT queries", () => {
     const q = builder()
       .insertInto("settings", ["user_id", "notifications", "score"])
       .values(42, true, 9.5);
-    expect(q.toSql()).toBe(`INSERT INTO"settings"("user_id", "notifications", "score")VALUES(42, 1, 9.5)`);
+    expect(q.toSql()).toBe(
+      `INSERT INTO"settings"("user_id", "notifications", "score")VALUES(42, 1, 9.5)`,
+    );
   });
 
   test("INSERT with raw SQL expression as value", () => {
-    const q = builder()
-      .insertInto("events", ["user_id", "created_at"])
-      .values(1, sql.raw("NOW()"));
+    const q = builder().insertInto("events", ["user_id", "created_at"]).values(1, sql.raw("NOW()"));
     expect(q.toSql()).toBe(`INSERT INTO"events"("user_id", "created_at")VALUES(1, NOW())`);
   });
 
   test("INSERT with ON CONFLICT DO NOTHING appended via raw()", () => {
     const conflict = sql.onConflict("email").doNothing();
-    const q = builder()
-      .insertInto("users", ["email"])
-      .values("bob@example.com")
-      .raw(conflict);
+    const q = builder().insertInto("users", ["email"]).values("bob@example.com").raw(conflict);
     expect(q.toSql()).toContain("DO NOTHING");
     expect(q.toSql()).toContain("'bob@example.com'");
   });
@@ -492,18 +488,14 @@ describe("QueryBuilder – DDL patterns (raw SQL)", () => {
   });
 
   test("ALTER TABLE via raw SQL part", () => {
-    const q = builder().rawSql(
-      'ALTER TABLE "users" ADD COLUMN "avatar_url" TEXT',
-    );
+    const q = builder().rawSql('ALTER TABLE "users" ADD COLUMN "avatar_url" TEXT');
     expect(q.toSql()).toBe('ALTER TABLE "users" ADD COLUMN "avatar_url" TEXT');
   });
 });
 
 describe("QueryBuilder – multi-dialect output", () => {
   test("INSERT renders column quoting per dialect", () => {
-    const q = builder()
-      .insertInto("orders", ["user_id", "total"])
-      .values(7, 99.99);
+    const q = builder().insertInto("orders", ["user_id", "total"]).values(7, 99.99);
 
     const sqlite = q.toSql(new SqliteStrategy());
     const mysql = q.toSql(new MysqlStrategy());

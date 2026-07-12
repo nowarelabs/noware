@@ -6,10 +6,10 @@
  * Connection: Used by controllers to validate input
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ValidatorContext, RequestLike } from "@nowarelabs/shared";
 
 export class BaseValidator<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ValidatorContext = ValidatorContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -19,6 +19,6 @@ export class BaseValidator<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

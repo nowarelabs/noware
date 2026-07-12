@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { RpcContext } from "@nowarelabs/shared";
 import { BaseRpc, BaseRpcServer } from "../src/index.ts";
 
 describe("BaseRpcServer", () => {
@@ -15,7 +15,7 @@ describe("BaseRpcServer", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as RpcContext;
 
     const server = new TestRpcServer(mockRequest, mockEnv, mockCtx);
 
@@ -29,7 +29,7 @@ describe("BaseRpcServer", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as RpcContext;
 
     const server = new TestRpcServer(mockRequest, mockEnv, mockCtx);
 

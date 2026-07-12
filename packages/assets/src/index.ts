@@ -1,4 +1,4 @@
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, AssetContext, RequestLike } from "@nowarelabs/shared";
 
 // Dynamically try to pull the map built by your vendor process
 let COMPILED_MAP = { imports: {} as Record<string, string> };
@@ -26,7 +26,7 @@ export interface RuntimeAdapter {
 }
 
 export class CloudflareAdapter implements RuntimeAdapter {
-  constructor(private env: { ASSETS?: Fetcher } & Record<string, any>) { }
+  constructor(private env: { ASSETS?: Fetcher } & Record<string, any>) {}
 
   matchRuntime(): boolean {
     return typeof HTMLRewriter !== "undefined" && typeof this.env?.ASSETS?.fetch === "function";
@@ -83,7 +83,7 @@ export class NodeAdapter implements RuntimeAdapter {
         const contentType = pathname.endsWith(".js") ? "application/javascript" : "text/css";
         return new Response(stream as any, { headers: { "content-type": contentType } });
       }
-    } catch { }
+    } catch {}
     return null;
   }
 
@@ -105,7 +105,11 @@ export abstract class AbstractAssetChainLink implements AssetChainLink {
     return next;
   }
 
-  async handle(pathname: string, request: Request, adapter: RuntimeAdapter): Promise<Response | null> {
+  async handle(
+    pathname: string,
+    request: Request,
+    adapter: RuntimeAdapter,
+  ): Promise<Response | null> {
     if (this.nextLink) {
       return this.nextLink.handle(pathname, request, adapter);
     }
@@ -114,7 +118,10 @@ export abstract class AbstractAssetChainLink implements AssetChainLink {
 }
 
 export class StaticAssetRouteLink extends AbstractAssetChainLink {
-  constructor(private publicPrefix: string, private vendorPrefix: string) {
+  constructor(
+    private publicPrefix: string,
+    private vendorPrefix: string,
+  ) {
     super();
   }
 
@@ -128,7 +135,11 @@ export class StaticAssetRouteLink extends AbstractAssetChainLink {
     );
   }
 
-  override async handle(pathname: string, request: Request, adapter: RuntimeAdapter): Promise<Response | null> {
+  override async handle(
+    pathname: string,
+    request: Request,
+    adapter: RuntimeAdapter,
+  ): Promise<Response | null> {
     if (this.isStaticPath(pathname)) {
       const assetResponse = await adapter.serveStatic(pathname, request);
       if (assetResponse) return assetResponse;
@@ -139,14 +150,24 @@ export class StaticAssetRouteLink extends AbstractAssetChainLink {
 }
 
 export class HTMLHtmlInjectionLink extends AbstractAssetChainLink {
-  constructor(private payloadHtml: string, private htmlFallbackOrResponse: Response | string) {
+  constructor(
+    private payloadHtml: string,
+    private htmlFallbackOrResponse: Response | string,
+  ) {
     super();
   }
 
-  override async handle(pathname: string, request: Request, adapter: RuntimeAdapter): Promise<Response | null> {
-    const originalResponse = typeof this.htmlFallbackOrResponse === "string"
-      ? new Response(this.htmlFallbackOrResponse, { headers: { "content-type": "text/html;charset=UTF-8" } })
-      : this.htmlFallbackOrResponse;
+  override async handle(
+    pathname: string,
+    request: Request,
+    adapter: RuntimeAdapter,
+  ): Promise<Response | null> {
+    const originalResponse =
+      typeof this.htmlFallbackOrResponse === "string"
+        ? new Response(this.htmlFallbackOrResponse, {
+            headers: { "content-type": "text/html;charset=UTF-8" },
+          })
+        : this.htmlFallbackOrResponse;
 
     return adapter.injectHTML(originalResponse, this.payloadHtml);
   }
@@ -154,11 +175,7 @@ export class HTMLHtmlInjectionLink extends AbstractAssetChainLink {
 
 export class RuntimeAdapterFactory {
   static create(env: EnvLike): RuntimeAdapter {
-    const adapters = [
-      new CloudflareAdapter(env),
-      new BunAdapter(),
-      new NodeAdapter()
-    ];
+    const adapters = [new CloudflareAdapter(env), new BunAdapter(), new NodeAdapter()];
 
     for (const adapter of adapters) {
       if (adapter.matchRuntime()) return adapter;
@@ -169,7 +186,7 @@ export class RuntimeAdapterFactory {
 }
 
 export class BaseAsset<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends AssetContext = AssetContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -183,7 +200,7 @@ export class BaseAsset<
     protected request: Request,
     protected env: Env,
     protected ctx: Ctx,
-    options: AssetPipelineOptions = {}
+    options: AssetPipelineOptions = {},
   ) {
     this.options = {
       styles: options.styles || [],
@@ -191,7 +208,7 @@ export class BaseAsset<
       publicPrefix: options.publicPrefix || "/assets/",
       vendorPrefix: options.vendorPrefix || "/assets/vendor/",
       manifest: options.manifest || {},
-      importMap: options.importMap || COMPILED_MAP.imports
+      importMap: options.importMap || COMPILED_MAP.imports,
     };
 
     this.adapter = RuntimeAdapterFactory.create(this.env);
@@ -201,7 +218,10 @@ export class BaseAsset<
     const url = new URL((this.request as any).url);
     const payloadHtml = this.generateInjectionString();
 
-    const staticAssetLink = new StaticAssetRouteLink(this.options.publicPrefix, this.options.vendorPrefix);
+    const staticAssetLink = new StaticAssetRouteLink(
+      this.options.publicPrefix,
+      this.options.vendorPrefix,
+    );
     const htmlInjectionLink = new HTMLHtmlInjectionLink(payloadHtml, htmlFallbackOrResponse);
 
     staticAssetLink.setNext(htmlInjectionLink);

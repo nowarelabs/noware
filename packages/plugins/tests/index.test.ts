@@ -1,5 +1,5 @@
 import { describe, expect, test, vi, beforeEach } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { PluginContext } from "@nowarelabs/shared";
 import { Plugin, BasePlugin } from "../src/index.ts";
 
 describe("Plugin", () => {
@@ -22,7 +22,7 @@ describe("BasePlugin", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as PluginContext;
 
     const plugin = new BasePlugin(mockRequest, mockEnv, mockCtx);
     expect(plugin).toBeDefined();

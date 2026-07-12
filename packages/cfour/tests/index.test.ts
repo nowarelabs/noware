@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { CfourContext } from "@nowarelabs/shared";
 import {
   BaseCfour,
   flattenWorkspace,
@@ -49,13 +49,11 @@ const mockWorkspace: C4Workspace = {
                   kind: "Class",
                   componentId: "comp1",
                   technology: "TypeScript",
-                  members: [
-                    { name: "render", kind: "method", visibility: "public" }
-                  ]
-                }
-              ]
-            }
-          ]
+                  members: [{ name: "render", kind: "method", visibility: "public" }],
+                },
+              ],
+            },
+          ],
         },
         {
           id: "con2",
@@ -63,29 +61,48 @@ const mockWorkspace: C4Workspace = {
           kind: "Container",
           systemId: "sys1",
           technology: "Node.js",
-        }
-      ]
+        },
+      ],
     },
     {
       id: "sys2",
       name: "External System",
       kind: "SoftwareSystem",
       external: true,
-    }
+    },
   ],
   relationships: [
     { id: "r1", kind: "Relationship", sourceId: "p1", destinationId: "sys1", description: "Uses" },
-    { id: "r2", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", description: "Fetches data from" },
-    { id: "r3", kind: "Relationship", sourceId: "con1", destinationId: "con2", description: "Calls API", interactionStyle: "sync" },
-    { id: "r4", kind: "Relationship", sourceId: "code1", destinationId: "comp1", description: "Part of" }
-  ]
+    {
+      id: "r2",
+      kind: "Relationship",
+      sourceId: "sys1",
+      destinationId: "sys2",
+      description: "Fetches data from",
+    },
+    {
+      id: "r3",
+      kind: "Relationship",
+      sourceId: "con1",
+      destinationId: "con2",
+      description: "Calls API",
+      interactionStyle: "sync",
+    },
+    {
+      id: "r4",
+      kind: "Relationship",
+      sourceId: "code1",
+      destinationId: "comp1",
+      description: "Part of",
+    },
+  ],
 };
 
 describe("C4 Model - cfour package", () => {
   beforeEach(() => {
     BaseCfour.resetWorkspace(); // Resets "default"
     // Clear other workspaces if any
-    BaseCfour.getWorkspaceNames().forEach(name => {
+    BaseCfour.getWorkspaceNames().forEach((name) => {
       if (name !== "default") BaseCfour.resetWorkspace(name);
     });
   });
@@ -99,7 +116,7 @@ describe("C4 Model - cfour package", () => {
       const mockCtx = {
         waitUntil: () => {},
         passThroughOnException: () => {},
-      } as ContextLike;
+      } as CfourContext;
 
       const query = new TestQuery(mockRequest, mockEnv, mockCtx);
 
@@ -131,7 +148,9 @@ describe("C4 Model - cfour package", () => {
 
       const ws = BaseCfour.getWorkspace();
       expect(ws.name).toBe("Framework Architecture");
-      expect(ws.softwareSystems[0].containers![0].components![0].codeElements![0].name).toBe("User");
+      expect(ws.softwareSystems[0].containers![0].components![0].codeElements![0].name).toBe(
+        "User",
+      );
       expect(ws.relationships.length).toBe(1);
     });
 
@@ -152,7 +171,12 @@ describe("C4 Model - cfour package", () => {
       // @ts-ignore - static blocks are supported in modern TS/JS
       class AdaptersPackage extends BaseCfour {
         static {
-          this.addBuildingBlock("pkg-adapters", "Adapters", "Infrastructure adapters", "TypeScript");
+          this.addBuildingBlock(
+            "pkg-adapters",
+            "Adapters",
+            "Infrastructure adapters",
+            "TypeScript",
+          );
         }
       }
 
@@ -165,11 +189,11 @@ describe("C4 Model - cfour package", () => {
       }
 
       const ws = BaseCfour.getWorkspace();
-      const framework = ws.softwareSystems.find(s => s.id === "framework");
+      const framework = ws.softwareSystems.find((s) => s.id === "framework");
 
       expect(framework).toBeDefined();
       expect(framework?.containers?.length).toBe(2);
-      const containerIds = framework?.containers?.map(c => c.id);
+      const containerIds = framework?.containers?.map((c) => c.id);
       expect(containerIds).toContain("pkg-adapters");
       expect(containerIds).toContain("pkg-domains");
     });
@@ -200,7 +224,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addBuildingBlock("pkg-dup", "Duplicate", "Desc", "Tech");
 
       const ws = BaseCfour.getWorkspace();
-      const framework = ws.softwareSystems.find(s => s.id === "framework");
+      const framework = ws.softwareSystems.find((s) => s.id === "framework");
       expect(framework?.containers?.length).toBe(1);
     });
 
@@ -219,11 +243,11 @@ describe("C4 Model - cfour package", () => {
       const ws = BaseCfour.getWorkspace();
       const { nodes } = c4ToReactFlow(ws);
 
-      const sysNode = nodes.find(n => n.id === "sys1");
+      const sysNode = nodes.find((n) => n.id === "sys1");
       expect(sysNode?.data.childCount).toBe(1);
       expect(sysNode?.data.canDrill).toBe(true);
 
-      const personNode = nodes.find(n => n.data.kind === "Person"); // Person has no children
+      const personNode = nodes.find((n) => n.data.kind === "Person"); // Person has no children
       if (personNode) {
         expect(personNode.data.canDrill).toBe(false);
       }
@@ -236,7 +260,7 @@ describe("C4 Model - cfour package", () => {
 
       const view = BaseCfour.getContainerView("sys1");
       expect(view.kind).toBe("Container");
-      expect(view.elements.map(e => e.elementId)).toContain("con1");
+      expect(view.elements.map((e) => e.elementId)).toContain("con1");
     });
 
     test("should support multiple independent workspaces", () => {
@@ -254,11 +278,11 @@ describe("C4 Model - cfour package", () => {
       expect(wsA.name).toBe("Architecture A");
       expect(wsB.name).toBe("Architecture B");
 
-      expect(wsA.softwareSystems.map(s => s.id)).toContain("sysA");
-      expect(wsA.softwareSystems.map(s => s.id)).not.toContain("sysB");
+      expect(wsA.softwareSystems.map((s) => s.id)).toContain("sysA");
+      expect(wsA.softwareSystems.map((s) => s.id)).not.toContain("sysB");
 
-      expect(wsB.softwareSystems.map(s => s.id)).toContain("sysB");
-      expect(wsB.softwareSystems.map(s => s.id)).not.toContain("sysA");
+      expect(wsB.softwareSystems.map((s) => s.id)).toContain("sysB");
+      expect(wsB.softwareSystems.map((s) => s.id)).not.toContain("sysA");
     });
 
     test("register should target specific workspace", () => {
@@ -270,7 +294,7 @@ describe("C4 Model - cfour package", () => {
           this.register({
             parentId: "pkg-web",
             workspaceName: "SpecificWS",
-            description: "Custom service in specific workspace"
+            description: "Custom service in specific workspace",
           });
         }
       }
@@ -278,7 +302,7 @@ describe("C4 Model - cfour package", () => {
       const ws = BaseCfour.getWorkspace("SpecificWS");
       const component = ws.softwareSystems[0].containers![0].components![0];
       expect(component.id).toBe("CustomService");
-      
+
       const defaultWs = BaseCfour.getWorkspace("default");
       expect(defaultWs.softwareSystems.length).toBe(0);
     });
@@ -286,11 +310,11 @@ describe("C4 Model - cfour package", () => {
     test("should support interactive editing (update and remove)", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Original" });
-      
+
       // Update
       BaseCfour.updateElement("sys1", { name: "Updated" });
       expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("Updated");
-      
+
       // Remove
       BaseCfour.removeElement("sys1");
       expect(BaseCfour.getWorkspace().softwareSystems.length).toBe(0);
@@ -299,14 +323,14 @@ describe("C4 Model - cfour package", () => {
     test("should support view persistence and position updates", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      
+
       const view = BaseCfour.getSystemContextView("sys1");
       BaseCfour.saveView(view);
-      
+
       BaseCfour.updateViewPosition(view.id, "sys1", 100, 200);
-      
+
       const savedView = BaseCfour.getWorkspace().views![0];
-      const element = savedView.elements.find(e => e.elementId === "sys1");
+      const element = savedView.elements.find((e) => e.elementId === "sys1");
       expect(element?.x).toBe(100);
       expect(element?.y).toBe(200);
     });
@@ -320,7 +344,7 @@ describe("C4 Model - cfour package", () => {
 
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       expect(notified).toBe(true);
-      
+
       unsubscribe();
       notified = false;
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
@@ -330,10 +354,10 @@ describe("C4 Model - cfour package", () => {
     test("should support export and import for persistence", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Persistent System" });
-      
+
       const json = BaseCfour.export();
       expect(json).toContain("Persistent System");
-      
+
       BaseCfour.resetWorkspace(); // Clear
       BaseCfour.import(json);
       expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("Persistent System");
@@ -364,61 +388,67 @@ describe("C4 Model - cfour package", () => {
 
     test("should support team-based perspectives", () => {
       BaseCfour.resetWorkspace();
-      
+
       // Team Alpha owns these
       BaseCfour.addSoftwareSystem({ id: "svc-1", name: "Service 1", owner: "Team Alpha" });
       BaseCfour.addSoftwareSystem({ id: "svc-2", name: "Service 2", owner: "Team Alpha" });
-      
+
       // Team Beta owns this
       BaseCfour.addSoftwareSystem({ id: "svc-3", name: "Service 3", owner: "Team Beta" });
-      
+
       // Interaction
-      BaseCfour.addRelationship({ id: "r1", kind: "Relationship", sourceId: "svc-1", destinationId: "svc-3", description: "Calls" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "svc-1",
+        destinationId: "svc-3",
+        description: "Calls",
+      });
 
       const view = BaseCfour.getTeamView("Team Alpha");
-      
-      const elementIds = view.elements.map(e => e.elementId);
+
+      const elementIds = view.elements.map((e) => e.elementId);
       expect(elementIds).toContain("svc-1"); // Owned
       expect(elementIds).toContain("svc-2"); // Owned
       expect(elementIds).toContain("svc-3"); // Neighbor (dependency)
-      
-      expect(view.relationships.map(r => r.relationshipId)).toContain("r1");
+
+      expect(view.relationships.map((r) => r.relationshipId)).toContain("r1");
     });
 
     test("should support ephemeral flow views and catalogs for CISO/Stakeholders", () => {
       BaseCfour.resetWorkspace();
-      
+
       BaseCfour.addSoftwareSystem({ id: "internet", name: "Internet", external: true });
       BaseCfour.addBuildingBlock("gateway", "API Gateway", "Entry point", "Nginx");
       BaseCfour.addBuildingBlock("db", "Database", "Sensitive data", "PostgreSQL");
 
       // Network flows
-      BaseCfour.addRelationship({ 
-        id: "f1", 
-        kind: "Relationship", 
-        sourceId: "internet", 
-        destinationId: "gateway", 
-        description: "Inbound traffic", 
+      BaseCfour.addRelationship({
+        id: "f1",
+        kind: "Relationship",
+        sourceId: "internet",
+        destinationId: "gateway",
+        description: "Inbound traffic",
         technology: "HTTPS/443",
-        tags: ["internet-flow", "security-critical"]
+        tags: ["internet-flow", "security-critical"],
       });
 
-      BaseCfour.addRelationship({ 
-        id: "f2", 
-        kind: "Relationship", 
-        sourceId: "gateway", 
-        destinationId: "db", 
-        description: "Database access", 
+      BaseCfour.addRelationship({
+        id: "f2",
+        kind: "Relationship",
+        sourceId: "gateway",
+        destinationId: "db",
+        description: "Database access",
         technology: "SQL/5432",
-        tags: ["internal-flow"]
+        tags: ["internal-flow"],
       });
 
       // 1. Get the View for the CISO presentation
       const flowView = BaseCfour.getFlowView("internet-flow", "CISO: Internet Facing Flows");
       expect(flowView.title).toBe("CISO: Internet Facing Flows");
-      expect(flowView.elements.map(e => e.elementId)).toContain("internet");
-      expect(flowView.elements.map(e => e.elementId)).toContain("gateway");
-      expect(flowView.elements.map(e => e.elementId)).not.toContain("db"); // Internal, not tagged
+      expect(flowView.elements.map((e) => e.elementId)).toContain("internet");
+      expect(flowView.elements.map((e) => e.elementId)).toContain("gateway");
+      expect(flowView.elements.map((e) => e.elementId)).not.toContain("db"); // Internal, not tagged
 
       // 2. Get the Tabular Catalog for the audit report
       const catalog = BaseCfour.getFlowCatalog("internet-flow");
@@ -429,18 +459,18 @@ describe("C4 Model - cfour package", () => {
 
     test("should support custom icons for elements", () => {
       BaseCfour.resetWorkspace();
-      
-      BaseCfour.addSoftwareSystem({ 
-        id: "db", 
-        name: "Database", 
-        icon: "lucide:database" 
+
+      BaseCfour.addSoftwareSystem({
+        id: "db",
+        name: "Database",
+        icon: "lucide:database",
       });
 
       const ws = BaseCfour.getWorkspace();
       const { nodes } = c4ToReactFlow(ws);
-      
+
       expect(nodes[0].data.icon).toBe("lucide:database");
-      
+
       // Verify legend also includes the icon
       const view = BaseCfour.getSystemContextView("db");
       const legend = BaseCfour.getLegend(view);
@@ -449,29 +479,29 @@ describe("C4 Model - cfour package", () => {
 
     test("should support automatic relationship roll-up (the 'Better General Case')", () => {
       BaseCfour.resetWorkspace();
-      
+
       // System A with Container A
       BaseCfour.addSoftwareSystem({ id: "sysA", name: "System A" });
       BaseCfour.addContainer({ id: "conA", name: "Container A", systemId: "sysA" });
-      
+
       // System B with Container B
       BaseCfour.addSoftwareSystem({ id: "sysB", name: "System B" });
       BaseCfour.addContainer({ id: "conB", name: "Container B", systemId: "sysB" });
 
       // Relationship at the GRANULAR level (Container to Container)
-      BaseCfour.addRelationship({ 
-        id: "rel-deep", 
-        kind: "Relationship", 
-        sourceId: "conA", 
-        destinationId: "conB", 
-        description: "Sends data" 
+      BaseCfour.addRelationship({
+        id: "rel-deep",
+        kind: "Relationship",
+        sourceId: "conA",
+        destinationId: "conB",
+        description: "Sends data",
       });
 
       // 1. Verify Level 1 View (System Context)
       // It should automatically show an arrow from SysA to SysB
       const contextView = BaseCfour.getSystemContextView("sysA");
       const { edges: contextEdges } = c4ToReactFlow(BaseCfour.getWorkspace(), contextView);
-      
+
       expect(contextEdges.length).toBe(1);
       expect(contextEdges[0].source).toBe("sysA");
       expect(contextEdges[0].target).toBe("sysB");
@@ -480,7 +510,7 @@ describe("C4 Model - cfour package", () => {
       // It should show an arrow from ConA to SysB (since SysB is a neighbor)
       const containerView = BaseCfour.getContainerView("sysA");
       const { edges: containerEdges } = c4ToReactFlow(BaseCfour.getWorkspace(), containerView);
-      
+
       expect(containerEdges.length).toBe(1);
       expect(containerEdges[0].source).toBe("conA");
       expect(containerEdges[0].target).toBe("sysB");
@@ -489,28 +519,39 @@ describe("C4 Model - cfour package", () => {
     test("should validate architectural integrity", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Empty System" });
-      BaseCfour.addRelationship({ id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "missing" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "missing",
+      });
 
       const errors = BaseCfour.validate();
-      
+
       // Should find the dangling relationship
-      const relError = errors.find(e => e.message.includes("Dangling relationship"));
+      const relError = errors.find((e) => e.message.includes("Dangling relationship"));
       expect(relError).toBeDefined();
       expect(relError?.severity).toBe("error");
 
       // Should find the empty system warning
-      const sysWarning = errors.find(e => e.message.includes("no containers"));
+      const sysWarning = errors.find((e) => e.message.includes("no containers"));
       expect(sysWarning).toBeDefined();
       expect(sysWarning?.severity).toBe("warning");
     });
 
     test("should correctly diff two workspaces", () => {
       BaseCfour.resetWorkspace("Before");
-      BaseCfour.addSoftwareSystem({ id: "sys1", name: "Old Name", description: "Old Desc" }, "Before");
+      BaseCfour.addSoftwareSystem(
+        { id: "sys1", name: "Old Name", description: "Old Desc" },
+        "Before",
+      );
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "To Be Removed" }, "Before");
 
       BaseCfour.resetWorkspace("After");
-      BaseCfour.addSoftwareSystem({ id: "sys1", name: "New Name", description: "Old Desc" }, "After");
+      BaseCfour.addSoftwareSystem(
+        { id: "sys1", name: "New Name", description: "Old Desc" },
+        "After",
+      );
       BaseCfour.addSoftwareSystem({ id: "sys3", name: "Newly Added" }, "After");
 
       const diff = BaseCfour.diff("Before", "After");
@@ -535,66 +576,82 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       // Use addContainer directly to ensure 'React' tech is set on the container
       BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1", technology: "React" });
-      BaseCfour.addRelationship({ id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "con1", description: "Uses", technology: "HTTPS" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+        description: "Uses",
+        technology: "HTTPS",
+      });
 
       const view = BaseCfour.getContainerView("sys1");
       const legend = BaseCfour.getLegend(view);
 
-      expect(legend.elements.some(e => e.kind === "Container" && e.technology === "React")).toBe(true);
-      expect(legend.relationships.some(r => r.description === "Uses" && r.technology === "HTTPS")).toBe(true);
+      expect(legend.elements.some((e) => e.kind === "Container" && e.technology === "React")).toBe(
+        true,
+      );
+      expect(
+        legend.relationships.some((r) => r.description === "Uses" && r.technology === "HTTPS"),
+      ).toBe(true);
     });
 
     test("should lint a workspace against the architecture checklist", () => {
       BaseCfour.resetWorkspace();
       // Add a node with missing description and technology
-      BaseCfour.addBuildingBlock("api", "API"); 
+      BaseCfour.addBuildingBlock("api", "API");
       // Add a relationship with missing description and technology
-      BaseCfour.addRelationship({ id: "r1", kind: "Relationship", sourceId: "api", destinationId: "api" } as any);
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "api",
+        destinationId: "api",
+      } as any);
 
       const violations = BaseCfour.lint();
-      
-      const elementViolations = violations.filter(v => v.category === "Elements");
-      expect(elementViolations.some(v => v.check.includes("what every element does"))).toBe(true);
-      expect(elementViolations.some(v => v.check.includes("technology choices"))).toBe(true);
 
-      const relViolations = violations.filter(v => v.category === "Relationships");
-      expect(relViolations.some(v => v.check.includes("arrow have a label"))).toBe(true);
-      expect(relViolations.some(v => v.check.includes("technology choices"))).toBe(true);
+      const elementViolations = violations.filter((v) => v.category === "Elements");
+      expect(elementViolations.some((v) => v.check.includes("what every element does"))).toBe(true);
+      expect(elementViolations.some((v) => v.check.includes("technology choices"))).toBe(true);
+
+      const relViolations = violations.filter((v) => v.category === "Relationships");
+      expect(relViolations.some((v) => v.check.includes("arrow have a label"))).toBe(true);
+      expect(relViolations.some((v) => v.check.includes("technology choices"))).toBe(true);
     });
 
     test("should support modeling Queues and Topics as specialized Containers", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Messaging System" });
-      
+
       BaseCfour.addQueue({
         id: "q1",
         name: "Order Processing Queue",
         systemId: "sys1",
-        technology: "RabbitMQ"
+        technology: "RabbitMQ",
       });
 
       BaseCfour.addTopic({
         id: "t1",
         name: "Customer Events Topic",
         systemId: "sys1",
-        technology: "Kafka"
+        technology: "Kafka",
       });
 
       const ws = BaseCfour.getWorkspace();
       const containers = ws.softwareSystems[0].containers!;
-      
-      const queue = containers.find(c => c.id === "q1");
+
+      const queue = containers.find((c) => c.id === "q1");
       expect(queue?.kind).toBe("Queue");
       expect(queue?.technology).toBe("RabbitMQ");
 
-      const topic = containers.find(c => c.id === "t1");
+      const topic = containers.find((c) => c.id === "t1");
       expect(topic?.kind).toBe("Topic");
       expect(topic?.technology).toBe("Kafka");
 
       // Verify adapter picks them up
       const { nodes } = c4ToReactFlow(ws);
-      expect(nodes.find(n => n.id === "q1")?.type).toBe("Queue");
-      expect(nodes.find(n => n.id === "t1")?.type).toBe("Topic");
+      expect(nodes.find((n) => n.id === "q1")?.type).toBe("Queue");
+      expect(nodes.find((n) => n.id === "t1")?.type).toBe("Topic");
     });
   });
 
@@ -612,7 +669,7 @@ describe("C4 Model - cfour package", () => {
       expect(flat.nodes.length).toBe(8);
       expect(flat.relationships.length).toBe(4);
 
-      const nodeIds = flat.nodes.map(n => n.id);
+      const nodeIds = flat.nodes.map((n) => n.id);
       expect(nodeIds).toContain("p1");
       expect(nodeIds).toContain("sys1");
       expect(nodeIds).toContain("con1");
@@ -629,7 +686,7 @@ describe("C4 Model - cfour package", () => {
       expect(edges.length).toBe(4);
 
       // Check node data mapping
-      const webAppNode = nodes.find(n => n.id === "con1");
+      const webAppNode = nodes.find((n) => n.id === "con1");
       expect(webAppNode?.type).toBe("Container");
       expect(webAppNode?.data.name).toBe("Web App");
       expect(webAppNode?.data.technology).toBe("React");
@@ -639,28 +696,23 @@ describe("C4 Model - cfour package", () => {
       const view = {
         id: "v1",
         kind: "SystemContext" as const,
-        elements: [
-          { elementId: "p1" },
-          { elementId: "sys1" }
-        ],
-        relationships: [
-          { relationshipId: "r1" }
-        ]
+        elements: [{ elementId: "p1" }, { elementId: "sys1" }],
+        relationships: [{ relationshipId: "r1" }],
       };
 
       const { nodes, edges } = c4ToReactFlow(mockWorkspace, view);
 
       expect(nodes.length).toBe(2);
       expect(edges.length).toBe(1);
-      expect(nodes.map(n => n.id)).toEqual(expect.arrayContaining(["p1", "sys1"]));
+      expect(nodes.map((n) => n.id)).toEqual(expect.arrayContaining(["p1", "sys1"]));
       expect(edges[0].id).toBe("r1");
     });
 
     test("should handle useParentNodes for nesting", () => {
       const { nodes } = c4ToReactFlow(mockWorkspace, undefined, { useParentNodes: true });
 
-      const webAppNode = nodes.find(n => n.id === "con1");
-      const dashboardNode = nodes.find(n => n.id === "comp1");
+      const webAppNode = nodes.find((n) => n.id === "con1");
+      const dashboardNode = nodes.find((n) => n.id === "comp1");
 
       expect(webAppNode?.parentId).toBe("sys1");
       expect(dashboardNode?.parentId).toBe("con1");
@@ -670,21 +722,21 @@ describe("C4 Model - cfour package", () => {
     test("should apply transformers", () => {
       const { nodes, edges } = c4ToReactFlow(mockWorkspace, undefined, {
         nodeTransformer: (node) => ({ ...node, data: { ...node.data, transformed: true } }),
-        edgeTransformer: (edge) => ({ ...edge, animated: true })
+        edgeTransformer: (edge) => ({ ...edge, animated: true }),
       });
 
       expect((nodes[0].data as any).transformed).toBe(true);
-      expect(edges.every(e => e.animated)).toBe(true);
+      expect(edges.every((e) => e.animated)).toBe(true);
     });
 
     test("should use custom dimensions", () => {
       const { nodes } = c4ToReactFlow(mockWorkspace, undefined, {
         nodeDimensions: {
-          Person: { width: 500, height: 500 }
-        }
+          Person: { width: 500, height: 500 },
+        },
       });
 
-      const personNode = nodes.find(n => n.id === "p1");
+      const personNode = nodes.find((n) => n.id === "p1");
       expect(personNode?.width).toBe(500);
       expect(personNode?.height).toBe(500);
     });
@@ -697,11 +749,11 @@ describe("C4 Model - cfour package", () => {
       expect(view.kind).toBe("SystemContext");
       expect(view.scopeId).toBe("sys1");
 
-      const elementIds = view.elements.map(e => e.elementId);
+      const elementIds = view.elements.map((e) => e.elementId);
       expect(elementIds).toContain("sys1"); // target
       expect(elementIds).toContain("sys2"); // neighbor via r2
-      expect(elementIds).toContain("p1");   // person
-      expect(elementIds).toContain("p2");   // all persons
+      expect(elementIds).toContain("p1"); // person
+      expect(elementIds).toContain("p2"); // all persons
     });
 
     test("buildContainerView should include containers of a system", () => {
@@ -710,7 +762,7 @@ describe("C4 Model - cfour package", () => {
       expect(view.kind).toBe("Container");
       expect(view.scopeId).toBe("sys1");
 
-      const elementIds = view.elements.map(e => e.elementId);
+      const elementIds = view.elements.map((e) => e.elementId);
       expect(elementIds).toContain("con1");
       expect(elementIds).toContain("con2");
       expect(elementIds).not.toContain("p1");
@@ -722,7 +774,7 @@ describe("C4 Model - cfour package", () => {
       expect(view.kind).toBe("Component");
       expect(view.scopeId).toBe("con1");
 
-      const elementIds = view.elements.map(e => e.elementId);
+      const elementIds = view.elements.map((e) => e.elementId);
       expect(elementIds).toContain("comp1");
     });
 
@@ -732,7 +784,7 @@ describe("C4 Model - cfour package", () => {
       expect(view.kind).toBe("Code");
       expect(view.scopeId).toBe("comp1");
 
-      const elementIds = view.elements.map(e => e.elementId);
+      const elementIds = view.elements.map((e) => e.elementId);
       expect(elementIds).toContain("code1");
     });
   });

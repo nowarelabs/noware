@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { MigrationContext } from "@nowarelabs/shared";
 import { Migration, BaseMigration } from "../src/index.ts";
 
 describe("Migration", () => {
@@ -43,7 +43,7 @@ describe("BaseMigration", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as MigrationContext;
 
     const migration = new BaseMigration(mockRequest, mockEnv, mockCtx);
     expect(migration).toBeDefined();

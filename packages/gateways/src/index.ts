@@ -6,10 +6,10 @@
  * Connection: Implements Port interfaces from noware-ports
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, GatewayContext, RequestLike } from "@nowarelabs/shared";
 
 export class BaseGateway<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends GatewayContext = GatewayContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -19,6 +19,6 @@ export class BaseGateway<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

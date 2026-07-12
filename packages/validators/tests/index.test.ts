@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { ValidatorContext } from "@nowarelabs/shared";
 import { Validator, BaseValidator } from "../src/index.ts";
 
 describe("Validator", () => {
@@ -26,7 +26,7 @@ describe("BaseValidator", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as ValidatorContext;
 
     const validator = new TestValidator(mockRequest, mockEnv, mockCtx);
 
@@ -39,7 +39,7 @@ describe("BaseValidator", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as ValidatorContext;
 
     const validator = new TestValidator(mockRequest, mockEnv, mockCtx);
     const result = validator.validate({ name: "test" });

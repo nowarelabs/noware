@@ -1,23 +1,63 @@
-/**
- * noware-contexts - BaseContext
- *
- * Standard Gauge: Bounded Context Container (Tier 2)
- *
- * Connection Flow:
- * BaseContext → BaseModule (multiple allowed)
- *
- * Connection: This layer → BaseModule[] (multiple allowed)
- *
- * Static Plugin Points:
- * - modules: Map<string, BaseModule>
- */
+import type { ContextLike } from "./shared.ts";
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+export type { Body, RequestLike, EnvLike, ContextLike } from "./shared.ts";
+export { createContext, createContextWith } from "./shared.ts";
+
+export type { RouterContext } from "./router.ts";
+export { createRouterContext, enhanceRouterContext } from "./router.ts";
+
+export type { ControllerContext } from "./controllers.ts";
+export { createControllerContext, enhanceControllerContext } from "./controllers.ts";
+
+export type { ServiceContext } from "./services.ts";
+export { createServiceContext, enhanceServiceContext } from "./services.ts";
+
+export type { ModelContext } from "./models.ts";
+export { createModelContext, enhanceModelContext } from "./models.ts";
+
+export type { ViewContext } from "./views.ts";
+export { createViewContext, enhanceViewContext } from "./views.ts";
+
+export type { EntrypointContext } from "./entrypoints.ts";
+
+export type { FeatureContext } from "./features.ts";
+
+export type { AdapterRequest, AdapterResponse, AdapterContext } from "./adapters.ts";
+
+export type { ModuleContext } from "./modules.ts";
+
+export type {
+  RpcContext,
+  IntegrationEventContext,
+  UseCaseContext,
+  PortContext,
+  AggregateContext,
+  EventContext,
+  QueryContext,
+  GatewayContext,
+  PersistenceContext,
+  SqlContext,
+  MigrationContext,
+  LoggerContext,
+  JobContext,
+  AssetContext,
+  DurableObjectContext,
+  CfourContext,
+  DtoContext,
+  NormalizerContext,
+  ValidatorContext,
+  FormatterContext,
+  SerializerContext,
+  MaintenanceContext,
+  PluginContext,
+  ScriptContext,
+  DomainContext,
+} from "./packages.ts";
 
 export abstract class BaseContext<
-  Ctx extends ContextLike = ContextLike,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
+  Ctx = ContextLike,
+  Env = Record<string, unknown>,
+  Req = any,
   Module = unknown,
 > {
   static beforeHooks: unknown[] = [];
@@ -26,9 +66,10 @@ export abstract class BaseContext<
   protected abstract module: Module;
 
   constructor(
-    protected request: RequestLike,
-    protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected request: Req,
+    protected env: Env,
+    protected ctx: Ctx,
   ) {}
+
   protected abstract getModule(): Module;
 }

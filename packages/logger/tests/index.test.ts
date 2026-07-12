@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike, EnvLike, RequestLike } from "@nowarelabs/shared";
+import type { LoggerContext, EnvLike, RequestLike } from "@nowarelabs/shared";
 import { Logger, LogLevel, BaseLogger } from "../src/index.ts";
 
 describe("Logger", () => {
@@ -28,7 +28,7 @@ describe("BaseLogger", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = {} as RequestLike;
     const mockEnv = {} as EnvLike;
-    const mockCtx = { waitUntil: () => {} } as unknown as ContextLike;
+    const mockCtx = { waitUntil: () => {} } as unknown as LoggerContext;
 
     class TestLogger extends BaseLogger {
       constructor() {
@@ -50,7 +50,7 @@ describe("Logger extends BaseLogger", () => {
   test("constructor with request, env, ctx", () => {
     const mockRequest = {} as RequestLike;
     const mockEnv = { ENVIRONMENT: "development" } as EnvLike;
-    const mockCtx = { waitUntil: () => {} } as unknown as ContextLike;
+    const mockCtx = { waitUntil: () => {} } as unknown as LoggerContext;
 
     const logger = new Logger(mockRequest, mockEnv, mockCtx, {
       service: "test-service",
@@ -75,7 +75,7 @@ describe("Logger extends BaseLogger", () => {
   test("getMetadata and setMetadata work", () => {
     const mockRequest = {} as RequestLike;
     const mockEnv = {} as EnvLike;
-    const mockCtx = { waitUntil: () => {} } as unknown as ContextLike;
+    const mockCtx = { waitUntil: () => {} } as unknown as LoggerContext;
 
     class TestLogger extends Logger {
       public testSetMetadata() {
@@ -94,7 +94,7 @@ describe("Logger extends BaseLogger", () => {
   test("getEnv works", () => {
     const mockRequest = {} as RequestLike;
     const mockEnv = { DB_HOST: "localhost" } as EnvLike;
-    const mockCtx = { waitUntil: () => {} } as unknown as ContextLike;
+    const mockCtx = { waitUntil: () => {} } as unknown as LoggerContext;
 
     class TestLogger extends Logger {
       public testGetEnv(key: string, defaultValue?: string) {

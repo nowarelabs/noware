@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { NormalizerContext } from "@nowarelabs/shared";
 import { Normalizer, BaseNormalizer } from "../src/index.ts";
 
 describe("Normalizer", () => {
@@ -25,7 +25,7 @@ describe("BaseNormalizer", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as NormalizerContext;
 
     const normalizer = new TestNormalizer(mockRequest, mockEnv, mockCtx);
 
@@ -38,7 +38,7 @@ describe("BaseNormalizer", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as NormalizerContext;
 
     const normalizer = new TestNormalizer(mockRequest, mockEnv, mockCtx);
     const result = normalizer.normalize({ name: "test" });

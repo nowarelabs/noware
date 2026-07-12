@@ -4,7 +4,7 @@
 
 import type {
   EnvLike,
-  ContextLike,
+  PortContext,
   RequestLike,
   UseCaseResult,
   HookOptions,
@@ -18,7 +18,7 @@ import type {
 export abstract class BasePort<
   TInput = unknown,
   TOutput = unknown,
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends PortContext = PortContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > implements Port<TInput, TOutput> {

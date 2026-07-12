@@ -6,7 +6,7 @@
  * Connection: CLI tools for project setup
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, ScriptContext, RequestLike } from "@nowarelabs/shared";
 
 export const GENERATORS = {
   controller: (name: string) => `// Controller template`,
@@ -18,12 +18,12 @@ export class ScriptRunner {
   constructor(
     protected request?: RequestLike,
     protected env?: EnvLike,
-    protected ctx?: ContextLike,
+    protected ctx?: ScriptContext,
   ) {}
 }
 
 export class BaseScript<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends ScriptContext = ScriptContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
   Model = unknown,
@@ -34,6 +34,6 @@ export class BaseScript<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

@@ -28,19 +28,19 @@ pnpm add @nowarelabs/sql
 ## Quick Start
 
 ```typescript
-import { sql } from '@nowarelabs/sql';
+import { sql } from "@nowarelabs/sql";
 
 // Simple SELECT query
 const query = sql
-  .select('id', 'name', 'email')
-  .from('users')
-  .where(sql.composite(sql.id('status'), sql.op(' = '), sql.val('active')));
+  .select("id", "name", "email")
+  .from("users")
+  .where(sql.composite(sql.id("status"), sql.op(" = "), sql.val("active")));
 
 console.log(query.toSql());
 // Output: SELECT"id", "name", "email"FROM"users"WHERE"status" = 'active'
 
 // With explicit dialect strategy
-import { PostgresStrategy } from '@nowarelabs/sql';
+import { PostgresStrategy } from "@nowarelabs/sql";
 const pgQuery = query.toSql(new PostgresStrategy());
 // Output: SELECT "id", "name", "email" FROM "users" WHERE "status" = 'active'
 ```
@@ -62,6 +62,7 @@ You can also create custom dialect strategies by extending `BaseDialectStrategy`
 All SQL components are represented as `SqlPart` instances:
 
 #### Primitives
+
 - `sql.id(name)` - Creates an Identifier (properly quoted for the dialect)
 - `sql.val(value)` - Creates a Literal (properly escaped for the dialect)
 - `sql.key(text)` - Creates a Keyword (uppercased)
@@ -71,27 +72,33 @@ All SQL components are represented as `SqlPart` instances:
 - `sql.indent(level)` - Creates an Indent part (default 2 spaces)
 
 #### Helpers
+
 - `sql.composite(...parts)` - Creates a Composite part (concatenates parts)
 - `sql.join(parts, separator)` - Joins parts with a separator
 - `sql.default(value)` - Creates a DEFAULT clause
 
 #### Specialized
+
 - `sql.primaryKey()` - Creates a PRIMARY KEY keyword
 - `sql.currentTimestamp()` - Creates a CURRENT_TIMESTAMP keyword
 - `sql.dataType(typeName)` - Creates a DataType (uppercased)
 
 #### JSON Helpers (SQLite/PostgreSQL/MySQL)
+
 - `sql.json.extract(jsonColumn, path)` - JSON_EXTRACT function
 - `sql.json.set(jsonColumn, path, value)` - JSON_SET function
 - `sql.json.valid(jsonColumn)` - JSON_VALID function
 
 #### Generated Columns
+
 - `sql.generated(expression, stored = false)` - GENERATED ALWAYS AS clause
 
 #### Common Table Expressions (CTE)
+
 - `sql.with(recursive = false).as(name, query)` - WITH [RECURSIVE] name AS (query)
 
 #### Conflict Resolution
+
 - `sql.onConflict(target).doNothing()` - ON CONFLICT ... DO NOTHING
 - `sql.onConflict(target).doUpdate(set)` - ON CONFLICT ... DO UPDATE SET ...
 
@@ -100,23 +107,22 @@ All SQL components are represented as `SqlPart` instances:
 Fluent interface for building SQL queries:
 
 ```typescript
-import { QueryBuilder } from '@nowarelabs/sql';
+import { QueryBuilder } from "@nowarelabs/sql";
 
 // Create a builder instance
 const builder = new QueryBuilder(request, env, ctx);
 
 // SELECT
-builder.select('id', 'name')
-       .from('users')
-       .where(sql.id('age').op('>').sql.val(18));
+builder.select("id", "name").from("users").where(sql.id("age").op(">").sql.val(18));
 
 // INSERT
-builder.insertInto('users', ['name', 'email'])
-       .values('Alice', 'alice@example.com')
-       .raw(sql.onConflict('email').doNothing());
+builder
+  .insertInto("users", ["name", "email"])
+  .values("Alice", "alice@example.com")
+  .raw(sql.onConflict("email").doNothing());
 
 // Raw SQL
-builder.rawSql('SELECT * FROM logs WHERE created_at > ?');
+builder.rawSql("SELECT * FROM logs WHERE created_at > ?");
 ```
 
 ### BaseSql
@@ -124,13 +130,13 @@ builder.rawSql('SELECT * FROM logs WHERE created_at > ?');
 Extensible base class for SQL services with lifecycle hooks:
 
 ```typescript
-import { BaseSql } from '@nowarelabs/sql';
+import { BaseSql } from "@nowarelabs/sql";
 
 class UserService extends BaseSql {
   async findActive() {
-    await this.runBeforeHooks('findActive');
-    const query = this.select('*').from('users').where(sql.id('active'), '=', true);
-    const result = await this.runAfterHooks('findActive', query);
+    await this.runBeforeHooks("findActive");
+    const query = this.select("*").from("users").where(sql.id("active"), "=", true);
+    const result = await this.runAfterHooks("findActive", query);
     return result;
   }
 }

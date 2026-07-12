@@ -1,18 +1,12 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": [
-      "esnext"
-    ],
+    "lib": ["esnext"],
     "moduleDetection": "force",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
-    "types": [
-      "node",
-      "bun",
-      "@cloudflare/workers-types"
-    ],
+    "types": ["node", "bun", "@cloudflare/workers-types"],
     "strict": true,
     "noUnusedLocals": true,
     "declaration": true,
@@ -23,7 +17,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

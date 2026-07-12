@@ -11,7 +11,7 @@ import type {
   UseCaseResult,
   HookOptions,
   EnvLike,
-  ContextLike,
+  UseCaseContext,
   HookFunction,
   AfterHookFunction,
   AroundHookFunction,
@@ -61,7 +61,7 @@ export function abandoned<T = never>(error: Error | string): UseCaseResult<T> {
 export abstract class BaseUseCase<
   TInput = unknown,
   TOutput = unknown,
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends UseCaseContext = UseCaseContext,
   Env extends EnvLike = EnvLike,
 > {
   static beforeHooks: RegisteredHook[] = [];

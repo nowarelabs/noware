@@ -28,10 +28,7 @@ Configure your application dependencies to vendor assets out of `node_modules` d
 ```json
 {
   "name": "my-nowarelabs-app",
-  "vendorAssets": [
-    "htmx.org",
-    "lodash-es"
-  ],
+  "vendorAssets": ["htmx.org", "lodash-es"],
   "scripts": {
     "build:assets": "noware-vendor"
   }
@@ -55,8 +52,8 @@ export default {
       styles: ["assets/css/main.css"],
       scripts: ["assets/js/app.js"],
       manifest: {
-        "assets/css/main.css": "assets/css/main.a8f3b2.css"
-      }
+        "assets/css/main.css": "assets/css/main.a8f3b2.css",
+      },
     });
 
     // 2. Supply your raw template layout or stream target response
@@ -74,7 +71,7 @@ export default {
 
     // 3. Chain handling routes static asset files or transparently injects tags into the HTML head
     return await pipeline.handle(htmlTemplate);
-  }
+  },
 };
 ```
 
@@ -110,14 +107,14 @@ Request ──► [ StaticAssetRouteLink ] ──(If NotFound / NotStatic)──
 
 When extending or calling `BaseAsset`, passing the following generic setup controls options parameters:
 
-| Property | Type | Default | Description |
-| --- | --- | --- | --- |
-| `styles` | `string[]` | `[]` | List of target CSS files to include as explicit link elements. |
-| `scripts` | `string[]` | `[]` | Primary client JavaScript module paths to append into the head. |
-| `publicPrefix` | `string` | `"/assets/"` | Path indicator prefix identifying static app files. |
-| `vendorPrefix` | `string` | `"/assets/vendor/"` | Path indicator prefix identifying localized vendors. |
-| `manifest` | `Record<string, string>` | `{}` | Hashed dictionary map pairing raw assets to compiled production paths. |
-| `importMap` | `Record<string, string>` | *Compiled Map* | Browser-side bare module path mappings overrides. |
+| Property       | Type                     | Default             | Description                                                            |
+| -------------- | ------------------------ | ------------------- | ---------------------------------------------------------------------- |
+| `styles`       | `string[]`               | `[]`                | List of target CSS files to include as explicit link elements.         |
+| `scripts`      | `string[]`               | `[]`                | Primary client JavaScript module paths to append into the head.        |
+| `publicPrefix` | `string`                 | `"/assets/"`        | Path indicator prefix identifying static app files.                    |
+| `vendorPrefix` | `string`                 | `"/assets/vendor/"` | Path indicator prefix identifying localized vendors.                   |
+| `manifest`     | `Record<string, string>` | `{}`                | Hashed dictionary map pairing raw assets to compiled production paths. |
+| `importMap`    | `Record<string, string>` | _Compiled Map_      | Browser-side bare module path mappings overrides.                      |
 
 ## TypeScript Global Configuration
 
@@ -139,24 +136,24 @@ To ensure cross-runtime types like Cloudflare's `Fetcher` and `Bun` are fully ac
 
 ### `BaseAsset`
 
-| Method | Return Type | Description |
-| --- | --- | --- |
-| `constructor(request, env, ctx, options)` | `BaseAsset` | Prepares the framework engine and isolates active runtime. |
-| `handle(htmlFallbackOrResponse)` | `Promise<Response>` | Processes static routes immediately, or intercept/stream HTML injections. |
-| `resolveAssetPath(name)` | `string` | Queries internal manifest instances to match cache-busted path mappings. |
+| Method                                    | Return Type         | Description                                                               |
+| ----------------------------------------- | ------------------- | ------------------------------------------------------------------------- |
+| `constructor(request, env, ctx, options)` | `BaseAsset`         | Prepares the framework engine and isolates active runtime.                |
+| `handle(htmlFallbackOrResponse)`          | `Promise<Response>` | Processes static routes immediately, or intercept/stream HTML injections. |
+| `resolveAssetPath(name)`                  | `string`            | Queries internal manifest instances to match cache-busted path mappings.  |
 
 ### `RuntimeAdapterFactory`
 
-| Method | Return Type | Description |
-| --- | --- | --- |
+| Method               | Return Type      | Description                                                         |
+| -------------------- | ---------------- | ------------------------------------------------------------------- |
 | `static create(env)` | `RuntimeAdapter` | Scans global bindings dynamically to instantiate matching adapters. |
 
 ### `VendorManager` (Build Step)
 
-| Method | Return Type | Description |
-| --- | --- | --- |
-| `constructor(options)` | `VendorManager` | Builds compilation contexts target layouts. |
-| `vendor()` | `Promise<void>` | Mirror distributes source trees and registers `importmap.ts`. |
+| Method                 | Return Type     | Description                                                   |
+| ---------------------- | --------------- | ------------------------------------------------------------- |
+| `constructor(options)` | `VendorManager` | Builds compilation contexts target layouts.                   |
+| `vendor()`             | `Promise<void>` | Mirror distributes source trees and registers `importmap.ts`. |
 
 ## Development
 
@@ -167,7 +164,7 @@ vp install
 # Run build-time assets unit verification tests
 vp test
 
-# Compile production distributions 
+# Compile production distributions
 vp pack
 ```
 
@@ -182,21 +179,14 @@ import type { ContextLike, EnvLike, RequestLike } from "@nowarelabs/shared";
 export default {
   async fetch(request: Request, env: EnvLike, ctx: ContextLike): Promise<Response> {
     const pipeline = new BaseAsset(request, env, ctx, {
-      styles: [
-        "css/bootstrap.min.css",
-        "css/site.css"
-      ],
-      scripts: [
-        "js/jquery.min.js",
-        "js/bootstrap.bundle.min.js",
-        "js/app.js"
-      ],
+      styles: ["css/bootstrap.min.css", "css/site.css"],
+      scripts: ["js/jquery.min.js", "js/bootstrap.bundle.min.js", "js/app.js"],
       publicPrefix: "/assets/",
       vendorPrefix: "/assets/vendor/",
       manifest: {
         "css/bootstrap.min.css": "css/bootstrap.min.a1b2c3.css",
-        "js/app.js": "js/app.d4e5f6.js"
-      }
+        "js/app.js": "js/app.d4e5f6.js",
+      },
     });
 
     const htmlTemplate = `
@@ -216,7 +206,7 @@ export default {
     `;
 
     return await pipeline.handle(htmlTemplate);
-  }
+  },
 };
 ```
 
@@ -240,8 +230,8 @@ const pipeline = new BaseAsset(request, env, ctx, {
   manifest: {
     "css/main.css": "css/main.abc123def456.css",
     "js/app.js": "js/app.abc123def456.js",
-    "images/logo.png": "images/logo.abc123def456.png"
-  }
+    "images/logo.png": "images/logo.abc123def456.png",
+  },
 });
 ```
 
@@ -254,9 +244,9 @@ const pipeline = new BaseAsset(request, env, ctx, {
   styles: ["css/main.css"],
   scripts: ["js/app.js"],
   importMap: {
-    "lodash": "/assets/vendor/lodash-es/lodash.js",
-    "axios": "/assets/vendor/axios/dist/axios.esm.js"
-  }
+    lodash: "/assets/vendor/lodash-es/lodash.js",
+    axios: "/assets/vendor/axios/dist/axios.esm.js",
+  },
 });
 ```
 

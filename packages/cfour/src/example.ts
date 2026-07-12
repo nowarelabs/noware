@@ -144,12 +144,24 @@ const workspace: C4Workspace = {
                   namespace: "com.bank.accounts.model",
                   stereotype: "<<entity>>",
                   members: [
-                    { kind: "field", name: "id",         type: "UUID",           visibility: "private" },
-                    { kind: "field", name: "customerId", type: "UUID",           visibility: "private" },
-                    { kind: "field", name: "balance",    type: "BigDecimal",     visibility: "private" },
-                    { kind: "field", name: "currency",   type: "Currency",       visibility: "private" },
-                    { kind: "method", name: "getId",      type: "UUID",          visibility: "public",  parameters: "()" },
-                    { kind: "method", name: "getBalance", type: "BigDecimal",    visibility: "public",  parameters: "()" },
+                    { kind: "field", name: "id", type: "UUID", visibility: "private" },
+                    { kind: "field", name: "customerId", type: "UUID", visibility: "private" },
+                    { kind: "field", name: "balance", type: "BigDecimal", visibility: "private" },
+                    { kind: "field", name: "currency", type: "Currency", visibility: "private" },
+                    {
+                      kind: "method",
+                      name: "getId",
+                      type: "UUID",
+                      visibility: "public",
+                      parameters: "()",
+                    },
+                    {
+                      kind: "method",
+                      name: "getBalance",
+                      type: "BigDecimal",
+                      visibility: "public",
+                      parameters: "()",
+                    },
                   ],
                 },
                 {
@@ -159,8 +171,8 @@ const workspace: C4Workspace = {
                   name: "AccountType",
                   namespace: "com.bank.accounts.model",
                   members: [
-                    { kind: "field", name: "CURRENT",  type: "AccountType", visibility: "public" },
-                    { kind: "field", name: "SAVINGS",  type: "AccountType", visibility: "public" },
+                    { kind: "field", name: "CURRENT", type: "AccountType", visibility: "public" },
+                    { kind: "field", name: "SAVINGS", type: "AccountType", visibility: "public" },
                     { kind: "field", name: "MORTGAGE", type: "AccountType", visibility: "public" },
                   ],
                 },
@@ -196,14 +208,63 @@ const workspace: C4Workspace = {
 
   relationships: [
     // Level 1
-    { id: "r1", kind: "Relationship", sourceId: "customer",       destinationId: "banking-system", description: "Views balances and makes payments using", technology: "HTTPS" },
-    { id: "r2", kind: "Relationship", sourceId: "banking-system", destinationId: "email-system",   description: "Sends emails using", interactionStyle: "async" },
-    { id: "r3", kind: "Relationship", sourceId: "banking-system", destinationId: "mainframe",      description: "Gets account information from", technology: "XML/HTTPS" },
+    {
+      id: "r1",
+      kind: "Relationship",
+      sourceId: "customer",
+      destinationId: "banking-system",
+      description: "Views balances and makes payments using",
+      technology: "HTTPS",
+    },
+    {
+      id: "r2",
+      kind: "Relationship",
+      sourceId: "banking-system",
+      destinationId: "email-system",
+      description: "Sends emails using",
+      interactionStyle: "async",
+    },
+    {
+      id: "r3",
+      kind: "Relationship",
+      sourceId: "banking-system",
+      destinationId: "mainframe",
+      description: "Gets account information from",
+      technology: "XML/HTTPS",
+    },
     // Level 2
-    { id: "r4", kind: "Relationship", sourceId: "customer",       destinationId: "web-app", description: "Visits bigbank.com using", technology: "HTTPS" },
-    { id: "r5", kind: "Relationship", sourceId: "web-app",        destinationId: "api",     description: "Makes API calls to", technology: "JSON/HTTPS" },
-    { id: "r6", kind: "Relationship", sourceId: "api",            destinationId: "db",      description: "Reads from and writes to", technology: "JDBC" },
-    { id: "r7", kind: "Relationship", sourceId: "api",            destinationId: "mainframe", description: "Makes API calls to", technology: "XML/HTTPS" },
+    {
+      id: "r4",
+      kind: "Relationship",
+      sourceId: "customer",
+      destinationId: "web-app",
+      description: "Visits bigbank.com using",
+      technology: "HTTPS",
+    },
+    {
+      id: "r5",
+      kind: "Relationship",
+      sourceId: "web-app",
+      destinationId: "api",
+      description: "Makes API calls to",
+      technology: "JSON/HTTPS",
+    },
+    {
+      id: "r6",
+      kind: "Relationship",
+      sourceId: "api",
+      destinationId: "db",
+      description: "Reads from and writes to",
+      technology: "JDBC",
+    },
+    {
+      id: "r7",
+      kind: "Relationship",
+      sourceId: "api",
+      destinationId: "mainframe",
+      description: "Makes API calls to",
+      technology: "XML/HTTPS",
+    },
     // Level 4 — structural relationships between code elements
     {
       id: "r8",
@@ -278,9 +339,10 @@ const { nodes: codeNodes, edges: codeEdges } = c4ToReactFlow(workspace, codeView
     return {
       ...edge,
       // dashed for Implements / Depends / Realizes
-      style: (kind === "Implements" || kind === "Depends" || kind === "Realizes")
-        ? { strokeDasharray: "6 3" }
-        : {},
+      style:
+        kind === "Implements" || kind === "Depends" || kind === "Realizes"
+          ? { strokeDasharray: "6 3" }
+          : {},
       // animated for async (none at code level, but supported)
       animated: rel.interactionStyle === "async",
     };
@@ -290,11 +352,13 @@ const { nodes: codeNodes, edges: codeEdges } = c4ToReactFlow(workspace, codeView
 console.log(`\n=== Code view for 'accounts-controller' ===`);
 codeNodes.forEach((n: C4ReactFlowNode) => {
   const memberCount = n.data.members?.length ?? 0;
-  console.log(`  [${n.data.kind}] ${n.data.name}  (${memberCount} members)  ns: ${n.data.namespace ?? "—"}`);
+  console.log(
+    `  [${n.data.kind}] ${n.data.name}  (${memberCount} members)  ns: ${n.data.namespace ?? "—"}`,
+  );
 });
 console.log(`Edges:`);
 codeEdges.forEach((e: C4ReactFlowEdge) =>
-  console.log(`  ${e.source} --[${e.data?.codeRelationshipKind}]--> ${e.target}`)
+  console.log(`  ${e.source} --[${e.data?.codeRelationshipKind}]--> ${e.target}`),
 );
 
 // ----------------------------------------------------------------

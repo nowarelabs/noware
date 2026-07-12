@@ -9,7 +9,7 @@
  * Other types use noware-shared for runtime-agnostic compatibility.
  */
 
-import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import type { EnvLike, DurableObjectContext, RequestLike } from "@nowarelabs/shared";
 
 export type DurableObjectState = {
   id: {
@@ -28,7 +28,7 @@ export type DurableObjectState = {
 };
 
 export class BaseDurableObject<
-  Ctx extends ContextLike = ContextLike,
+  Ctx extends DurableObjectContext = DurableObjectContext,
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
@@ -38,6 +38,6 @@ export class BaseDurableObject<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
 }

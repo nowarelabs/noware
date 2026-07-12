@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { GatewayContext } from "@nowarelabs/shared";
 import { BaseGateway } from "../src/index.ts";
 
 describe("BaseGateway", () => {
@@ -15,7 +15,7 @@ describe("BaseGateway", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as GatewayContext;
 
     const gateway = new TestGateway(mockRequest, mockEnv, mockCtx);
 

@@ -22,9 +22,7 @@ describe("BaseModule", () => {
     const module = new TestModule(mockRequest, mockEnv, mockCtx);
 
     expect(module).toBeDefined();
-    expect((module as unknown as { request: Request }).request).toBe(
-      mockRequest,
-    );
+    expect((module as unknown as { request: Request }).request).toBe(mockRequest);
   });
 
   test("getFeature returns the feature", () => {
@@ -37,9 +35,7 @@ describe("BaseModule", () => {
 
     const module = new TestModule(mockRequest, mockEnv, mockCtx);
 
-    expect(
-      (module as unknown as { getFeature: () => object }).getFeature(),
-    ).toEqual({});
+    expect((module as unknown as { getFeature: () => object }).getFeature()).toEqual({});
   });
 
   test("static hooks exist", () => {

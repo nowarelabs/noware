@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { DtoContext } from "@nowarelabs/shared";
 import { Dto, BaseDto } from "../src/index.ts";
 
 describe("Dto", () => {
@@ -28,7 +28,7 @@ describe("BaseDto", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as DtoContext;
 
     const dto = new BaseDto(mockRequest, mockEnv, mockCtx);
     expect(dto).toBeDefined();

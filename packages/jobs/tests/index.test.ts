@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { JobContext } from "@nowarelabs/shared";
 import { BaseJob } from "../src/index.ts";
 
 describe("BaseJob", () => {
@@ -13,7 +13,7 @@ describe("BaseJob", () => {
     const mockCtx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+    } as JobContext;
 
     const job = new TestJob(mockRequest, mockEnv, mockCtx);
 
