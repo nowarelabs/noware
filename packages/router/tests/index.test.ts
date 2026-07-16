@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { createRouterContext } from "@nowarelabs/shared";
 import type { RouterContext } from "@nowarelabs/shared";
-import { BaseRouter, type RouteResult } from "../src/index.ts";
+import { BaseRouter, HttpRouter, type RouteResult } from "../src/index.ts";
 
 describe("BaseRouter", () => {
   class TestController {
@@ -178,5 +178,163 @@ describe("BaseRouter", () => {
     expect(RouterB.beforeHooks).toHaveLength(1);
     expect(RouterA.beforeHooks[0].fn).toBe(fnA);
     expect(RouterB.beforeHooks[0].fn).toBe(fnB);
+  });
+
+  test("hook inheritance: parent hooks apply to child without own arrays", async () => {
+    const calls: string[] = [];
+    class Parent extends TestRouter {}
+    class Child extends Parent {}
+
+    Parent.before(async (_r: any) => {
+      calls.push("parent-before");
+    });
+
+    const router = new Child();
+    const request = new Request("http://localhost/");
+    const env = {} as Record<string, unknown>;
+    const ctx = createRouterContext();
+
+    await router.handle(request, env, ctx);
+    expect(calls).toEqual(["parent-before"]);
+  });
+
+  test("hook inheritance: child hooks don't leak to parent", async () => {
+    const calls: string[] = [];
+    class Parent extends TestRouter {}
+    class Child extends Parent {}
+
+    Child.before(async (_r: any) => {
+      calls.push("child-before");
+    });
+
+    const parentRouter = new Parent();
+    const childRouter = new Child();
+    const request = new Request("http://localhost/");
+    const env = {} as Record<string, unknown>;
+    const ctx = createRouterContext();
+
+    await parentRouter.handle(request, env, ctx);
+    expect(calls).toEqual([]);
+
+    await childRouter.handle(request, env, ctx);
+    expect(calls).toEqual(["child-before"]);
+  });
+
+  test("hook inheritance: parent + child hooks run in correct order", async () => {
+    const calls: string[] = [];
+    class Parent extends TestRouter {}
+    class Child extends Parent {}
+
+    Parent.before(async (_r: any) => {
+      calls.push("parent-before");
+    });
+
+    Child.before(async (_r: any) => {
+      calls.push("child-before");
+    });
+
+    const router = new Child();
+    const request = new Request("http://localhost/");
+    const env = {} as Record<string, unknown>;
+    const ctx = createRouterContext();
+
+    await router.handle(request, env, ctx);
+    expect(calls).toEqual(["parent-before", "child-before"]);
+  });
+});
+
+describe("HttpRouter", () => {
+  class TestController {
+    constructor(
+      private _request: Request,
+      private _env: Record<string, unknown>,
+      private _ctx: RouterContext,
+    ) {}
+
+    async run(action: string): Promise<Response> {
+      if (action === "home") return new Response("home page");
+      if (action === "show") return new Response(`show ${this._ctx.params?.id ?? "none"}`);
+      if (action === "nested") return new Response(`nested ${this._ctx.params?.id ?? "none"}`);
+      return new Response("Not Found", { status: 404 });
+    }
+  }
+
+  function createRouter() {
+    const router = new HttpRouter();
+    router.route("GET", "/", TestController as any, "home");
+    router.route("GET", "/users/:id", TestController as any, "show");
+    router.route("GET", "/users/:id/posts/:postId", TestController as any, "nested");
+    return router;
+  }
+
+  test("route registration and resolveRoute match", () => {
+    const router = createRouter();
+    const request = new Request("http://localhost/");
+    const result = router.resolveRoute(request);
+    expect(result).not.toBeNull();
+    expect(result!.action).toBe("home");
+  });
+
+  test("resolveRoute extracts path params", () => {
+    const router = createRouter();
+    const request = new Request("http://localhost/users/42");
+    const result = router.resolveRoute(request);
+    expect(result).not.toBeNull();
+    expect(result!.action).toBe("show");
+    expect(result!.params).toEqual({ id: "42" });
+  });
+
+  test("resolveRoute returns null for unknown path", () => {
+    const router = createRouter();
+    const request = new Request("http://localhost/unknown");
+    const result = router.resolveRoute(request);
+    expect(result).toBeNull();
+  });
+
+  test("resolveRoute returns null for wrong method", () => {
+    const router = createRouter();
+    const request = new Request("http://localhost/", { method: "POST" });
+    const result = router.resolveRoute(request);
+    expect(result).toBeNull();
+  });
+
+  test("handle dispatches matched route to controller", async () => {
+    const router = createRouter();
+    const response = await router.handle(
+      new Request("http://localhost/users/99"),
+      {},
+      createRouterContext(),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toBe("show 99");
+  });
+
+  test("handle returns 404 when no route matches", async () => {
+    const router = createRouter();
+    const response = await router.handle(
+      new Request("http://localhost/unknown"),
+      {},
+      createRouterContext(),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("multiple path params extracted correctly", () => {
+    const router = createRouter();
+    const request = new Request("http://localhost/users/7/posts/abc");
+    const result = router.resolveRoute(request);
+    expect(result).not.toBeNull();
+    expect(result!.params).toEqual({ id: "7", postId: "abc" });
+  });
+
+  test("chained route registration", () => {
+    const router = new HttpRouter();
+    router
+      .route("GET", "/", TestController as any, "home")
+      .route("GET", "/about", TestController as any, "about");
+
+    expect(router.resolveRoute(new Request("http://localhost/"))).not.toBeNull();
+    expect(router.resolveRoute(new Request("http://localhost/about"))).not.toBeNull();
   });
 });

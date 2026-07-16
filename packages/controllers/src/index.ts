@@ -10,6 +10,18 @@ import type {
 } from "@nowarelabs/shared";
 import { runBeforeHooks, runAfterHooks, runAroundHooks } from "@nowarelabs/shared";
 
+function collectHooks(ctor: object, prop: string): RegisteredHook[] {
+  const hooks: RegisteredHook[] = [];
+  let current: any = ctor;
+  while (current && current !== Function.prototype) {
+    if (Object.hasOwn(current, prop)) {
+      hooks.unshift(...current[prop]);
+    }
+    current = Object.getPrototypeOf(current);
+  }
+  return hooks;
+}
+
 export abstract class BaseController<
   Ctx extends ControllerContext = ControllerContext,
   Env extends EnvLike = EnvLike,
@@ -31,30 +43,37 @@ export abstract class BaseController<
   protected abstract getService(): Svc;
 
   static before<T extends BaseController>(fn: HookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
     this.beforeHooks.push({ fn: fn as HookFunction, options });
   }
 
   static after<T extends BaseController>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "afterHooks")) this.afterHooks = [];
     this.afterHooks.push({ fn: fn as AfterHookFunction, options });
   }
 
   static around<T extends BaseController>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
 
   async run(action: string, ...args: any[]): Promise<Response> {
-    const Ctor = this.constructor as typeof BaseController;
+    const Ctor = this.constructor;
     const shouldRunHook = (opts?: HookOptions) => this.shouldRunHook(opts);
 
     const instanceBefore = await this.beforeAction();
     if (instanceBefore) return instanceBefore;
 
-    const beforeResult = await runBeforeHooks(this, Ctor.beforeHooks, shouldRunHook);
+    const beforeResult = await runBeforeHooks(
+      this,
+      collectHooks(Ctor, "beforeHooks"),
+      shouldRunHook,
+    );
     if (beforeResult) return beforeResult;
 
     const response = await runAroundHooks(
       this,
-      Ctor.aroundHooks,
+      collectHooks(Ctor, "aroundHooks"),
       async () => {
         const handler = (this as Record<string, unknown>)[action];
         if (typeof handler !== "function") {
@@ -65,7 +84,12 @@ export abstract class BaseController<
       shouldRunHook,
     );
 
-    const afterResponse = await runAfterHooks(this, Ctor.afterHooks, response, shouldRunHook);
+    const afterResponse = await runAfterHooks(
+      this,
+      collectHooks(Ctor, "afterHooks"),
+      response,
+      shouldRunHook,
+    );
 
     const instanceAfter = await this.afterAction(afterResponse);
     return instanceAfter ?? afterResponse;

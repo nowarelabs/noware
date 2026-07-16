@@ -287,4 +287,66 @@ describe("BaseController", () => {
     await controller.run("index");
     expect(calls).toEqual(["instance-before", "static-before", "static-after", "instance-after"]);
   });
+
+  test("hook inheritance: parent hooks apply to child without own arrays", async () => {
+    const calls: string[] = [];
+    class Parent extends TestController {}
+    class Child extends Parent {}
+
+    Parent.before(async (_c: any) => {
+      calls.push("parent-before");
+    });
+
+    const request = new Request("http://localhost");
+    const env = {} as Record<string, unknown>;
+    const ctx = {} as any;
+    const ctrl = new Child(request, env, ctx);
+
+    await ctrl.run("index");
+    expect(calls).toEqual(["parent-before"]);
+  });
+
+  test("hook inheritance: child hooks don't leak to parent", async () => {
+    const calls: string[] = [];
+    class Parent extends TestController {}
+    class Child extends Parent {}
+
+    Child.before(async (_c: any) => {
+      calls.push("child-before");
+    });
+
+    const request = new Request("http://localhost");
+    const env = {} as Record<string, unknown>;
+    const ctx = {} as any;
+    const parentCtrl = new Parent(request, env, ctx);
+    const childCtrl = new Child(request, env, ctx);
+
+    await parentCtrl.run("index");
+    expect(calls).toEqual([]);
+
+    await childCtrl.run("index");
+    expect(calls).toEqual(["child-before"]);
+  });
+
+  test("hook inheritance: parent + child hooks run in correct order", async () => {
+    const calls: string[] = [];
+    class Parent extends TestController {}
+    class Child extends Parent {}
+
+    Parent.before(async (_c: any) => {
+      calls.push("parent-before");
+    });
+
+    Child.before(async (_c: any) => {
+      calls.push("child-before");
+    });
+
+    const request = new Request("http://localhost");
+    const env = {} as Record<string, unknown>;
+    const ctx = {} as any;
+    const ctrl = new Child(request, env, ctx);
+
+    await ctrl.run("index");
+    expect(calls).toEqual(["parent-before", "child-before"]);
+  });
 });

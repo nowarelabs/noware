@@ -68,6 +68,10 @@ export interface RouterLike<
   handle(request: Req, env: Env, ctx: Ctx): Promise<TOutput>;
 }
 
+export interface ControllerLike {
+  run(action: string, ...args: any[]): Promise<Response>;
+}
+
 // ── Handler-like interfaces (protocol-specific dispatch targets) ──
 
 export interface MessageHandlerLike<
