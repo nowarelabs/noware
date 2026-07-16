@@ -212,6 +212,7 @@ describe("Layer Context Factories", () => {
     const { waitUntil, passThroughOnException } = ctx;
     expect(waitUntil).toBeDefined();
     expect(passThroughOnException).toBeDefined();
+    expect(ctx.params).toEqual({});
     expect(ctx.currentUser).toBeUndefined();
     expect(ctx.session).toEqual({});
   });

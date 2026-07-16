@@ -91,13 +91,18 @@ describe("Layer Contexts", () => {
 
   test("createControllerContext returns ControllerContext", () => {
     const ctx = createControllerContext();
+    expect(ctx.params).toEqual({});
     expect(ctx.currentUser).toBeUndefined();
     expect(ctx.session).toEqual({});
   });
 
   test("enhanceControllerContext overrides properties", () => {
     const base = createContext();
-    const ctx = enhanceControllerContext(base, { currentUser: { name: "Alice" } });
+    const ctx = enhanceControllerContext(base, {
+      params: { id: "1" },
+      currentUser: { name: "Alice" },
+    });
+    expect(ctx.params).toEqual({ id: "1" });
     expect(ctx.currentUser).toEqual({ name: "Alice" });
   });
 

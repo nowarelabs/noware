@@ -31,8 +31,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@nowarelabs/shared": "workspace:*",
-    "http-status": "^2.1.0"
+    "@nowarelabs/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

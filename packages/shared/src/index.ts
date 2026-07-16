@@ -102,10 +102,7 @@ export interface GrpcHandlerLike<
 }
 
 export interface WorkflowStep {
-  do<T>(
-    name: string,
-    fn: (ctx: { state: { finished: boolean } }) => Promise<T>,
-  ): Promise<T>;
+  do<T>(name: string, fn: (ctx: { state: { finished: boolean } }) => Promise<T>): Promise<T>;
   sleep(name: string, duration: string): Promise<void>;
   sleepUntil(name: string, timestamp: Date | number): Promise<void>;
 }
