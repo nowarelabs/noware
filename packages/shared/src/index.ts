@@ -1,4 +1,4 @@
-import type { ContextLike, RequestLike, EnvLike } from "@nowarelabs/contexts";
+import type { ContextLike, RequestLike, EnvLike, EntrypointContext } from "@nowarelabs/contexts";
 import { createContext } from "@nowarelabs/contexts";
 
 export type {
@@ -58,6 +58,62 @@ export {
   enhanceModelContext,
   enhanceViewContext,
 } from "@nowarelabs/contexts";
+
+export interface RouterLike<
+  Req = RequestLike,
+  Env extends EnvLike = EnvLike,
+  Ctx extends ContextLike = ContextLike,
+  TOutput = Response,
+> {
+  handle(request: Req, env: Env, ctx: Ctx): Promise<TOutput>;
+}
+
+// ── Handler-like interfaces (protocol-specific dispatch targets) ──
+
+export interface MessageHandlerLike<
+  TBody = unknown,
+  TMetadata = Record<string, unknown>,
+  TEnv extends EnvLike = EnvLike,
+  TCtx extends EntrypointContext = EntrypointContext,
+> {
+  handle(body: TBody, metadata: TMetadata, env: TEnv, ctx: TCtx): Promise<void>;
+}
+
+export interface DurableObjectHandlerLike<
+  TEnv extends EnvLike = EnvLike,
+  TCtx extends EntrypointContext = EntrypointContext,
+> {
+  fetch(request: Request, env: TEnv, ctx: TCtx): Promise<Response>;
+  alarm(env: TEnv, ctx: TCtx): Promise<void>;
+}
+
+export interface GrpcHandlerLike<
+  TEnv extends EnvLike = EnvLike,
+  TCtx extends EntrypointContext = EntrypointContext,
+> {
+  unary(request: Uint8Array, env: TEnv, ctx: TCtx): Promise<Uint8Array>;
+  serverStream(request: Uint8Array, env: TEnv, ctx: TCtx): AsyncIterable<Uint8Array>;
+  clientStream(requests: AsyncIterable<Uint8Array>, env: TEnv, ctx: TCtx): Promise<Uint8Array>;
+  bidiStream(requests: AsyncIterable<Uint8Array>, env: TEnv, ctx: TCtx): AsyncIterable<Uint8Array>;
+}
+
+export interface WorkflowStep {
+  do<T>(
+    name: string,
+    fn: (ctx: { state: { finished: boolean } }) => Promise<T>,
+  ): Promise<T>;
+  sleep(name: string, duration: string): Promise<void>;
+  sleepUntil(name: string, timestamp: Date | number): Promise<void>;
+}
+
+export interface WorkflowHandlerLike<
+  TPayload = unknown,
+  TResult = unknown,
+  TEnv extends EnvLike = EnvLike,
+  TCtx extends EntrypointContext = EntrypointContext,
+> {
+  run(payload: TPayload, step: WorkflowStep, env: TEnv, ctx: TCtx): Promise<TResult>;
+}
 
 export type UseCaseResult<TOutput, TError = Error> =
   | { success: true; data: TOutput; status: "delivered" }

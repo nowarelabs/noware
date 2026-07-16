@@ -3,6 +3,7 @@ import type {
   RouterContext,
   RequestLike,
   ContextLike,
+  RouterLike,
   HookOptions,
   HookFunction,
   AfterHookFunction,
@@ -29,7 +30,7 @@ export abstract class BaseRouter<
   Ctx extends RouterContext = RouterContext,
   Env extends EnvLike = EnvLike,
   Req extends RequestLike = RequestLike,
-> {
+> implements RouterLike<Req, Env, Ctx> {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
   static aroundHooks: RegisteredHook[] = [];
