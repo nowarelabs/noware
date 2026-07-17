@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { ContextLike } from "../src/index.ts";
 import {
-  BaseContext,
   createContext,
   createContextWith,
   createRouterContext,
@@ -15,50 +14,6 @@ import {
   enhanceModelContext,
   enhanceViewContext,
 } from "../src/index.ts";
-
-describe("BaseContext", () => {
-  class TestContext extends BaseContext {
-    protected module = {} as any;
-
-    protected getModule() {
-      return this.module;
-    }
-  }
-
-  test("constructor accepts request, env, ctx", () => {
-    const mockRequest = new Request("http://localhost");
-    const mockEnv = { DB: {} } as Record<string, unknown>;
-    const mockCtx: ContextLike = {
-      waitUntil: () => {},
-      passThroughOnException: () => {},
-    };
-
-    const context = new TestContext(mockRequest, mockEnv, mockCtx);
-
-    expect(context).toBeDefined();
-    expect((context as unknown as { request: Request }).request).toBe(mockRequest);
-    expect((context as unknown as { env: Record<string, unknown> }).env).toBe(mockEnv);
-    expect((context as unknown as { ctx: ContextLike }).ctx).toBe(mockCtx);
-  });
-
-  test("getModule returns the module", () => {
-    const mockRequest = new Request("http://localhost");
-    const mockEnv = {} as Record<string, unknown>;
-    const mockCtx: ContextLike = {
-      waitUntil: () => {},
-      passThroughOnException: () => {},
-    };
-
-    const context = new TestContext(mockRequest, mockEnv, mockCtx);
-
-    expect((context as unknown as { getModule: () => object }).getModule()).toEqual({});
-  });
-
-  test("static hooks exist", () => {
-    expect(BaseContext.beforeHooks).toBeDefined();
-    expect(BaseContext.afterHooks).toBeDefined();
-  });
-});
 
 describe("ContextLike", () => {
   test("createContext returns a ContextLike with noop methods", () => {
@@ -77,7 +32,7 @@ describe("ContextLike", () => {
   });
 });
 
-describe("Layer Contexts", () => {
+describe("Layer Contexts (Linear Chain)", () => {
   test("createRouterContext returns RouterContext", () => {
     const ctx = createRouterContext();
     expect(ctx.params).toEqual({});
@@ -89,7 +44,7 @@ describe("Layer Contexts", () => {
     expect(ctx.params).toEqual({ id: "1" });
   });
 
-  test("createControllerContext returns ControllerContext", () => {
+  test("createControllerContext returns ControllerContext extending RouterContext", () => {
     const ctx = createControllerContext();
     expect(ctx.params).toEqual({});
     expect(ctx.currentUser).toBeUndefined();
@@ -106,40 +61,77 @@ describe("Layer Contexts", () => {
     expect(ctx.currentUser).toEqual({ name: "Alice" });
   });
 
-  test("createServiceContext returns ServiceContext with transactionId", () => {
+  test("createServiceContext returns ServiceContext extending ControllerContext", () => {
     const ctx = createServiceContext();
     expect(typeof ctx.transactionId).toBe("string");
     expect(ctx.transactionId.length).toBeGreaterThan(0);
+    expect(ctx.params).toEqual({});
+    expect(ctx.currentUser).toBeUndefined();
+    expect(ctx.session).toEqual({});
   });
 
-  test("enhanceServiceContext preserves transactionId", () => {
-    const base = createContext();
+  test("enhanceServiceContext preserves parent fields", () => {
+    const base = createControllerContext();
     const ctx = enhanceServiceContext(base);
     expect(typeof ctx.transactionId).toBe("string");
+    expect(ctx.params).toEqual({});
+    expect(ctx.currentUser).toBeUndefined();
   });
 
-  test("createModelContext returns ModelContext", () => {
+  test("createModelContext returns ModelContext extending ServiceContext", () => {
     const ctx = createModelContext();
+    expect(typeof ctx.transactionId).toBe("string");
     expect(ctx.logger).toBeUndefined();
     expect(ctx.transaction).toBeUndefined();
+    expect(ctx.params).toEqual({});
   });
 
-  test("enhanceModelContext overrides properties", () => {
-    const base = createContext();
+  test("enhanceModelContext overrides transaction", () => {
+    const base = createServiceContext();
     const tx = { id: "tx-1" };
     const ctx = enhanceModelContext(base, { transaction: tx });
     expect(ctx.transaction).toBe(tx);
+    expect(typeof ctx.transactionId).toBe("string");
   });
 
-  test("createViewContext returns ViewContext", () => {
+  test("createViewContext returns ViewContext extending ControllerContext", () => {
     const ctx = createViewContext();
     expect(ctx.currentUser).toBeUndefined();
     expect(ctx.flash).toEqual({});
+    expect(ctx.params).toEqual({});
+    expect(ctx.session).toEqual({});
   });
 
   test("enhanceViewContext overrides flash", () => {
-    const base = createContext();
+    const base = createControllerContext();
     const ctx = enhanceViewContext(base, { flash: { notice: "Saved" } });
     expect(ctx.flash).toEqual({ notice: "Saved" });
+  });
+});
+
+describe("Context Chain Inheritance", () => {
+  test("ServiceContext inherits ControllerContext fields", () => {
+    const ctx = createServiceContext();
+    expect("params" in ctx).toBe(true);
+    expect("currentUser" in ctx).toBe(true);
+    expect("session" in ctx).toBe(true);
+    expect("transactionId" in ctx).toBe(true);
+  });
+
+  test("ModelContext inherits ServiceContext and ControllerContext fields", () => {
+    const ctx = createModelContext();
+    expect("params" in ctx).toBe(true);
+    expect("currentUser" in ctx).toBe(true);
+    expect("session" in ctx).toBe(true);
+    expect("transactionId" in ctx).toBe(true);
+    expect("transaction" in ctx).toBe(true);
+  });
+
+  test("ViewContext inherits ControllerContext fields", () => {
+    const ctx = createViewContext();
+    expect("params" in ctx).toBe(true);
+    expect("currentUser" in ctx).toBe(true);
+    expect("session" in ctx).toBe(true);
+    expect("flash" in ctx).toBe(true);
   });
 });

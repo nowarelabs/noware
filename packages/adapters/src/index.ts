@@ -54,15 +54,30 @@ export abstract class BaseAdapter<
     return this.metadata[key] as T;
   }
 
+  private static collectHooks(ctor: object, prop: string): RegisteredHook[] {
+    const hooks: RegisteredHook[] = [];
+    let current: any = ctor;
+    while (current && current !== Function.prototype) {
+      if (Object.hasOwn(current, prop)) {
+        hooks.unshift(...current[prop]);
+      }
+      current = Object.getPrototypeOf(current);
+    }
+    return hooks;
+  }
+
   static before<T extends BaseAdapter>(fn: HookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
     this.beforeHooks.push({ fn: fn as HookFunction, options });
   }
 
   static after<T extends BaseAdapter>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "afterHooks")) this.afterHooks = [];
     this.afterHooks.push({ fn: fn as AfterHookFunction, options });
   }
 
   static around<T extends BaseAdapter>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
 
@@ -95,8 +110,9 @@ export abstract class BaseAdapter<
     if (instanceResult) return instanceResult as R;
 
     const constructor = this.constructor as typeof BaseAdapter;
+    const allHooks = BaseAdapter.collectHooks(constructor, "beforeHooks");
 
-    for (const { fn, options } of constructor.beforeHooks) {
+    for (const { fn, options } of allHooks) {
       if (!this.shouldRunHook(options)) continue;
 
       const result = await (fn as HookFunction)(this);
@@ -115,8 +131,9 @@ export abstract class BaseAdapter<
     if (instanceResult) currentResult = instanceResult as R;
 
     const constructor = this.constructor as typeof BaseAdapter;
+    const allHooks = BaseAdapter.collectHooks(constructor, "afterHooks");
 
-    for (const { fn, options } of constructor.afterHooks) {
+    for (const { fn, options } of allHooks) {
       if (!this.shouldRunHook(options)) continue;
 
       const hookResult = await (fn as AfterHookFunction)(this, currentResult);
@@ -130,7 +147,8 @@ export abstract class BaseAdapter<
 
   protected async runAroundHooks<R = any>(action: () => Promise<R>): Promise<R> {
     const constructor = this.constructor as typeof BaseAdapter;
-    const applicableHooks = constructor.aroundHooks.filter(({ options }) =>
+    const allHooks = BaseAdapter.collectHooks(constructor, "aroundHooks");
+    const applicableHooks = allHooks.filter(({ options }) =>
       this.shouldRunHook(options),
     );
 

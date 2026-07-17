@@ -28,7 +28,7 @@ export abstract class BaseQuery<
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
-    protected ctx: ContextLike,
+    protected ctx: Ctx,
   ) {}
   protected abstract getPersistence(): Persistence;
 }

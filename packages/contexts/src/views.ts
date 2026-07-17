@@ -1,18 +1,23 @@
-import type { ContextLike } from "./shared.ts";
 import { createContext } from "./shared.ts";
+import type { ControllerContext } from "./controllers.ts";
 
-export interface ViewContext extends ContextLike {
-  readonly currentUser?: unknown;
+export interface ViewContext extends ControllerContext {
   readonly flash?: Record<string, unknown>;
 }
 
 export function createViewContext(): ViewContext {
-  return { ...createContext(), currentUser: undefined, flash: {} };
+  return {
+    ...createContext(),
+    params: {},
+    currentUser: undefined,
+    session: {},
+    flash: {},
+  };
 }
 
 export function enhanceViewContext(
-  ctx: ContextLike,
-  overrides?: Partial<Pick<ViewContext, "currentUser" | "flash">>,
+  ctx: ControllerContext,
+  overrides?: Partial<Pick<ViewContext, "flash">>,
 ): ViewContext {
-  return { ...ctx, currentUser: undefined, flash: {}, ...overrides };
+  return { ...ctx, flash: {}, ...overrides };
 }

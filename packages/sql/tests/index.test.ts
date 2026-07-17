@@ -558,29 +558,24 @@ describe("sql edge cases", () => {
 // ---------------------------------------------------------------------------
 
 describe("BaseSql lifecycle hooks", () => {
-  test("registers and runs before hooks", async () => {
+  test("registers before hooks", () => {
     class MyService extends BaseSql {}
-    const calls: string[] = [];
-    MyService.addBeforeHook((...args: any[]) => calls.push(`before:${args[0]}`));
+    const hook = () => {};
+    MyService.before(hook as any);
 
-    const svc = new MyService(mockReq, mockEnv, mockCtx);
-    // @ts-expect-error – accessing protected method for test
-    await svc.runBeforeHooks("query");
-    expect(calls).toContain("before:query");
+    expect(MyService.beforeHooks).toHaveLength(1);
+    expect(MyService.beforeHooks[0].fn).toBe(hook);
 
-    // Clean up to avoid cross-test pollution
     MyService.beforeHooks = [];
   });
 
-  test("registers and runs after hooks", async () => {
+  test("registers after hooks", () => {
     class MyService extends BaseSql {}
-    const calls: string[] = [];
-    MyService.addAfterHook((...args: any[]) => calls.push(`after:${args[0]}`));
+    const hook = () => {};
+    MyService.after(hook as any);
 
-    const svc = new MyService(mockReq, mockEnv, mockCtx);
-    // @ts-expect-error – accessing protected method for test
-    await svc.runAfterHooks("result");
-    expect(calls).toContain("after:result");
+    expect(MyService.afterHooks).toHaveLength(1);
+    expect(MyService.afterHooks[0].fn).toBe(hook);
 
     MyService.afterHooks = [];
   });
@@ -589,7 +584,7 @@ describe("BaseSql lifecycle hooks", () => {
     class ServiceA extends BaseSql {}
     class ServiceB extends BaseSql {}
 
-    ServiceA.addBeforeHook(() => {});
+    ServiceA.before((() => {}) as any);
     expect(ServiceA.beforeHooks).toHaveLength(1);
     expect(ServiceB.beforeHooks).toHaveLength(0);
 

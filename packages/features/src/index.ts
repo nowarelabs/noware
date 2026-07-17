@@ -382,7 +382,11 @@ export abstract class BaseFeature<
     fn: FeatureHookFunction<T>,
     options?: FeatureHookOptions,
   ): void {
-    this.beforeHooks.push({ fn: fn as FeatureHookFunction, options });
+    const ctor = this as any;
+    if (!Object.hasOwn(ctor, "beforeHooks")) {
+      ctor.beforeHooks = [...ctor.beforeHooks];
+    }
+    ctor.beforeHooks.push({ fn: fn as FeatureHookFunction, options });
   }
 
   /**
@@ -401,7 +405,11 @@ export abstract class BaseFeature<
     fn: AfterFeatureHookFunction<T>,
     options?: FeatureHookOptions,
   ): void {
-    this.afterHooks.push({ fn: fn as AfterFeatureHookFunction, options });
+    const ctor = this as any;
+    if (!Object.hasOwn(ctor, "afterHooks")) {
+      ctor.afterHooks = [...ctor.afterHooks];
+    }
+    ctor.afterHooks.push({ fn: fn as AfterFeatureHookFunction, options });
   }
 
   /**
@@ -422,10 +430,23 @@ export abstract class BaseFeature<
   // Hook Execution - Internal
   // ============================================================================
 
-  private async runBeforeHooks(context: FeatureContext): Promise<void> {
-    const constructor = this.constructor as typeof BaseFeature;
+  private static collectHooks(ctor: object, prop: string): any[] {
+    const hooks: any[] = [];
+    let current: any = ctor;
+    while (current && current !== Function.prototype) {
+      if (Object.hasOwn(current, prop)) {
+        hooks.unshift(...current[prop]);
+      }
+      current = Object.getPrototypeOf(current);
+    }
+    return hooks;
+  }
 
-    for (const { fn } of constructor.beforeHooks) {
+  private async runBeforeHooks(context: FeatureContext): Promise<void> {
+    const constructor = this.constructor;
+    const hooks = BaseFeature.collectHooks(constructor, "beforeHooks");
+
+    for (const { fn } of hooks) {
       await fn(this, context);
     }
   }
@@ -434,10 +455,11 @@ export abstract class BaseFeature<
     result: UseCaseResult<TOutput>,
     context: FeatureContext,
   ): Promise<UseCaseResult<TOutput>> {
-    const constructor = this.constructor as typeof BaseFeature;
+    const constructor = this.constructor;
+    const hooks = BaseFeature.collectHooks(constructor, "afterHooks");
     let currentResult = result;
 
-    for (const { fn } of constructor.afterHooks) {
+    for (const { fn } of hooks) {
       const hookResult = await fn(this, currentResult, context);
 
       // If hook returns a result, use it

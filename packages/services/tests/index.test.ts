@@ -52,21 +52,21 @@ describe("BaseService", () => {
     expect(BaseService.aroundHooks).toBeDefined();
   });
 
-  test("execute calls the named action method", async () => {
+  test("run calls the named action method", async () => {
     const service = createService();
-    const result = await service.execute("greet", "world");
+    const result = await service.run("greet", "world");
     expect(result).toBe("hello world");
   });
 
-  test("execute passes multiple args", async () => {
+  test("run passes multiple args", async () => {
     const service = createService();
-    const result = await service.execute("add", 2, 3);
+    const result = await service.run("add", 2, 3);
     expect(result).toBe(5);
   });
 
-  test("execute throws for unknown action", async () => {
+  test("run throws for unknown action", async () => {
     const service = createService();
-    await expect(service.execute("nonexistent")).rejects.toThrow(
+    await expect(service.run("nonexistent")).rejects.toThrow(
       "Service action 'nonexistent' not found",
     );
   });
@@ -81,7 +81,7 @@ describe("BaseService", () => {
     });
 
     const service = createService(HookedService as any);
-    await service.execute("greet", "world");
+    await service.run("greet", "world");
     expect(calls).toEqual(["before"]);
   });
 
@@ -96,7 +96,7 @@ describe("BaseService", () => {
     });
 
     const service = createService(HookedService as any);
-    await service.execute("greet", "world");
+    await service.run("greet", "world");
     expect(calls).toEqual(["after"]);
   });
 
@@ -113,7 +113,7 @@ describe("BaseService", () => {
     });
 
     const service = createService(AroundService as any);
-    await service.execute("greet", "world");
+    await service.run("greet", "world");
     expect(calls).toEqual(["before-around", "after-around"]);
   });
 
@@ -133,7 +133,7 @@ describe("BaseService", () => {
     });
 
     const service = createService(PipelineService as any);
-    const result = await service.execute("greet", "world");
+    const result = await service.run("greet", "world");
     expect(result).toBe("hello world");
     expect(calls).toEqual(["before", "after"]);
   });

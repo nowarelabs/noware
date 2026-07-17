@@ -1,4 +1,13 @@
-import type { EnvLike, SqlContext, RequestLike } from "@nowarelabs/shared";
+import type {
+  EnvLike,
+  SqlContext,
+  RequestLike,
+  HookOptions,
+  HookFunction,
+  AfterHookFunction,
+  AroundHookFunction,
+  RegisteredHook,
+} from "@nowarelabs/shared";
 import { type Result, ok, safe, all, tagged } from "@nowarelabs/result";
 
 export type Dialect = "sqlite" | "postgres" | "mysql";
@@ -435,54 +444,40 @@ export class BaseSql<
   Env extends EnvLike = EnvLike,
   Request extends RequestLike = RequestLike,
 > {
-  static beforeHooks: ((...args: any[]) => any)[] = [];
-  static afterHooks: ((...args: any[]) => any)[] = [];
+  static beforeHooks: RegisteredHook[] = [];
+  static afterHooks: RegisteredHook[] = [];
+  static aroundHooks: RegisteredHook[] = [];
+
+  static before<T extends BaseSql>(fn: HookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
+    this.beforeHooks.push({ fn: fn as HookFunction, options });
+  }
+
+  static after<T extends BaseSql>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "afterHooks")) this.afterHooks = [];
+    this.afterHooks.push({ fn: fn as AfterHookFunction, options });
+  }
+
+  static around<T extends BaseSql>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
+    this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
+  }
+
+  private static collectHooks(ctor: object, prop: string): RegisteredHook[] {
+    const hooks: RegisteredHook[] = [];
+    let current: any = ctor;
+    while (current && current !== Function.prototype) {
+      if (Object.hasOwn(current, prop)) {
+        hooks.unshift(...current[prop]);
+      }
+      current = Object.getPrototypeOf(current);
+    }
+    return hooks;
+  }
 
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
     protected ctx: Ctx,
   ) {}
-
-  /** Register a before‑hook */
-  static addBeforeHook(hook: (...args: any[]) => any) {
-    // Ensure this class has its own copy of the hooks array
-    if (!Object.prototype.hasOwnProperty.call(this, "beforeHooks")) {
-      Object.defineProperty(this, "beforeHooks", {
-        value: [],
-        writable: true,
-        configurable: true,
-      });
-    }
-    this.beforeHooks.push(hook);
-  }
-
-  /** Register an after‑hook */
-  static addAfterHook(hook: (...args: any[]) => any) {
-    // Ensure this class has its own copy of the hooks array
-    if (!Object.prototype.hasOwnProperty.call(this, "afterHooks")) {
-      Object.defineProperty(this, "afterHooks", {
-        value: [],
-        writable: true,
-        configurable: true,
-      });
-    }
-    this.afterHooks.push(hook);
-  }
-
-  /** Execute all registered before hooks. */
-  protected async runBeforeHooks(...args: any[]): Promise<void> {
-    const hooks = (this.constructor as typeof BaseSql).beforeHooks;
-    for (const hook of hooks) {
-      await hook(...args);
-    }
-  }
-
-  /** Execute all registered after hooks. */
-  protected async runAfterHooks(...args: any[]): Promise<void> {
-    const hooks = (this.constructor as typeof BaseSql).afterHooks;
-    for (const hook of hooks) {
-      await hook(...args);
-    }
-  }
 }

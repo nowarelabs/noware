@@ -31,26 +31,45 @@ export abstract class BaseService<
   protected abstract getModel(): Model;
 
   static before<T extends BaseService>(fn: HookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
     this.beforeHooks.push({ fn: fn as HookFunction, options });
   }
 
   static after<T extends BaseService>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "afterHooks")) this.afterHooks = [];
     this.afterHooks.push({ fn: fn as AfterHookFunction, options });
   }
 
   static around<T extends BaseService>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+    if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
 
-  async execute<T = unknown>(action: string, ...args: any[]): Promise<T> {
-    const Ctor = this.constructor as typeof BaseService;
+  private static collectHooks(ctor: object, prop: string): RegisteredHook[] {
+    const hooks: RegisteredHook[] = [];
+    let current: any = ctor;
+    while (current && current !== Function.prototype) {
+      if (Object.hasOwn(current, prop)) {
+        hooks.unshift(...current[prop]);
+      }
+      current = Object.getPrototypeOf(current);
+    }
+    return hooks;
+  }
+
+  async run<T = unknown>(action: string, ...args: any[]): Promise<T> {
+    const Ctor = this.constructor;
     const shouldRunHook = (opts?: HookOptions) => this.shouldRunHook(opts);
 
-    await runBeforeHooks(this, Ctor.beforeHooks, shouldRunHook);
+    const beforeResult = await runBeforeHooks(
+      this,
+      BaseService.collectHooks(Ctor, "beforeHooks"),
+      shouldRunHook,
+    );
 
     const result = await runAroundHooks(
       this,
-      Ctor.aroundHooks,
+      BaseService.collectHooks(Ctor, "aroundHooks"),
       async () => {
         const handler = (this as Record<string, unknown>)[action];
         if (typeof handler !== "function") {
@@ -61,7 +80,12 @@ export abstract class BaseService<
       shouldRunHook,
     );
 
-    const afterResult = await runAfterHooks(this, Ctor.afterHooks, result, shouldRunHook);
+    const afterResult = await runAfterHooks(
+      this,
+      BaseService.collectHooks(Ctor, "afterHooks"),
+      result,
+      shouldRunHook,
+    );
     return afterResult as T;
   }
 

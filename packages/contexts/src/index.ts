@@ -53,23 +53,3 @@ export type {
   ScriptContext,
   DomainContext,
 } from "./packages.ts";
-
-export abstract class BaseContext<
-  Ctx = ContextLike,
-  Env = Record<string, unknown>,
-  Req = any,
-  Module = unknown,
-> {
-  static beforeHooks: unknown[] = [];
-  static afterHooks: unknown[] = [];
-
-  protected abstract module: Module;
-
-  constructor(
-    protected request: Req,
-    protected env: Env,
-    protected ctx: Ctx,
-  ) {}
-
-  protected abstract getModule(): Module;
-}
