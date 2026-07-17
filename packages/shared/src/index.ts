@@ -72,8 +72,6 @@ export interface ControllerLike {
   run(action: string, ...args: any[]): Promise<Response>;
 }
 
-// ── Handler-like interfaces (protocol-specific dispatch targets) ──
-
 export interface MessageHandlerLike<
   TBody = unknown,
   TMetadata = Record<string, unknown>,
@@ -233,6 +231,79 @@ export function fromWebContext(): ContextLike {
 
 export function fromWebEnv<T extends Record<string, unknown>>(env: T): EnvLike {
   return env;
+}
+
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public details?: unknown,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
+export class NotFoundError extends HttpError {
+  constructor(message = "Not Found", details?: unknown) {
+    super(message, 404, details);
+  }
+}
+
+export class BadRequestError extends HttpError {
+  constructor(message = "Bad Request", details?: unknown) {
+    super(message, 400, details);
+  }
+}
+
+export class UnauthorizedError extends HttpError {
+  constructor(message = "Unauthorized", details?: unknown) {
+    super(message, 401, details);
+  }
+}
+
+export class ForbiddenError extends HttpError {
+  constructor(message = "Forbidden", details?: unknown) {
+    super(message, 403, details);
+  }
+}
+
+export class ConflictError extends HttpError {
+  constructor(message = "Conflict", details?: unknown) {
+    super(message, 409, details);
+  }
+}
+
+export class ValidationError extends HttpError {
+  constructor(message = "Validation Error", details?: unknown) {
+    super(message, 422, details);
+  }
+}
+
+export function isValidPath(path: string): boolean {
+  const normalized = path.normalize("NFC");
+  for (let i = 0; i < normalized.length; i++) {
+    const code = normalized.charCodeAt(i);
+    if (code <= 31 || code === 127 || (code >= 128 && code <= 159)) {
+      return false;
+    }
+  }
+  const forbidden = "<>\"'`\\^|[]{}";
+  for (let i = 0; i < normalized.length; i++) {
+    if (forbidden.indexOf(normalized[i]) !== -1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function splitPath(path: string, maxDepth = 32): string[] {
+  const normalized = path.normalize("NFC");
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.length > maxDepth) {
+    throw new Error(`Path depth exceeded limit (${maxDepth}).`);
+  }
+  return segments;
 }
 
 interface NodeIncomingMessage {

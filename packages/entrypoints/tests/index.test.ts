@@ -49,7 +49,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
   test("static before hooks run before run()", async () => {
     const calls: string[] = [];
     class CliEntrypoint extends BaseEntrypoint<string[], number> {
-      static override beforeHooks: any[] = [];
       protected async run(args: string[]): Promise<number> {
         calls.push("run");
         return args.length;
@@ -68,7 +67,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
   test("static after hooks run after run()", async () => {
     const calls: string[] = [];
     class CliEntrypoint extends BaseEntrypoint<string[], number> {
-      static override afterHooks: any[] = [];
       protected async run(args: string[]): Promise<number> {
         calls.push("run");
         return args.length;
@@ -87,7 +85,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
 
   test("before hook can short-circuit before run()", async () => {
     class CliEntrypoint extends BaseEntrypoint<string[], number> {
-      static override beforeHooks: any[] = [];
       protected async run(_args: string[]): Promise<number> {
         return 42;
       }
@@ -105,7 +102,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
   test("around hook wraps run()", async () => {
     const calls: string[] = [];
     class CliEntrypoint extends BaseEntrypoint<string[], number> {
-      static override aroundHooks: any[] = [];
       protected async run(_args: string[]): Promise<number> {
         calls.push("run");
         return 42;
@@ -127,7 +123,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
   test("hook inheritance: parent hooks apply to child without own arrays", async () => {
     const calls: string[] = [];
     class Parent extends BaseEntrypoint<string[], number> {
-      static override beforeHooks: any[] = [];
       protected async run(args: string[]): Promise<number> {
         calls.push("run");
         return args.length;
@@ -148,7 +143,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
   test("hook inheritance: child hooks don't leak to parent", async () => {
     const calls: string[] = [];
     class Parent extends BaseEntrypoint<string[], number> {
-      static override beforeHooks: any[] = [];
       protected async run(args: string[]): Promise<number> {
         calls.push("run");
         return args.length;
@@ -174,7 +168,6 @@ describe("BaseEntrypoint (protocol-agnostic)", () => {
   test("hook inheritance: parent + child hooks run in correct order", async () => {
     const calls: string[] = [];
     class Parent extends BaseEntrypoint<string[], number> {
-      static override beforeHooks: any[] = [];
       protected async run(args: string[]): Promise<number> {
         calls.push("run");
         return args.length;
@@ -246,7 +239,6 @@ describe("HttpEntrypoint", () => {
   test("static before hooks run before routing", async () => {
     const calls: string[] = [];
     class HookedEntrypoint extends TestHttpEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedEntrypoint.before(async (_ep: any) => {
@@ -261,7 +253,6 @@ describe("HttpEntrypoint", () => {
   test("static after hooks run after routing", async () => {
     const calls: string[] = [];
     class HookedEntrypoint extends TestHttpEntrypoint {
-      static override afterHooks: any[] = [];
     }
 
     HookedEntrypoint.after(async (_ep: any, result: Response) => {
@@ -276,7 +267,6 @@ describe("HttpEntrypoint", () => {
 
   test("before hook can short-circuit before routing", async () => {
     class ProtectedEntrypoint extends TestHttpEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     ProtectedEntrypoint.before(async (_ep: any) => {
@@ -293,7 +283,6 @@ describe("HttpEntrypoint", () => {
   test("around hook wraps the routing", async () => {
     const calls: string[] = [];
     class AroundEntrypoint extends TestHttpEntrypoint {
-      static override aroundHooks: any[] = [];
     }
 
     AroundEntrypoint.around(async (_ep: any, next: () => Promise<any>) => {
@@ -333,7 +322,6 @@ describe("CliEntrypoint", () => {
 
   test("main returns exit code from hooks pipeline", async () => {
     class HookedCliEntrypoint extends TestCliEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedCliEntrypoint.before(async (_ep: any) => {
@@ -381,7 +369,6 @@ describe("RpcEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedRpcEntrypoint extends TestRpcEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedRpcEntrypoint.before(async (_ep: any) => {
@@ -426,7 +413,6 @@ describe("IotEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedIotEntrypoint extends TestIotEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedIotEntrypoint.before(async (_ep: any) => {
@@ -463,7 +449,6 @@ describe("CronEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedCronEntrypoint extends TestCronEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedCronEntrypoint.before(async (_ep: any) => {
@@ -500,7 +485,6 @@ describe("QueueEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedQueueEntrypoint extends TestQueueEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedQueueEntrypoint.before(async (_ep: any) => {
@@ -541,7 +525,6 @@ describe("EmailEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedEmailEntrypoint extends TestEmailEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedEmailEntrypoint.before(async (_ep: any) => {
@@ -593,7 +576,6 @@ describe("WebSocketEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedWsEntrypoint extends TestWebSocketEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedWsEntrypoint.before(async (_ep: any) => {
@@ -633,7 +615,6 @@ describe("TcpEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedTcpEntrypoint extends TestTcpEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedTcpEntrypoint.before(async (_ep: any) => {
@@ -670,7 +651,6 @@ describe("UdpEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedUdpEntrypoint extends TestUdpEntrypoint {
-      static override beforeHooks: any[] = [];
     }
 
     HookedUdpEntrypoint.before(async (_ep: any) => {
@@ -722,7 +702,6 @@ describe("DurableObjectEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedDO extends TestDurableObjectEntrypoint {
-      static override beforeHooks = [];
     }
 
     HookedDO.before(async (_ep: any) => {
@@ -796,7 +775,6 @@ describe("GrpcEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedGrpc extends TestGrpcEntrypoint {
-      static override beforeHooks = [];
     }
 
     HookedGrpc.before(async (_ep: any) => {
@@ -846,7 +824,6 @@ describe("WorkflowEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedWorkflow extends TestWorkflowEntrypoint {
-      static override beforeHooks = [];
     }
 
     HookedWorkflow.before(async (_ep: any) => {
@@ -860,7 +837,6 @@ describe("WorkflowEntrypoint", () => {
 
   test("before hook can short-circuit", async () => {
     class ShortCircuit extends TestWorkflowEntrypoint {
-      static override beforeHooks = [];
     }
 
     ShortCircuit.before(async (_ep: any) => {
@@ -875,7 +851,6 @@ describe("WorkflowEntrypoint", () => {
   test("around hook wraps handler.run", async () => {
     const calls: string[] = [];
     class AroundWorkflow extends TestWorkflowEntrypoint {
-      static override aroundHooks = [];
     }
 
     AroundWorkflow.around(async (_ep: any, next: () => Promise<any>) => {
@@ -948,7 +923,6 @@ describe("MessageEntrypoint", () => {
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
     class HookedMsg extends TestMessageEntrypoint {
-      static override beforeHooks = [];
     }
 
     HookedMsg.before(async (_ep: any) => {
@@ -967,7 +941,6 @@ describe("MessageEntrypoint", () => {
 
   test("before hook can short-circuit", async () => {
     class ProtectiveEntry extends TestMessageEntrypoint {
-      static override beforeHooks = [];
     }
 
     ProtectiveEntry.before(async (_ep: any) => {

@@ -1,6 +1,7 @@
 import type {
   EnvLike,
   EntrypointContext,
+  RouterContext,
   RouterLike,
   MessageHandlerLike,
   DurableObjectHandlerLike,
@@ -98,7 +99,7 @@ export abstract class BaseEntrypoint<
 }
 
 export abstract class HttpEntrypoint<
-  TCtx extends EntrypointContext = EntrypointContext,
+  TCtx extends RouterContext = RouterContext,
   TEnv extends EnvLike = EnvLike,
 > extends BaseEntrypoint<Request, Response, TEnv, TCtx> {
   abstract router: RouterLike<Request, TEnv, TCtx>;
@@ -110,7 +111,7 @@ export abstract class HttpEntrypoint<
   protected async run(request: Request, env: TEnv, ctx: TCtx): Promise<Response> {
     const routerCtx = createRouterContext();
     Object.assign(routerCtx, ctx);
-    return this.router.handle(request, env, routerCtx as unknown as TCtx);
+    return this.router.handle(request, env, routerCtx as TCtx);
   }
 }
 
@@ -130,7 +131,7 @@ export abstract class CliEntrypoint<
 }
 
 export abstract class RpcEntrypoint<
-  TCtx extends EntrypointContext = EntrypointContext,
+  TCtx extends RouterContext = RouterContext,
   TEnv extends EnvLike = EnvLike,
 > extends BaseEntrypoint<Request, Response, TEnv, TCtx> {
   abstract router: RouterLike<Request, TEnv, TCtx>;
@@ -140,7 +141,9 @@ export abstract class RpcEntrypoint<
   }
 
   protected async run(request: Request, env: TEnv, ctx: TCtx): Promise<Response> {
-    return this.router.handle(request, env, ctx);
+    const routerCtx = createRouterContext();
+    Object.assign(routerCtx, ctx);
+    return this.router.handle(request, env, routerCtx as TCtx);
   }
 }
 
@@ -208,7 +211,7 @@ export abstract class EmailEntrypoint<
 }
 
 export abstract class WebSocketEntrypoint<
-  TCtx extends EntrypointContext = EntrypointContext,
+  TCtx extends RouterContext = RouterContext,
   TEnv extends EnvLike = EnvLike,
 > extends BaseEntrypoint<Request, Response, TEnv, TCtx> {
   abstract router: RouterLike<Request, TEnv, TCtx>;

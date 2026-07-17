@@ -74,7 +74,6 @@ describe("BaseService", () => {
   test("static before hooks run before the action", async () => {
     const calls: string[] = [];
     class HookedService extends TestService {
-      static override beforeHooks: any[] = [];
     }
 
     HookedService.before(async (_svc: any) => {
@@ -89,7 +88,6 @@ describe("BaseService", () => {
   test("static after hooks run after the action", async () => {
     const calls: string[] = [];
     class HookedService extends TestService {
-      static override afterHooks: any[] = [];
     }
 
     HookedService.after(async (svc: any, result: any) => {
@@ -105,7 +103,6 @@ describe("BaseService", () => {
   test("around hook wraps the action call", async () => {
     const calls: string[] = [];
     class AroundService extends TestService {
-      static override aroundHooks: any[] = [];
     }
 
     AroundService.around(async (svc: any, next: () => Promise<any>) => {
@@ -124,8 +121,6 @@ describe("BaseService", () => {
     const calls: string[] = [];
 
     class PipelineService extends TestService {
-      static override beforeHooks: any[] = [];
-      static override afterHooks: any[] = [];
     }
 
     PipelineService.before(async (_svc: any) => {

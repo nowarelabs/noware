@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { BaseController, BaseResourceController } from "../src/index.ts";
-
-// ─── BaseController Tests ──────────────────────────────────────────
+import { HttpError, NotFoundError } from "@nowarelabs/shared";
 
 describe("BaseController", () => {
   class TestController extends BaseController {
@@ -53,6 +52,14 @@ describe("BaseController", () => {
 
     async serverErrorAction(): Promise<Response> {
       return this.serverError("boom");
+    }
+
+    async respondWithErrorAction(): Promise<Response> {
+      return this.respondWithError(new NotFoundError("custom not found", { resource: "user" }));
+    }
+
+    async respondWithGenericError(): Promise<Response> {
+      return this.respondWithError(new HttpError("Something failed", 503));
     }
 
     async readCookies(): Promise<Response> {
@@ -149,8 +156,6 @@ describe("BaseController", () => {
     expect(body.error).toContain("nonexistent");
   });
 
-  // ── Response helpers ──────────────────────────────────────────
-
   test("json helper sets content-type", async () => {
     const controller = createController();
     const response = await controller.run("index");
@@ -187,8 +192,6 @@ describe("BaseController", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBe("/login");
   });
-
-  // ── Error helpers ─────────────────────────────────────────────
 
   test("notFound helper returns 404 with JSON", async () => {
     const controller = createController();
@@ -230,7 +233,29 @@ describe("BaseController", () => {
     expect(body.error).toBe("boom");
   });
 
-  // ── Param accessors ───────────────────────────────────────────
+  test("respondWithError returns correct status and message", async () => {
+    const controller = createController();
+    const response = await controller.run("respondWithErrorAction");
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error).toBe("custom not found");
+  });
+
+  test("respondWithError includes details when present", async () => {
+    const controller = createController();
+    const response = await controller.run("respondWithErrorAction");
+    const body = await response.json();
+    expect(body.details).toEqual({ resource: "user" });
+  });
+
+  test("respondWithError omits details when not present", async () => {
+    const controller = createController();
+    const response = await controller.run("respondWithGenericError");
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.error).toBe("Something failed");
+    expect(body.details).toBeUndefined();
+  });
 
   test("params returns route params from ctx", async () => {
     const controller = createControllerWithParams({ id: "42" });
@@ -249,8 +274,6 @@ describe("BaseController", () => {
     expect((controller as any).queryParams).toEqual({ q: "test", page: "2" });
   });
 
-  // ── Request info ──────────────────────────────────────────────
-
   test("requestInfo returns method, path, ip, url", async () => {
     const controller = createController();
     const response = await controller.run("requestInfo");
@@ -259,8 +282,6 @@ describe("BaseController", () => {
     expect(body.path).toBe("/");
     expect(body.hasUrl).toBe(true);
   });
-
-  // ── Cookie helpers ────────────────────────────────────────────
 
   test("cookies parses request cookies", async () => {
     const request = new Request("http://localhost", {
@@ -296,8 +317,6 @@ describe("BaseController", () => {
     expect(cookieHeader).toContain("Max-Age=0");
   });
 
-  // ── beforeAction convention ───────────────────────────────────
-
   test("beforeAction convention intercepts requests", async () => {
     const request = new Request("http://localhost");
     const env = {} as Record<string, unknown>;
@@ -320,12 +339,9 @@ describe("BaseController", () => {
     expect(response.status).toBe(200);
   });
 
-  // ── Static hooks ──────────────────────────────────────────────
-
   test("static before hooks run before the action", async () => {
     const calls: string[] = [];
     class HookedController extends TestController {
-      static override beforeHooks: any[] = [];
     }
 
     HookedController.before(async (_ctrl: any) => {
@@ -340,7 +356,6 @@ describe("BaseController", () => {
   test("static after hooks run after the action", async () => {
     const calls: string[] = [];
     class HookedController extends TestController {
-      static override afterHooks: any[] = [];
     }
 
     HookedController.after(async (ctrl: any, result: any) => {
@@ -355,7 +370,6 @@ describe("BaseController", () => {
 
   test("before hook can short-circuit with a response", async () => {
     class ProtectedController extends TestController {
-      static override beforeHooks: any[] = [];
     }
 
     ProtectedController.before(async (_ctrl: any) => {
@@ -371,7 +385,6 @@ describe("BaseController", () => {
 
   test("after hook can transform the response", async () => {
     class TransformController extends TestController {
-      static override afterHooks: any[] = [];
     }
 
     TransformController.after(async (_ctrl: any, _result: Response) => {
@@ -388,7 +401,6 @@ describe("BaseController", () => {
   test("around hook wraps the action call", async () => {
     const calls: string[] = [];
     class AroundController extends TestController {
-      static override aroundHooks: any[] = [];
     }
 
     AroundController.around(async (ctrl: any, next: () => Promise<any>) => {
@@ -403,14 +415,10 @@ describe("BaseController", () => {
     expect(calls).toEqual(["before-around", "after-around"]);
   });
 
-  // ── Full pipeline ─────────────────────────────────────────────
-
   test("full pipeline: beforeAction -> before hook -> action -> after hook -> afterAction", async () => {
     const calls: string[] = [];
 
     class FullPipelineController extends TestController {
-      static override beforeHooks: any[] = [];
-      static override afterHooks: any[] = [];
 
       protected override async beforeAction(): Promise<Response | void> {
         calls.push("instance-before");
@@ -434,8 +442,6 @@ describe("BaseController", () => {
     await controller.run("index");
     expect(calls).toEqual(["instance-before", "static-before", "static-after", "instance-after"]);
   });
-
-  // ── Hook inheritance ──────────────────────────────────────────
 
   test("hook inheritance: parent hooks apply to child without own arrays", async () => {
     const calls: string[] = [];
@@ -488,12 +494,9 @@ describe("BaseController", () => {
     expect(calls).toEqual(["parent-before", "child-before"]);
   });
 
-  // ── Hook options (only/except) ────────────────────────────────
-
   test("before hook with only option runs only for specified actions", async () => {
     const calls: string[] = [];
     class FilteredController extends TestController {
-      static override beforeHooks: any[] = [];
     }
 
     FilteredController.before(
@@ -514,7 +517,6 @@ describe("BaseController", () => {
   test("before hook with except option skips specified actions", async () => {
     const calls: string[] = [];
     class FilteredController extends TestController {
-      static override beforeHooks: any[] = [];
     }
 
     FilteredController.before(
@@ -533,11 +535,7 @@ describe("BaseController", () => {
   });
 });
 
-// ─── BaseResourceController Tests ──────────────────────────────────
-
 describe("BaseResourceController", () => {
-  // ── Mock data accessor (works as both service and model) ──────
-
   function createDataAccessor() {
     const items = [
       { id: "1", name: "Alice" },
@@ -615,8 +613,6 @@ describe("BaseResourceController", () => {
       },
     };
   }
-
-  // ── Pattern 1: Service-backed (recommended) ───────────────────
 
   describe("service pattern (recommended)", () => {
     class UsersController extends BaseResourceController {
@@ -753,8 +749,7 @@ describe("BaseResourceController", () => {
     test("before hook runs on resource actions", async () => {
       const calls: string[] = [];
       class AuditedController extends UsersController {
-        static override beforeHooks: any[] = [];
-      }
+        }
 
       AuditedController.before(async (_ctrl: any) => {
         calls.push("audit");
@@ -769,8 +764,6 @@ describe("BaseResourceController", () => {
       expect(calls).toEqual(["audit"]);
     });
   });
-
-  // ── Pattern 2: Model-direct (simpler apps) ────────────────────
 
   describe("model-direct pattern", () => {
     class UsersController extends BaseResourceController {
@@ -846,8 +839,6 @@ describe("BaseResourceController", () => {
     });
   });
 
-  // ── Shared behavior tests ─────────────────────────────────────
-
   describe("content negotiation", () => {
     class UsersController extends BaseResourceController {
       protected service = createDataAccessor();
@@ -888,7 +879,7 @@ describe("BaseResourceController", () => {
       expect(response.headers.get("content-type")).toBe("text/csv");
     });
 
-    test("respondWith returns HTML when Accept header requests it", async () => {
+    test("respondWith falls back to JSON for unhandled content types like HTML", async () => {
       const request = new Request("http://localhost", {
         headers: { Accept: "text/html" },
       });
@@ -896,7 +887,7 @@ describe("BaseResourceController", () => {
       const ctx = { params: {} } as any;
       const controller = new UsersController(request, env, ctx);
       const response = await controller.run("index");
-      expect(response.headers.get("content-type")).toBe("text/html");
+      expect(response.headers.get("content-type")).toBe("application/json");
     });
   });
 

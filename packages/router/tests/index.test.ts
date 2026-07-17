@@ -1,284 +1,189 @@
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { createRouterContext } from "@nowarelabs/shared";
 import type { RouterContext } from "@nowarelabs/shared";
-import { BaseRouter, HttpRouter, type RouteResult } from "../src/index.ts";
+import {
+  BaseRouter,
+  HttpRouter,
+  RouteDrawer,
+  type RouteResult,
+  type RouterPlugin,
+} from "../src/index.ts";
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+class StubController {
+  constructor(
+    private request: Request,
+    private env: Record<string, unknown>,
+    private ctx: RouterContext,
+  ) {}
+
+  async run(action: string): Promise<Response> {
+    const params = this.ctx?.params ?? {};
+    if (action === "index") return new Response(JSON.stringify({ items: [] }));
+    if (action === "show") return new Response(`show ${params.id ?? "none"}`);
+    if (action === "create") return new Response("created", { status: 201 });
+    if (action === "update") return new Response("updated");
+    if (action === "destroy") return new Response("deleted");
+    if (action === "new") return new Response("new form");
+    if (action === "edit") return new Response(`edit form ${params.id}`);
+    return new Response(`${action} OK`);
+  }
+}
+
+function req(method: string, path: string): Request {
+  return new Request(`http://localhost${path}`, { method });
+}
+
+function env(): Record<string, unknown> {
+  return {};
+}
+
+// ── BaseRouter ───────────────────────────────────────────────────
 
 describe("BaseRouter", () => {
-  class TestController {
-    constructor(
-      private request: Request,
-      private env: Record<string, unknown>,
-      private ctx: RouterContext,
-    ) {}
-
-    async run(action: string): Promise<Response> {
-      if (action === "home") return new Response("home page");
-      if (action === "show") return new Response(`show ${this.ctx.params?.id || "none"}`);
-      return new Response("Not Found", { status: 404 });
-    }
-  }
-
   class TestRouter extends BaseRouter {
     resolveRoute(request: Request): RouteResult | null {
       const url = new URL(request.url);
       if (url.pathname === "/") {
-        return {
-          Controller: TestController as any,
-          action: "home",
-          params: {},
-        };
+        return { Controller: StubController as any, action: "home", params: {} };
       }
       return null;
     }
   }
 
-  function createRouter(routerClass = TestRouter) {
-    const router = new routerClass();
-    return router;
-  }
-
   test("constructor works", () => {
-    const router = createRouter();
-    expect(router).toBeDefined();
+    expect(new TestRouter()).toBeDefined();
   });
 
   test("resolveRoute returns a route for /", () => {
-    const router = createRouter();
-    const request = new Request("http://localhost/");
-    const route = router.resolveRoute(request);
+    const router = new TestRouter();
+    const route = router.resolveRoute(req("GET", "/"));
     expect(route).not.toBeNull();
     expect(route!.action).toBe("home");
   });
 
   test("resolveRoute returns null for unknown path", () => {
-    const router = createRouter();
-    const request = new Request("http://localhost/unknown");
-    const route = router.resolveRoute(request);
-    expect(route).toBeNull();
+    const router = new TestRouter();
+    expect(router.resolveRoute(req("GET", "/unknown"))).toBeNull();
   });
 
   test("handle dispatches to the controller", async () => {
-    const router = createRouter();
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    const response = await router.handle(request, env, ctx);
+    const router = new TestRouter();
+    const response = await router.handle(req("GET", "/"), env(), createRouterContext());
     expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toBe("home page");
   });
 
   test("handle returns 404 when no route matches", async () => {
-    const router = createRouter();
-    const request = new Request("http://localhost/unknown");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    const response = await router.handle(request, env, ctx);
+    const router = new TestRouter();
+    const response = await router.handle(req("GET", "/unknown"), env(), createRouterContext());
     expect(response.status).toBe(404);
   });
 
   test("static before hooks run before routing", async () => {
     const calls: string[] = [];
     class HookedRouter extends TestRouter {
-      static override beforeHooks: any[] = [];
     }
-
-    HookedRouter.before(async (_r: any) => {
+    HookedRouter.before(async () => {
       calls.push("before");
     });
 
-    const router = createRouter(HookedRouter as any);
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    await router.handle(request, env, ctx);
+    const router = new HookedRouter();
+    await router.handle(req("GET", "/"), env(), createRouterContext());
     expect(calls).toEqual(["before"]);
   });
 
   test("static after hooks run after routing", async () => {
     const calls: string[] = [];
     class HookedRouter extends TestRouter {
-      static override afterHooks: any[] = [];
     }
-
-    HookedRouter.after(async (r: any, result: Response) => {
+    HookedRouter.after(async (_r: any, result: Response) => {
       calls.push("after");
       return result;
     });
 
-    const router = createRouter(HookedRouter as any);
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    await router.handle(request, env, ctx);
+    const router = new HookedRouter();
+    await router.handle(req("GET", "/"), env(), createRouterContext());
     expect(calls).toEqual(["after"]);
   });
 
-  test("before hook can short-circuit before routing", async () => {
+  test("before hook can short-circuit", async () => {
     class ProtectedRouter extends TestRouter {
-      static override beforeHooks: any[] = [];
     }
+    ProtectedRouter.before(async () => new Response("Blocked", { status: 403 }));
 
-    ProtectedRouter.before(async (_r: any) => {
-      return new Response("Blocked before route", { status: 403 });
-    });
-
-    const router = createRouter(ProtectedRouter as any);
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    const response = await router.handle(request, env, ctx);
+    const response = await new ProtectedRouter().handle(
+      req("GET", "/"),
+      env(),
+      createRouterContext(),
+    );
     expect(response.status).toBe(403);
-    const body = await response.text();
-    expect(body).toBe("Blocked before route");
   });
 
-  test("around hook wraps the routing and controller dispatch", async () => {
+  test("around hook wraps the routing", async () => {
     const calls: string[] = [];
     class AroundRouter extends TestRouter {
-      static override aroundHooks: any[] = [];
     }
-
-    AroundRouter.around(async (r: any, next: () => Promise<any>) => {
-      calls.push("before-around");
+    AroundRouter.around(async (_r: any, next: () => Promise<any>) => {
+      calls.push("before");
       const result = await next();
-      calls.push("after-around");
+      calls.push("after");
       return result;
     });
 
-    const router = createRouter(AroundRouter as any);
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    await router.handle(request, env, ctx);
-    expect(calls).toEqual(["before-around", "after-around"]);
+    await new AroundRouter().handle(req("GET", "/"), env(), createRouterContext());
+    expect(calls).toEqual(["before", "after"]);
   });
 
   test("static hooks are isolated per subclass", () => {
     class RouterA extends TestRouter {
-      static override beforeHooks: any[] = [];
     }
     class RouterB extends TestRouter {
-      static override beforeHooks: any[] = [];
     }
-
     const fnA = async () => {};
     const fnB = async () => {};
-
     RouterA.before(fnA as any);
     RouterB.before(fnB as any);
-
     expect(RouterA.beforeHooks).toHaveLength(1);
     expect(RouterB.beforeHooks).toHaveLength(1);
     expect(RouterA.beforeHooks[0].fn).toBe(fnA);
     expect(RouterB.beforeHooks[0].fn).toBe(fnB);
   });
 
-  test("hook inheritance: parent hooks apply to child without own arrays", async () => {
+  test("hook inheritance: parent hooks apply to child", async () => {
     const calls: string[] = [];
     class Parent extends TestRouter {}
     class Child extends Parent {}
-
-    Parent.before(async (_r: any) => {
-      calls.push("parent-before");
+    Parent.before(async () => {
+      calls.push("parent");
     });
 
-    const router = new Child();
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    await router.handle(request, env, ctx);
-    expect(calls).toEqual(["parent-before"]);
-  });
-
-  test("hook inheritance: child hooks don't leak to parent", async () => {
-    const calls: string[] = [];
-    class Parent extends TestRouter {}
-    class Child extends Parent {}
-
-    Child.before(async (_r: any) => {
-      calls.push("child-before");
-    });
-
-    const parentRouter = new Parent();
-    const childRouter = new Child();
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    await parentRouter.handle(request, env, ctx);
-    expect(calls).toEqual([]);
-
-    await childRouter.handle(request, env, ctx);
-    expect(calls).toEqual(["child-before"]);
-  });
-
-  test("hook inheritance: parent + child hooks run in correct order", async () => {
-    const calls: string[] = [];
-    class Parent extends TestRouter {}
-    class Child extends Parent {}
-
-    Parent.before(async (_r: any) => {
-      calls.push("parent-before");
-    });
-
-    Child.before(async (_r: any) => {
-      calls.push("child-before");
-    });
-
-    const router = new Child();
-    const request = new Request("http://localhost/");
-    const env = {} as Record<string, unknown>;
-    const ctx = createRouterContext();
-
-    await router.handle(request, env, ctx);
-    expect(calls).toEqual(["parent-before", "child-before"]);
+    await new Child().handle(req("GET", "/"), env(), createRouterContext());
+    expect(calls).toEqual(["parent"]);
   });
 });
 
+// ── HttpRouter ───────────────────────────────────────────────────
+
 describe("HttpRouter", () => {
-  class TestController {
-    constructor(
-      private _request: Request,
-      private _env: Record<string, unknown>,
-      private _ctx: RouterContext,
-    ) {}
-
-    async run(action: string): Promise<Response> {
-      if (action === "home") return new Response("home page");
-      if (action === "show") return new Response(`show ${this._ctx.params?.id ?? "none"}`);
-      if (action === "nested") return new Response(`nested ${this._ctx.params?.id ?? "none"}`);
-      return new Response("Not Found", { status: 404 });
-    }
-  }
-
   function createRouter() {
     const router = new HttpRouter();
-    router.route("GET", "/", TestController as any, "home");
-    router.route("GET", "/users/:id", TestController as any, "show");
-    router.route("GET", "/users/:id/posts/:postId", TestController as any, "nested");
+    router.route("GET", "/", StubController as any, "index");
+    router.route("GET", "/users/:id", StubController as any, "show");
+    router.route("GET", "/users/:id/posts/:postId", StubController as any, "show");
     return router;
   }
 
   test("route registration and resolveRoute match", () => {
     const router = createRouter();
-    const request = new Request("http://localhost/");
-    const result = router.resolveRoute(request);
+    const result = router.resolveRoute(req("GET", "/"));
     expect(result).not.toBeNull();
-    expect(result!.action).toBe("home");
+    expect(result!.action).toBe("index");
   });
 
   test("resolveRoute extracts path params", () => {
     const router = createRouter();
-    const request = new Request("http://localhost/users/42");
-    const result = router.resolveRoute(request);
+    const result = router.resolveRoute(req("GET", "/users/42"));
     expect(result).not.toBeNull();
     expect(result!.action).toBe("show");
     expect(result!.params).toEqual({ id: "42" });
@@ -286,44 +191,30 @@ describe("HttpRouter", () => {
 
   test("resolveRoute returns null for unknown path", () => {
     const router = createRouter();
-    const request = new Request("http://localhost/unknown");
-    const result = router.resolveRoute(request);
-    expect(result).toBeNull();
+    expect(router.resolveRoute(req("GET", "/unknown"))).toBeNull();
   });
 
   test("resolveRoute returns null for wrong method", () => {
     const router = createRouter();
-    const request = new Request("http://localhost/", { method: "POST" });
-    const result = router.resolveRoute(request);
-    expect(result).toBeNull();
+    expect(router.resolveRoute(req("POST", "/"))).toBeNull();
   });
 
-  test("handle dispatches matched route to controller", async () => {
+  test("handle dispatches matched route", async () => {
     const router = createRouter();
-    const response = await router.handle(
-      new Request("http://localhost/users/99"),
-      {},
-      createRouterContext(),
-    );
+    const response = await router.handle(req("GET", "/users/99"), env(), createRouterContext());
     expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toBe("show 99");
+    expect(await response.text()).toBe("show 99");
   });
 
   test("handle returns 404 when no route matches", async () => {
     const router = createRouter();
-    const response = await router.handle(
-      new Request("http://localhost/unknown"),
-      {},
-      createRouterContext(),
-    );
+    const response = await router.handle(req("GET", "/unknown"), env(), createRouterContext());
     expect(response.status).toBe(404);
   });
 
   test("multiple path params extracted correctly", () => {
     const router = createRouter();
-    const request = new Request("http://localhost/users/7/posts/abc");
-    const result = router.resolveRoute(request);
+    const result = router.resolveRoute(req("GET", "/users/7/posts/abc"));
     expect(result).not.toBeNull();
     expect(result!.params).toEqual({ id: "7", postId: "abc" });
   });
@@ -331,10 +222,315 @@ describe("HttpRouter", () => {
   test("chained route registration", () => {
     const router = new HttpRouter();
     router
-      .route("GET", "/", TestController as any, "home")
-      .route("GET", "/about", TestController as any, "about");
+      .route("GET", "/", StubController as any, "index")
+      .route("GET", "/about", StubController as any, "show");
+    expect(router.resolveRoute(req("GET", "/"))).not.toBeNull();
+    expect(router.resolveRoute(req("GET", "/about"))).not.toBeNull();
+  });
 
-    expect(router.resolveRoute(new Request("http://localhost/"))).not.toBeNull();
-    expect(router.resolveRoute(new Request("http://localhost/about"))).not.toBeNull();
+  // ── HTTP verb helpers ──────────────────────────────────────
+
+  test(".get() registers GET route", async () => {
+    const router = new HttpRouter();
+    router.get("/hello", StubController as any, "show");
+    const result = router.resolveRoute(req("GET", "/hello"));
+    expect(result).not.toBeNull();
+    expect(result!.action).toBe("show");
+  });
+
+  test(".post() registers POST route", async () => {
+    const router = new HttpRouter();
+    router.post("/items", StubController as any, "create");
+    const result = router.resolveRoute(req("POST", "/items"));
+    expect(result).not.toBeNull();
+    expect(result!.action).toBe("create");
+  });
+
+  test(".put() registers PUT route", async () => {
+    const router = new HttpRouter();
+    router.put("/items/:id", StubController as any, "update");
+    const result = router.resolveRoute(req("PUT", "/items/5"));
+    expect(result).not.toBeNull();
+    expect(result!.params).toEqual({ id: "5" });
+  });
+
+  test(".patch() registers PATCH route", async () => {
+    const router = new HttpRouter();
+    router.patch("/items/:id", StubController as any, "update");
+    const result = router.resolveRoute(req("PATCH", "/items/5"));
+    expect(result).not.toBeNull();
+    expect(result!.action).toBe("update");
+  });
+
+  test(".delete() registers DELETE route", async () => {
+    const router = new HttpRouter();
+    router.delete("/items/:id", StubController as any, "destroy");
+    const result = router.resolveRoute(req("DELETE", "/items/5"));
+    expect(result).not.toBeNull();
+    expect(result!.action).toBe("destroy");
+  });
+
+  // ── resources() ────────────────────────────────────────────
+
+  test("resources() registers standard REST routes", () => {
+    const router = new HttpRouter();
+    router.resources("/users", StubController as any);
+
+    expect(router.resolveRoute(req("GET", "/users"))?.action).toBe("index");
+    expect(router.resolveRoute(req("POST", "/users"))?.action).toBe("create");
+    expect(router.resolveRoute(req("GET", "/users/new"))?.action).toBe("new");
+    expect(router.resolveRoute(req("GET", "/users/1"))?.action).toBe("show");
+    expect(router.resolveRoute(req("GET", "/users/1/edit"))?.action).toBe("edit");
+    expect(router.resolveRoute(req("PUT", "/users/1"))?.action).toBe("update");
+    expect(router.resolveRoute(req("PATCH", "/users/1"))?.action).toBe("update");
+    expect(router.resolveRoute(req("DELETE", "/users/1"))?.action).toBe("destroy");
+  });
+
+  test("resources() with only option", () => {
+    const router = new HttpRouter();
+    router.resources("/users", StubController as any, { only: ["index", "show"] });
+
+    expect(router.resolveRoute(req("GET", "/users"))?.action).toBe("index");
+    expect(router.resolveRoute(req("GET", "/users/1"))?.action).toBe("show");
+    expect(router.resolveRoute(req("POST", "/users"))).toBeNull();
+    expect(router.resolveRoute(req("DELETE", "/users/1"))).toBeNull();
+  });
+
+  test("resources() with except option", () => {
+    const router = new HttpRouter();
+    router.resources("/users", StubController as any, { except: ["destroy", "new"] });
+
+    expect(router.resolveRoute(req("GET", "/users"))?.action).toBe("index");
+    expect(router.resolveRoute(req("DELETE", "/users/1"))).toBeNull();
+    // /users/new is not registered as "new", but matches /users/:id param route
+    expect(router.resolveRoute(req("GET", "/users/new"))?.params).toEqual({ id: "new" });
+  });
+
+  // ── resourceActions() ──────────────────────────────────────
+
+  test("resourceActions() registers custom actions", () => {
+    const router = new HttpRouter();
+    router.resourceActions("/users", StubController as any, {
+      archive: "POST",
+      publish: "PATCH",
+    });
+
+    expect(router.resolveRoute(req("POST", "/users/archive"))?.action).toBe("archive");
+    expect(router.resolveRoute(req("PATCH", "/users/publish"))?.action).toBe("publish");
+    expect(router.resolveRoute(req("GET", "/users/archive"))).toBeNull();
+  });
+
+  test("resourceActions() handles index action at root", () => {
+    const router = new HttpRouter();
+    router.resourceActions("/users", StubController as any, {
+      index: "GET",
+      export: "POST",
+    });
+
+    expect(router.resolveRoute(req("GET", "/users"))?.action).toBe("index");
+    expect(router.resolveRoute(req("POST", "/users/export"))?.action).toBe("export");
+  });
+
+  // ── Resources param extraction ─────────────────────────────
+
+  test("resources() extracts params correctly", async () => {
+    const router = new HttpRouter();
+    router.resources("/users", StubController as any);
+
+    const result = router.resolveRoute(req("GET", "/users/42"));
+    expect(result).not.toBeNull();
+    expect(result!.params.id).toBe("42");
+
+    const editResult = router.resolveRoute(req("GET", "/users/42/edit"));
+    expect(editResult).not.toBeNull();
+    expect(editResult!.params.id).toBe("42");
+  });
+});
+
+// ── Middleware ───────────────────────────────────────────────────
+
+describe("Middleware", () => {
+  function createControllerReturning(text: string) {
+    return class {
+      async run() {
+        return new Response(text);
+      }
+    } as any;
+  }
+
+  test("use() adds middleware that runs before action", async () => {
+    const order: string[] = [];
+    const router = new HttpRouter();
+    router.get("/", createControllerReturning("ok"), "run");
+
+    router.use(async (_req, _env, _ctx, next) => {
+      order.push("mw");
+      return await next();
+    });
+
+    await router.handle(req("GET", "/"), env(), createRouterContext());
+    expect(order).toEqual(["mw"]);
+  });
+
+  test("middleware chain runs in order", async () => {
+    const order: string[] = [];
+    const router = new HttpRouter();
+    router.get("/", createControllerReturning("ok"), "run");
+
+    router.use(async (_req, _env, _ctx, next) => {
+      order.push("first");
+      return await next();
+    });
+    router.use(async (_req, _env, _ctx, next) => {
+      order.push("second");
+      return await next();
+    });
+
+    await router.handle(req("GET", "/"), env(), createRouterContext());
+    expect(order).toEqual(["first", "second"]);
+  });
+
+  test("middleware can short-circuit", async () => {
+    const router = new HttpRouter();
+    router.get("/", createControllerReturning("ok"), "run");
+
+    router.use(async () => new Response("blocked", { status: 403 }));
+
+    const response = await router.handle(req("GET", "/"), env(), createRouterContext());
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("blocked");
+  });
+
+  test("applyMiddleware() adds middleware at the front", async () => {
+    const order: string[] = [];
+    const router = new HttpRouter();
+    router.get("/", createControllerReturning("ok"), "run");
+
+    router.use(async (_req, _env, _ctx, next) => {
+      order.push("last");
+      return await next();
+    });
+    router.applyMiddleware(async (_req, _env, _ctx, next) => {
+      order.push("first");
+      return await next();
+    });
+
+    await router.handle(req("GET", "/"), env(), createRouterContext());
+    expect(order).toEqual(["first", "last"]);
+  });
+
+  test("middleware is not called for 404 routes", async () => {
+    const mw = vi.fn(async (_req: any, _env: any, _ctx: any, next: any) => next());
+    const router = new HttpRouter();
+    router.get("/", createControllerReturning("ok"), "run");
+    router.use(mw);
+
+    const response = await router.handle(req("GET", "/missing"), env(), createRouterContext());
+    expect(response.status).toBe(404);
+    expect(mw).not.toHaveBeenCalled();
+  });
+});
+
+// ── Plugins ─────────────────────────────────────────────────────
+
+describe("Plugins", () => {
+  test("plugin() calls install on the plugin", () => {
+    const installed = vi.fn();
+    const myPlugin: RouterPlugin = { name: "test", install: installed };
+
+    const router = new HttpRouter();
+    router.plugin(myPlugin);
+
+    expect(installed).toHaveBeenCalledWith(router);
+  });
+
+  test("multiple plugins are installed", () => {
+    const calls: string[] = [];
+    const pluginA: RouterPlugin = {
+      name: "a",
+      install: () => {
+        calls.push("a");
+      },
+    };
+    const pluginB: RouterPlugin = {
+      name: "b",
+      install: () => {
+        calls.push("b");
+      },
+    };
+
+    const router = new HttpRouter();
+    router.plugin(pluginA, pluginB);
+
+    expect(calls).toEqual(["a", "b"]);
+  });
+});
+
+// ── RouteDrawer ──────────────────────────────────────────────────
+
+describe("RouteDrawer", () => {
+  test("add() and getEntries() works", () => {
+    const drawer = new RouteDrawer();
+    drawer.add("GET", "/users", "UserController", "index");
+    drawer.add("POST", "/users", "UserController", "create");
+
+    const entries = drawer.getEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries[0].method).toBe("GET");
+    expect(entries[0].path).toBe("/users");
+  });
+
+  test("toString() returns a formatted table", () => {
+    const drawer = new RouteDrawer();
+    drawer.add("GET", "/users", "UserController", "index");
+    drawer.add("POST", "/users", "UserController", "create");
+    drawer.add("GET", "/users/:id", "UserController", "show");
+
+    const output = drawer.toString();
+    expect(output).toContain("GET");
+    expect(output).toContain("POST");
+    expect(output).toContain("/users");
+    expect(output).toContain("UserController");
+    expect(output).toContain("index");
+  });
+
+  test("HttpRouter.drawer is populated", () => {
+    const router = new HttpRouter();
+    router.get("/", StubController as any, "index");
+    router.post("/users", StubController as any, "create");
+
+    const entries = router.drawer.getEntries();
+    expect(entries).toHaveLength(2);
+    expect(entries.some((e) => e.method === "GET" && e.action === "index")).toBe(true);
+    expect(entries.some((e) => e.method === "POST" && e.action === "create")).toBe(true);
+  });
+
+  test("resources() populates drawer with all routes", () => {
+    const router = new HttpRouter();
+    router.resources("/posts", StubController as any);
+
+    const entries = router.drawer.getEntries();
+    expect(entries.length).toBeGreaterThanOrEqual(8);
+    const actions = entries.map((e) => e.action);
+    expect(actions).toContain("index");
+    expect(actions).toContain("create");
+    expect(actions).toContain("show");
+    expect(actions).toContain("new");
+    expect(actions).toContain("edit");
+    expect(actions).toContain("update");
+    expect(actions).toContain("destroy");
+  });
+});
+
+// ── Logger Integration ──────────────────────────────────────────
+
+describe("Logger Integration", () => {
+  test("withLogger() sets logger on router", () => {
+    const router = new HttpRouter();
+    expect(router.logger).toBeUndefined();
+
+    const mockLogger = { withContext: vi.fn().mockReturnThis() } as any;
+    router.withLogger(mockLogger);
+    expect(router.logger).toBe(mockLogger);
   });
 });

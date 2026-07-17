@@ -2,7 +2,6 @@ import type {
   EnvLike,
   RouterContext,
   RequestLike,
-  ContextLike,
   RouterLike,
   ControllerLike,
   HookOptions,
@@ -12,6 +11,7 @@ import type {
   RegisteredHook,
 } from "@nowarelabs/shared";
 import { runBeforeHooks, runAfterHooks, runAroundHooks } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/logger";
 
 export interface RouteResult<
   Req extends RequestLike = RequestLike,
@@ -23,6 +23,64 @@ export interface RouteResult<
   params: Record<string, string>;
 }
 
+export type MiddlewareFn<
+  Req extends RequestLike = RequestLike,
+  Env extends EnvLike = EnvLike,
+  Ctx extends RouterContext = RouterContext,
+> = (
+  request: Req,
+  env: Env,
+  ctx: Ctx,
+  next: () => Promise<Response>,
+) => Promise<Response> | Response;
+
+export interface RouterPlugin<
+  Req extends RequestLike = RequestLike,
+  Env extends EnvLike = EnvLike,
+  Ctx extends RouterContext = RouterContext,
+> {
+  name: string;
+  install(router: BaseRouter<Ctx, Env, Req>): void;
+}
+
+export interface RouteDrawerEntry {
+  method: string;
+  path: string;
+  controller: string;
+  action: string;
+}
+
+export class RouteDrawer {
+  private entries: RouteDrawerEntry[] = [];
+
+  add(method: string, path: string, controller: string, action: string): void {
+    this.entries.push({ method, path, controller, action });
+  }
+
+  getEntries(): RouteDrawerEntry[] {
+    return [...this.entries];
+  }
+
+  toString(): string {
+    if (this.entries.length === 0) return "";
+
+    const maxMethod = Math.max(...this.entries.map((e) => e.method.length));
+    const maxPath = Math.max(...this.entries.map((e) => e.path.length));
+    const maxController = Math.max(...this.entries.map((e) => e.controller.length));
+
+    return [
+      `${"Method".padEnd(maxMethod)}  ${"Path".padEnd(maxPath)}  ${"Controller".padEnd(maxController)}  Action`,
+      `${"-".repeat(maxMethod)}  ${"-".repeat(maxPath)}  ${"-".repeat(maxController)}  ${"-".repeat(10)}`,
+      ...this.entries
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map(
+          (e) =>
+            `${e.method.padEnd(maxMethod)}  ${e.path.padEnd(maxPath)}  ${e.controller.padEnd(maxController)}  ${e.action}`,
+        ),
+    ].join("\n");
+  }
+}
+
 export abstract class BaseRouter<
   Ctx extends RouterContext = RouterContext,
   Env extends EnvLike = EnvLike,
@@ -32,17 +90,17 @@ export abstract class BaseRouter<
   static afterHooks: RegisteredHook[] = [];
   static aroundHooks: RegisteredHook[] = [];
 
-  static before<T extends BaseRouter>(fn: HookFunction<T>, options?: HookOptions): void {
+  static before(fn: HookFunction<BaseRouter>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
     this.beforeHooks.push({ fn: fn as HookFunction, options });
   }
 
-  static after<T extends BaseRouter>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+  static after(fn: AfterHookFunction<BaseRouter>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "afterHooks")) this.afterHooks = [];
     this.afterHooks.push({ fn: fn as AfterHookFunction, options });
   }
 
-  static around<T extends BaseRouter>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+  static around(fn: AroundHookFunction<BaseRouter>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
@@ -59,11 +117,38 @@ export abstract class BaseRouter<
     return hooks;
   }
 
+  private middleware: MiddlewareFn[] = [];
+  private plugins: RouterPlugin[] = [];
+  public drawer = new RouteDrawer();
+  public logger?: Logger;
+
+  use(...fns: MiddlewareFn[]): this {
+    this.middleware.push(...fns);
+    return this;
+  }
+
+  applyMiddleware(...fns: MiddlewareFn[]): this {
+    this.middleware.unshift(...fns);
+    return this;
+  }
+
+  plugin(...plugins: RouterPlugin[]): this {
+    for (const p of plugins) {
+      p.install(this as any);
+      this.plugins.push(p);
+    }
+    return this;
+  }
+
+  withLogger(logger: Logger): this {
+    this.logger = logger;
+    return this;
+  }
+
   abstract resolveRoute(request: Req): RouteResult<Req, Env, Ctx> | null;
 
   async handle(request: Req, env: Env, ctx: Ctx): Promise<Response> {
     const Ctor = this.constructor;
-
     const shouldRunHook = (opts?: HookOptions) => this.shouldRunHook(opts);
 
     const beforeResult = await runBeforeHooks(
@@ -81,10 +166,33 @@ export abstract class BaseRouter<
         if (!route) return new Response("Not Found", { status: 404 });
 
         const { Controller: ControllerClass, action, params } = route;
-        const controllerCtx = Object.assign(ctx as ContextLike, { params });
+        const controllerCtx: Ctx = { ...ctx, params };
 
-        const controller = new ControllerClass(request, env, controllerCtx as Ctx);
-        return await controller.run(action);
+        const controller = new ControllerClass(request, env, controllerCtx);
+
+        const enrichedCtx = controllerCtx as Ctx & { logger?: Logger };
+        if (this.logger) {
+          const req = request as unknown as Request;
+          enrichedCtx.logger = this.logger.withContext({
+            controller: ControllerClass.name,
+            action,
+            method: req.method,
+            path: new URL(req.url).pathname,
+          });
+        }
+
+        const handler = async (): Promise<Response> => {
+          return await controller.run(action);
+        };
+
+        let chain = handler;
+        for (let i = this.middleware.length - 1; i >= 0; i--) {
+          const mw = this.middleware[i];
+          const next = chain;
+          chain = async () => await mw(request, env, controllerCtx, next);
+        }
+
+        return await chain();
       },
       shouldRunHook,
     );
@@ -102,7 +210,12 @@ export abstract class BaseRouter<
   }
 }
 
-// ─── HttpRouter ────────────────────────────────────────────────────
+class RouterTrieNode {
+  children = new Map<string, RouterTrieNode>();
+  paramName?: string;
+  wildcardName?: string;
+  entry?: RouteEntry;
+}
 
 interface RouteEntry {
   pattern: string;
@@ -111,48 +224,101 @@ interface RouteEntry {
   action: string;
 }
 
-function matchPath(
-  pattern: string,
-  paramNames: string[],
-  pathname: string,
-): Record<string, string> | null {
-  const patternSegments = pattern.split("/");
-  const pathSegments = pathname.split("/");
+function normalizePath(path: string): string {
+  const normalized = path.endsWith("/") && path.length > 1 ? path.slice(0, -1) : path;
+  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+}
 
-  if (patternSegments.length !== pathSegments.length) {
-    if (pattern.endsWith("/*")) {
-      const prefixSegments = patternSegments.slice(0, -1);
-      if (pathSegments.length < prefixSegments.length) return null;
-      for (let i = 0; i < prefixSegments.length; i++) {
-        if (prefixSegments[i] !== pathSegments[i]) return null;
-      }
-      return {};
+function extractParamNames(pattern: string): string[] {
+  const params: string[] = [];
+  for (const segment of pattern.split("/")) {
+    if (segment.startsWith(":")) {
+      params.push(segment.slice(1));
+    } else if (segment.startsWith("*")) {
+      params.push(segment.slice(1));
     }
+  }
+  return params;
+}
+
+function insertTrie(root: RouterTrieNode, entry: RouteEntry): void {
+  const segments = entry.pattern.split("/").filter(Boolean);
+  let node = root;
+  for (const segment of segments) {
+    if (segment.startsWith(":")) {
+      if (!node.children.has(":")) {
+        const child = new RouterTrieNode();
+        child.paramName = segment.slice(1);
+        node.children.set(":", child);
+      }
+      node = node.children.get(":")!;
+    } else if (segment.startsWith("*")) {
+      if (!node.children.has("*")) {
+        const child = new RouterTrieNode();
+        child.wildcardName = segment.slice(1) || "*";
+        node.children.set("*", child);
+      }
+      node = node.children.get("*")!;
+    } else {
+      if (!node.children.has(segment)) {
+        node.children.set(segment, new RouterTrieNode());
+      }
+      node = node.children.get(segment)!;
+    }
+  }
+  node.entry = entry;
+}
+
+function matchTrie(
+  node: RouterTrieNode,
+  segments: string[],
+  depth: number,
+): { entry: RouteEntry; params: Record<string, string> } | null {
+  if (depth === segments.length) {
+    if (node.entry) return { entry: node.entry, params: {} };
     return null;
   }
 
-  const params: Record<string, string> = {};
-  let paramIdx = 0;
+  const segment = segments[depth];
 
-  for (let i = 0; i < patternSegments.length; i++) {
-    const ps = patternSegments[i];
-    const p = pathSegments[i];
+  const wildcardChild = node.children.get("*");
+  if (wildcardChild && wildcardChild.entry) {
+    const remaining = segments.slice(depth).join("/");
+    return {
+      entry: wildcardChild.entry,
+      params: { [wildcardChild.wildcardName!]: remaining },
+    };
+  }
 
-    if (ps.startsWith(":")) {
-      params[paramNames[paramIdx++]] = p;
-    } else if (ps !== p) {
-      return null;
+  if (node.children.has(segment)) {
+    const result = matchTrie(node.children.get(segment)!, segments, depth + 1);
+    if (result) return result;
+  }
+
+  const paramChild = node.children.get(":");
+  if (paramChild && paramChild.paramName) {
+    const result = matchTrie(paramChild, segments, depth + 1);
+    if (result) {
+      result.params[paramChild.paramName] = segment;
+      return result;
     }
   }
 
-  return params;
+  return null;
 }
 
 export class HttpRouter<
   Ctx extends RouterContext = RouterContext,
   Env extends EnvLike = EnvLike,
 > extends BaseRouter<Ctx, Env, Request> {
-  private routes = new Map<string, RouteEntry[]>();
+  private roots = new Map<string, RouterTrieNode>();
+
+  private getRoot(method: string): RouterTrieNode {
+    if (!this.roots.has(method)) {
+      this.roots.set(method, new RouterTrieNode());
+    }
+    return this.roots.get(method)!;
+  }
 
   route(
     method: string,
@@ -160,48 +326,118 @@ export class HttpRouter<
     Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
     action: string,
   ): this {
-    const normalizedPath = path.endsWith("/") && path.length > 1 ? path.slice(0, -1) : path;
-    const paramNames: string[] = [];
-    const segments = normalizedPath.split("/");
-    for (const segment of segments) {
-      if (segment.startsWith(":")) {
-        paramNames.push(segment.slice(1));
-      }
-    }
+    const normalized = normalizePath(path);
+    const paramNames = extractParamNames(normalized);
+    const entry: RouteEntry = { pattern: normalized, paramNames, Controller, action };
 
-    const entry: RouteEntry = { pattern: normalizedPath, paramNames, Controller, action };
-    const methodRoutes = this.routes.get(method) ?? [];
-    methodRoutes.push(entry);
-    this.routes.set(method, methodRoutes);
+    insertTrie(this.getRoot(method), entry);
+
+    const controllerName = Controller.name || "AnonymousController";
+    this.drawer.add(method, normalized, controllerName, action);
+    return this;
+  }
+
+  get(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    action: string,
+  ): this {
+    return this.route("GET", path, Controller, action);
+  }
+
+  post(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    action: string,
+  ): this {
+    return this.route("POST", path, Controller, action);
+  }
+
+  put(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    action: string,
+  ): this {
+    return this.route("PUT", path, Controller, action);
+  }
+
+  patch(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    action: string,
+  ): this {
+    return this.route("PATCH", path, Controller, action);
+  }
+
+  delete(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    action: string,
+  ): this {
+    return this.route("DELETE", path, Controller, action);
+  }
+
+  resources(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    options: { only?: string[]; except?: string[] } = {},
+  ): this {
+    const routes: Array<{ method: string; path: string; action: string }> = [
+      { method: "GET", path, action: "index" },
+      { method: "POST", path, action: "create" },
+      { method: "GET", path: `${path}/new`, action: "new" },
+      { method: "GET", path: `${path}/:id`, action: "show" },
+      { method: "GET", path: `${path}/:id/edit`, action: "edit" },
+      { method: "PUT", path: `${path}/:id`, action: "update" },
+      { method: "PATCH", path: `${path}/:id`, action: "update" },
+      { method: "DELETE", path: `${path}/:id`, action: "destroy" },
+    ];
+
+    const { only, except } = options;
+    const filtered = routes.filter((r) => {
+      if (only && !only.includes(r.action)) return false;
+      if (except && except.includes(r.action)) return false;
+      return true;
+    });
+
+    for (const r of filtered) {
+      this.route(r.method, r.path, Controller, r.action);
+    }
+    return this;
+  }
+
+  resourceActions(
+    path: string,
+    Controller: new (request: Request, env: Env, ctx: Ctx) => ControllerLike,
+    actions: Record<string, string>,
+  ): this {
+    for (const [action, method] of Object.entries(actions)) {
+      const routePath = action === "index" ? path : `${path}/${action}`;
+      this.route(method.toUpperCase(), routePath, Controller, action);
+    }
     return this;
   }
 
   resolveRoute(request: Request): RouteResult<Request, Env, Ctx> | null {
     const method = request.method;
     const url = new URL(request.url);
-    const pathname =
-      url.pathname.endsWith("/") && url.pathname.length > 1
-        ? url.pathname.slice(0, -1)
-        : url.pathname;
+    const pathname = normalizePath(url.pathname);
+    const segments = pathname.split("/").filter(Boolean);
 
-    const methodRoutes = this.routes.get(method);
-    if (!methodRoutes) return null;
+    const root = this.roots.get(method);
+    if (!root) return null;
 
-    for (const entry of methodRoutes) {
-      const params = matchPath(entry.pattern, entry.paramNames, pathname);
-      if (params !== null) {
-        return {
-          Controller: entry.Controller as new (
-            request: Request,
-            env: Env,
-            ctx: Ctx,
-          ) => ControllerLike,
-          action: entry.action,
-          params,
-        };
-      }
-    }
+    const result = matchTrie(root, segments, 0);
+    if (!result) return null;
 
-    return null;
+    return {
+      Controller: result.entry.Controller as new (
+        request: Request,
+        env: Env,
+        ctx: Ctx,
+      ) => ControllerLike,
+      action: result.entry.action,
+      params: result.params,
+    };
   }
 }

@@ -43,7 +43,6 @@ describe("BaseLogger", () => {
 
   test("static before hook registration", () => {
     class TestLogger extends BaseLogger {
-      static override beforeHooks: any[] = [];
     }
     const fn = async () => {};
     TestLogger.before(fn);
@@ -53,7 +52,6 @@ describe("BaseLogger", () => {
 
   test("static after hook registration", () => {
     class TestLogger extends BaseLogger {
-      static override afterHooks: any[] = [];
     }
     const fn = async () => {};
     TestLogger.after(fn);
@@ -62,7 +60,6 @@ describe("BaseLogger", () => {
 
   test("static around hook registration", () => {
     class TestLogger extends BaseLogger {
-      static override aroundHooks: any[] = [];
     }
     const fn = async (_: any, next: () => Promise<any>) => next();
     TestLogger.around(fn);
@@ -71,10 +68,8 @@ describe("BaseLogger", () => {
 
   test("Object.hasOwn prevents hook leaking between siblings", () => {
     class LoggerA extends BaseLogger {
-      static override beforeHooks: any[] = [];
     }
     class LoggerB extends BaseLogger {
-      static override beforeHooks: any[] = [];
     }
 
     LoggerA.before(async () => {});
@@ -87,9 +82,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class TestLogger extends BaseLogger {
-      static override beforeHooks: any[] = [];
-      static override aroundHooks: any[] = [];
-      static override afterHooks: any[] = [];
 
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
@@ -130,7 +122,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class TestLogger extends BaseLogger {
-      static override beforeHooks: any[] = [];
 
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
@@ -160,7 +151,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class TestLogger extends BaseLogger {
-      static override aroundHooks: any[] = [];
 
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
@@ -192,7 +182,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class Parent extends BaseLogger {
-      static override beforeHooks: any[] = [];
 
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
@@ -221,7 +210,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class Parent extends BaseLogger {
-      static override beforeHooks: any[] = [];
 
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
@@ -253,7 +241,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class Parent extends BaseLogger {
-      static override beforeHooks: any[] = [];
 
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
@@ -447,7 +434,6 @@ describe("Logger hook pipeline", () => {
     const calls: string[] = [];
 
     class HookedLogger extends Logger {
-      static override beforeHooks: any[] = [];
     }
 
     HookedLogger.before(async (_: any) => {
@@ -466,7 +452,6 @@ describe("Logger hook pipeline", () => {
     const calls: string[] = [];
 
     class HookedLogger extends Logger {
-      static override afterHooks: any[] = [];
     }
 
     HookedLogger.after(async (_: any, result: any) => {
@@ -487,7 +472,6 @@ describe("Logger hook pipeline", () => {
     const calls: string[] = [];
 
     class HookedLogger extends Logger {
-      static override aroundHooks: any[] = [];
     }
 
     HookedLogger.around(async (_: any, next: () => Promise<any>) => {
@@ -510,7 +494,6 @@ describe("Logger hook pipeline", () => {
     const calls: string[] = [];
 
     class ParentLogger extends Logger {
-      static override beforeHooks: any[] = [];
     }
 
     ParentLogger.before(async () => {

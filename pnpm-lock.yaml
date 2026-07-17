@@ -638,6 +638,9 @@ importers:
 
   packages/router:
     dependencies:
+      '@nowarelabs/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared

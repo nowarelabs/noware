@@ -8,9 +8,16 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
-import { runBeforeHooks, runAfterHooks, runAroundHooks } from "@nowarelabs/shared";
-
-// ─── BaseController ────────────────────────────────────────────────
+import {
+  runBeforeHooks,
+  runAfterHooks,
+  runAroundHooks,
+  HttpError,
+  NotFoundError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+} from "@nowarelabs/shared";
 
 export abstract class BaseController<
   Ctx extends ControllerContext = ControllerContext,
@@ -36,8 +43,6 @@ export abstract class BaseController<
     );
   }
 
-  // ── Static hook registration (same pattern as entrypoints) ─────
-
   static before<T extends BaseController>(fn: HookFunction<T>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
     this.beforeHooks.push({ fn: fn as HookFunction, options });
@@ -52,8 +57,6 @@ export abstract class BaseController<
     if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
-
-  // ── Main entry point (called by router) ───────────────────────
 
   async run(action: string, ...args: any[]): Promise<Response> {
     const Ctor = this.constructor;
@@ -79,10 +82,7 @@ export abstract class BaseController<
       async () => {
         const handler = (this as Record<string, unknown>)[action];
         if (typeof handler !== "function") {
-          return new Response(JSON.stringify({ error: `Action '${action}' not found` }), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
+          return this.respondWithError(new NotFoundError(`Action '${action}' not found`));
         }
         return await (handler as (...args: any[]) => Promise<Response>).call(this, ...args);
       },
@@ -120,8 +120,6 @@ export abstract class BaseController<
     return true;
   }
 
-  // ── Param accessors ───────────────────────────────────────────
-
   protected get params(): Record<string, string> {
     return this.ctx.params;
   }
@@ -134,8 +132,6 @@ export abstract class BaseController<
     const url = new URL(this.request.url);
     return Object.fromEntries(url.searchParams);
   }
-
-  // ── Request info ──────────────────────────────────────────────
 
   protected get method(): string {
     return this.request.method;
@@ -165,8 +161,6 @@ export abstract class BaseController<
       null
     );
   }
-
-  // ── Response helpers ──────────────────────────────────────────
 
   protected json(data: unknown, init?: ResponseInit): Response {
     const headers = new Headers(init?.headers);
@@ -211,44 +205,31 @@ export abstract class BaseController<
     return new Response(null, { status, headers: { Location: url } });
   }
 
-  // ── Error helpers ─────────────────────────────────────────────
-
   protected notFound(message = "Not Found"): Response {
-    return new Response(JSON.stringify({ error: message }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
+    return this.respondWithError(new NotFoundError(message));
   }
 
   protected unauthorized(message = "Unauthorized"): Response {
-    return new Response(JSON.stringify({ error: message }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return this.respondWithError(new UnauthorizedError(message));
   }
 
   protected forbidden(message = "Forbidden"): Response {
-    return new Response(JSON.stringify({ error: message }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
+    return this.respondWithError(new ForbiddenError(message));
   }
 
   protected badRequest(message = "Bad Request"): Response {
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return this.respondWithError(new BadRequestError(message));
   }
 
   protected serverError(message = "Internal Server Error"): Response {
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return this.respondWithError(new HttpError(message, 500));
   }
 
-  // ── Cookie helpers ────────────────────────────────────────────
+  protected respondWithError(error: HttpError): Response {
+    const body: Record<string, unknown> = { error: error.message };
+    if (error.details !== undefined) body.details = error.details;
+    return this.json(body, { status: error.status });
+  }
 
   protected get cookies(): Record<string, string> {
     const cookieStr = this.request.headers.get("cookie") || "";
@@ -305,8 +286,6 @@ export abstract class BaseController<
   }
 }
 
-// ─── BaseResourceController ────────────────────────────────────────
-
 export abstract class BaseResourceController<
   Ctx extends ControllerContext = ControllerContext,
   Env extends EnvLike = EnvLike,
@@ -315,36 +294,24 @@ export abstract class BaseResourceController<
   TSelect = any,
   TInsert = any,
 > extends BaseController<Ctx, Env, Req, Svc> {
-  /**
-   * Returns the data accessor for CRUD operations.
-   * Defaults to getService() — override to bypass the service layer.
-   *
-   * Service pattern (recommended):
-   *   protected service = userService;
-   *   getService() { return this.service; }
-   *   // getModel() defaults to this.getService()
-   *
-   * Model pattern (simpler apps):
-   *   protected model = userModel;
-   *   getModel() { return this.model; }
-   */
   protected getModel(): any {
     return this.getService();
   }
 
-  /**
-   * Returns the data accessor — what getModel() returns.
-   * Can be a model directly, or a service that exposes the same interface.
-   */
   protected get data(): any {
     return this.getModel();
   }
 
-  // ── Identifier & scoping ─────────────────────────────────────
-
   protected getIdentifier(): string {
     const params = this.pathParams;
-    return (params.id || Object.values(params).reverse()[0] || "") as string;
+    const id = params.id ?? Object.values(params).reverse()[0];
+    if (!id) {
+      throw new Error(
+        "getIdentifier() failed: no 'id' param found in route. " +
+          "Define a route with :id or override getIdentifier() in your controller.",
+      );
+    }
+    return id as string;
   }
 
   protected getScopeConditions(): Record<string, string> {
@@ -359,8 +326,6 @@ export abstract class BaseResourceController<
     return conditions;
   }
 
-  // ── Request data ─────────────────────────────────────────────
-
   protected async getRequestData(): Promise<any> {
     try {
       return (await this.request.json()) || {};
@@ -369,29 +334,33 @@ export abstract class BaseResourceController<
     }
   }
 
-  // ── Content negotiation ──────────────────────────────────────
-
   protected async respondWith(data: any, options: { status?: number } = {}): Promise<Response> {
     if (data === null) return this.notFound();
 
     const accept = (this.request.headers.get("accept") || "").toLowerCase();
-    const wantsHtml = accept.includes("text/html") && !accept.includes("application/json");
     const wantsXml = accept.includes("application/xml");
     const wantsCsv = accept.includes("text/csv");
     const wantsXlsx = accept.includes(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
-    if (wantsXml) return this.xml(JSON.stringify(data), { status: options.status });
-    if (wantsCsv) return this.csv(JSON.stringify(data), { status: options.status });
-    if (wantsXlsx) return this.xlsx(new Uint8Array(), { status: options.status });
-    if (wantsHtml) {
-      return this.html(JSON.stringify(data), { status: options.status });
-    }
+    if (wantsXml) return this.xml(this.toXml(data), { status: options.status });
+    if (wantsCsv) return this.csv(this.toCsv(data), { status: options.status });
+    if (wantsXlsx) return this.xlsx(this.toXlsx(data), { status: options.status });
     return this.json(data, { status: options.status });
   }
 
-  // ── RESTful CRUD actions ─────────────────────────────────────
+  protected toXml(data: unknown): string {
+    return JSON.stringify(data);
+  }
+
+  protected toCsv(data: unknown): string {
+    return JSON.stringify(data);
+  }
+
+  protected toXlsx(_data: unknown): Uint8Array {
+    return new Uint8Array();
+  }
 
   async index(): Promise<Response> {
     const query = this.data.query();
@@ -457,8 +426,6 @@ export abstract class BaseResourceController<
     const item: TSelect | null = await this.data.findBy(conditions);
     return this.respondWith(item);
   }
-
-  // ── Lifecycle actions ────────────────────────────────────────
 
   async trash(): Promise<Response> {
     const id = this.getIdentifier();
@@ -588,8 +555,6 @@ export abstract class BaseResourceController<
     return this.respondWith(await d.findBy(conditions));
   }
 
-  // ── Relationship traversal ───────────────────────────────────
-
   async listChildIds(): Promise<Response> {
     const data = (await this.getRequestData()) as { relation?: string };
     const id = this.getIdentifier();
@@ -662,8 +627,6 @@ export abstract class BaseResourceController<
     const ids = await this.data.listAssociatedThroughIds(data.relation, data.through, id);
     return this.json({ ids });
   }
-
-  // ── Eager loading ────────────────────────────────────────────
 
   async findAllWith(): Promise<Response> {
     const data = (await this.getRequestData()) as {

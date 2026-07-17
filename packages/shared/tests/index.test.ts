@@ -17,6 +17,15 @@ import {
   fromCloudflareEnv,
   fromWebRequest,
   fromNodeIncomingMessage,
+  HttpError,
+  NotFoundError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  ConflictError,
+  ValidationError,
+  isValidPath,
+  splitPath,
 } from "../src/index.ts";
 
 describe("RequestLike", () => {
@@ -323,5 +332,92 @@ describe("HookEngine", () => {
     });
     expect(result).toBe("done");
     expect(order).toEqual(["before1", "before2", "action", "after2", "after1"]);
+  });
+});
+
+describe("Error Classes", () => {
+  test("HttpError has status and details", () => {
+    const err = new HttpError("Something failed", 500, { code: "X" });
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(HttpError);
+    expect(err.message).toBe("Something failed");
+    expect(err.status).toBe(500);
+    expect(err.details).toEqual({ code: "X" });
+    expect(err.name).toBe("HttpError");
+  });
+
+  test("NotFoundError defaults to 404", () => {
+    const err = new NotFoundError();
+    expect(err).toBeInstanceOf(HttpError);
+    expect(err.status).toBe(404);
+    expect(err.message).toBe("Not Found");
+  });
+
+  test("BadRequestError defaults to 400", () => {
+    const err = new BadRequestError();
+    expect(err.status).toBe(400);
+    expect(err.message).toBe("Bad Request");
+  });
+
+  test("UnauthorizedError defaults to 401", () => {
+    const err = new UnauthorizedError();
+    expect(err.status).toBe(401);
+  });
+
+  test("ForbiddenError defaults to 403", () => {
+    const err = new ForbiddenError();
+    expect(err.status).toBe(403);
+  });
+
+  test("ConflictError defaults to 409", () => {
+    const err = new ConflictError();
+    expect(err.status).toBe(409);
+  });
+
+  test("ValidationError defaults to 422", () => {
+    const err = new ValidationError();
+    expect(err.status).toBe(422);
+  });
+
+  test("custom details on any error class", () => {
+    const err = new NotFoundError("Gone", { resource: "user" });
+    expect(err.details).toEqual({ resource: "user" });
+  });
+});
+
+describe("Path Utilities", () => {
+  test("isValidPath accepts normal paths", () => {
+    expect(isValidPath("/users")).toBe(true);
+    expect(isValidPath("/api/v1/users/:id")).toBe(true);
+    expect(isValidPath("/")).toBe(true);
+  });
+
+  test("isValidPath rejects forbidden characters", () => {
+    expect(isValidPath("/users<1>")).toBe(false);
+    expect(isValidPath('/users/"name"')).toBe(false);
+    expect(isValidPath("/users\\back")).toBe(false);
+    expect(isValidPath("/users[0]")).toBe(false);
+  });
+
+  test("isValidPath rejects control characters", () => {
+    expect(isValidPath("/users\x00")).toBe(false);
+    expect(isValidPath("/users\x1f")).toBe(false);
+    expect(isValidPath("/users\x7f")).toBe(false);
+  });
+
+  test("splitPath splits and normalizes", () => {
+    expect(splitPath("/users/42")).toEqual(["users", "42"]);
+    expect(splitPath("/")).toEqual([]);
+    expect(splitPath("/api/v1/users")).toEqual(["api", "v1", "users"]);
+  });
+
+  test("splitPath strips leading empty segment", () => {
+    expect(splitPath("/")).toEqual([]);
+    expect(splitPath("//")).toEqual([]);
+  });
+
+  test("splitPath throws on depth exceeded", () => {
+    const deepPath = Array(33).fill("seg").join("/");
+    expect(() => splitPath(deepPath)).toThrow("Path depth exceeded limit");
   });
 });
