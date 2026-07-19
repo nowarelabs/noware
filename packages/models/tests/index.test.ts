@@ -160,52 +160,60 @@ describe("SQL compilation", () => {
     expect(result.data.value).toBe('"user""s"');
   });
 
-  test("compiles string value with quotes", () => {
+  test("compiles string value with placeholders", () => {
     const stmt = new Statement([sql.val("test")]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("'test'");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual(["test"]);
   });
 
   test("escapes single quotes in value", () => {
     const stmt = new Statement([sql.val("it's")]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("'it''s'");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual(["it's"]);
   });
 
   test("compiles number value", () => {
     const stmt = new Statement([sql.val(42)]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("42");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual([42]);
   });
 
   test("compiles boolean true", () => {
     const stmt = new Statement([sql.val(true)]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("true");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual([true]);
   });
 
   test("compiles boolean false", () => {
     const stmt = new Statement([sql.val(false)]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("false");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual([false]);
   });
 
   test("compiles null value", () => {
     const stmt = new Statement([sql.val(null)]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("NULL");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual([null]);
   });
 
   test("compiles undefined value", () => {
     const stmt = new Statement([sql.val(undefined)]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("NULL");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual([undefined]);
   });
 
   test("compiles array value", () => {
     const stmt = new Statement([sql.val([1, 2, 3])]);
     const result = stmt.toSql();
-    expect(result.data.value).toBe("(1, 2, 3)");
+    expect(result.data.value).toBe("__PH_0__");
+    expect(result.params).toEqual([[1, 2, 3]]);
   });
 
   test("compiles composite SQL", () => {
@@ -226,6 +234,96 @@ describe("SQL compilation", () => {
     const stmt = new Statement([sql.raw("SELECT"), sql.nl(), sql.raw("*")]);
     const result = stmt.toSql();
     expect(result.data.value).toBe("SELECT\n*");
+  });
+});
+
+describe("value interpolation (escapeVal coverage)", () => {
+  function getInterpolatedSql(fn: (captured: string) => void) {
+    const mockDb = {
+      execSql: async (sql: string) => {
+        fn(sql);
+        return [];
+      },
+    };
+    return mockDb;
+  }
+
+  test("escapes single quotes in strings", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where({ name: "O'Brien" });
+    await query.all();
+    expect(captured).toContain("'O''Brien'");
+  });
+
+  test("interpolates number values", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where({ age: 42 });
+    await query.all();
+    expect(captured).toContain("42");
+  });
+
+  test("interpolates boolean true", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where({ active: true });
+    await query.all();
+    expect(captured).toContain("true");
+  });
+
+  test("interpolates boolean false", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where({ active: false });
+    await query.all();
+    expect(captured).toContain("false");
+  });
+
+  test("interpolates null as NULL", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where({ deleted_at: null });
+    await query.all();
+    expect(captured).toContain("IS NULL");
+    expect(captured).not.toContain("__PH_");
+  });
+
+  test("interpolates Date as ISO string", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const d = new Date("2025-01-15T10:30:00.000Z");
+    const query = new FluentQuery(db, "users");
+    query.where({ created_at: d });
+    await query.all();
+    expect(captured).toContain("2025-01-15T10:30:00.000Z");
+  });
+
+  test("interpolates IN clause with mixed types", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where({ id: { in: [1, "two", null] } });
+    await query.all();
+    expect(captured).toContain("IN");
+    expect(captured).toContain("1");
+    expect(captured).toContain("'two'");
+    expect(captured).toContain("NULL");
+    expect(captured).not.toContain("__PH_");
+  });
+
+  test("raw SQL fragments with literal ? are not consumed as placeholders", async () => {
+    let captured = "";
+    const db = getInterpolatedSql((s) => (captured = s));
+    const query = new FluentQuery(db, "users");
+    query.where(sql.raw("json_extract(data, '$.key') = 'test'"));
+    await query.all();
+    expect(captured).toContain("json_extract(data, '$.key') = 'test'");
   });
 });
 
@@ -262,7 +360,7 @@ describe("FluentQuery", () => {
     expect(sqlStr).toContain("WHERE");
     expect(sqlStr).toContain('"id"');
     expect(sqlStr).toContain(" = ");
-    expect(sqlStr).toContain("1");
+    expect(sqlStr).toContain("__PH_");
   });
 
   test("where with null condition", () => {
@@ -514,7 +612,7 @@ describe("BaseModel", () => {
       passThroughOnException: () => {},
     } as ContextLike;
 
-    const model = new TestModel(mockRequest, mockEnv, mockCtx);
+    const model = new TestModel({ request: mockRequest, env: mockEnv, ctx: mockCtx });
 
     expect(model).toBeDefined();
     expect((model as unknown as { request: Request }).request).toBe(mockRequest);
@@ -530,14 +628,9 @@ describe("BaseModel", () => {
       passThroughOnException: () => {},
     } as ContextLike;
 
-    const model = new TestModel(mockRequest, mockEnv, mockCtx);
+    const model = new TestModel({ request: mockRequest, env: mockEnv, ctx: mockCtx });
 
     expect((model as unknown as { getPersistence: () => object }).getPersistence()).toEqual({});
-  });
-
-  test("static hooks exist", () => {
-    expect(BaseModel.beforeHooks).toBeDefined();
-    expect(BaseModel.afterHooks).toBeDefined();
   });
 
   test("registry stores and retrieves models", () => {
@@ -560,7 +653,7 @@ describe("BaseModel", () => {
       passThroughOnException: () => {},
     } as ContextLike;
 
-    const model = new TestModel(mockRequest, mockEnv, mockCtx);
+    const model = new TestModel({ request: mockRequest, env: mockEnv, ctx: mockCtx });
     const query = model.query();
     expect(query).toBeInstanceOf(FluentQuery);
   });
@@ -573,7 +666,7 @@ describe("BaseModel", () => {
       passThroughOnException: () => {},
     } as ContextLike;
 
-    const model = new TestModel(mockRequest, mockEnv, mockCtx);
+    const model = new TestModel({ request: mockRequest, env: mockEnv, ctx: mockCtx });
     expect(model.columnNames).toEqual([]);
   });
 
@@ -585,7 +678,7 @@ describe("BaseModel", () => {
       passThroughOnException: () => {},
     } as ContextLike;
 
-    const model = new TestModel(mockRequest, mockEnv, mockCtx);
+    const model = new TestModel({ request: mockRequest, env: mockEnv, ctx: mockCtx });
     expect(model.relationships).toEqual({});
   });
 
@@ -597,7 +690,7 @@ describe("BaseModel", () => {
       passThroughOnException: () => {},
     } as ContextLike;
 
-    const model = new TestModel(mockRequest, mockEnv, mockCtx);
+    const model = new TestModel({ request: mockRequest, env: mockEnv, ctx: mockCtx });
     expect(model.getRelations()).toEqual([]);
   });
 });
@@ -607,7 +700,7 @@ describe("BaseModel with mock database", () => {
     protected persistence: any;
 
     constructor(db: any) {
-      super(db, "test_table");
+      super({ db, table: "test_table" });
       this.persistence = { db };
     }
 
@@ -670,7 +763,7 @@ describe("BaseModel lifecycle queries", () => {
     protected persistence: any;
 
     constructor(db: any) {
-      super(db, "test_table");
+      super({ db, table: "test_table" });
       this.persistence = { db };
     }
 

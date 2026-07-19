@@ -1,7 +1,29 @@
 import type { EnvLike, ModelContext, RequestLike } from "@nowarelabs/shared";
 
-// The unified generic type for `this.db`
-export type DatabaseInstance = any;
+export type DatabaseInstance = {
+  prepare?: (sql: string) => {
+    bind: (...params: any[]) => { all: () => Promise<{ results: any[] }> };
+  };
+  all?: (query: { sql: string; __isSql: true }) => Promise<{ success: boolean; data: any[] }>;
+  exec?: (sql: string) => { toArray: () => any[] };
+  execSql?: (sql: string) => Promise<any[]>;
+};
+
+export interface ModelDbInit {
+  db: DatabaseInstance;
+  table: any;
+  request?: RequestLike;
+  env?: EnvLike;
+  ctx?: ModelContext;
+}
+
+export interface ModelRequestInit {
+  request: RequestLike;
+  env: EnvLike;
+  ctx?: ModelContext;
+}
+
+export type ModelInit = ModelDbInit | ModelRequestInit;
 
 export interface DialectStrategy {
   dialect: "sqlite" | "postgres" | "mysql";
@@ -39,13 +61,14 @@ export class Statement {
   toSql(_strategy?: DialectStrategy): {
     success: boolean;
     data: { value: string };
+    params: any[];
     message?: string;
   } {
     try {
-      const sqlStr = compileSqlParts(this.parts);
-      return { success: true, data: { value: sqlStr } };
+      const { sql: sqlStr, params } = compileSqlParts(this.parts);
+      return { success: true, data: { value: sqlStr }, params };
     } catch (e: any) {
-      return { success: false, data: { value: "" }, message: e.message };
+      return { success: false, data: { value: "" }, params: [], message: e.message };
     }
   }
 }
@@ -80,11 +103,13 @@ export const sql = {
   },
 };
 
-function compileSqlParts(parts: SqlPart[]): string {
-  return parts.map((part) => compileSqlPart(part)).join("");
+function compileSqlParts(parts: SqlPart[]): { sql: string; params: any[] } {
+  const params: any[] = [];
+  const sql = parts.map((part) => compileSqlPart(part, params)).join("");
+  return { sql, params };
 }
 
-function compileSqlPart(part: SqlPart): string {
+function compileSqlPart(part: SqlPart, params: any[]): string {
   switch (part.type) {
     case "raw":
     case "key":
@@ -95,16 +120,25 @@ function compileSqlPart(part: SqlPart): string {
     case "id":
       return escapeId(String(part.value));
     case "val":
-      return escapeVal(part.value);
+      params.push(part.value);
+      return `__PH_${params.length - 1}__`;
     case "composite":
-      return (part.value as SqlPart[]).map((p) => compileSqlPart(p)).join("");
+      return (part.value as SqlPart[]).map((p) => compileSqlPart(p, params)).join("");
     case "join": {
       const { parts, sep } = part.value as { parts: SqlPart[]; sep: SqlPart };
-      return parts.map((p) => compileSqlPart(p)).join(compileSqlPart(sep));
+      return parts.map((p) => compileSqlPart(p, params)).join(compileSqlPart(sep, params));
     }
     default:
       return "";
   }
+}
+
+function interpolateSql(sql: string, params: any[]): string {
+  return sql.replace(/__PH_(\d+)__/g, (_, index) => escapeVal(params[Number(index)]));
+}
+
+function toPositionalSql(sql: string): string {
+  return sql.replace(/__PH_(\d+)__/g, "?");
 }
 
 function escapeId(id: string): string {
@@ -143,15 +177,6 @@ function escapeVal(val: any): string {
   return `'${String(val).replace(/'/g, "''")}'`;
 }
 
-function rawSql(text: string): any {
-  return {
-    queryChunks: [{ value: [text] }],
-    shouldDisplayEvaluation: false,
-    toQuery: () => ({ sql: text, params: [] }),
-    getSQL: () => ({ sql: text, params: [] }),
-  };
-}
-
 function getTableName(table: any): string {
   if (!table) return "";
   if (typeof table === "string") return table;
@@ -162,6 +187,28 @@ function getTableName(table: any): string {
     if (str && str !== "[object Object]") return str;
   }
   return "";
+}
+
+// Only the db.prepare path uses real parameterized queries (via .bind()).
+// The execSql/all/exec paths cannot accept bound params in their target runtimes
+// (D1 raw exec, DO storage), so they fall back to interpolateSql which builds
+// a string using escapeVal. The __PH_N__ placeholders in the compiled SQL are
+// replaced with either bound params (prepare) or interpolated literals (others).
+async function execRaw(db: DatabaseInstance, sqlText: string, params: any[] = []): Promise<any[]> {
+  if (db.prepare) {
+    const positionalSql = toPositionalSql(sqlText);
+    const stmt = db.prepare(positionalSql).bind(...params);
+    const res = await stmt.all();
+    return res.results || res;
+  }
+  const sql = params.length > 0 ? interpolateSql(sqlText, params) : sqlText;
+  if (db.execSql) return db.execSql(sql);
+  if (db.all) {
+    const res = await db.all({ sql, __isSql: true });
+    return (res as any).success ? (res as any).data : (res as any);
+  }
+  if (db.exec) return db.exec(sql).toArray();
+  throw new Error("No execution driver available");
 }
 
 // Fallback Logger matching @noblackbox/logger
@@ -373,24 +420,22 @@ export class FluentQuery<TTable = any, TSelect = any> {
           return sql.composite(sql.id(k), sql.op(" LIKE "), sql.val(v.like));
         }
         if (v !== null && typeof v === "object" && "in" in v && Array.isArray(v.in)) {
-          const values = v.in
-            .map((val: any) => {
-              if (typeof val === "string") return `'${val.replace(/'/g, "''")}'`;
-              if (val === null || val === undefined) return "NULL";
-              return String(val);
-            })
-            .join(", ");
-          return sql.composite(sql.id(k), sql.op(" IN ("), sql.raw(values), sql.op(")"));
+          const valParts = v.in.map((val: any) => sql.val(val));
+          return sql.composite(
+            sql.id(k),
+            sql.op(" IN ("),
+            sql.join(valParts, sql.op(", ")),
+            sql.op(")"),
+          );
         }
         if (v !== null && typeof v === "object" && "nin" in v && Array.isArray(v.nin)) {
-          const values = v.nin
-            .map((val: any) => {
-              if (typeof val === "string") return `'${val.replace(/'/g, "''")}'`;
-              if (val === null || val === undefined) return "NULL";
-              return String(val);
-            })
-            .join(", ");
-          return sql.composite(sql.id(k), sql.op(" NOT IN ("), sql.raw(values), sql.op(")"));
+          const valParts = v.nin.map((val: any) => sql.val(val));
+          return sql.composite(
+            sql.id(k),
+            sql.op(" NOT IN ("),
+            sql.join(valParts, sql.op(", ")),
+            sql.op(")"),
+          );
         }
         if (v === null) {
           return sql.composite(sql.id(k), sql.op(" IS NULL"));
@@ -447,6 +492,22 @@ export class FluentQuery<TTable = any, TSelect = any> {
 
   selectColumnValues<K extends keyof TSelect>(column: K): Promise<TSelect[K][]> {
     return this.pluck(column);
+  }
+
+  private appendWhere(s: Statement): void {
+    if (this.whereClauses.length === 0) return;
+    s.append(sql.nl(), sql.key("WHERE "));
+    const first = this.whereClauses[0];
+    const firstPart = first instanceof SqlPart ? first : first.part;
+    s.append(firstPart);
+    for (let i = 1; i < this.whereClauses.length; i++) {
+      const item = this.whereClauses[i];
+      if (item instanceof SqlPart) {
+        s.append(sql.op(" AND "), item);
+      } else {
+        s.append(sql.op(` ${item.type} `), item.part);
+      }
+    }
   }
 
   private build(): Statement {
@@ -511,20 +572,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
     }
 
     // WHERE
-    if (this.whereClauses.length > 0) {
-      s.append(sql.nl(), sql.key("WHERE "));
-      const first = this.whereClauses[0];
-      const firstPart = first instanceof SqlPart ? first : first.part;
-      s.append(firstPart);
-      for (let i = 1; i < this.whereClauses.length; i++) {
-        const item = this.whereClauses[i];
-        if (item instanceof SqlPart) {
-          s.append(sql.op(" AND "), item);
-        } else {
-          s.append(sql.op(` ${item.type} `), item.part);
-        }
-      }
-    }
+    this.appendWhere(s);
 
     // ORDER BY
     if (this.orderClauses.length > 0) {
@@ -554,28 +602,12 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const sqlRes = finalStmt.toSql(this.strategy);
     if (!sqlRes.success) throw new Error(sqlRes.message);
     const sqlText = sqlRes.data.value;
+    const params = sqlRes.params;
     const start = Date.now();
     this.logger?.debug(`[QUERY] ${sqlText}`);
 
     let results: TSelect[] = [];
-
-    // Support D1, Durable Object storage.exec, Drizzle or RPC execSql
-    if (this.db.execSql) {
-      results = await this.db.execSql(sqlText);
-    } else if (this.db.all) {
-      // If it's a Drizzle instance, use its all method with raw SQL
-      if (typeof this.db.session === "object" || this.db.$) {
-        results = await this.db.all(rawSql(sqlText));
-      } else {
-        const res = await this.db.all({ sql: sqlText, __isSql: true });
-        results = (res.success ? res.data : res) as TSelect[];
-      }
-    } else if (this.db.prepare) {
-      const res = await this.db.prepare(sqlText).all();
-      results = (res.results || res) as TSelect[];
-    } else if (this.db.exec) {
-      results = this.db.exec(sqlText).toArray() as TSelect[];
-    }
+    results = (await execRaw(this.db, sqlText, params)) as TSelect[];
 
     // Eager load relations
     if (this.loadWith.length > 0 && results.length > 0) {
@@ -641,11 +673,11 @@ export class FluentQuery<TTable = any, TSelect = any> {
         if (foreignKeys.length === 0) continue;
 
         // Query related table
-        let relTable = this.db[rel.model] || this.db.query?.[rel.model];
+        let relTable = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
         if (!relTable) {
           const regClass = BaseModel.registry[rel.model];
           if (regClass) {
-            relTable = new regClass(this.db);
+            relTable = new regClass({ db: this.db });
           }
         }
 
@@ -746,42 +778,14 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const tableName = getTableName(this.table);
     const s = sql.statement([sql.key("SELECT COUNT(*) as count FROM "), sql.id(tableName)]);
 
-    if (this.whereClauses.length > 0) {
-      s.append(sql.nl(), sql.key("WHERE "));
-      const first = this.whereClauses[0];
-      const firstPart = first instanceof SqlPart ? first : first.part;
-      s.append(firstPart);
-      for (let i = 1; i < this.whereClauses.length; i++) {
-        const item = this.whereClauses[i];
-        if (item instanceof SqlPart) {
-          s.append(sql.op(" AND "), item);
-        } else {
-          s.append(sql.op(` ${item.type} `), item.part);
-        }
-      }
-    }
+    this.appendWhere(s);
 
     const sqlRes = s.toSql(this.strategy);
     if (!sqlRes.success) throw new Error(sqlRes.message);
     const sqlText = sqlRes.data.value;
+    const params = sqlRes.params;
 
-    let res: any;
-    if (this.db.execSql) {
-      res = await this.db.execSql(sqlText);
-    } else if (this.db.prepare) {
-      const out = await this.db.prepare(sqlText).all();
-      res = out.results || out;
-    } else if (this.db.all) {
-      if (typeof this.db.session === "object" || this.db.$) {
-        res = await this.db.all(rawSql(sqlText));
-      } else {
-        res = await this.db.all({ sql: sqlText, __isSql: true });
-        res = res.success ? res.data : res;
-      }
-    } else if (this.db.exec) {
-      res = this.db.exec(sqlText).toArray();
-    }
-
+    const res = await execRaw(this.db, sqlText, params);
     return (res?.[0]?.count || 0) as number;
   }
 
@@ -807,20 +811,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
       sql.id(tableName),
     ]);
 
-    if (this.whereClauses.length > 0) {
-      s.append(sql.nl(), sql.key("WHERE "));
-      const first = this.whereClauses[0];
-      const firstPart = first instanceof SqlPart ? first : first.part;
-      s.append(firstPart);
-      for (let i = 1; i < this.whereClauses.length; i++) {
-        const item = this.whereClauses[i];
-        if (item instanceof SqlPart) {
-          s.append(sql.op(" AND "), item);
-        } else {
-          s.append(sql.op(` ${item.type} `), item.part);
-        }
-      }
-    }
+    this.appendWhere(s);
 
     if (this.orderClauses.length > 0) {
       s.append(sql.nl(), sql.key("ORDER BY "));
@@ -838,24 +829,9 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const sqlRes = s.toSql(this.strategy);
     if (!sqlRes.success) throw new Error(sqlRes.message);
     const sqlText = sqlRes.data.value;
+    const params = sqlRes.params;
 
-    let res: any;
-    if (this.db.execSql) {
-      res = await this.db.execSql(sqlText);
-    } else if (this.db.prepare) {
-      const out = await this.db.prepare(sqlText).all();
-      res = out.results || out;
-    } else if (this.db.all) {
-      if (typeof this.db.session === "object" || this.db.$) {
-        res = await this.db.all(rawSql(sqlText));
-      } else {
-        res = await this.db.all({ sql: sqlText, __isSql: true });
-        res = res.success ? res.data : res;
-      }
-    } else if (this.db.exec) {
-      res = this.db.exec(sqlText).toArray();
-    }
-
+    const res = await execRaw(this.db, sqlText, params);
     return res.map((row: any) => row[String(column)]) as TSelect[K][];
   }
 
@@ -890,7 +866,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const total = await this.clone().count();
     const maxPage = Math.max(1, Math.ceil(total / perPage));
     const requestedPage = params.page ?? 1;
-    const page = requestedPage > maxPage ? 1 : Math.max(1, requestedPage);
+    const page = Math.min(Math.max(1, requestedPage), maxPage);
     const offset = (page - 1) * perPage;
     const items = await this.limit(perPage).offset(offset).all();
     return { items, total, page, perPage, totalPages: maxPage };
@@ -913,10 +889,6 @@ export abstract class BaseModel<
   }
 
   static columnTypes: Record<string, string> = {};
-  static relations: Record<string, any> = {};
-
-  static beforeHooks: any[] = [];
-  static afterHooks: any[] = [];
 
   protected abstract persistence: Persistence;
 
@@ -927,7 +899,6 @@ export abstract class BaseModel<
   protected ctx!: Ctx;
 
   private _db?: DatabaseInstance;
-  public req: any;
 
   private callbacks: Record<CallbackEvent, CallbackEntry[]> = {
     beforeValidation: [],
@@ -948,20 +919,17 @@ export abstract class BaseModel<
     afterRollback: [],
   };
 
-  constructor(...args: any[]) {
-    // Detect Style A (db, table, req, env, ctx) vs Style B (request, env, ctx)
-    if (args.length >= 4 || (args[0] && !args[0].url && !args[0].method)) {
-      this._db = args[0];
-      this.table = args[1];
-      this.request = args[2] || args[0]?.request;
-      this.req = this.request;
-      this.env = args[3];
-      this.ctx = args[4];
+  constructor(init: ModelInit) {
+    if ("db" in init) {
+      this._db = init.db;
+      this.table = init.table;
+      this.request = init.request as RequestLike;
+      this.env = init.env as EnvLike;
+      this.ctx = init.ctx as Ctx;
     } else {
-      this.request = args[0];
-      this.req = args[0];
-      this.env = args[1];
-      this.ctx = args[2];
+      this.request = init.request;
+      this.env = init.env;
+      this.ctx = init.ctx as Ctx;
       const ctor = this.constructor as any;
       this.table = ctor.tableName || ctor.name;
     }
@@ -1166,7 +1134,7 @@ export abstract class BaseModel<
 
       try {
         const callback = typeof fn === "string" ? (this as any)[fn] : fn;
-        const result = await callback.call(data, data);
+        const result = await callback(data);
 
         if (result === ABORT) {
           throw new CallbackAbortError(`Callback aborted: ${event}`);
@@ -1428,74 +1396,16 @@ export abstract class BaseModel<
     return this.delete(id);
   }
 
-  // ===== Async Operations =====
-
-  async queue(
-    id: number | string,
-    data?: Record<string, unknown>,
-  ): Promise<{ queued: boolean; id: string | number; data?: Record<string, unknown> }> {
-    this.logger?.info(`[QUEUE] ${getTableName(this.table)}#${id}`);
-    return {
-      queued: true,
-      id,
-      data,
-    };
-  }
-
-  async cron(
-    id: number | string,
-    data?: Record<string, unknown>,
-  ): Promise<{ scheduled: boolean; id: string | number; data?: Record<string, unknown> }> {
-    this.logger?.info(`[CRON] ${getTableName(this.table)}#${id}`);
-    return {
-      scheduled: true,
-      id,
-      data,
-    };
-  }
-
-  async add(id: number | string, relation: string, _relatedId: number | string): Promise<TSelect> {
-    this.logger?.info(`[ADD] ${getTableName(this.table)}#${id} to ${relation}`);
-    return this.findBy({ id } as any) as Promise<TSelect>;
-  }
-
-  async remove(
-    id: number | string,
-    relation: string,
-    relatedId: number | string,
-  ): Promise<TSelect> {
-    this.logger?.info(`[REMOVE] ${relatedId} from ${getTableName(this.table)}#${id}`);
-    return this.findBy({ id } as any) as Promise<TSelect>;
-  }
-
-  async assign(
-    id: number | string,
-    relation: string,
-    relatedId: number | string,
-  ): Promise<TSelect> {
-    this.logger?.info(`[ASSIGN] ${relation}#${relatedId} to ${getTableName(this.table)}#${id}`);
-    return this.findBy({ id } as any) as Promise<TSelect>;
-  }
-
-  async unassign(
-    id: number | string,
-    relation: string,
-    relatedId: number | string,
-  ): Promise<TSelect> {
-    this.logger?.info(`[UNASSIGN] ${relation}#${relatedId} from ${getTableName(this.table)}#${id}`);
-    return this.findBy({ id } as any) as Promise<TSelect>;
-  }
-
   // ===== Relationship Traversal =====
 
   async listChildIds(relationName: string, id: number | string): Promise<(string | number)[]> {
     const rel = this.relationships[relationName];
     if (!rel || rel.type !== "has_many" || !rel.foreignKey) return [];
 
-    let relatedModel = this.db[rel.model] || this.db.query?.[rel.model];
+    let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
     if (!relatedModel) {
       const regClass = BaseModel.registry[rel.model];
-      if (regClass) relatedModel = new regClass(this.db);
+      if (regClass) relatedModel = new regClass({ db: this.db });
     }
     if (!relatedModel) return [];
 
@@ -1524,17 +1434,21 @@ export abstract class BaseModel<
     if (!parentId) return [];
 
     const foreignKey = rel.foreignKey;
-    let relatedModel = this.db[rel.model] || this.db.query?.[rel.model];
+    let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
     if (!relatedModel) {
       const regClass = BaseModel.registry[rel.model];
-      if (regClass) relatedModel = new regClass(this.db);
+      if (regClass) relatedModel = new regClass({ db: this.db });
     }
     if (!relatedModel) return [];
 
     return relatedModel.where({ [foreignKey]: parentId, id: { neq: id } }).pluck("id");
   }
 
-  async listCousinIds(relationName: string, id: number | string): Promise<(string | number)[]> {
+  async listCousinIds(
+    relationName: string,
+    parentRelationName: string,
+    id: number | string,
+  ): Promise<(string | number)[]> {
     const rel = this.relationships[relationName];
     if (!rel || rel.type !== "has_many" || !rel.foreignKey) return [];
 
@@ -1544,10 +1458,8 @@ export abstract class BaseModel<
     const parentId = (item as any)[rel.foreignKey];
     if (!parentId) return [];
 
-    const parentRel = Object.values(this.relationships).find(
-      (r) => r.type === "belongs_to" && r.foreignKey,
-    ) as RelationshipMetadata | undefined;
-    if (!parentRel || !parentRel.foreignKey) return [];
+    const parentRel = this.relationships[parentRelationName];
+    if (!parentRel || parentRel.type !== "belongs_to" || !parentRel.foreignKey) return [];
 
     const parent = await this.findBy({ id: parentId } as any);
     if (!parent) return [];
@@ -1563,10 +1475,11 @@ export abstract class BaseModel<
         siblingRelName !== relationName &&
         siblingRel.foreignKey
       ) {
-        let siblingModel = this.db[siblingRel.model] || this.db.query?.[siblingRel.model];
+        let siblingModel =
+          (this.db as any)[siblingRel.model] || (this.db as any).query?.[siblingRel.model];
         if (!siblingModel) {
           const regClass = BaseModel.registry[siblingRel.model];
-          if (regClass) siblingModel = new regClass(this.db);
+          if (regClass) siblingModel = new regClass({ db: this.db });
         }
         if (siblingModel) {
           const siblings = await siblingModel
@@ -1620,10 +1533,10 @@ export abstract class BaseModel<
       if (depth >= maxDepth || visited.has(parentId)) return;
       visited.add(parentId);
 
-      let relatedModel = this.db[rel.model] || this.db.query?.[rel.model];
+      let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
       if (!relatedModel) {
         const regClass = BaseModel.registry[rel.model];
-        if (regClass) relatedModel = new regClass(this.db);
+        if (regClass) relatedModel = new regClass({ db: this.db });
       }
       if (!relatedModel) return;
 
@@ -1647,9 +1560,19 @@ export abstract class BaseModel<
     const rel = this.relationships[relationName];
     if (!rel || !rel.foreignKey) return [];
 
-    const dbWithSelect = this.db as any;
-    const through = dbWithSelect.select().from(throughTable);
-    const junctionItems = await through.where({ [rel.foreignKey]: id });
+    const s = sql.statement([
+      sql.key("SELECT "),
+      sql.id("id"),
+      sql.key(" FROM "),
+      sql.id(throughTable),
+      sql.key(" WHERE "),
+      sql.id(rel.foreignKey),
+      sql.op(" = "),
+      sql.val(id),
+    ]);
+    const sqlRes = s.toSql();
+    if (!sqlRes.success) throw new Error(sqlRes.message);
+    const junctionItems = await execRaw(this.db, sqlRes.data.value, sqlRes.params);
 
     return junctionItems.map((item: any) => item.id as string | number);
   }
@@ -1702,10 +1625,11 @@ export abstract class BaseModel<
           const rel = this.relationships[includeKey];
           const foreignKeyValue = (item as any)[includeConfig.foreignKey];
 
-          let relatedModel = this.db[includeConfig.model] || this.db.query?.[includeConfig.model];
+          let relatedModel =
+            (this.db as any)[includeConfig.model] || (this.db as any).query?.[includeConfig.model];
           if (!relatedModel) {
             const regClass = BaseModel.registry[includeConfig.model];
-            if (regClass) relatedModel = new regClass(this.db);
+            if (regClass) relatedModel = new regClass({ db: this.db });
           }
 
           if (!relatedModel) {
@@ -1745,10 +1669,11 @@ export abstract class BaseModel<
     for (const [includeKey, includeConfig] of Object.entries(includes)) {
       const foreignKeyValue = (item as any)[includeConfig.foreignKey];
 
-      let relatedModel = this.db[includeConfig.model] || this.db.query?.[includeConfig.model];
+      let relatedModel =
+        (this.db as any)[includeConfig.model] || (this.db as any).query?.[includeConfig.model];
       if (!relatedModel) {
         const regClass = BaseModel.registry[includeConfig.model];
-        if (regClass) relatedModel = new regClass(this.db);
+        if (regClass) relatedModel = new regClass({ db: this.db });
       }
 
       if (!relatedModel) {
@@ -1986,16 +1911,7 @@ export abstract class BaseModel<
 
     let record: TSelect | null = null;
 
-    if (this.db?.select && !this.db?.execSql) {
-      const result = await this.db
-        .select()
-        .from(this.table)
-        .where(eq((this.table as any)?.id || "id", id))
-        .limit(1);
-      record = (result[0] as TSelect) || null;
-    } else {
-      record = await this.where({ id }).first();
-    }
+    record = await this.where({ id }).first();
 
     if (record) {
       this.logger?.debug(`[FOUND] ${tableName}#${id}`);
@@ -2012,11 +1928,7 @@ export abstract class BaseModel<
 
     let records: TSelect[] = [];
 
-    if (this.db?.select && !this.db?.execSql) {
-      records = (await this.db.select().from(this.table)) as TSelect[];
-    } else {
-      records = await this.query().all();
-    }
+    records = await this.query().all();
 
     this.logger?.debug(`[ALL RESULT] ${tableName} count=${records.length}`);
     return records;
@@ -2028,22 +1940,12 @@ export abstract class BaseModel<
     const sqlRes = s.toSql(strategy);
     if (!sqlRes.success) throw new Error(sqlRes.message);
     const sqlText = sqlRes.data.value;
+    const params = sqlRes.params;
 
     this.logger?.debug(`[SQL] ${sqlText}`);
 
     try {
-      if (this.db.execSql) return await this.db.execSql(sqlText);
-      if (this.db.all) {
-        if (typeof this.db.session === "object" || this.db.$) {
-          return await this.db.all(rawSql(sqlText));
-        }
-        const res = await this.db.all({ sql: sqlText, __isSql: true });
-        return res.success ? res.data : res;
-      }
-      if (this.db.prepare) {
-        const res = await this.db.prepare(sqlText).all();
-        return (res.results || res) as any[];
-      }
+      return await execRaw(this.db, sqlText, params);
     } catch (err: any) {
       this.logger?.error(`[SQL ERROR]`, { sql: sqlText, error: err.message });
 
@@ -2072,7 +1974,6 @@ export abstract class BaseModel<
       }
       throw err;
     }
-    throw new Error("No execution driver available for statement");
   }
 
   async transaction<T>(fn: (model: this) => Promise<T>): Promise<T> {
@@ -2103,10 +2004,4 @@ export function defineModel<TTableName extends string, TColumnsMap extends Recor
     tableName: name,
     columns,
   };
-}
-
-// Helpers for query support
-function eq(left: any, right: any): SqlPart {
-  const leftPart = typeof left === "string" ? sql.id(left) : left;
-  return sql.composite(leftPart, sql.op(" = "), sql.val(right));
 }

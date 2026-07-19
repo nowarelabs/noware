@@ -364,7 +364,7 @@ const siblingIds = await userModel.listSiblingIds("posts", postId);
 // Hierarchical traversal
 const ancestorIds = await userModel.listAncestorIds("parent", nodeId);
 const descendantIds = await userModel.listDescendantIds("children", nodeId);
-const cousinIds = await userModel.listCousinIds("siblings", nodeId);
+const cousinIds = await userModel.listCousinIds("siblings", "parent", nodeId);
 
 // Generic related IDs
 const relatedIds = await userModel.listRelatedIds("posts", userId);
