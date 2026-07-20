@@ -1,0 +1,29 @@
+import { BaseModel } from "@nowarelabs/models";
+import { usersTable, type UserRow } from "../schema.js";
+
+export class User extends BaseModel<
+  any,
+  any,
+  any,
+  any,
+  typeof usersTable,
+  UserRow,
+  Partial<UserRow>
+> {
+  static tableName = "users";
+  static columnTypes = Object.fromEntries(Object.entries(usersTable).map(([k, v]) => [k, v.type]));
+
+  protected persistence: any = null;
+
+  constructor(init: any) {
+    super({ ...init, table: init.table ?? usersTable });
+
+    this.hasMany("posts", { model: "Post", foreignKey: "user_id" });
+  }
+
+  protected getPersistence() {
+    return { db: this.db };
+  }
+}
+
+BaseModel.register("User", User);

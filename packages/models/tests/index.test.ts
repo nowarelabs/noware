@@ -1094,6 +1094,123 @@ describe("getDialectStrategy", () => {
   });
 });
 
+describe("Postgres placeholder rendering", () => {
+  test("execRaw with postgres dialect passes $1 placeholders to db.prepare", async () => {
+    let capturedSql = "";
+    let capturedParams: any[] = [];
+    const mockDb = {
+      prepare: (s: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            capturedSql = s;
+            capturedParams = params;
+            return { results: [{ id: 1, name: "Alice" }] };
+          },
+        }),
+      }),
+    };
+
+    const query = new FluentQuery(mockDb as any, "users", undefined, "postgres");
+    await query.where({ name: "Alice" }).all();
+
+    expect(capturedSql).toContain("$1");
+    expect(capturedSql).not.toContain("?");
+    expect(capturedParams).toEqual(["Alice"]);
+  });
+
+  test("execRaw with sqlite dialect passes ? placeholders to db.prepare", async () => {
+    let capturedSql = "";
+    let capturedParams: any[] = [];
+    const mockDb = {
+      prepare: (s: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            capturedSql = s;
+            capturedParams = params;
+            return { results: [{ id: 1, name: "Alice" }] };
+          },
+        }),
+      }),
+    };
+
+    const query = new FluentQuery(mockDb as any, "users", undefined, "sqlite");
+    await query.where({ name: "Alice" }).all();
+
+    expect(capturedSql).toContain("?");
+    expect(capturedSql).not.toContain("$1");
+    expect(capturedParams).toEqual(["Alice"]);
+  });
+
+  test("execRaw with postgres dialect handles multiple $N placeholders", async () => {
+    let capturedSql = "";
+    let capturedParams: any[] = [];
+    const mockDb = {
+      prepare: (s: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            capturedSql = s;
+            capturedParams = params;
+            return { results: [{ id: 1 }] };
+          },
+        }),
+      }),
+    };
+
+    const query = new FluentQuery(mockDb as any, "users", undefined, "postgres");
+    await query.where({ name: "Alice", age: { gt: 18 } }).all();
+
+    expect(capturedSql).toContain("$1");
+    expect(capturedSql).toContain("$2");
+    expect(capturedParams).toEqual(["Alice", 18]);
+  });
+
+  test("count() with postgres dialect uses $1 placeholders", async () => {
+    let capturedSql = "";
+    let capturedParams: any[] = [];
+    const mockDb = {
+      prepare: (s: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            capturedSql = s;
+            capturedParams = params;
+            return { results: [{ count: 5 }] };
+          },
+        }),
+      }),
+    };
+
+    const query = new FluentQuery(mockDb as any, "users", undefined, "postgres");
+    const count = await query.where({ status: "active" }).count();
+
+    expect(count).toBe(5);
+    expect(capturedSql).toContain("$1");
+    expect(capturedParams).toEqual(["active"]);
+  });
+
+  test("pluck() with postgres dialect uses $1 placeholders", async () => {
+    let capturedSql = "";
+    let capturedParams: any[] = [];
+    const mockDb = {
+      prepare: (s: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            capturedSql = s;
+            capturedParams = params;
+            return { results: [{ name: "Alice" }, { name: "Bob" }] };
+          },
+        }),
+      }),
+    };
+
+    const query = new FluentQuery(mockDb as any, "users", undefined, "postgres");
+    const names = await query.where({ active: true }).pluck("name");
+
+    expect(names).toEqual(["Alice", "Bob"]);
+    expect(capturedSql).toContain("$1");
+    expect(capturedParams).toEqual([true]);
+  });
+});
+
 describe("BaseModel", () => {
   class TestModel extends BaseModel {
     protected persistence = {};
@@ -1359,5 +1476,125 @@ describe("defineModel", () => {
     });
     expect(model.tableName).toBe("users");
     expect(model.columns).toEqual({ id: "integer", name: "text" });
+  });
+});
+
+describe("listCousinIds structural alias dedup", () => {
+  test("does not double-process two has_many relations pointing at same model+foreignKey", async () => {
+    let pluckQueryCount = 0;
+    const mockDb = {
+      prepare: (sql: string) => ({
+        bind: (..._params: any[]) => ({
+          all: async () => {
+            if (sql.includes("SELECT") && sql.includes('"id"') && sql.includes("FROM")) {
+              pluckQueryCount++;
+            }
+            return { results: [{ id: "item-1", user_id: "parent-1" }] };
+          },
+        }),
+      }),
+    };
+
+    class CousinModel extends BaseModel {
+      protected persistence: any;
+      constructor(db: any) {
+        super({ db, table: "items" });
+        this.persistence = { db };
+        this.hasMany("items", { model: "Item", foreignKey: "user_id" });
+        this.hasMany("recentItems", { model: "Item", foreignKey: "user_id" });
+        this.belongsTo("owner", { model: "User", foreignKey: "owner_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new CousinModel(mockDb);
+    model.findBy = async (conditions: any) => {
+      if (conditions.id === "item-1") return { id: "item-1", user_id: "parent-1" };
+      if (conditions.id === "parent-1") return { id: "parent-1", owner_id: null };
+      return null;
+    };
+
+    const result = await model.listCousinIds("items", "owner", "item-1");
+
+    expect(result).toEqual([]);
+    expect(pluckQueryCount).toBe(0);
+  });
+
+  test("processes multiple distinct sibling relations (different model+foreignKey)", async () => {
+    const preparedSqls: string[] = [];
+    const mockDb = {
+      prepare: (sql: string) => ({
+        bind: (..._params: any[]) => ({
+          all: async () => {
+            preparedSqls.push(sql);
+            if (sql.includes('"tags"') && sql.includes('"folder_id"')) {
+              return { results: [{ id: "tag-1" }, { id: "tag-2" }] };
+            }
+            if (sql.includes('"notes"') && sql.includes('"folder_id"')) {
+              return { results: [{ id: "note-1" }] };
+            }
+            return { results: [] };
+          },
+        }),
+      }),
+    };
+
+    class TagModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "tags" });
+        this.persistence = { db: init.db };
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    class NoteModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "notes" });
+        this.persistence = { db: init.db };
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    (mockDb as any).Tag = new TagModel({ db: mockDb });
+    (mockDb as any).Note = new NoteModel({ db: mockDb });
+
+    class FolderModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "folders" });
+        this.persistence = { db: init.db };
+        this.hasMany("bookmarks", { model: "Bookmark", foreignKey: "folder_id" });
+        this.hasMany("tags", { model: "Tag", foreignKey: "folder_id" });
+        this.hasMany("notes", { model: "Note", foreignKey: "folder_id" });
+        this.belongsTo("workspace", { model: "Workspace", foreignKey: "workspace_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new FolderModel({ db: mockDb });
+    model.findBy = async (conditions: any) => {
+      if (conditions.id === "item-1") return { id: "item-1", folder_id: "folder-A" };
+      if (conditions.id === "folder-A") return { id: "folder-A", workspace_id: "ws-1" };
+      return null;
+    };
+
+    const result = await model.listCousinIds("bookmarks", "workspace", "item-1");
+
+    expect(result).toContain("tag-1");
+    expect(result).toContain("tag-2");
+    expect(result).toContain("note-1");
+
+    const siblingQueries = preparedSqls.filter((s) => s.includes('"folder_id"'));
+    expect(siblingQueries).toHaveLength(2);
   });
 });

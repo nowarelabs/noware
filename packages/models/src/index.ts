@@ -135,7 +135,10 @@ function interpolateSql(sql: string, params: any[]): string {
   return sql.replace(/__PH_(\d+)__/g, (_, index) => escapeVal(params[Number(index)]));
 }
 
-function toPositionalSql(sql: string): string {
+function toPositionalSql(sql: string, dialect: "sqlite" | "postgres" = "sqlite"): string {
+  if (dialect === "postgres") {
+    return sql.replace(/__PH_(\d+)__/g, (_, index) => `$${Number(index) + 1}`);
+  }
   return sql.replace(/__PH_(\d+)__/g, "?");
 }
 
@@ -192,9 +195,14 @@ function getTableName(table: any): string {
 // (D1 raw exec, DO storage), so they fall back to interpolateSql which builds
 // a string using escapeVal. The __PH_N__ placeholders in the compiled SQL are
 // replaced with either bound params (prepare) or interpolated literals (others).
-async function execRaw(db: DatabaseInstance, sqlText: string, params: any[] = []): Promise<any[]> {
+async function execRaw(
+  db: DatabaseInstance,
+  sqlText: string,
+  params: any[] = [],
+  dialect: "sqlite" | "postgres" = "sqlite",
+): Promise<any[]> {
   if (db.prepare) {
-    const positionalSql = toPositionalSql(sqlText);
+    const positionalSql = toPositionalSql(sqlText, dialect);
     const stmt = db.prepare(positionalSql).bind(...params);
     const res = await stmt.all();
     return res.results || res;
@@ -640,7 +648,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
     this.logger?.debug(`[QUERY] ${sqlText}`);
 
     let results: TSelect[] = [];
-    results = (await execRaw(this.db, sqlText, params)) as TSelect[];
+    results = (await execRaw(this.db, sqlText, params, this.strategy.dialect)) as TSelect[];
 
     // Eager load relations
     if (this.loadWith.length > 0 && results.length > 0) {
@@ -844,7 +852,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const sqlText = sqlRes.data.value;
     const params = sqlRes.params;
 
-    const res = await execRaw(this.db, sqlText, params);
+    const res = await execRaw(this.db, sqlText, params, this.strategy.dialect);
     return (res?.[0]?.count || 0) as number;
   }
 
@@ -890,7 +898,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const sqlText = sqlRes.data.value;
     const params = sqlRes.params;
 
-    const res = await execRaw(this.db, sqlText, params);
+    const res = await execRaw(this.db, sqlText, params, this.strategy.dialect);
     return res.map((row: any) => row[String(column)]) as TSelect[K][];
   }
 
@@ -1543,7 +1551,7 @@ export abstract class BaseModel<
       if (
         typeof siblingRelName === "string" &&
         siblingRel.type === "has_many" &&
-        siblingRelName !== relationName &&
+        (siblingRel.model !== rel.model || siblingRel.foreignKey !== rel.foreignKey) &&
         siblingRel.foreignKey
       ) {
         let siblingModel =
@@ -1641,9 +1649,7 @@ export abstract class BaseModel<
       sql.op(" = "),
       sql.val(id),
     ]);
-    const sqlRes = s.toSql();
-    if (!sqlRes.success) throw new Error(sqlRes.message);
-    const junctionItems = await execRaw(this.db, sqlRes.data.value, sqlRes.params);
+    const junctionItems = await this.queryExec(s);
 
     return junctionItems.map((item: any) => item.id as string | number);
   }
@@ -2042,7 +2048,7 @@ export abstract class BaseModel<
     this.logger?.debug(`[SQL] ${sqlText}`);
 
     try {
-      return await execRaw(this.db, sqlText, params);
+      return await execRaw(this.db, sqlText, params, strategy.dialect);
     } catch (err: any) {
       this.logger?.error(`[SQL ERROR]`, { sql: sqlText, error: err.message });
 

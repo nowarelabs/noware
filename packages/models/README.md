@@ -269,10 +269,60 @@ export default {
 - **Lifecycle hooks** are registered in the constructor body and apply to every instance of that model.
 - **Transactions** wrap real `BEGIN`/`COMMIT`/`ROLLBACK` and only fire commit-callbacks after a successful commit, and rollback-callbacks once per rolled-back operation.
 
-### Running the example locally
+### Running the examples locally
+
+The [`examples/`](./examples/) folder contains working demos you can run with [Bun](https://bun.sh):
 
 ```bash
 bun run packages/models/examples/d1-orm-demo/main.ts
+bun run packages/models/examples/postgres-dialect/main.ts
+```
+
+#### `examples/d1-orm-demo/`
+
+A full end-to-end demo using `bun:sqlite` as a D1-compatible backend. Demonstrates:
+
+- **CRUD**: `create`, `find`, `findBy`, `update`, `delete`
+- **Query builder**: `select`, `where` with operators (`like`, `gt`), `orderBy`, `limit`, `count`, `pluck`
+- **Eager loading**: `with()` (separate queries, safe for LIMIT) and `withJoins()` (JOIN, belongs_to only)
+- **Pagination**: `paginate({ page, perPage })`
+- **Transactions**: success path and rollback with `afterRollback` callback
+- **Soft delete**: `trash`, `restore`, `trashed()`, `active()`
+- **SQL inspection**: `toSql()` to see generated SQL
+- **Relationship traversal**: `listChildIds`, `listParentIds`
+
+**Schema:**
+
+```
+d1-orm-demo/
+├── d1-sqlite.ts          # D1-compatible wrapper over bun:sqlite
+├── schema.ts             # Table definitions + TypeScript types
+├── models/
+│   ├── User.ts           # User model with hasMany, lifecycle hooks
+│   └── Post.ts           # Post model with belongsTo
+└── main.ts               # 12-step demo script
+```
+
+#### `examples/postgres-dialect/`
+
+Demonstrates the Postgres dialect support for `$1, $2` positional placeholders. Uses a simulated Postgres driver to show the SQL that would be sent to a real Postgres client. Demonstrates:
+
+- **Postgres `$N` placeholders**: `$1`, `$2` instead of `?`
+- **SQLite `?` placeholders**: default dialect for comparison
+- **`FluentQuery` with dialect**: `new FluentQuery(db, table, undefined, "postgres")`
+- **`toSql()` internal format**: `__PH_N__` placeholders (conversion happens at driver level)
+- **Full roundtrip**: `FluentQuery` → `Statement` → `execRaw` → `$1` at driver
+
+**Schema:**
+
+```
+postgres-dialect/
+├── pg-sim.ts             # Simulated Postgres driver (captures SQL + params)
+├── schema.ts             # Table definitions + TypeScript types
+├── models/
+│   ├── User.ts           # User model
+│   └── Post.ts           # Post model with belongsTo
+└── main.ts               # Dialect comparison demo
 ```
 
 ## Query Builder
