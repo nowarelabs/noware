@@ -26,12 +26,10 @@ export interface ModelRequestInit {
 export type ModelInit = ModelDbInit | ModelRequestInit;
 
 export interface DialectStrategy {
-  dialect: "sqlite" | "postgres" | "mysql";
+  dialect: "sqlite" | "postgres";
 }
 
-export function getDialectStrategy(
-  dialect: "sqlite" | "postgres" | "mysql" = "sqlite",
-): DialectStrategy {
+export function getDialectStrategy(dialect: "sqlite" | "postgres" = "sqlite"): DialectStrategy {
   return { dialect };
 }
 
@@ -330,7 +328,7 @@ export class FluentQuery<TTable = any, TSelect = any> {
     private db: DatabaseInstance,
     private table: TTable,
     private logger?: Logger,
-    dialect: "sqlite" | "postgres" | "mysql" = "sqlite",
+    dialect: "sqlite" | "postgres" = "sqlite",
   ) {
     this.strategy = getDialectStrategy(dialect);
   }
@@ -514,16 +512,46 @@ export class FluentQuery<TTable = any, TSelect = any> {
     const tableName = getTableName(this.table);
     const s = sql.statement();
 
+    // Guard: withJoins + has_many + limit/offset breaks LIMIT semantics
+    if (
+      this.loadStrategy === "joins" &&
+      (this.limitCount !== undefined || this.offsetCount !== undefined)
+    ) {
+      for (const relName of this.loadWith) {
+        const rel = this.relationships[relName];
+        if (
+          rel &&
+          (rel.type === "has_many" ||
+            rel.type === "has_many_through" ||
+            rel.type === "has_and_belongs_to_many")
+        ) {
+          throw new Error(
+            `withJoins("${relName}") with ${rel.type} relation cannot be combined with limit/offset. ` +
+              `Fan-out from joined rows breaks LIMIT semantics. Use withSeparateQueries instead.`,
+          );
+        }
+      }
+    }
+
     // SELECT
     s.append(sql.key("SELECT "));
 
-    // When using joins, we need to prefix columns to avoid ambiguity
     if (this.loadStrategy === "joins" && this.loadWith.length > 0) {
-      const selectParts: SqlPart[] = [sql.id(tableName), sql.op(".*")];
+      // Main table: unaliased .*
+      const selectParts: SqlPart[] = [sql.composite(sql.id(tableName), sql.op(".*"))];
+      // Related tables: alias each column as relName__col
       for (const relName of this.loadWith) {
         const rel = this.relationships[relName];
-        if (rel) {
-          selectParts.push(sql.composite(sql.id(rel.model), sql.op(".*")));
+        if (!rel) continue;
+        const relColumns = this.getColumnsFor(rel.model);
+        for (const col of relColumns) {
+          selectParts.push(
+            sql.composite(
+              sql.id(`${relName}.${col}`),
+              sql.key(" AS "),
+              sql.id(`${relName}__${col}`),
+            ),
+          );
         }
       }
       s.append(sql.join(selectParts, sql.op(", ")));
@@ -547,24 +575,29 @@ export class FluentQuery<TTable = any, TSelect = any> {
         const rel = this.relationships[relName];
         if (!rel) continue;
 
-        const relTableName = rel.model;
+        const relTableName = getTableName(BaseModel.registry[rel.model]?.tableName) || rel.model;
         const fk = rel.foreignKey || `${relName}_id`;
-        const pk = rel.type === "belongs_to" ? `${relTableName}_id` : "id";
+        const [leftCol, rightCol] =
+          rel.type === "belongs_to"
+            ? [fk, "id"] // fk lives on tableName; related's PK is "id"
+            : ["id", fk]; // tableName's PK is "id"; fk lives on relName
 
         s.append(sql.nl());
         s.append(
           sql.composite(
             sql.key("LEFT JOIN "),
             sql.id(relTableName),
+            sql.key(" AS "),
+            sql.id(relName),
             sql.key(" ON "),
             sql.composite(
               sql.id(tableName),
               sql.op("."),
-              sql.id(fk),
+              sql.id(leftCol),
               sql.op(" = "),
-              sql.id(relTableName),
+              sql.id(relName),
               sql.op("."),
-              sql.id(pk),
+              sql.id(rightCol),
             ),
           ),
         );
@@ -611,13 +644,69 @@ export class FluentQuery<TTable = any, TSelect = any> {
 
     // Eager load relations
     if (this.loadWith.length > 0 && results.length > 0) {
-      results = await this.loadRelations(results);
+      if (this.loadStrategy === "joins") {
+        results = await this.loadJoinedRelations(results);
+      } else {
+        results = await this.loadRelations(results);
+      }
     }
 
     this.logger?.debug(
       `[QUERY RESULT] ${tableName} count=${results.length} duration_ms=${Date.now() - start}`,
     );
     return results;
+  }
+
+  private getColumnsFor(modelName: string): string[] {
+    const regClass = BaseModel.registry[modelName];
+    if (!regClass) {
+      throw new Error(
+        `withJoins requires model "${modelName}" to be registered via BaseModel.register(). ` +
+          `Use withSeparateQueries instead.`,
+      );
+    }
+    const instance = new regClass({ db: this.db, table: regClass.tableName });
+    const cols = instance.columnNames;
+    if (cols.length === 0) {
+      throw new Error(
+        `withJoins requires model "${modelName}" to define static columnTypes or a table shape. ` +
+          `The model is registered but has no enumerable columns. Use withSeparateQueries instead.`,
+      );
+    }
+    return cols;
+  }
+
+  private async loadJoinedRelations(rows: any[]): Promise<TSelect[]> {
+    const byId = new Map<any, any>();
+
+    for (const row of rows) {
+      const id = row.id;
+      if (!byId.has(id)) {
+        const main: any = {};
+        for (const k of Object.keys(row)) {
+          if (!this.loadWith.some((r) => k.startsWith(`${r}__`))) main[k] = row[k];
+        }
+        for (const relName of this.loadWith) main[relName] = [];
+        byId.set(id, main);
+      }
+      const main = byId.get(id);
+
+      for (const relName of this.loadWith) {
+        const prefix = `${relName}__`;
+        const relRow: any = {};
+        let hasData = false;
+        for (const k of Object.keys(row)) {
+          if (k.startsWith(prefix)) {
+            const col = k.slice(prefix.length);
+            relRow[col] = row[k];
+            if (row[k] !== null) hasData = true;
+          }
+        }
+        if (hasData) main[relName].push(relRow);
+      }
+    }
+
+    return [...byId.values()];
   }
 
   private async loadRelations(results: TSelect[]): Promise<TSelect[]> {
@@ -630,85 +719,55 @@ export class FluentQuery<TTable = any, TSelect = any> {
 
       const foreignKey = rel.foreignKey || `${relationName}_id`;
 
-      if (this.loadStrategy === "joins") {
-        // Results are already joined - group by the parent record's id
-        const grouped = new Map<any, any[]>();
-        const relTableName = rel.model;
+      // Determine local key and query key based on relationship type.
+      // has_many/has_one: FK lives on the related table, so collect current model's PK
+      // belongs_to: FK lives on the current table, so collect the FK values
+      const isInverse =
+        rel.type === "has_many" || rel.type === "has_one" || rel.type === "has_many_through";
+      const localKey = isInverse ? "id" : foreignKey;
+      const queryKey = isInverse ? foreignKey : "id";
 
-        for (const row of results) {
-          const rowAny = row as any;
-          const parentId = rowAny.id;
+      // Collect key values from current results
+      const localKeys = [...new Set(results.map((r) => (r as any)[localKey]).filter(Boolean))];
+      if (localKeys.length === 0) continue;
 
-          const relColumns: any = {};
-          let hasRelatedData = false;
-
-          for (const key of Object.keys(rowAny)) {
-            if (key.startsWith(`${relTableName}_`)) {
-              const originalKey = key.substring(relTableName.length + 1);
-              relColumns[originalKey] = rowAny[key];
-              if (rowAny[key] !== null && rowAny[key] !== undefined) {
-                hasRelatedData = true;
-              }
-            }
-          }
-
-          if (hasRelatedData) {
-            if (!grouped.has(parentId)) grouped.set(parentId, []);
-            grouped.get(parentId)!.push(relColumns);
-          }
+      // Resolve the related model instance
+      let relTable = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
+      if (!relTable) {
+        const regClass = BaseModel.registry[rel.model];
+        if (regClass) {
+          relTable = new regClass({ db: this.db, table: regClass.tableName });
         }
-
-        for (const item of results) {
-          const parentId = (item as any).id;
-          (item as any)[relationName] = grouped.get(parentId) || [];
-        }
-
-        this.logger?.debug(`[LOAD JOIN] ${relationName}`);
-      } else {
-        // Separate queries - collect all foreign key values
-        const foreignKeys = [
-          ...new Set(results.map((r) => (r as any)[foreignKey]).filter(Boolean)),
-        ];
-
-        if (foreignKeys.length === 0) continue;
-
-        // Query related table
-        let relTable = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
-        if (!relTable) {
-          const regClass = BaseModel.registry[rel.model];
-          if (regClass) {
-            relTable = new regClass({ db: this.db });
-          }
-        }
-
-        if (!relTable) {
-          this.logger?.warn(`[LOAD] Related model not found: ${rel.model}`);
-          continue;
-        }
-
-        let relatedResults: any[] = [];
-        const relQuery = relTable.where?.({ [foreignKey]: { in: foreignKeys } });
-
-        if (relQuery?.all) {
-          relatedResults = await relQuery.all();
-        } else if (relTable.all) {
-          relatedResults = await relTable.all();
-        }
-
-        const grouped = new Map<any, any[]>();
-        for (const item of relatedResults) {
-          const fk = item[foreignKey];
-          if (!grouped.has(fk)) grouped.set(fk, []);
-          grouped.get(fk)!.push(item);
-        }
-
-        for (const item of results) {
-          const fk = (item as any)[foreignKey];
-          (item as any)[relationName] = grouped.get(fk) || [];
-        }
-
-        this.logger?.debug(`[LOAD PRELOAD] ${relationName} count=${relatedResults.length}`);
       }
+
+      if (!relTable) {
+        this.logger?.warn(`[LOAD] Related model not found: ${rel.model}`);
+        continue;
+      }
+
+      let relatedResults: any[] = [];
+      const relQuery = relTable.where?.({ [queryKey]: { in: localKeys } });
+
+      if (relQuery?.all) {
+        relatedResults = await relQuery.all();
+      } else if (relTable.all) {
+        relatedResults = await relTable.all();
+      }
+
+      // Group by the query key so we can match back to local results
+      const grouped = new Map<any, any[]>();
+      for (const item of relatedResults) {
+        const fk = item[queryKey];
+        if (!grouped.has(fk)) grouped.set(fk, []);
+        grouped.get(fk)!.push(item);
+      }
+
+      for (const item of results) {
+        const localVal = (item as any)[localKey];
+        (item as any)[relationName] = grouped.get(localVal) || [];
+      }
+
+      this.logger?.debug(`[LOAD PRELOAD] ${relationName} count=${relatedResults.length}`);
     }
 
     return results;
@@ -899,6 +958,16 @@ export abstract class BaseModel<
   protected ctx!: Ctx;
 
   private _db?: DatabaseInstance;
+  private _inTransaction = false;
+  private _transactionCallbacks: Array<{
+    event: CallbackEvent;
+    context: "create" | "update" | "destroy";
+    data: any;
+  }> = [];
+  private _transactionOps: Array<{
+    context: "create" | "update" | "destroy";
+    data: any;
+  }> = [];
 
   private callbacks: Record<CallbackEvent, CallbackEntry[]> = {
     beforeValidation: [],
@@ -1092,7 +1161,9 @@ export abstract class BaseModel<
     this.registerCallback("afterCommit", fn);
   }
 
-  protected afterRollback(fn: (this: any, data: any) => void | Promise<void>) {
+  protected afterRollback(
+    fn: (this: any, data: any, context?: "create" | "update" | "destroy") => void | Promise<void>,
+  ) {
     this.registerCallback("afterRollback", fn);
   }
 
@@ -1134,7 +1205,7 @@ export abstract class BaseModel<
 
       try {
         const callback = typeof fn === "string" ? (this as any)[fn] : fn;
-        const result = await callback(data);
+        const result = await callback(data, context);
 
         if (result === ABORT) {
           throw new CallbackAbortError(`Callback aborted: ${event}`);
@@ -1405,7 +1476,7 @@ export abstract class BaseModel<
     let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
     if (!relatedModel) {
       const regClass = BaseModel.registry[rel.model];
-      if (regClass) relatedModel = new regClass({ db: this.db });
+      if (regClass) relatedModel = new regClass({ db: this.db, table: regClass.tableName });
     }
     if (!relatedModel) return [];
 
@@ -1437,7 +1508,7 @@ export abstract class BaseModel<
     let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
     if (!relatedModel) {
       const regClass = BaseModel.registry[rel.model];
-      if (regClass) relatedModel = new regClass({ db: this.db });
+      if (regClass) relatedModel = new regClass({ db: this.db, table: regClass.tableName });
     }
     if (!relatedModel) return [];
 
@@ -1479,7 +1550,7 @@ export abstract class BaseModel<
           (this.db as any)[siblingRel.model] || (this.db as any).query?.[siblingRel.model];
         if (!siblingModel) {
           const regClass = BaseModel.registry[siblingRel.model];
-          if (regClass) siblingModel = new regClass({ db: this.db });
+          if (regClass) siblingModel = new regClass({ db: this.db, table: regClass.tableName });
         }
         if (siblingModel) {
           const siblings = await siblingModel
@@ -1536,7 +1607,7 @@ export abstract class BaseModel<
       let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
       if (!relatedModel) {
         const regClass = BaseModel.registry[rel.model];
-        if (regClass) relatedModel = new regClass({ db: this.db });
+        if (regClass) relatedModel = new regClass({ db: this.db, table: regClass.tableName });
       }
       if (!relatedModel) return;
 
@@ -1629,7 +1700,7 @@ export abstract class BaseModel<
             (this.db as any)[includeConfig.model] || (this.db as any).query?.[includeConfig.model];
           if (!relatedModel) {
             const regClass = BaseModel.registry[includeConfig.model];
-            if (regClass) relatedModel = new regClass({ db: this.db });
+            if (regClass) relatedModel = new regClass({ db: this.db, table: regClass.tableName });
           }
 
           if (!relatedModel) {
@@ -1673,7 +1744,7 @@ export abstract class BaseModel<
         (this.db as any)[includeConfig.model] || (this.db as any).query?.[includeConfig.model];
       if (!relatedModel) {
         const regClass = BaseModel.registry[includeConfig.model];
-        if (regClass) relatedModel = new regClass({ db: this.db });
+        if (regClass) relatedModel = new regClass({ db: this.db, table: regClass.tableName });
       }
 
       if (!relatedModel) {
@@ -1787,7 +1858,7 @@ export abstract class BaseModel<
 
     for (const k in finalData) {
       const isValidColumn = !hasColumnsDefined || k in this.table;
-      if (isValidColumn && finalData[k] !== undefined && finalData[k] !== null) {
+      if (isValidColumn && finalData[k] !== undefined) {
         filtered[k] = finalData[k];
       }
     }
@@ -1815,9 +1886,18 @@ export abstract class BaseModel<
 
     await this._afterCreate(record);
     await this._afterSave(record);
-    await this.runCallbacks("afterCommit", "create", record);
-    await this.runCallbacks("afterCreateCommit", "create", record);
-    await this.runCallbacks("afterSaveCommit", "create", record);
+    if (this._inTransaction) {
+      this._transactionCallbacks.push(
+        { event: "afterCommit", context: "create", data: record },
+        { event: "afterCreateCommit", context: "create", data: record },
+        { event: "afterSaveCommit", context: "create", data: record },
+      );
+      this._transactionOps.push({ context: "create", data: record });
+    } else {
+      await this.runCallbacks("afterCommit", "create", record);
+      await this.runCallbacks("afterCreateCommit", "create", record);
+      await this.runCallbacks("afterSaveCommit", "create", record);
+    }
     this.logger?.info(`[CREATED] ${tableName}#${(record as any).id}`);
     return record;
   }
@@ -1837,7 +1917,7 @@ export abstract class BaseModel<
 
     for (const k in finalData) {
       const isValidColumn = !hasColumnsDefined || k in this.table;
-      if (isValidColumn && (finalData as any)[k] !== undefined && (finalData as any)[k] !== null) {
+      if (isValidColumn && (finalData as any)[k] !== undefined) {
         filtered[k] = (finalData as any)[k];
       }
     }
@@ -1871,9 +1951,18 @@ export abstract class BaseModel<
 
     await this._afterUpdate(record);
     await this._afterSave(record);
-    await this.runCallbacks("afterCommit", "update", record);
-    await this.runCallbacks("afterUpdateCommit", "update", record);
-    await this.runCallbacks("afterSaveCommit", "update", record);
+    if (this._inTransaction) {
+      this._transactionCallbacks.push(
+        { event: "afterCommit", context: "update", data: record },
+        { event: "afterUpdateCommit", context: "update", data: record },
+        { event: "afterSaveCommit", context: "update", data: record },
+      );
+      this._transactionOps.push({ context: "update", data: record });
+    } else {
+      await this.runCallbacks("afterCommit", "update", record);
+      await this.runCallbacks("afterUpdateCommit", "update", record);
+      await this.runCallbacks("afterSaveCommit", "update", record);
+    }
     this.logger?.info(`[UPDATED] ${tableName}#${id}`);
     return record;
   }
@@ -1898,8 +1987,16 @@ export abstract class BaseModel<
 
     if (success) {
       await this._afterDelete(id);
-      await this.runCallbacks("afterCommit", "destroy", { id });
-      await this.runCallbacks("afterDestroyCommit", "destroy", { id });
+      if (this._inTransaction) {
+        this._transactionCallbacks.push(
+          { event: "afterCommit", context: "destroy", data: { id } },
+          { event: "afterDestroyCommit", context: "destroy", data: { id } },
+        );
+        this._transactionOps.push({ context: "destroy", data: { id } });
+      } else {
+        await this.runCallbacks("afterCommit", "destroy", { id });
+        await this.runCallbacks("afterDestroyCommit", "destroy", { id });
+      }
       this.logger?.info(`[DELETED] ${tableName}#${id}`);
     }
     return success;
@@ -1980,18 +2077,51 @@ export abstract class BaseModel<
     const tableName = getTableName(this.table);
     this.logger?.info(`[TRANSACTION START] ${tableName}`);
 
+    this._inTransaction = true;
+    this._transactionCallbacks = [];
+    this._transactionOps = [];
+
     try {
+      await execRaw(this.db, "BEGIN");
       const result = await fn(this);
-      await this.runCallbacks("afterCommit", "create", result);
-      await this.runCallbacks("afterCreateCommit", "create", result);
-      await this.runCallbacks("afterUpdateCommit", "update", result);
-      await this.runCallbacks("afterSaveCommit", "create", result);
+      await execRaw(this.db, "COMMIT");
+
+      // Flush queued commit callbacks — outside the rollback catch so a
+      // callback failure doesn't retroactively roll back a committed tx.
+      try {
+        for (const entry of this._transactionCallbacks) {
+          await this.runCallbacks(entry.event as CallbackEvent, entry.context, entry.data);
+        }
+      } catch (cbErr: any) {
+        this.logger?.error(`[TRANSACTION CALLBACK ERROR] ${tableName}`, { error: cbErr.message });
+      }
+
       this.logger?.info(`[TRANSACTION COMMIT] ${tableName}`);
       return result;
     } catch (err: any) {
-      await this.runCallbacks("afterRollback", "create", { error: err.message });
+      try {
+        await execRaw(this.db, "ROLLBACK");
+      } catch {
+        this.logger?.warn(`[TRANSACTION ROLLBACK FAILED] ${tableName}`);
+      }
+
+      // Fire afterRollback once per operation with its record data and context
+      for (const op of this._transactionOps) {
+        await this.runCallbacks("afterRollback", op.context, { ...op.data, error: err.message });
+      }
+      // If nothing was queued, fire once with a neutral context
+      if (this._transactionOps.length === 0) {
+        await this.runCallbacks("afterRollback", "create", { error: err.message });
+      }
+
+      this._transactionCallbacks = [];
+      this._transactionOps = [];
       this.logger?.error(`[TRANSACTION ROLLBACK] ${tableName}`, { error: err.message });
       throw err;
+    } finally {
+      this._inTransaction = false;
+      this._transactionCallbacks = [];
+      this._transactionOps = [];
     }
   }
 }

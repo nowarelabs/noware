@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, beforeAll } from "vite-plus/test";
 import type { ContextLike } from "@nowarelabs/shared";
 import {
   BaseModel,
@@ -503,6 +503,15 @@ describe("FluentQuery", () => {
     expect(query).toBeDefined();
   });
 
+  test("withJoins + has_many + limit throws error", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts").limit(10);
+    expect(() => query.toSql()).toThrow("withJoins");
+  });
+
   test("full query with select, where, orderBy, limit, offset", () => {
     const query = new FluentQuery(mockDb, "users");
     query
@@ -518,6 +527,501 @@ describe("FluentQuery", () => {
     expect(sqlStr).toContain("ORDER BY");
     expect(sqlStr).toContain("LIMIT");
     expect(sqlStr).toContain("OFFSET");
+  });
+});
+
+describe("withJoins eager loading", () => {
+  const mockDb = { execSql: async (_sql: string) => [] };
+
+  class PostModel extends BaseModel {
+    static columnTypes = { id: "integer", title: "text", user_id: "integer" };
+    protected persistence = {};
+    protected getPersistence() {
+      return this.persistence;
+    }
+  }
+
+  class AuthorModel extends BaseModel {
+    static columnTypes = { id: "integer", name: "text" };
+    protected persistence = {};
+    protected getPersistence() {
+      return this.persistence;
+    }
+  }
+
+  class ProfileModel extends BaseModel {
+    static columnTypes = { id: "integer", bio: "text", user_id: "integer" };
+    protected persistence = {};
+    protected getPersistence() {
+      return this.persistence;
+    }
+  }
+
+  beforeAll(() => {
+    BaseModel.register("posts", PostModel);
+    BaseModel.register("users", AuthorModel);
+    BaseModel.register("profiles", ProfileModel);
+  });
+
+  test("produces relName__col aliases in SELECT for joined tables", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+    const sqlStr = query.toSql();
+    expect(sqlStr).toContain('"posts"."id" AS "posts__id"');
+    expect(sqlStr).toContain('"posts"."title" AS "posts__title"');
+    expect(sqlStr).toContain('"posts"."user_id" AS "posts__user_id"');
+  });
+
+  test("main table uses unaliased .*", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+    const sqlStr = query.toSql();
+    expect(sqlStr).toContain('"users".*');
+  });
+
+  test("JOIN clause aliases table by relation name", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+    const sqlStr = query.toSql();
+    expect(sqlStr).toContain('LEFT JOIN "posts" AS "posts"');
+  });
+
+  test("has_many: JOIN ON uses tableName.id = relName.fk", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+    const sqlStr = query.toSql();
+    expect(sqlStr).toContain('"users"."id" = "posts"."user_id"');
+  });
+
+  test("belongs_to: JOIN ON uses tableName.fk = relName.id", () => {
+    const query = new FluentQuery(mockDb, "posts");
+    query.setRelationships({
+      author: { type: "belongs_to", model: "users", foreignKey: "author_id" },
+    });
+    query.withJoins("author");
+    const sqlStr = query.toSql();
+    expect(sqlStr).toContain('"posts"."author_id" = "author"."id"');
+  });
+
+  test("has_one: JOIN ON uses tableName.id = relName.fk", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      profile: { type: "has_one", model: "profiles", foreignKey: "user_id" },
+    });
+    query.withJoins("profile");
+    const sqlStr = query.toSql();
+    expect(sqlStr).toContain('"users"."id" = "profile"."user_id"');
+  });
+
+  test("has_many + limit throws", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts").limit(10);
+    expect(() => query.toSql()).toThrow("has_many");
+  });
+
+  test("has_many + offset throws", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts").offset(5);
+    expect(() => query.toSql()).toThrow("has_many");
+  });
+
+  test("has_one + limit does NOT throw (no fan-out risk)", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      profile: { type: "has_one", model: "profiles", foreignKey: "user_id" },
+    });
+    query.withJoins("profile").limit(10);
+    expect(() => query.toSql()).not.toThrow();
+  });
+
+  test("belongs_to + limit does NOT throw", () => {
+    const query = new FluentQuery(mockDb, "posts");
+    query.setRelationships({
+      author: { type: "belongs_to", model: "users", foreignKey: "author_id" },
+    });
+    query.withJoins("author").limit(10);
+    expect(() => query.toSql()).not.toThrow();
+  });
+
+  test("throws for unregistered model", () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      comments: { type: "has_many", model: "nonexistent_model" },
+    });
+    query.withJoins("comments");
+    expect(() => query.toSql()).toThrow("registered");
+  });
+
+  test("throws for model with no columnTypes", () => {
+    class EmptyModel extends BaseModel {
+      protected persistence = {};
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+    BaseModel.register("empty_model", EmptyModel);
+
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      things: { type: "has_many", model: "empty_model" },
+    });
+    query.withJoins("things");
+    expect(() => query.toSql()).toThrow("columnTypes");
+  });
+});
+
+describe("loadJoinedRelations dedup", () => {
+  const mockDb = { execSql: async (_sql: string) => [] };
+
+  class PostModel extends BaseModel {
+    static columnTypes = { id: "integer", title: "text", user_id: "integer" };
+    protected persistence = {};
+    protected getPersistence() {
+      return this.persistence;
+    }
+  }
+
+  beforeAll(() => {
+    BaseModel.register("posts", PostModel);
+  });
+
+  test("collapses multiple joined rows into one parent with array of related", async () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+
+    const rows = [
+      { id: 1, name: "Alice", posts__id: 10, posts__title: "Post A", posts__user_id: 1 },
+      { id: 1, name: "Alice", posts__id: 20, posts__title: "Post B", posts__user_id: 1 },
+      { id: 2, name: "Bob", posts__id: null, posts__title: null, posts__user_id: null },
+    ];
+
+    const result = await (query as any).loadJoinedRelations(rows);
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe(1);
+    expect(result[0].name).toBe("Alice");
+    expect(result[0].posts).toHaveLength(2);
+    expect(result[0].posts[0]).toEqual({ id: 10, title: "Post A", user_id: 1 });
+    expect(result[0].posts[1]).toEqual({ id: 20, title: "Post B", user_id: 1 });
+  });
+
+  test("parent with no related data gets empty array", async () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+
+    const rows = [
+      { id: 3, name: "Charlie", posts__id: null, posts__title: null, posts__user_id: null },
+    ];
+
+    const result = await (query as any).loadJoinedRelations(rows);
+    expect(result).toHaveLength(1);
+    expect(result[0].posts).toEqual([]);
+  });
+
+  test("strips relation prefix keys from main record", async () => {
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+    });
+    query.withJoins("posts");
+
+    const rows = [
+      { id: 1, name: "Alice", posts__id: 10, posts__title: "Post A", posts__user_id: 1 },
+    ];
+
+    const result = await (query as any).loadJoinedRelations(rows);
+    const mainKeys = Object.keys(result[0]).filter((k) => !k.startsWith("posts"));
+    expect(mainKeys).not.toContain("posts__id");
+    expect(mainKeys).not.toContain("posts__title");
+  });
+
+  test("multiple relations are grouped independently", async () => {
+    class CommentModel extends BaseModel {
+      static columnTypes = { id: "integer", body: "text", user_id: "integer" };
+      protected persistence = {};
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+    BaseModel.register("comments", CommentModel);
+
+    const query = new FluentQuery(mockDb, "users");
+    query.setRelationships({
+      posts: { type: "has_many", model: "posts", foreignKey: "user_id" },
+      comments: { type: "has_many", model: "comments", foreignKey: "user_id" },
+    });
+    query.withJoins("posts", "comments");
+
+    const rows = [
+      {
+        id: 1,
+        name: "Alice",
+        posts__id: 10,
+        posts__title: "Post A",
+        posts__user_id: 1,
+        comments__id: 100,
+        comments__body: "Great!",
+        comments__user_id: 1,
+      },
+      {
+        id: 1,
+        name: "Alice",
+        posts__id: 20,
+        posts__title: "Post B",
+        posts__user_id: 1,
+        comments__id: 100,
+        comments__body: "Great!",
+        comments__user_id: 1,
+      },
+    ];
+
+    const result = await (query as any).loadJoinedRelations(rows);
+    expect(result).toHaveLength(1);
+    expect(result[0].posts).toHaveLength(2);
+    expect(result[0].comments).toHaveLength(2);
+  });
+});
+
+describe("transaction SQL and callbacks", () => {
+  class TxModel extends BaseModel {
+    static columnTypes = { id: "integer", name: "text" };
+    protected persistence: any;
+    protected getPersistence() {
+      return this.persistence;
+    }
+  }
+
+  function makeMockDb(capture: string[], returnRow: any = { id: 1, name: "Alice" }) {
+    return {
+      prepare: (sql: string) => ({
+        bind: (..._params: any[]) => ({
+          all: async () => {
+            capture.push(sql);
+            return { results: [returnRow] };
+          },
+        }),
+      }),
+      execSql: async (sql: string) => {
+        capture.push(sql);
+        return [returnRow];
+      },
+    };
+  }
+
+  function registerAllCallbacks(model: TxModel, handlers: Record<string, (data: any) => void>) {
+    for (const [event, fn] of Object.entries(handlers)) {
+      (model as any).callbacks[event].push({ fn: fn.bind(model), options: undefined });
+    }
+  }
+
+  test("transaction issues BEGIN and COMMIT", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const model = new TxModel({ db, table: "users" });
+
+    await model.transaction(async (m) => {
+      await m.create({ name: "Alice" });
+    });
+
+    expect(captured.some((s) => s.includes("BEGIN"))).toBe(true);
+    expect(captured.some((s) => s.includes("COMMIT"))).toBe(true);
+  });
+
+  test("transaction issues ROLLBACK on error", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const model = new TxModel({ db, table: "users" });
+
+    try {
+      await model.transaction(async () => {
+        throw new Error("boom");
+      });
+    } catch {
+      // expected
+    }
+
+    expect(captured.some((s) => s.includes("BEGIN"))).toBe(true);
+    expect(captured.some((s) => s.includes("ROLLBACK"))).toBe(true);
+    expect(captured.some((s) => s.includes("COMMIT"))).toBe(false);
+  });
+
+  test("transaction fires only create callbacks when only create is called", async () => {
+    const db = makeMockDb([]);
+    const fired: string[] = [];
+    const model = new TxModel({ db, table: "users" });
+
+    registerAllCallbacks(model, {
+      afterCreateCommit: (data: any) => fired.push(`afterCreateCommit:${data?.name}`),
+      afterUpdateCommit: () => fired.push("afterUpdateCommit"),
+      afterSaveCommit: (data: any) => fired.push(`afterSaveCommit:${data?.name}`),
+    });
+
+    await model.transaction(async (m) => {
+      await m.create({ name: "Alice" });
+    });
+
+    expect(fired).toContain("afterCreateCommit:Alice");
+    expect(fired).toContain("afterSaveCommit:Alice");
+    expect(fired).not.toContain("afterUpdateCommit");
+  });
+
+  test("transaction fires only update callbacks when only update is called", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured, { id: 1, name: "Bob" });
+    const fired: string[] = [];
+    const model = new TxModel({ db, table: "users" });
+
+    registerAllCallbacks(model, {
+      afterCreateCommit: () => fired.push("afterCreateCommit"),
+      afterUpdateCommit: (data: any) => fired.push(`afterUpdateCommit:${data?.name}`),
+    });
+
+    await model.transaction(async (m) => {
+      await m.update(1, { name: "Bob" });
+    });
+
+    expect(fired).toContainEqual(expect.stringMatching(/^afterUpdateCommit:/));
+    expect(fired).not.toContain("afterCreateCommit");
+  });
+
+  test("transaction fires afterRollback on error", async () => {
+    const db = makeMockDb([]);
+    const model = new TxModel({ db, table: "users" });
+    let rollbackFired = false;
+
+    registerAllCallbacks(model, {
+      afterRollback: () => {
+        rollbackFired = true;
+      },
+    });
+
+    try {
+      await model.transaction(async () => {
+        throw new Error("boom");
+      });
+    } catch {
+      // expected
+    }
+
+    expect(rollbackFired).toBe(true);
+  });
+
+  test("afterRollback fires once per operation with correct context and record data", async () => {
+    const db = makeMockDb([]);
+    const model = new TxModel({ db, table: "users" });
+    const rollbackCalls: Array<{ context: string; data: any }> = [];
+
+    registerAllCallbacks(model, {
+      afterRollback: (data: any, ctx?: string) => {
+        rollbackCalls.push({ context: ctx ?? "unknown", data });
+      },
+    });
+
+    try {
+      await model.transaction(async (m) => {
+        await m.create({ name: "Alice" });
+        await m.update(1, { name: "Bob" });
+        throw new Error("boom");
+      });
+    } catch {
+      // expected
+    }
+
+    // Once per operation, not 2-3x per commit-callback type
+    expect(rollbackCalls).toHaveLength(2);
+    expect(rollbackCalls[0].context).toBe("create");
+    expect(rollbackCalls[0].data.error).toBe("boom");
+    expect(rollbackCalls[1].context).toBe("update");
+    expect(rollbackCalls[1].data.error).toBe("boom");
+  });
+
+  test("afterRollback fires with destroy context when only delete was attempted", async () => {
+    const db = makeMockDb([]);
+    const model = new TxModel({ db, table: "users" });
+    const rollbackCalls: Array<{ context: string; data: any }> = [];
+
+    registerAllCallbacks(model, {
+      afterRollback: (data: any, ctx?: string) => {
+        rollbackCalls.push({ context: ctx ?? "unknown", data });
+      },
+    });
+
+    try {
+      await model.transaction(async (m) => {
+        await m.delete(1);
+        throw new Error("boom after delete");
+      });
+    } catch {
+      // expected
+    }
+
+    expect(rollbackCalls).toHaveLength(1);
+    expect(rollbackCalls[0].context).toBe("destroy");
+    expect(rollbackCalls[0].data.id).toBe(1);
+    expect(rollbackCalls[0].data.error).toBe("boom after delete");
+  });
+
+  test("callback failure after COMMIT does not trigger ROLLBACK", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const model = new TxModel({ db, table: "users" });
+
+    registerAllCallbacks(model, {
+      afterCommit: () => {
+        throw new Error("callback exploded");
+      },
+    });
+
+    try {
+      await model.transaction(async (m) => {
+        await m.create({ name: "Alice" });
+      });
+    } catch {
+      // expected — the callback error propagates
+    }
+
+    // COMMIT was issued but ROLLBACK should NOT be
+    expect(captured.some((s) => s.includes("COMMIT"))).toBe(true);
+    expect(captured.some((s) => s.includes("ROLLBACK"))).toBe(false);
+  });
+
+  test("outside transaction, callbacks fire immediately (no queue)", async () => {
+    const db = makeMockDb([]);
+    const fired: string[] = [];
+    const model = new TxModel({ db, table: "users" });
+
+    registerAllCallbacks(model, {
+      afterCreateCommit: (data: any) => fired.push(`afterCreateCommit:${data?.name}`),
+      afterUpdateCommit: () => fired.push("afterUpdateCommit"),
+    });
+
+    await model.create({ name: "Alice" });
+
+    expect(fired).toContain("afterCreateCommit:Alice");
+    expect(fired).not.toContain("afterUpdateCommit");
   });
 });
 
@@ -587,11 +1091,6 @@ describe("getDialectStrategy", () => {
   test("returns postgres when specified", () => {
     const strategy = getDialectStrategy("postgres");
     expect(strategy.dialect).toBe("postgres");
-  });
-
-  test("returns mysql when specified", () => {
-    const strategy = getDialectStrategy("mysql");
-    expect(strategy.dialect).toBe("mysql");
   });
 });
 
