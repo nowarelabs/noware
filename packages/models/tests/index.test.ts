@@ -1905,3 +1905,211 @@ describe("GraphTraversal", () => {
     expect(result).toEqual([]);
   });
 });
+
+describe("Security hardening", () => {
+  describe("permit option on create", () => {
+    test("permit filters allowed columns", async () => {
+      const inserted: any = {};
+      const mockDb = {
+        prepare: () => ({
+          bind: (...params: any[]) => ({
+            all: async () => {
+              inserted.name = params[0];
+              inserted.role = params[1];
+              return { results: [{ id: 1, name: params[0], role: params[1] }] };
+            },
+          }),
+        }),
+      };
+
+      class UserModel extends BaseModel {
+        protected persistence: any;
+        static tableName = "users";
+        constructor(init: any) {
+          super({ db: init.db, table: "users" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new UserModel({ db: mockDb });
+      const result = await model.create(
+        { name: "Alice", role: "admin", password: "secret" } as any,
+        { permit: ["name", "role"] },
+      );
+      expect(inserted.password).toBeUndefined();
+      expect(result).toBeDefined();
+    });
+
+    test("permit filters in update", async () => {
+      const updated: any = {};
+      const mockDb = {
+        prepare: () => ({
+          bind: (...params: any[]) => ({
+            all: async () => {
+              updated.role = params[0];
+              return { results: [{ id: 1, name: "Alice", role: params[0] }] };
+            },
+          }),
+        }),
+      };
+
+      class UserModel extends BaseModel {
+        protected persistence: any;
+        static tableName = "users";
+        constructor(init: any) {
+          super({ db: init.db, table: "users" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new UserModel({ db: mockDb });
+      await model.update(1, { name: "Bob", role: "superadmin" } as any, { permit: ["role"] });
+      expect(updated.name).toBeUndefined();
+      expect(updated.role).toBe("superadmin");
+    });
+
+    test("without permit, all keys pass through", async () => {
+      const inserted: any = {};
+      const mockDb = {
+        prepare: () => ({
+          bind: (...params: any[]) => ({
+            all: async () => {
+              inserted.name = params[0];
+              inserted.role = params[1];
+              return { results: [{ id: 1, name: params[0], role: params[1] }] };
+            },
+          }),
+        }),
+      };
+
+      class UserModel extends BaseModel {
+        protected persistence: any;
+        static tableName = "users";
+        constructor(init: any) {
+          super({ db: init.db, table: "users" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new UserModel({ db: mockDb });
+      await model.create({ name: "Alice", role: "admin" } as any);
+      expect(inserted.name).toBe("Alice");
+      expect(inserted.role).toBe("admin");
+    });
+  });
+
+  describe("escapeVal hardening", () => {
+    test("escapes backslashes in strings via interpolation path", async () => {
+      const interpolatedSqls: string[] = [];
+      const mockDb = {
+        execSql: async (sql: string) => {
+          interpolatedSqls.push(sql);
+          return [{ id: 1, val: "a\\b'c" }];
+        },
+      };
+
+      class TestModel extends BaseModel {
+        protected persistence: any;
+        constructor(init: any) {
+          super({ db: init.db, table: "test" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new TestModel({ db: mockDb });
+      await model.create({ val: "a\\b'c" } as any);
+      expect(interpolatedSqls[0]).toContain("a\\\\b''c");
+    });
+
+    test("escapes single quotes in strings via interpolation path", async () => {
+      const interpolatedSqls: string[] = [];
+      const mockDb = {
+        execSql: async (sql: string) => {
+          interpolatedSqls.push(sql);
+          return [{ id: 1 }];
+        },
+      };
+
+      class TestModel extends BaseModel {
+        protected persistence: any;
+        constructor(init: any) {
+          super({ db: init.db, table: "test" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new TestModel({ db: mockDb });
+      await model.create({ val: "it's" } as any);
+      expect(interpolatedSqls[0]).toContain("it''s");
+    });
+
+    test("NaN becomes NULL via interpolation path", async () => {
+      const interpolatedSqls: string[] = [];
+      const mockDb = {
+        execSql: async (sql: string) => {
+          interpolatedSqls.push(sql);
+          return [{ id: 1 }];
+        },
+      };
+
+      class TestModel extends BaseModel {
+        protected persistence: any;
+        constructor(init: any) {
+          super({ db: init.db, table: "test" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new TestModel({ db: mockDb });
+      await model.create({ val: NaN } as any);
+      expect(interpolatedSqls[0]).toContain("NULL");
+    });
+
+    test("prepare path uses bound params (no interpolation)", async () => {
+      const boundParams: any[] = [];
+      const mockDb = {
+        prepare: (sql: string) => ({
+          bind: (...params: any[]) => {
+            boundParams.push(...params);
+            return {
+              all: async () => ({ results: [{ id: 1 }] }),
+            };
+          },
+        }),
+      };
+
+      class TestModel extends BaseModel {
+        protected persistence: any;
+        constructor(init: any) {
+          super({ db: init.db, table: "test" });
+          this.persistence = { db: init.db };
+        }
+        protected getPersistence() {
+          return this.persistence;
+        }
+      }
+
+      const model = new TestModel({ db: mockDb });
+      await model.create({ val: "a\\b'c" } as any);
+      expect(boundParams[0]).toBe("a\\b'c");
+    });
+  });
+});

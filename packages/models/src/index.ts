@@ -164,10 +164,11 @@ function escapeVal(val: any): string {
     return val ? "true" : "false";
   }
   if (typeof val === "number") {
+    if (!Number.isFinite(val)) return "NULL";
     return String(val);
   }
   if (typeof val === "string") {
-    return `'${val.replace(/'/g, "''")}'`;
+    return `'${val.replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
   }
   if (val instanceof Date) {
     return `'${val.toISOString().replace(/'/g, "''")}'`;
@@ -175,7 +176,10 @@ function escapeVal(val: any): string {
   if (Array.isArray(val)) {
     return `(${val.map((v) => escapeVal(v)).join(", ")})`;
   }
-  return `'${String(val).replace(/'/g, "''")}'`;
+  if (typeof val === "object") {
+    return `'${JSON.stringify(val).replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
+  }
+  return `'${String(val).replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
 }
 
 function getTableName(table: any): string {
@@ -359,11 +363,14 @@ export class GraphTraversal {
   }
 }
 
-// Only the db.prepare path uses real parameterized queries (via .bind()).
-// The execSql/all/exec paths cannot accept bound params in their target runtimes
-// (D1 raw exec, DO storage), so they fall back to interpolateSql which builds
-// a string using escapeVal. The __PH_N__ placeholders in the compiled SQL are
-// replaced with either bound params (prepare) or interpolated literals (others).
+// SECURITY: The db.prepare path uses real parameterized queries (via .bind()).
+// The execSql/all/exec fallback paths use interpolateSql + escapeVal, which is
+// manual string escaping — correct for the types it handles but inherently less
+// safe than bound parameters. If you are processing untrusted input on runtimes
+// that lack .prepare() (DO storage, D1 raw exec), treat this path with caution.
+// The escapeVal function escapes single quotes, backslashes, and handles
+// non-finite numbers, null, booleans, dates, arrays, and objects — but no
+// manual escaping is a complete substitute for parameterized queries.
 async function execRaw(
   db: DatabaseInstance,
   sqlText: string,
@@ -1985,7 +1992,7 @@ export abstract class BaseModel<
     await this.runCallbacks("afterDestroy", "destroy", { id });
   }
 
-  async create(data: TInsert): Promise<TSelect> {
+  async create(data: TInsert, options?: { permit?: string[] }): Promise<TSelect> {
     const tableName = getTableName(this.table);
     this.logger?.info(`[CREATE] ${tableName}`, { data });
 
@@ -1997,8 +2004,10 @@ export abstract class BaseModel<
     const filtered: any = {};
     const hasColumnsDefined =
       this.table && typeof this.table === "object" && Object.keys(this.table).length > 0;
+    const permitSet = options?.permit ? new Set(options.permit) : null;
 
     for (const k in finalData) {
+      if (permitSet && !permitSet.has(k)) continue;
       const isValidColumn = !hasColumnsDefined || k in this.table;
       if (isValidColumn && finalData[k] !== undefined) {
         filtered[k] = finalData[k];
@@ -2044,7 +2053,11 @@ export abstract class BaseModel<
     return record;
   }
 
-  async update(id: number | string, data: Partial<TInsert>): Promise<TSelect> {
+  async update(
+    id: number | string,
+    data: Partial<TInsert>,
+    options?: { permit?: string[] },
+  ): Promise<TSelect> {
     const tableName = getTableName(this.table);
     this.logger?.info(`[UPDATE] ${tableName}#${id}`, { data });
 
@@ -2056,8 +2069,10 @@ export abstract class BaseModel<
     const filtered: any = {};
     const hasColumnsDefined =
       this.table && typeof this.table === "object" && Object.keys(this.table).length > 0;
+    const permitSet = options?.permit ? new Set(options.permit) : null;
 
     for (const k in finalData) {
+      if (permitSet && !permitSet.has(k)) continue;
       const isValidColumn = !hasColumnsDefined || k in this.table;
       if (isValidColumn && (finalData as any)[k] !== undefined) {
         filtered[k] = (finalData as any)[k];
