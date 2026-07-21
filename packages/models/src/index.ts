@@ -190,6 +190,175 @@ function getTableName(table: any): string {
   return "";
 }
 
+// ---------------------------------------------------------------------------
+// GraphTraversal — recursive CTE graph queries with iterative fallback
+// ---------------------------------------------------------------------------
+
+interface GraphTraversalConfig {
+  db: DatabaseInstance;
+  table: string;
+  relationships: Record<string, RelationshipMetadata>;
+  resolveModel: (name: string) => string;
+}
+
+function buildAncestorCte(
+  table: string,
+  fk: string,
+  startId: number | string,
+  maxDepth: number,
+): string {
+  return [
+    `WITH RECURSIVE ancestors(id, parent_id) AS (`,
+    `  SELECT id, ${fk} FROM ${table} WHERE id = ?`,
+    `  UNION ALL`,
+    `  SELECT t.id, t.${fk} FROM ${table} t`,
+    `  INNER JOIN ancestors a ON t.id = a.parent_id`,
+    `)`,
+    `SELECT id FROM ancestors LIMIT ${maxDepth}`,
+  ].join(" ");
+}
+
+function buildDescendantCte(
+  table: string,
+  fk: string,
+  startId: number | string,
+  maxDepth: number,
+): string {
+  return [
+    `WITH RECURSIVE descendants(id) AS (`,
+    `  SELECT id FROM ${table} WHERE id = ?`,
+    `  UNION ALL`,
+    `  SELECT t.id FROM ${table} t`,
+    `  INNER JOIN descendants d ON t.${fk} = d.id`,
+    `)`,
+    `SELECT id FROM descendants WHERE id != ? LIMIT ${maxDepth}`,
+  ].join(" ");
+}
+
+function resolveGraphTable(
+  rel: RelationshipMetadata,
+  relationships: Record<string, RelationshipMetadata>,
+  resolveModel: (name: string) => string,
+): string {
+  const tableName = resolveModel(rel.model);
+  if (tableName) return tableName;
+
+  const related = relationships[rel.model];
+  if (related) return resolveGraphTable(related, relationships, resolveModel);
+
+  return rel.model;
+}
+
+export class GraphTraversal {
+  private db: DatabaseInstance;
+  private table: string;
+  private relationships: Record<string, RelationshipMetadata>;
+  private resolveModel: (name: string) => string;
+
+  constructor(config: GraphTraversalConfig) {
+    this.db = config.db;
+    this.table = config.table;
+    this.relationships = config.relationships;
+    this.resolveModel = config.resolveModel;
+  }
+
+  async listAncestorIds(
+    relationName: string,
+    id: number | string,
+    maxDepth = 100,
+  ): Promise<(string | number)[]> {
+    const rel = this.relationships[relationName];
+    if (!rel || rel.type !== "belongs_to" || !rel.foreignKey) return [];
+
+    try {
+      const relatedTable = resolveGraphTable(rel, this.relationships, this.resolveModel);
+      const cteSql = buildAncestorCte(relatedTable, rel.foreignKey, id, maxDepth);
+      const rows = await execRaw(this.db, cteSql, [id]);
+      const ids = rows.map((r: any) => r.id).filter((x: any) => x != null);
+      return ids.length > 0 ? ids : [];
+    } catch {
+      return this._ancestorsIterative(rel, id, maxDepth);
+    }
+  }
+
+  async listDescendantIds(
+    relationName: string,
+    id: number | string,
+    maxDepth = 100,
+  ): Promise<(string | number)[]> {
+    const rel = this.relationships[relationName];
+    if (!rel || rel.type !== "has_many" || !rel.foreignKey) return [];
+
+    try {
+      const relatedTable = resolveGraphTable(rel, this.relationships, this.resolveModel);
+      const cteSql = buildDescendantCte(relatedTable, rel.foreignKey, id, maxDepth);
+      const rows = await execRaw(this.db, cteSql, [id, id]);
+      const ids = rows.map((r: any) => r.id).filter((x: any) => x != null);
+      return ids.length > 0 ? ids : [];
+    } catch {
+      return this._descendantsIterative(rel, id, maxDepth);
+    }
+  }
+
+  private async _ancestorsIterative(
+    rel: RelationshipMetadata,
+    id: number | string,
+    maxDepth: number,
+  ): Promise<(string | number)[]> {
+    const ancestors: (string | number)[] = [];
+    const visited = new Set<string | number>();
+    let currentId: string | number | null = id;
+    let depth = 0;
+
+    while (currentId && depth < maxDepth) {
+      if (visited.has(currentId)) break;
+      visited.add(currentId);
+
+      const sqlText = `SELECT * FROM ${this.table} WHERE id = ? LIMIT 1`;
+      const rows = await execRaw(this.db, sqlText, [currentId]);
+      if (!rows.length) break;
+
+      currentId = rows[0][rel.foreignKey!];
+      if (currentId) {
+        ancestors.push(currentId);
+      }
+      depth++;
+    }
+
+    return ancestors;
+  }
+
+  private async _descendantsIterative(
+    rel: RelationshipMetadata,
+    id: number | string,
+    maxDepth: number,
+  ): Promise<(string | number)[]> {
+    const descendants: (string | number)[] = [];
+    const visited = new Set<string | number>();
+    const fk = rel.foreignKey!;
+    const relatedTable = resolveGraphTable(rel, this.relationships, this.resolveModel);
+
+    const collect = async (parentId: string | number, depth: number) => {
+      if (depth >= maxDepth || visited.has(parentId)) return;
+      visited.add(parentId);
+
+      const sqlText = `SELECT id FROM ${relatedTable} WHERE ${fk} = ?`;
+      const rows = await execRaw(this.db, sqlText, [parentId]);
+
+      for (const row of rows) {
+        const childId = row.id;
+        if (childId != null) {
+          descendants.push(childId);
+          await collect(childId, depth + 1);
+        }
+      }
+    };
+
+    await collect(id, 0);
+    return descendants;
+  }
+}
+
 // Only the db.prepare path uses real parameterized queries (via .bind()).
 // The execSql/all/exec paths cannot accept bound params in their target runtimes
 // (D1 raw exec, DO storage), so they fall back to interpolateSql which builds
@@ -1573,62 +1742,29 @@ export abstract class BaseModel<
   }
 
   async listAncestorIds(relationName: string, id: number | string): Promise<(string | number)[]> {
-    const rel = this.relationships[relationName];
-    if (!rel || rel.type !== "belongs_to" || !rel.foreignKey) return [];
-
-    const ancestors: (string | number)[] = [];
-    const visited = new Set<string | number>();
-    let currentId: string | number | null = id;
-    const maxDepth = 100;
-    let depth = 0;
-
-    while (currentId && depth < maxDepth) {
-      if (visited.has(currentId)) break;
-      visited.add(currentId);
-
-      const item = await this.findBy({ id: currentId } as any);
-      if (!item) break;
-
-      currentId = (item as any)[rel.foreignKey];
-      if (currentId) {
-        ancestors.push(currentId);
-      }
-      depth++;
-    }
-
-    return ancestors;
+    const traversal = new GraphTraversal({
+      db: this.db,
+      table: this.table,
+      relationships: this.relationships,
+      resolveModel: (modelName: string) => {
+        const regClass = BaseModel.registry[modelName];
+        return regClass ? getTableName(regClass.tableName) : "";
+      },
+    });
+    return traversal.listAncestorIds(relationName, id);
   }
 
   async listDescendantIds(relationName: string, id: number | string): Promise<(string | number)[]> {
-    const rel = this.relationships[relationName];
-    if (!rel || rel.type !== "has_many" || !rel.foreignKey) return [];
-
-    const descendants: (string | number)[] = [];
-    const foreignKey = rel.foreignKey;
-    const visited = new Set<string | number>();
-    const maxDepth = 100;
-
-    const collectDescendants = async (parentId: string | number, depth: number) => {
-      if (depth >= maxDepth || visited.has(parentId)) return;
-      visited.add(parentId);
-
-      let relatedModel = (this.db as any)[rel.model] || (this.db as any).query?.[rel.model];
-      if (!relatedModel) {
-        const regClass = BaseModel.registry[rel.model];
-        if (regClass) relatedModel = new regClass({ db: this.db, table: regClass.tableName });
-      }
-      if (!relatedModel) return;
-
-      const children = await relatedModel.where({ [foreignKey]: parentId }).pluck("id");
-
-      for (const childId of children) {
-        descendants.push(childId as string | number);
-        await collectDescendants(childId as string | number, depth + 1);
-      }
-    };
-
-    await collectDescendants(id, 0);
-    return descendants;
+    const traversal = new GraphTraversal({
+      db: this.db,
+      table: this.table,
+      relationships: this.relationships,
+      resolveModel: (modelName: string) => {
+        const regClass = BaseModel.registry[modelName];
+        return regClass ? getTableName(regClass.tableName) : "";
+      },
+    });
+    return traversal.listDescendantIds(relationName, id);
   }
 
   async listAssociatedThroughIds(

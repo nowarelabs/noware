@@ -1598,3 +1598,310 @@ describe("listCousinIds structural alias dedup", () => {
     expect(siblingQueries).toHaveLength(2);
   });
 });
+
+describe("GraphTraversal", () => {
+  test("builds correct ancestor CTE SQL", async () => {
+    const preparedSqls: string[] = [];
+    const mockDb = {
+      prepare: (sql: string) => {
+        preparedSqls.push(sql);
+        return {
+          bind: () => ({
+            all: async () => ({ results: [] }),
+          }),
+        };
+      },
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      static tableName = "items";
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.belongsTo("parent", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    (BaseModel.registry as any)["Item"] = ItemModel;
+    const model = new ItemModel({ db: mockDb });
+    await model.listAncestorIds("parent", 5);
+
+    expect(preparedSqls[0]).toContain("WITH RECURSIVE ancestors");
+    expect(preparedSqls[0]).toContain("items");
+    expect(preparedSqls[0]).toContain("parent_id");
+    expect(preparedSqls[0]).toContain("UNION ALL");
+    delete (BaseModel.registry as any)["Item"];
+  });
+
+  test("builds correct descendant CTE SQL", async () => {
+    const preparedSqls: string[] = [];
+    const mockDb = {
+      prepare: (sql: string) => {
+        preparedSqls.push(sql);
+        return {
+          bind: () => ({
+            all: async () => ({ results: [] }),
+          }),
+        };
+      },
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      static tableName = "items";
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.hasMany("children", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    (BaseModel.registry as any)["Item"] = ItemModel;
+    const model = new ItemModel({ db: mockDb });
+    await model.listDescendantIds("children", 1);
+
+    expect(preparedSqls[0]).toContain("WITH RECURSIVE descendants");
+    expect(preparedSqls[0]).toContain("items");
+    expect(preparedSqls[0]).toContain("parent_id");
+    expect(preparedSqls[0]).toContain("WHERE id != ?");
+    delete (BaseModel.registry as any)["Item"];
+  });
+
+  test("returns empty for unknown relation", async () => {
+    const mockDb = { prepare: () => ({ bind: () => ({ all: async () => ({ results: [] }) }) }) };
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new ItemModel({ db: mockDb });
+    expect(await model.listAncestorIds("nonexistent", 1)).toEqual([]);
+    expect(await model.listDescendantIds("nonexistent", 1)).toEqual([]);
+  });
+
+  test("returns empty for wrong relation type", async () => {
+    const mockDb = { prepare: () => ({ bind: () => ({ all: async () => ({ results: [] }) }) }) };
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.hasMany("children", { model: "Item", foreignKey: "parent_id" });
+        this.belongsTo("parent", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new ItemModel({ db: mockDb });
+    expect(await model.listAncestorIds("children", 1)).toEqual([]);
+    expect(await model.listDescendantIds("parent", 1)).toEqual([]);
+  });
+
+  test("ancestor traversal returns correct chain via CTE", async () => {
+    const rows: Record<number, any> = {
+      1: { id: 1, parent_id: 2 },
+      2: { id: 2, parent_id: 3 },
+      3: { id: 3, parent_id: null },
+    };
+
+    const mockDb = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            if (sql.includes("WITH RECURSIVE ancestors")) {
+              const startId = params[0];
+              const chain: any[] = [];
+              let current = rows[startId];
+              while (current && current.parent_id) {
+                chain.push({ id: current.parent_id });
+                current = rows[current.parent_id];
+              }
+              return { results: chain };
+            }
+            return { results: [] };
+          },
+        }),
+      }),
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.belongsTo("parent", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new ItemModel({ db: mockDb });
+    const result = await model.listAncestorIds("parent", 1);
+    expect(result).toEqual([2, 3]);
+  });
+
+  test("descendant traversal returns correct tree via CTE", async () => {
+    const childrenByParent: Record<number, { id: number }[]> = {
+      1: [{ id: 2 }, { id: 3 }],
+      2: [{ id: 4 }],
+      3: [],
+      4: [],
+    };
+
+    const mockDb = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            if (sql.includes("WITH RECURSIVE descendants")) {
+              const startId = params[0];
+              const result: any[] = [];
+              const collect = (pid: number) => {
+                for (const child of childrenByParent[pid] || []) {
+                  if (child.id !== startId) result.push({ id: child.id });
+                  collect(child.id);
+                }
+              };
+              collect(startId);
+              return { results: result };
+            }
+            return { results: [] };
+          },
+        }),
+      }),
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      static tableName = "items";
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.hasMany("children", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    (BaseModel.registry as any)["Item"] = ItemModel;
+    const model = new ItemModel({ db: mockDb });
+    const result = await model.listDescendantIds("children", 1);
+    expect(result).toEqual([2, 4, 3]);
+    delete (BaseModel.registry as any)["Item"];
+  });
+
+  test("falls back to iterative when CTE fails", async () => {
+    let cteAttempted = false;
+
+    const rows: Record<number, any> = {
+      10: { id: 10, parent_id: 20 },
+      20: { id: 20, parent_id: null },
+    };
+
+    const mockDb = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            if (sql.includes("WITH RECURSIVE")) {
+              cteAttempted = true;
+              throw new Error('near "WITH": syntax error');
+            }
+            const id = params[0];
+            const row = rows[id];
+            return { results: row ? [row] : [] };
+          },
+        }),
+      }),
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.belongsTo("parent", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new ItemModel({ db: mockDb });
+    const result = await model.listAncestorIds("parent", 10);
+    expect(cteAttempted).toBe(true);
+    expect(result).toEqual([20]);
+  });
+
+  test("respects maxDepth limit", async () => {
+    const preparedSqls: string[] = [];
+    const mockDb = {
+      prepare: (sql: string) => {
+        preparedSqls.push(sql);
+        return {
+          bind: () => ({
+            all: async () => ({ results: [] }),
+          }),
+        };
+      },
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.belongsTo("parent", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new ItemModel({ db: mockDb });
+    await model.listAncestorIds("parent", 1);
+
+    expect(preparedSqls[0]).toContain("LIMIT 100");
+  });
+
+  test("empty result from CTE returns empty array", async () => {
+    const mockDb = {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          all: async () => ({ results: [] }),
+        }),
+      }),
+    };
+
+    class ItemModel extends BaseModel {
+      protected persistence: any;
+      constructor(init: any) {
+        super({ db: init.db, table: "items" });
+        this.persistence = { db: init.db };
+        this.belongsTo("parent", { model: "Item", foreignKey: "parent_id" });
+      }
+      protected getPersistence() {
+        return this.persistence;
+      }
+    }
+
+    const model = new ItemModel({ db: mockDb });
+    const result = await model.listAncestorIds("parent", 999);
+    expect(result).toEqual([]);
+  });
+});
