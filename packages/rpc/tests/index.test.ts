@@ -4,6 +4,10 @@ import { BaseRpc, BaseRpcServer } from "../src/index.ts";
 
 describe("BaseRpcServer", () => {
   class TestRpcServer extends BaseRpcServer {
+    protected feature: unknown;
+    protected getFeature() {
+      return this.feature;
+    }
     async handle(_request: globalThis.Request) {
       return new Response("OK");
     }
@@ -21,6 +25,18 @@ describe("BaseRpcServer", () => {
 
     expect(server).toBeDefined();
     expect((server as unknown as { request: Request }).request).toBe(mockRequest);
+  });
+
+  test("logger is available after construction", () => {
+    const mockRequest = new Request("http://localhost");
+    const mockEnv = {} as Record<string, unknown>;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as RpcContext;
+
+    const server = new TestRpcServer(mockRequest, mockEnv, mockCtx);
+    expect((server as any).logger).toBeDefined();
   });
 
   test("handle can be overridden", async () => {
@@ -54,5 +70,17 @@ describe("BaseRpc", () => {
   test("static hooks exist", () => {
     expect(BaseRpc.beforeHooks).toBeDefined();
     expect(BaseRpc.afterHooks).toBeDefined();
+  });
+
+  test("logger is available after construction", () => {
+    const mockRequest = new Request("http://localhost");
+    const mockEnv = {} as Record<string, unknown>;
+    const mockCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as RpcContext;
+
+    const rpc = new TestRpc(mockRequest, mockEnv, mockCtx);
+    expect((rpc as any).logger).toBeDefined();
   });
 });

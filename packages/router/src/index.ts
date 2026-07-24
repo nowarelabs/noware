@@ -11,7 +11,7 @@ import type {
   RegisteredHook,
 } from "@nowarelabs/shared";
 import { runBeforeHooks, runAfterHooks, runAroundHooks } from "@nowarelabs/shared";
-import { Logger } from "@nowarelabs/logger";
+import { Logger } from "@nowarelabs/telemetry";
 
 export interface RouteResult<
   Req extends RequestLike = RequestLike,

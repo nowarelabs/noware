@@ -1,6 +1,8 @@
 import { describe, expect, test, vi } from "vite-plus/test";
+import { context, trace } from "@opentelemetry/api";
+import { AsyncHooksContextManager } from "@opentelemetry/context-async-hooks";
 import type { LoggerContext, EnvLike, RequestLike } from "@nowarelabs/shared";
-import { Logger, LogLevel, BaseLogger } from "../src/index.ts";
+import { Logger, LogLevel, BaseLogger, MetricsBuffer } from "../src/index.ts";
 
 const mockRequest = {} as RequestLike;
 const mockEnv = {} as EnvLike;
@@ -42,8 +44,7 @@ describe("BaseLogger", () => {
   });
 
   test("static before hook registration", () => {
-    class TestLogger extends BaseLogger {
-    }
+    class TestLogger extends BaseLogger {}
     const fn = async () => {};
     TestLogger.before(fn);
     expect(TestLogger.beforeHooks).toHaveLength(1);
@@ -51,26 +52,22 @@ describe("BaseLogger", () => {
   });
 
   test("static after hook registration", () => {
-    class TestLogger extends BaseLogger {
-    }
+    class TestLogger extends BaseLogger {}
     const fn = async () => {};
     TestLogger.after(fn);
     expect(TestLogger.afterHooks).toHaveLength(1);
   });
 
   test("static around hook registration", () => {
-    class TestLogger extends BaseLogger {
-    }
+    class TestLogger extends BaseLogger {}
     const fn = async (_: any, next: () => Promise<any>) => next();
     TestLogger.around(fn);
     expect(TestLogger.aroundHooks).toHaveLength(1);
   });
 
   test("Object.hasOwn prevents hook leaking between siblings", () => {
-    class LoggerA extends BaseLogger {
-    }
-    class LoggerB extends BaseLogger {
-    }
+    class LoggerA extends BaseLogger {}
+    class LoggerB extends BaseLogger {}
 
     LoggerA.before(async () => {});
 
@@ -82,7 +79,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class TestLogger extends BaseLogger {
-
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
       }
@@ -122,7 +118,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class TestLogger extends BaseLogger {
-
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
       }
@@ -151,7 +146,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class TestLogger extends BaseLogger {
-
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
       }
@@ -182,7 +176,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class Parent extends BaseLogger {
-
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
       }
@@ -210,7 +203,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class Parent extends BaseLogger {
-
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
       }
@@ -241,7 +233,6 @@ describe("BaseLogger", () => {
     const calls: string[] = [];
 
     class Parent extends BaseLogger {
-
       constructor() {
         super(mockRequest, mockEnv, mockCtx);
       }
@@ -321,6 +312,10 @@ describe("Logger (config constructor)", () => {
     expect(typeof logger.fatal).toBe("function");
     expect(typeof logger.setLevel).toBe("function");
     expect(typeof logger.withContext).toBe("function");
+    expect(typeof logger.span).toBe("function");
+    expect(typeof logger.counter).toBe("function");
+    expect(typeof logger.histogram).toBe("function");
+    expect(typeof logger.gauge).toBe("function");
   });
 
   test("setLevel updates level", () => {
@@ -390,6 +385,18 @@ describe("Logger (config constructor)", () => {
     expect(output.user_id).toBe("123");
     spy.mockRestore();
   });
+
+  test("Logger.ENABLED=false suppresses all output", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const prev = Logger.ENABLED;
+    Logger.ENABLED = false;
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    logger.info("should not appear");
+    logger.debug("should not appear");
+    expect(spy).not.toHaveBeenCalled();
+    Logger.ENABLED = prev;
+    spy.mockRestore();
+  });
 });
 
 // ── Logger (request/ctx constructor) ───────────────────────────────
@@ -433,8 +440,7 @@ describe("Logger hook pipeline", () => {
   test("static before hooks run before log", () => {
     const calls: string[] = [];
 
-    class HookedLogger extends Logger {
-    }
+    class HookedLogger extends Logger {}
 
     HookedLogger.before(async (_: any) => {
       calls.push("before");
@@ -451,8 +457,7 @@ describe("Logger hook pipeline", () => {
   test("static after hooks run after log", async () => {
     const calls: string[] = [];
 
-    class HookedLogger extends Logger {
-    }
+    class HookedLogger extends Logger {}
 
     HookedLogger.after(async (_: any, result: any) => {
       calls.push("after");
@@ -471,8 +476,7 @@ describe("Logger hook pipeline", () => {
   test("around hook wraps the log action", async () => {
     const calls: string[] = [];
 
-    class HookedLogger extends Logger {
-    }
+    class HookedLogger extends Logger {}
 
     HookedLogger.around(async (_: any, next: () => Promise<any>) => {
       calls.push("around-before");
@@ -493,8 +497,7 @@ describe("Logger hook pipeline", () => {
   test("hook inheritance: parent hooks apply to child Logger", () => {
     const calls: string[] = [];
 
-    class ParentLogger extends Logger {
-    }
+    class ParentLogger extends Logger {}
 
     ParentLogger.before(async () => {
       calls.push("parent-before");
@@ -508,5 +511,182 @@ describe("Logger hook pipeline", () => {
 
     expect(calls).toContain("parent-before");
     spy.mockRestore();
+  });
+});
+
+// ── Logger.span() ─────────────────────────────────────────────────
+
+describe("Logger.span()", () => {
+  test("span creates a child span and runs the function", async () => {
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    const result = await logger.span("my-span", async () => {
+      return 42;
+    });
+    expect(result).toBe(42);
+  });
+
+  test("span records error on exception and rethrows", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+
+    await expect(
+      logger.span("failing-span", async () => {
+        throw new Error("boom");
+      }),
+    ).rejects.toThrow("boom");
+
+    const errorLog = spy.mock.calls.find((call) => {
+      const output = JSON.parse(call[0] as string);
+      return output.level === "ERROR" && output.message === "failing-span failed";
+    });
+    expect(errorLog).toBeDefined();
+    spy.mockRestore();
+  });
+
+  test("span with attributes", async () => {
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    const result = await logger.span("attr-span", { "user.id": "123" }, async () => {
+      return "ok";
+    });
+    expect(result).toBe("ok");
+  });
+});
+
+// ── Logger metrics ─────────────────────────────────────────────────
+
+describe("Logger metrics", () => {
+  test("counter emits a metric entry", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    logger.counter("orders.created");
+
+    expect(spy).toHaveBeenCalledOnce();
+    const output = JSON.parse(spy.mock.calls[0][0] as string);
+    expect(output.type).toBe("metric");
+    expect(output.metric_type).toBe("counter");
+    expect(output.name).toBe("orders.created");
+    expect(output.value).toBe(1);
+    expect(output.service).toBe("test");
+    spy.mockRestore();
+  });
+
+  test("counter with custom value", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    logger.counter("items.processed", 5);
+
+    const output = JSON.parse(spy.mock.calls[0][0] as string);
+    expect(output.value).toBe(5);
+    spy.mockRestore();
+  });
+
+  test("histogram emits a metric entry", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    logger.histogram("request.duration_ms", 42.5);
+
+    const output = JSON.parse(spy.mock.calls[0][0] as string);
+    expect(output.type).toBe("metric");
+    expect(output.metric_type).toBe("histogram");
+    expect(output.name).toBe("request.duration_ms");
+    expect(output.value).toBe(42.5);
+    spy.mockRestore();
+  });
+
+  test("gauge emits a metric entry", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+    logger.gauge("queue.depth", 10);
+
+    const output = JSON.parse(spy.mock.calls[0][0] as string);
+    expect(output.type).toBe("metric");
+    expect(output.metric_type).toBe("gauge");
+    expect(output.name).toBe("queue.depth");
+    expect(output.value).toBe(10);
+    spy.mockRestore();
+  });
+
+  test("metric includes trace_id when span is active", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const contextManager = new AsyncHooksContextManager();
+    contextManager.enable();
+    context.setGlobalContextManager(contextManager);
+    try {
+      const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+
+      await logger.span("outer", async () => {
+        logger.counter("inside.span");
+      });
+
+      const metricCall = spy.mock.calls.find((call) => {
+        const output = JSON.parse(call[0] as string);
+        return output.type === "metric";
+      });
+      expect(metricCall).toBeDefined();
+      const output = JSON.parse(metricCall![0] as string);
+      expect(output.trace_id).toBeDefined();
+    } finally {
+      spy.mockRestore();
+      context.disable();
+    }
+  });
+
+  test("Logger.METRICS_ENABLED=false suppresses metrics", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const prev = Logger.METRICS_ENABLED;
+      Logger.METRICS_ENABLED = false;
+      const logger = new Logger({ service: "test", level: LogLevel.DEBUG });
+      logger.counter("should.not.appear");
+      expect(spy).not.toHaveBeenCalled();
+      Logger.METRICS_ENABLED = prev;
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+// ── MetricsBuffer ──────────────────────────────────────────────────
+
+describe("MetricsBuffer", () => {
+  test("accumulates entries", () => {
+    const ctx = { waitUntil: () => {} } as unknown as LoggerContext;
+    const buffer = new MetricsBuffer(ctx);
+    expect(buffer.hasEntries).toBe(false);
+
+    buffer.push({
+      type: "metric",
+      metric_type: "counter",
+      name: "test",
+      value: 1,
+      timestamp: new Date().toISOString(),
+    });
+    expect(buffer.hasEntries).toBe(true);
+  });
+
+  test("flush is idempotent", () => {
+    const waitUntil = vi.fn();
+    const ctx = { waitUntil } as unknown as LoggerContext;
+    const buffer = new MetricsBuffer(ctx);
+
+    buffer.push({
+      type: "metric",
+      metric_type: "counter",
+      name: "test",
+      value: 1,
+      timestamp: new Date().toISOString(),
+    });
+
+    buffer.flush();
+    buffer.flush();
+    expect(waitUntil).toHaveBeenCalledOnce();
+  });
+
+  test("flush with no entries is a no-op", () => {
+    const waitUntil = vi.fn();
+    const ctx = { waitUntil } as unknown as LoggerContext;
+    const buffer = new MetricsBuffer(ctx);
+    buffer.flush();
+    expect(waitUntil).not.toHaveBeenCalled();
   });
 });

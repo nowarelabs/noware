@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { createServiceContext } from "@nowarelabs/shared";
 import type { ServiceContext } from "@nowarelabs/shared";
 import { BaseService } from "../src/index.ts";
@@ -17,6 +17,10 @@ describe("BaseService", () => {
 
     async add(a: number, b: number): Promise<number> {
       return a + b;
+    }
+
+    async failing(): Promise<void> {
+      throw new Error("action failed");
     }
   }
 
@@ -38,6 +42,17 @@ describe("BaseService", () => {
     expect((service as unknown as { request: Request }).request).toBe(mockRequest);
     expect((service as unknown as { env: Record<string, unknown> }).env).toBe(mockEnv);
     expect((service as unknown as { ctx: ServiceContext }).ctx).toBe(mockCtx);
+  });
+
+  test("logger is available after construction", () => {
+    const service = createService();
+    expect((service as any).logger).toBeDefined();
+    expect(typeof (service as any).logger.info).toBe("function");
+  });
+
+  test("logger service name matches constructor name", () => {
+    const service = createService();
+    expect((service as any).logger.withContext).toBeDefined();
   });
 
   test("getModel returns the model", () => {
@@ -71,10 +86,22 @@ describe("BaseService", () => {
     );
   });
 
+  test("run logs error on failure", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const service = createService();
+    await expect(service.run("failing")).rejects.toThrow("action failed");
+
+    const errorCall = spy.mock.calls.find((call) => {
+      const output = JSON.parse(call[0] as string);
+      return output.level === "ERROR" && output.message === "failing failed";
+    });
+    expect(errorCall).toBeDefined();
+    spy.mockRestore();
+  });
+
   test("static before hooks run before the action", async () => {
     const calls: string[] = [];
-    class HookedService extends TestService {
-    }
+    class HookedService extends TestService {}
 
     HookedService.before(async (_svc: any) => {
       calls.push("before");
@@ -87,8 +114,7 @@ describe("BaseService", () => {
 
   test("static after hooks run after the action", async () => {
     const calls: string[] = [];
-    class HookedService extends TestService {
-    }
+    class HookedService extends TestService {}
 
     HookedService.after(async (svc: any, result: any) => {
       calls.push("after");
@@ -102,8 +128,7 @@ describe("BaseService", () => {
 
   test("around hook wraps the action call", async () => {
     const calls: string[] = [];
-    class AroundService extends TestService {
-    }
+    class AroundService extends TestService {}
 
     AroundService.around(async (svc: any, next: () => Promise<any>) => {
       calls.push("before-around");
@@ -120,8 +145,7 @@ describe("BaseService", () => {
   test("full pipeline: before hook -> action -> after hook", async () => {
     const calls: string[] = [];
 
-    class PipelineService extends TestService {
-    }
+    class PipelineService extends TestService {}
 
     PipelineService.before(async (_svc: any) => {
       calls.push("before");

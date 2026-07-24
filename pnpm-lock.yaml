@@ -129,6 +129,9 @@ importers:
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nowarelabs/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -286,6 +289,9 @@ importers:
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nowarelabs/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -374,31 +380,6 @@ importers:
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
-    devDependencies:
-      '@types/node':
-        specifier: ^25.5.0
-        version: 25.6.0
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260328.1
-        version: 7.0.0-dev.20260328.1
-      bumpp:
-        specifier: ^11.0.1
-        version: 11.1.0
-      typescript:
-        specifier: ^6.0.2
-        version: 6.0.3
-      vite-plus:
-        specifier: ^0.1.14
-        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.11(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.4))(yaml@2.8.4)
-
-  packages/logger:
-    dependencies:
-      '@nowarelabs/shared':
-        specifier: workspace:*
-        version: link:../shared
-      '@opentelemetry/api':
-        specifier: ^1.9.0
-        version: 1.9.1
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -553,6 +534,9 @@ importers:
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nowarelabs/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -638,12 +622,12 @@ importers:
 
   packages/router:
     dependencies:
-      '@nowarelabs/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nowarelabs/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -666,6 +650,9 @@ importers:
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nowarelabs/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -732,6 +719,9 @@ importers:
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nowarelabs/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -792,6 +782,34 @@ importers:
       vite-plus:
         specifier: ^0.1.14
         version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.11(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.4))(yaml@2.8.4)
+
+  packages/telemetry:
+    dependencies:
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.1
+    devDependencies:
+      '@opentelemetry/context-async-hooks':
+        specifier: ^2.10.0
+        version: 2.10.0(@opentelemetry/api@1.9.1)
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.6.2
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      bumpp:
+        specifier: ^11.0.1
+        version: 11.1.0
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.11(@types/node@25.6.2)(jiti@2.7.0)(yaml@2.8.4))(yaml@2.8.4)
 
   packages/usecases:
     dependencies:
@@ -882,6 +900,12 @@ packages:
   '@opentelemetry/api@1.9.1':
     resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
     engines: {node: '>=8.0.0'}
+
+  '@opentelemetry/context-async-hooks@2.10.0':
+    resolution: {integrity: sha512-bvyMcgLEkozzSzpEEEo1OMoeQ97bxj6Qs2uN3mPrSdDvObMI1myffD/BPqcLlzZO9//d1SqQA/WPw7Cz2AiqhA==}
+    engines: {node: ^18.19.0 || >=20.6.0}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
   '@oxc-project/runtime@0.127.0':
     resolution: {integrity: sha512-UQYLxAhDDPHm++szfa4z0RTdcPq5vaywrAoEA2n1YaAKeanXQdjHsoT6x1gP3U97RN8LZ7yHsSOrKPCcA6mCqw==}
@@ -2015,6 +2039,10 @@ snapshots:
     optional: true
 
   '@opentelemetry/api@1.9.1': {}
+
+  '@opentelemetry/context-async-hooks@2.10.0(@opentelemetry/api@1.9.1)':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
 
   '@oxc-project/runtime@0.127.0': {}
 

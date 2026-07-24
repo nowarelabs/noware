@@ -21,6 +21,7 @@ import type {
   FeatureContext,
   HookOptions as FeatureHookOptions,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export type { FeatureContext } from "@nowarelabs/shared";
 
@@ -102,6 +103,8 @@ export abstract class BaseFeature<
     options?: FeatureHookOptions;
   }> = [];
 
+  protected logger!: Logger;
+
   // ============================================================================
   // The Main Entry Point - The Standard Gauge Lifecycle
   // ============================================================================
@@ -111,30 +114,49 @@ export abstract class BaseFeature<
    * This is called by your RPC/API layer
    */
   async handle(input: TInput, context: FeatureContext<Ctx, Env, Request>): Promise<Response> {
-    try {
-      // Run before hooks
-      await this.runBeforeHooks(context);
+    this.logger = new Logger(context.request as any, context.env as any, context.ctx as any, {
+      service: this.constructor.name,
+    });
 
-      // 1. GATE: Validate input (Double-Gate Security)
-      await this.validate(input, context);
+    return this.logger.span(`${this.constructor.name}.handle`, async () => {
+      this.logger.info("handle started");
+      const start = performance.now();
 
-      // 2. PREPARE: Transform/enrich data
-      const preparedInput = await this.prepare(input, context);
+      try {
+        await this.runBeforeHooks(context);
 
-      // 3. EXECUTE: Call the use case(s) - THE HEXAGON
-      let result = await this.execute(preparedInput, context);
+        await this.logger.span("validate", async () => {
+          await this.validate(input, context);
+        });
 
-      // Run after hooks (can transform result)
-      result = await this.runAfterHooks(result, context);
+        const preparedInput = await this.logger.span("prepare", async () => {
+          return await this.prepare(input, context);
+        });
 
-      // 4. FINALIZE: Cleanup, side effects
-      await this.finalize(result, context);
+        let result = await this.logger.span("execute", async () => {
+          return await this.execute(preparedInput, context);
+        });
 
-      // 5. RESPOND: Convert to API response
-      return this.toResponse(result, context);
-    } catch (error) {
-      return this.handleError(error, context);
-    }
+        result = await this.runAfterHooks(result, context);
+
+        await this.logger.span("finalize", async () => {
+          await this.finalize(result, context);
+        });
+
+        const duration = performance.now() - start;
+        this.logger.debug("handle completed");
+        this.logger.counter(`${this.constructor.name}.handle.success`);
+        this.logger.histogram(`${this.constructor.name}.handle.duration_ms`, duration);
+
+        return this.toResponse(result, context);
+      } catch (error) {
+        const duration = performance.now() - start;
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error("handle failed", { duration_ms: duration }, err);
+        this.logger.counter(`${this.constructor.name}.handle.error`);
+        return this.handleError(error, context);
+      }
+    });
   }
 
   // ============================================================================
@@ -162,7 +184,7 @@ export abstract class BaseFeature<
    *   schema.parse(input); // Throws if invalid
    * }
    */
-  protected async validate(input: TInput, context: FeatureContext): Promise<void> {
+  protected async validate(_input: TInput, _context: FeatureContext): Promise<void> {
     // Override in subclasses
   }
 
@@ -185,7 +207,7 @@ export abstract class BaseFeature<
    *   };
    * }
    */
-  protected async prepare(input: TInput, context: FeatureContext): Promise<TInput> {
+  protected async prepare(input: TInput, _context: FeatureContext): Promise<TInput> {
     return input;
   }
 
@@ -267,7 +289,10 @@ export abstract class BaseFeature<
    *   }
    * }
    */
-  protected async finalize(result: UseCaseResult<TOutput>, context: FeatureContext): Promise<void> {
+  protected async finalize(
+    _result: UseCaseResult<TOutput>,
+    _context: FeatureContext,
+  ): Promise<void> {
     // Override in subclasses
   }
 

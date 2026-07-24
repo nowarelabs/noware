@@ -8,6 +8,7 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export interface Plugin {
   name: string;
@@ -35,6 +36,8 @@ export class BasePlugin<
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
   static aroundHooks: RegisteredHook[] = [];
+
+  protected logger: Logger;
 
   static before<T extends BasePlugin>(fn: HookFunction<T>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
@@ -120,5 +123,7 @@ export class BasePlugin<
     protected request: Request,
     protected env: Env,
     protected ctx: Ctx,
-  ) {}
+  ) {
+    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
 }

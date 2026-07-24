@@ -18,6 +18,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export abstract class BaseController<
   Ctx extends ControllerContext = ControllerContext,
@@ -30,12 +31,15 @@ export abstract class BaseController<
   static aroundHooks: RegisteredHook[] = [];
 
   protected service: Svc | undefined;
+  protected logger: Logger;
 
   constructor(
     protected request: Req,
     protected env: Env,
     protected ctx: Ctx,
-  ) {}
+  ) {
+    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
 
   protected getService(): Svc {
     throw new Error(
@@ -59,45 +63,67 @@ export abstract class BaseController<
   }
 
   async run(action: string, ...args: any[]): Promise<Response> {
-    const Ctor = this.constructor;
-    const shouldRunHook = (opts?: HookOptions) => {
-      if (opts?.only && !opts.only.includes(action)) return false;
-      if (opts?.except && opts.except.includes(action)) return false;
-      return this.shouldRunHook(opts);
-    };
+    return this.logger.span(`${this.constructor.name}.${action}`, async () => {
+      this.logger.info(`${action} started`);
+      const start = performance.now();
 
-    const instanceBefore = await this.beforeAction();
-    if (instanceBefore) return this.sendCookies(instanceBefore);
+      const Ctor = this.constructor;
+      const shouldRunHook = (opts?: HookOptions) => {
+        if (opts?.only && !opts.only.includes(action)) return false;
+        if (opts?.except && opts.except.includes(action)) return false;
+        return this.shouldRunHook(opts);
+      };
 
-    const beforeResult = await runBeforeHooks(
-      this,
-      BaseController.collectHooks(Ctor, "beforeHooks"),
-      shouldRunHook,
-    );
-    if (beforeResult) return this.sendCookies(beforeResult as Response);
+      const instanceBefore = await this.beforeAction();
+      if (instanceBefore) {
+        this.sendCookies(instanceBefore);
+        return this.sendCookies(instanceBefore);
+      }
 
-    const response = await runAroundHooks(
-      this,
-      BaseController.collectHooks(Ctor, "aroundHooks"),
-      async () => {
-        const handler = (this as Record<string, unknown>)[action];
-        if (typeof handler !== "function") {
-          return this.respondWithError(new NotFoundError(`Action '${action}' not found`));
-        }
-        return await (handler as (...args: any[]) => Promise<Response>).call(this, ...args);
-      },
-      shouldRunHook,
-    );
+      const beforeResult = await runBeforeHooks(
+        this,
+        BaseController.collectHooks(Ctor, "beforeHooks"),
+        shouldRunHook,
+      );
+      if (beforeResult) return this.sendCookies(beforeResult as Response);
 
-    const afterResponse = await runAfterHooks(
-      this,
-      BaseController.collectHooks(Ctor, "afterHooks"),
-      response,
-      shouldRunHook,
-    );
+      try {
+        const response = await runAroundHooks(
+          this,
+          BaseController.collectHooks(Ctor, "aroundHooks"),
+          async () => {
+            const handler = (this as Record<string, unknown>)[action];
+            if (typeof handler !== "function") {
+              return this.respondWithError(new NotFoundError(`Action '${action}' not found`));
+            }
+            return await (handler as (...args: any[]) => Promise<Response>).call(this, ...args);
+          },
+          shouldRunHook,
+        );
 
-    const instanceAfter = await this.afterAction(afterResponse);
-    return this.sendCookies(instanceAfter ?? afterResponse);
+        const afterResponse = await runAfterHooks(
+          this,
+          BaseController.collectHooks(Ctor, "afterHooks"),
+          response,
+          shouldRunHook,
+        );
+
+        const instanceAfter = await this.afterAction(afterResponse);
+        const finalResponse = this.sendCookies(instanceAfter ?? afterResponse);
+
+        const duration = performance.now() - start;
+        this.logger.debug(`${action} completed`);
+        this.logger.counter(`${this.constructor.name}.${action}.success`);
+        this.logger.histogram(`${this.constructor.name}.${action}.duration_ms`, duration);
+        return finalResponse;
+      } catch (error) {
+        const duration = performance.now() - start;
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger.error(`${action} failed`, { duration_ms: duration }, err);
+        this.logger.counter(`${this.constructor.name}.${action}.error`);
+        throw error;
+      }
+    });
   }
 
   private static collectHooks(ctor: object, prop: string): RegisteredHook[] {

@@ -1,6 +1,10 @@
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { BaseController, BaseResourceController } from "../src/index.ts";
 import { HttpError, NotFoundError } from "@nowarelabs/shared";
+
+function mockCtx(params: Record<string, string> = {}) {
+  return { params, waitUntil: () => {} } as any;
+}
 
 describe("BaseController", () => {
   class TestController extends BaseController {
@@ -108,8 +112,7 @@ describe("BaseController", () => {
     const headers = overrides?.headers || { Authorization: "Bearer token" };
     const request = new Request(path, { method, headers });
     const env = {} as Record<string, unknown>;
-    const ctx = { params: {} } as any;
-    return new controllerClass(request, env, ctx);
+    return new controllerClass(request, env, mockCtx());
   }
 
   function createControllerWithParams(
@@ -120,13 +123,38 @@ describe("BaseController", () => {
       headers: { Authorization: "Bearer token" },
     });
     const env = {} as Record<string, unknown>;
-    const ctx = { params } as any;
-    return new controllerClass(request, env, ctx);
+    return new controllerClass(request, env, mockCtx(params));
   }
 
   test("constructor accepts request, env, ctx", () => {
     const controller = createController();
     expect(controller).toBeDefined();
+  });
+
+  test("logger is available after construction", () => {
+    const controller = createController();
+    expect((controller as any).logger).toBeDefined();
+    expect(typeof (controller as any).logger.info).toBe("function");
+  });
+
+  test("run logs error on failure", async () => {
+    class FailingController extends TestController {
+      async explode(): Promise<Response> {
+        throw new Error("boom");
+      }
+    }
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const request = new Request("http://localhost");
+    const env = {} as Record<string, unknown>;
+    const controller = new FailingController(request, env, mockCtx());
+    await expect(controller.run("explode")).rejects.toThrow("boom");
+
+    const errorCall = spy.mock.calls.find((call) => {
+      const output = JSON.parse(call[0] as string);
+      return output.level === "ERROR" && output.message === "explode failed";
+    });
+    expect(errorCall).toBeDefined();
+    spy.mockRestore();
   });
 
   test("getService returns the service", () => {
@@ -269,8 +297,7 @@ describe("BaseController", () => {
       headers: { Authorization: "Bearer token" },
     });
     const env = {} as Record<string, unknown>;
-    const ctx = { params: {} } as any;
-    const controller = new TestController(request, env, ctx);
+    const controller = new TestController(request, env, mockCtx());
     expect((controller as any).queryParams).toEqual({ q: "test", page: "2" });
   });
 
@@ -291,8 +318,7 @@ describe("BaseController", () => {
       },
     });
     const env = {} as Record<string, unknown>;
-    const ctx = { params: {} } as any;
-    const controller = new TestController(request, env, ctx);
+    const controller = new TestController(request, env, mockCtx());
     const response = await controller.run("readCookies");
     const body = await response.json();
     expect(body.token).toBe("abc");
@@ -320,8 +346,7 @@ describe("BaseController", () => {
   test("beforeAction convention intercepts requests", async () => {
     const request = new Request("http://localhost");
     const env = {} as Record<string, unknown>;
-    const ctx = { params: {} } as any;
-    const controller = new AuthController(request, env, ctx);
+    const controller = new AuthController(request, env, mockCtx());
 
     const response = await controller.run("index");
     expect(response.status).toBe(401);
@@ -332,8 +357,7 @@ describe("BaseController", () => {
       headers: { Authorization: "Bearer token" },
     });
     const env = {} as Record<string, unknown>;
-    const ctx = { params: {} } as any;
-    const controller = new AuthController(request, env, ctx);
+    const controller = new AuthController(request, env, mockCtx());
 
     const response = await controller.run("index");
     expect(response.status).toBe(200);
@@ -341,8 +365,7 @@ describe("BaseController", () => {
 
   test("static before hooks run before the action", async () => {
     const calls: string[] = [];
-    class HookedController extends TestController {
-    }
+    class HookedController extends TestController {}
 
     HookedController.before(async (_ctrl: any) => {
       calls.push("before");
@@ -355,8 +378,7 @@ describe("BaseController", () => {
 
   test("static after hooks run after the action", async () => {
     const calls: string[] = [];
-    class HookedController extends TestController {
-    }
+    class HookedController extends TestController {}
 
     HookedController.after(async (ctrl: any, result: any) => {
       calls.push("after");
@@ -369,8 +391,7 @@ describe("BaseController", () => {
   });
 
   test("before hook can short-circuit with a response", async () => {
-    class ProtectedController extends TestController {
-    }
+    class ProtectedController extends TestController {}
 
     ProtectedController.before(async (_ctrl: any) => {
       return new Response("Blocked", { status: 403 });
@@ -384,8 +405,7 @@ describe("BaseController", () => {
   });
 
   test("after hook can transform the response", async () => {
-    class TransformController extends TestController {
-    }
+    class TransformController extends TestController {}
 
     TransformController.after(async (_ctrl: any, _result: Response) => {
       return new Response("Transformed", { status: 201 });
@@ -400,8 +420,7 @@ describe("BaseController", () => {
 
   test("around hook wraps the action call", async () => {
     const calls: string[] = [];
-    class AroundController extends TestController {
-    }
+    class AroundController extends TestController {}
 
     AroundController.around(async (ctrl: any, next: () => Promise<any>) => {
       calls.push("before-around");
@@ -419,7 +438,6 @@ describe("BaseController", () => {
     const calls: string[] = [];
 
     class FullPipelineController extends TestController {
-
       protected override async beforeAction(): Promise<Response | void> {
         calls.push("instance-before");
       }
@@ -496,8 +514,7 @@ describe("BaseController", () => {
 
   test("before hook with only option runs only for specified actions", async () => {
     const calls: string[] = [];
-    class FilteredController extends TestController {
-    }
+    class FilteredController extends TestController {}
 
     FilteredController.before(
       async (_ctrl: any) => {
@@ -516,8 +533,7 @@ describe("BaseController", () => {
 
   test("before hook with except option skips specified actions", async () => {
     const calls: string[] = [];
-    class FilteredController extends TestController {
-    }
+    class FilteredController extends TestController {}
 
     FilteredController.before(
       async (_ctrl: any) => {
@@ -639,8 +655,7 @@ describe("BaseResourceController", () => {
 
       const request = new Request(path, init);
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      return new UsersController(request, env, ctx);
+      return new UsersController(request, env, mockCtx());
     }
 
     function createControllerWithParams(params: Record<string, string>) {
@@ -648,8 +663,7 @@ describe("BaseResourceController", () => {
         headers: { "Content-Type": "application/json" },
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params } as any;
-      return new UsersController(request, env, ctx);
+      return new UsersController(request, env, mockCtx(params));
     }
 
     test("index returns all items", async () => {
@@ -748,8 +762,7 @@ describe("BaseResourceController", () => {
 
     test("before hook runs on resource actions", async () => {
       const calls: string[] = [];
-      class AuditedController extends UsersController {
-        }
+      class AuditedController extends UsersController {}
 
       AuditedController.before(async (_ctrl: any) => {
         calls.push("audit");
@@ -757,8 +770,7 @@ describe("BaseResourceController", () => {
 
       const request = new Request("http://localhost");
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new AuditedController(request, env, ctx);
+      const controller = new AuditedController(request, env, mockCtx());
 
       await controller.run("index");
       expect(calls).toEqual(["audit"]);
@@ -779,15 +791,13 @@ describe("BaseResourceController", () => {
         headers: { "Content-Type": "application/json" },
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params } as any;
-      return new UsersController(request, env, ctx);
+      return new UsersController(request, env, mockCtx(params));
     }
 
     test("index returns all items via model", async () => {
       const request = new Request("http://localhost");
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx());
       const response = await controller.run("index");
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -809,8 +819,7 @@ describe("BaseResourceController", () => {
         body: JSON.stringify({ name: "Dave" }),
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx());
       const response = await controller.run("create");
       expect(response.status).toBe(201);
       const body = await response.json();
@@ -830,8 +839,7 @@ describe("BaseResourceController", () => {
         body: JSON.stringify({ relation: "posts" }),
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params: { id: "1" } } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx({ id: "1" }));
       const response = await controller.run("listChildIds");
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -851,8 +859,7 @@ describe("BaseResourceController", () => {
     test("respondWith returns JSON by default", async () => {
       const request = new Request("http://localhost");
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx());
       const response = await controller.run("index");
       expect(response.headers.get("content-type")).toBe("application/json");
     });
@@ -862,8 +869,7 @@ describe("BaseResourceController", () => {
         headers: { Accept: "application/xml" },
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx());
       const response = await controller.run("index");
       expect(response.headers.get("content-type")).toBe("application/xml");
     });
@@ -873,8 +879,7 @@ describe("BaseResourceController", () => {
         headers: { Accept: "text/csv" },
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx());
       const response = await controller.run("index");
       expect(response.headers.get("content-type")).toBe("text/csv");
     });
@@ -884,8 +889,7 @@ describe("BaseResourceController", () => {
         headers: { Accept: "text/html" },
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params: {} } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx());
       const response = await controller.run("index");
       expect(response.headers.get("content-type")).toBe("application/json");
     });
@@ -905,8 +909,7 @@ describe("BaseResourceController", () => {
         headers: { "Content-Type": "application/json" },
       });
       const env = {} as Record<string, unknown>;
-      const ctx = { params } as any;
-      return new UsersController(request, env, ctx);
+      return new UsersController(request, env, mockCtx(params));
     }
 
     test("trash marks item as trashed", async () => {
@@ -1009,8 +1012,7 @@ describe("BaseResourceController", () => {
       }
       const request = new Request("http://localhost", init);
       const env = {} as Record<string, unknown>;
-      const ctx = { params } as any;
-      return new UsersController(request, env, ctx);
+      return new UsersController(request, env, mockCtx(params));
     }
 
     test("listChildIds returns child IDs", async () => {
@@ -1112,8 +1114,7 @@ describe("BaseResourceController", () => {
       }
       const request = new Request("http://localhost", init);
       const env = {} as Record<string, unknown>;
-      const ctx = { params } as any;
-      return new UsersController(request, env, ctx);
+      return new UsersController(request, env, mockCtx(params));
     }
 
     test("findAllWith returns items with includes", async () => {
@@ -1163,16 +1164,14 @@ describe("BaseResourceController", () => {
     test("getIdentifier returns id from path params", () => {
       const request = new Request("http://localhost");
       const env = {} as Record<string, unknown>;
-      const ctx = { params: { id: "42" } } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx({ id: "42" }));
       expect((controller as any).getIdentifier()).toBe("42");
     });
 
     test("getIdentifier falls back to last param value", () => {
       const request = new Request("http://localhost");
       const env = {} as Record<string, unknown>;
-      const ctx = { params: { slug: "my-post" } } as any;
-      const controller = new UsersController(request, env, ctx);
+      const controller = new UsersController(request, env, mockCtx({ slug: "my-post" }));
       expect((controller as any).getIdentifier()).toBe("my-post");
     });
   });

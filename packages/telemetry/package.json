@@ -1,7 +1,7 @@
 {
-  "name": "@nowarelabs/logger",
+  "name": "@nowarelabs/telemetry",
   "version": "0.0.1",
-  "description": "Logger for Standard Gauge",
+  "description": "Unified observability: logs, traces & metrics for Standard Gauge",
   "homepage": "https://github.com/nowarelabs/noware#readme",
   "bugs": {
     "url": "https://github.com/nowarelabs/noware/issues"
@@ -35,12 +35,11 @@
     "@opentelemetry/api": "^1.9.0"
   },
   "devDependencies": {
+    "@opentelemetry/context-async-hooks": "^2.10.0",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",
     "typescript": "^6.0.2",
     "vite-plus": "^0.1.14"
-  },
-  "peerDependencies": {},
-  "optionalDependencies": {}
+  }
 }
