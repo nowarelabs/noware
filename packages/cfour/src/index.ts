@@ -41,17 +41,93 @@ export abstract class BaseCfour<
     ],
   ]);
 
-  private static _listeners: Set<(workspaceName: string) => void> = new Set();
+  private static _listeners: Set<(event: CfourChangeEvent) => void> = new Set();
+  private static _batchDepth = 0;
+  private static _batchQueue: CfourChangeEvent[] = [];
+  private static _storage: CfourStorage | null = null;
 
-  /** Subscribes to changes in the workspace registry. */
-  static subscribe(listener: (workspaceName: string) => void) {
+  /**
+   * Subscribes to fine-grained workspace change events.
+   *
+   * **Synchronous & blocking**: listeners are called in registration order
+   * before the mutating method returns. The callback must not be async.
+   *
+   * This is a deliberate design choice: `BaseCfour` exposes a synchronous
+   * static API (`addComponent()` returns `void`, not `Promise<void>`).
+   * Making listeners async would require every mutation to become async,
+   * breaking all existing callers. Instead, listeners that need to perform
+   * slow work (LLM calls, remote file writes, etc.) should dispatch it
+   * asynchronously and return immediately.
+   *
+   * **Recommended pattern for async work:**
+   * ```ts
+   * // Queue async work per-node so rapid mutations coalesce naturally.
+   * const pending = new Map<string, Promise<void>>();
+   *
+   * BaseCfour.subscribe((event) => {
+   *   const key = event.elementId ?? event.op;
+   *   const prev = pending.get(key) ?? Promise.resolve();
+   *   pending.set(key, prev.then(() => handleAsyncWork(event)));
+   * });
+   * ```
+   *
+   * This pattern ensures:
+   * - The listener returns immediately (never blocks the mutation call).
+   * - Async work for the same node is serialized (no race conditions).
+   * - Rapid mutations to the same node naturally coalesce (each new
+   *   event chains onto the previous promise, so only the latest state
+   *   is processed).
+   *
+   * Returns an unsubscribe function.
+   */
+  static subscribe(listener: (event: CfourChangeEvent) => void) {
     this._listeners.add(listener);
     return () => this._listeners.delete(listener);
   }
 
-  private static _notify(workspaceName: string) {
+  private static _notify(event: CfourChangeEvent) {
+    if (this._batchDepth > 0) {
+      this._batchQueue.push(event);
+      return;
+    }
     for (const listener of this._listeners) {
-      listener(workspaceName);
+      listener(event);
+    }
+  }
+
+  /**
+   * Executes `fn` inside a transaction that defers all change notifications
+   * until the callback completes. Notifications are flushed in the order
+   * they were queued. Nested calls to `batch` are no-ops (the outermost
+   * batch handles the flush).
+   *
+   * ```ts
+   * BaseCfour.batch("default", () => {
+   *   addComponent({ ... })
+   *   addComponent({ ... })
+   *   // notifications are deferred
+   * })
+   * // -> two events emitted here, in order
+   * ```
+   */
+  static batch(fn: () => void) {
+    this._batchDepth++;
+    try {
+      fn();
+    } catch (e) {
+      // Discard queued events — the batch didn't complete atomically.
+      this._batchQueue.length = 0;
+      throw e;
+    } finally {
+      this._batchDepth--;
+      if (this._batchDepth === 0) {
+        const events = this._batchQueue.splice(0);
+        for (const event of events) {
+          for (const listener of this._listeners) {
+            listener(event);
+          }
+        }
+      }
     }
   }
 
@@ -65,7 +141,7 @@ export abstract class BaseCfour<
       relationships: [],
       views: [],
     });
-    this._notify(workspaceName);
+    this._notify({ op: "reset", workspaceName });
   }
 
   /** Returns a specific C4 workspace or the default one. */
@@ -87,13 +163,25 @@ export abstract class BaseCfour<
   /** Adds a Person to the workspace. */
   static addPerson(person: Omit<C4Person, "kind">, workspaceName = "default") {
     this.getWorkspace(workspaceName).people.push({ ...person, kind: "Person" });
-    this._notify(workspaceName);
+    this._notify({
+      op: "add",
+      workspaceName,
+      elementId: person.id,
+      elementKind: "Person",
+      path: [],
+    });
   }
 
   /** Adds a Software System to the workspace. */
   static addSoftwareSystem(system: Omit<C4SoftwareSystem, "kind">, workspaceName = "default") {
     this.getWorkspace(workspaceName).softwareSystems.push({ ...system, kind: "SoftwareSystem" });
-    this._notify(workspaceName);
+    this._notify({
+      op: "add",
+      workspaceName,
+      elementId: system.id,
+      elementKind: "SoftwareSystem",
+      path: [],
+    });
   }
 
   /** Adds a Container to a Software System. */
@@ -110,7 +198,13 @@ export abstract class BaseCfour<
     }
     system.containers = system.containers || [];
     system.containers.push({ ...container, kind: container.kind ?? "Container" });
-    this._notify(workspaceName);
+    this._notify({
+      op: "add",
+      workspaceName,
+      elementId: container.id,
+      elementKind: container.kind ?? "Container",
+      path: [container.systemId],
+    });
   }
 
   /** Adds a Queue to a Software System (specialized container). */
@@ -127,9 +221,13 @@ export abstract class BaseCfour<
   static addComponent(component: Omit<C4Component, "kind">, workspaceName = "default") {
     const ws = this.getWorkspace(workspaceName);
     let container: C4Container | undefined;
+    let systemId = "";
     for (const system of ws.softwareSystems) {
       container = system.containers?.find((c) => c.id === component.containerId);
-      if (container) break;
+      if (container) {
+        systemId = system.id;
+        break;
+      }
     }
 
     if (!container) {
@@ -140,7 +238,13 @@ export abstract class BaseCfour<
 
     container.components = container.components || [];
     container.components.push({ ...component, kind: "Component" });
-    this._notify(workspaceName);
+    this._notify({
+      op: "add",
+      workspaceName,
+      elementId: component.id,
+      elementKind: "Component",
+      path: [systemId, container.id],
+    });
   }
 
   /** Adds a Code Element to a Component. */
@@ -150,10 +254,16 @@ export abstract class BaseCfour<
   ) {
     const ws = this.getWorkspace(workspaceName);
     let component: C4Component | undefined;
+    let systemId = "";
+    let containerId = "";
     for (const system of ws.softwareSystems) {
       for (const container of system.containers ?? []) {
         component = container.components?.find((c) => c.id === codeElement.componentId);
-        if (component) break;
+        if (component) {
+          systemId = system.id;
+          containerId = container.id;
+          break;
+        }
       }
       if (component) break;
     }
@@ -169,13 +279,25 @@ export abstract class BaseCfour<
       ...codeElement,
       kind: codeElement.kind ?? "Class",
     } as C4CodeElement);
-    this._notify(workspaceName);
+    this._notify({
+      op: "add",
+      workspaceName,
+      elementId: codeElement.id,
+      elementKind: codeElement.kind ?? "Class",
+      path: [systemId, containerId, component.id],
+    });
   }
 
   /** Adds a Relationship between any two elements. */
   static addRelationship(rel: C4Relationship, workspaceName = "default") {
     this.getWorkspace(workspaceName).relationships.push(rel);
-    this._notify(workspaceName);
+    this._notify({
+      op: "add",
+      workspaceName,
+      elementId: rel.id,
+      elementKind: "Relationship",
+      path: [],
+    });
   }
 
   /** Updates an existing element's properties. */
@@ -188,8 +310,20 @@ export abstract class BaseCfour<
     const flat = flattenWorkspace(ws);
     const node = flat.nodes.find((n) => n.id === id);
     if (node) {
+      const before = snapshotNode(node);
       Object.assign(node, patch);
-      this._notify(workspaceName);
+      const found = findNodeWithAncestry(ws, id);
+      const changes = getObjectChanges(before, node);
+      this._notify({
+        op: "update",
+        workspaceName,
+        elementId: id,
+        elementKind: node.kind,
+        path: found?.path ?? [],
+        before,
+        after: snapshotNode(node),
+        changes,
+      });
     }
   }
 
@@ -197,20 +331,34 @@ export abstract class BaseCfour<
   static removeElement(id: string, workspaceName = "default") {
     const ws = this.getWorkspace(workspaceName);
 
+    // Capture before state and collect full subtree
+    const found = findNodeWithAncestry(ws, id);
+    const descendants = found ? collectDescendants(found.node) : [];
+
+    // Collect all node ids in the removal set (target + descendants)
+    const removedIds = new Set<string>([id, ...descendants.map((d) => d.id)]);
+
+    // Collect relationships that touch any removed node
+    const removedRelationships = ws.relationships.filter(
+      (r) => removedIds.has(r.sourceId) || removedIds.has(r.destinationId),
+    );
+
     // Remove from people
-    ws.people = ws.people.filter((p) => p.id !== id);
+    ws.people = ws.people.filter((p) => !removedIds.has(p.id));
 
     // Remove from systems/containers/components/code
-    ws.softwareSystems = ws.softwareSystems.filter((s) => s.id !== id);
+    ws.softwareSystems = ws.softwareSystems.filter((s) => !removedIds.has(s.id));
     for (const system of ws.softwareSystems) {
       if (system.containers) {
-        system.containers = system.containers.filter((c) => c.id !== id);
+        system.containers = system.containers.filter((c) => !removedIds.has(c.id));
         for (const container of system.containers) {
           if (container.components) {
-            container.components = container.components.filter((cp) => cp.id !== id);
+            container.components = container.components.filter((cp) => !removedIds.has(cp.id));
             for (const component of container.components) {
               if (component.codeElements) {
-                component.codeElements = component.codeElements.filter((ce) => ce.id !== id);
+                component.codeElements = component.codeElements.filter(
+                  (ce) => !removedIds.has(ce.id),
+                );
               }
             }
           }
@@ -219,9 +367,21 @@ export abstract class BaseCfour<
     }
 
     // Remove associated relationships
-    ws.relationships = ws.relationships.filter((r) => r.sourceId !== id && r.destinationId !== id);
+    ws.relationships = ws.relationships.filter(
+      (r) => !removedIds.has(r.sourceId) && !removedIds.has(r.destinationId),
+    );
 
-    this._notify(workspaceName);
+    this._notify({
+      op: "remove",
+      workspaceName,
+      elementId: id,
+      elementKind: found?.node.kind,
+      path: found?.path,
+      removedDescendants:
+        descendants.length > 0 || removedRelationships.length > 0
+          ? { nodes: descendants, relationships: removedRelationships }
+          : undefined,
+    });
   }
 
   // ── View Builders (Drilling) ───────────────────────────────
@@ -466,7 +626,12 @@ export abstract class BaseCfour<
       ve.y = y;
     }
 
-    this._notify(workspaceName);
+    this._notify({
+      op: "update",
+      workspaceName,
+      elementId: viewId,
+      path: [],
+    });
   }
 
   /** Persists a view to the workspace. */
@@ -474,12 +639,18 @@ export abstract class BaseCfour<
     const ws = this.getWorkspace(workspaceName);
     ws.views = ws.views || [];
     const idx = ws.views.findIndex((v) => v.id === view.id);
-    if (idx >= 0) {
-      ws.views[idx] = view;
-    } else {
+    const isNew = idx < 0;
+    if (isNew) {
       ws.views.push(view);
+    } else {
+      ws.views[idx] = view;
     }
-    this._notify(workspaceName);
+    this._notify({
+      op: isNew ? "add" : "update",
+      workspaceName,
+      elementId: view.id,
+      path: [],
+    });
   }
 
   // ── Persistence ───────────────────────────────────────────
@@ -493,7 +664,43 @@ export abstract class BaseCfour<
   static import(json: string, workspaceName = "default") {
     const ws = JSON.parse(json) as C4Workspace;
     this._workspaces.set(workspaceName, ws);
-    this._notify(workspaceName);
+    this._notify({ op: "import", workspaceName });
+  }
+
+  // ── Storage — platform-agnostic persistence ────────────────
+
+  /** Configures the storage adapter used by snapshot helpers. */
+  static setStorage(storage: CfourStorage) {
+    this._storage = storage;
+  }
+
+  /** Serialises the workspace and persists it via the storage adapter. */
+  static async saveSnapshot(workspaceName = "default"): Promise<void> {
+    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    const json = this.export(workspaceName);
+    await this._storage.put(`workspace:${workspaceName}`, json);
+  }
+
+  /** Loads a workspace from storage and imports it (triggers an "import" event). */
+  static async loadSnapshot(workspaceName = "default"): Promise<void> {
+    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    const json = await this._storage.get(`workspace:${workspaceName}`);
+    if (json) {
+      this.import(json, workspaceName);
+    }
+  }
+
+  /** Deletes a persisted workspace snapshot. */
+  static async deleteSnapshot(workspaceName = "default"): Promise<void> {
+    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    await this._storage.delete(`workspace:${workspaceName}`);
+  }
+
+  /** Lists all persisted workspace snapshot keys. */
+  static async listSnapshots(): Promise<string[]> {
+    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    const keys = await this._storage.list("workspace:");
+    return keys.map((k) => k.replace(/^workspace:/, ""));
   }
 
   // ── Query Engine ──────────────────────────────────────────
@@ -712,6 +919,50 @@ export type Technology = string; // e.g. "React", "PostgreSQL", "REST"
 export type Tag = string;
 
 // ----------------------------------------------------------------
+// Change Events — fine-grained notification payload
+// ----------------------------------------------------------------
+
+export interface CfourChangeEvent {
+  /** The operation that triggered this event. */
+  op: "add" | "update" | "remove" | "reset" | "import";
+  /** The workspace that was mutated. */
+  workspaceName: string;
+  /** The id of the changed node (present for add/update/remove). */
+  elementId?: string;
+  /** The kind of the changed node (present for add/update/remove). */
+  elementKind?: C4ElementKind | "Relationship";
+  /** Ancestry from workspace root down to this element (ids only). Empty for top-level elements. */
+  path?: string[];
+  /** Snapshot of the node before mutation (present for update). */
+  before?: C4Node;
+  /** Snapshot of the node after mutation (present for update). */
+  after?: C4Node;
+  /** Property names that changed (reuses getObjectChanges output, present for update). */
+  changes?: string[];
+  /**
+   * All descendants removed along with the element, in leaves-first order
+   * (code elements before components before containers before systems).
+   * Present only for `remove` events when the element had children.
+   * Includes cascade-removed relationships in a separate `relationships` array.
+   */
+  removedDescendants?: {
+    nodes: C4Node[];
+    relationships: C4Relationship[];
+  };
+}
+
+// ----------------------------------------------------------------
+// Storage — platform-agnostic persistence interface
+// ----------------------------------------------------------------
+
+export interface CfourStorage {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(prefix: string): Promise<string[]>;
+}
+
+// ----------------------------------------------------------------
 // Base element — every C4 node extends this
 // ----------------------------------------------------------------
 
@@ -788,6 +1039,8 @@ export interface C4Component extends C4Element {
   containerId: string;
   /** Implementation technology, e.g. "Spring MVC @RestController". */
   technology?: Technology;
+  /** Free-form text: plain-language intent or pseudocode/snippet for implementation. */
+  behavior?: string;
   /** Code elements that implement this component (Level 4). */
   codeElements?: C4CodeElement[];
 }
@@ -833,6 +1086,8 @@ export interface C4CodeElement extends C4Element {
   technology?: Technology;
   /** Stereotype shown in guillemets, e.g. "<<entity>>", "@Repository". */
   stereotype?: string;
+  /** Free-form text: plain-language intent or pseudocode/snippet for implementation. */
+  behavior?: string;
   /** Fields, methods, constructors. */
   members?: C4CodeMember[];
   /** Namespace / package / module path, e.g. "com.bank.accounts". */
@@ -1192,6 +1447,63 @@ function getParentId(el: C4Node): string | undefined {
   if (el.kind === "Component") return (el as C4Component).containerId;
   if (CODE_ELEMENT_KINDS.has(el.kind)) return (el as C4CodeElement).componentId;
   return undefined;
+}
+
+/**
+ * Walks the workspace tree to find a node by id and collects the ancestry
+ * (system id, container id, component id, …) from root down to the node.
+ */
+function findNodeWithAncestry(
+  ws: C4Workspace,
+  id: string,
+): { node: C4Node; path: string[] } | undefined {
+  for (const person of ws.people) {
+    if (person.id === id) return { node: person, path: [] };
+  }
+  for (const system of ws.softwareSystems) {
+    if (system.id === id) return { node: system, path: [] };
+    for (const container of system.containers ?? []) {
+      if (container.id === id) return { node: container, path: [system.id] };
+      for (const component of container.components ?? []) {
+        if (component.id === id)
+          return { node: component, path: [system.id, container.id] };
+        for (const codeEl of component.codeElements ?? []) {
+          if (codeEl.id === id)
+            return { node: codeEl, path: [system.id, container.id, component.id] };
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+/** Deep-clone a node for before/after snapshots. Uses JSON round-trip for runtime portability. */
+function snapshotNode(node: C4Node): C4Node {
+  return JSON.parse(JSON.stringify(node));
+}
+
+/**
+ * Collects all descendants of a node in leaves-first order.
+ * Used by removeElement to populate `removedDescendants` in the change event.
+ */
+function collectDescendants(node: C4Node): C4Node[] {
+  const result: C4Node[] = [];
+  if (node.kind === "SoftwareSystem") {
+    for (const container of (node as C4SoftwareSystem).containers ?? []) {
+      result.push(...collectDescendants(container));
+      result.push(container);
+    }
+  } else if (CONTAINER_KINDS.has(node.kind)) {
+    for (const component of (node as C4Container).components ?? []) {
+      result.push(...collectDescendants(component));
+      result.push(component);
+    }
+  } else if (node.kind === "Component") {
+    for (const codeEl of (node as C4Component).codeElements ?? []) {
+      result.push(codeEl);
+    }
+  }
+  return result;
 }
 
 function getCodeExtras(el: C4Node): Pick<C4NodeData, "stereotype" | "namespace" | "members"> {

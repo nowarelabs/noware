@@ -8,7 +8,10 @@ import {
   buildContainerView,
   buildComponentView,
   buildCodeView,
+  diffWorkspaces,
   type C4Workspace,
+  type CfourChangeEvent,
+  type CfourStorage,
 } from "../src/index.ts";
 
 // ----------------------------------------------------------------
@@ -337,18 +340,19 @@ describe("C4 Model - cfour package", () => {
 
     test("should notify subscribers on change", () => {
       BaseCfour.resetWorkspace();
-      let notified = false;
-      const unsubscribe = BaseCfour.subscribe((name) => {
-        if (name === "default") notified = true;
+      const events: CfourChangeEvent[] = [];
+      const unsubscribe = BaseCfour.subscribe((e) => {
+        if (e.workspaceName === "default") events.push(e);
       });
 
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      expect(notified).toBe(true);
+      expect(events.length).toBeGreaterThan(0);
+      expect(events[events.length - 1].elementId).toBe("sys1");
 
       unsubscribe();
-      notified = false;
+      events.length = 0;
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      expect(notified).toBe(false);
+      expect(events.length).toBe(0);
     });
 
     test("should support export and import for persistence", () => {
@@ -652,6 +656,547 @@ describe("C4 Model - cfour package", () => {
       const { nodes } = c4ToReactFlow(ws);
       expect(nodes.find((n) => n.id === "q1")?.type).toBe("Queue");
       expect(nodes.find((n) => n.id === "t1")?.type).toBe("Topic");
+    });
+  });
+
+  describe("Structured Change Events", () => {
+    test("addPerson emits correct event", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addPerson({ id: "p1", name: "Alice" });
+      const ev = events.find((e) => e.elementId === "p1");
+      expect(ev).toBeDefined();
+      expect(ev!.op).toBe("add");
+      expect(ev!.elementKind).toBe("Person");
+      expect(ev!.path).toEqual([]);
+      expect(ev!.workspaceName).toBe("default");
+      unsub();
+    });
+
+    test("addSoftwareSystem emits correct event", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const ev = events.find((e) => e.elementId === "sys1");
+      expect(ev).toBeDefined();
+      expect(ev!.op).toBe("add");
+      expect(ev!.elementKind).toBe("SoftwareSystem");
+      expect(ev!.path).toEqual([]);
+      unsub();
+    });
+
+    test("addContainer emits event with systemId in path", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      const ev = events.find((e) => e.elementId === "con1");
+      expect(ev).toBeDefined();
+      expect(ev!.op).toBe("add");
+      expect(ev!.elementKind).toBe("Container");
+      expect(ev!.path).toEqual(["sys1"]);
+      unsub();
+    });
+
+    test("addComponent emits event with full ancestry path", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addComponent({ id: "comp1", name: "Comp1", containerId: "con1" });
+      const ev = events.find((e) => e.elementId === "comp1");
+      expect(ev).toBeDefined();
+      expect(ev!.op).toBe("add");
+      expect(ev!.elementKind).toBe("Component");
+      expect(ev!.path).toEqual(["sys1", "con1"]);
+      unsub();
+    });
+
+    test("addCodeElement emits event with full ancestry path", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "Comp1", containerId: "con1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      const ev = events.find((e) => e.elementId === "ce1");
+      expect(ev).toBeDefined();
+      expect(ev!.op).toBe("add");
+      expect(ev!.elementKind).toBe("Class");
+      expect(ev!.path).toEqual(["sys1", "con1", "comp1"]);
+      unsub();
+    });
+
+    test("addRelationship emits correct event", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "sys2",
+      });
+      const ev = events.find((e) => e.elementId === "r1");
+      expect(ev).toBeDefined();
+      expect(ev!.op).toBe("add");
+      expect(ev!.elementKind).toBe("Relationship");
+      unsub();
+    });
+
+    test("updateElement emits event with before/after/changes", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "Old Name", description: "Keep" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.updateElement("sys1", { name: "New Name" });
+      const ev = events.find((e) => e.op === "update" && e.elementId === "sys1");
+      expect(ev).toBeDefined();
+      expect(ev!.before).toBeDefined();
+      expect(ev!.after).toBeDefined();
+      expect((ev!.before as any).name).toBe("Old Name");
+      expect((ev!.after as any).name).toBe("New Name");
+      expect(ev!.changes).toContain("name");
+      expect(ev!.changes).not.toContain("description");
+      unsub();
+    });
+
+    test("removeElement emits correct event", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("sys1");
+      const ev = events.find((e) => e.op === "remove" && e.elementId === "sys1");
+      expect(ev).toBeDefined();
+      expect(ev!.elementKind).toBe("SoftwareSystem");
+      unsub();
+    });
+
+    test("removeElement on nested node includes ancestry path", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("comp1");
+      const ev = events.find((e) => e.op === "remove" && e.elementId === "comp1");
+      expect(ev).toBeDefined();
+      expect(ev!.path).toEqual(["sys1", "con1"]);
+      unsub();
+    });
+
+    test("removeElement includes removedDescendants with full subtree", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addCodeElement({ id: "ce2", name: "CE2", componentId: "comp1" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "ce1",
+        destinationId: "comp1",
+      });
+      BaseCfour.addRelationship({
+        id: "r2",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+      });
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("con1");
+
+      const ev = events.find((e) => e.op === "remove" && e.elementId === "con1");
+      expect(ev).toBeDefined();
+      expect(ev!.removedDescendants).toBeDefined();
+
+      // Leaves-first: code elements before component
+      const descendantIds = ev!.removedDescendants!.nodes.map((n) => n.id);
+      expect(descendantIds).toContain("ce1");
+      expect(descendantIds).toContain("ce2");
+      expect(descendantIds).toContain("comp1");
+      // ce1/ce2 should appear before comp1 (leaves-first)
+      expect(descendantIds.indexOf("ce1")).toBeLessThan(descendantIds.indexOf("comp1"));
+      expect(descendantIds.indexOf("ce2")).toBeLessThan(descendantIds.indexOf("comp1"));
+
+      // Relationships touching removed nodes are included
+      const relIds = ev!.removedDescendants!.relationships.map((r) => r.id);
+      expect(relIds).toContain("r1"); // ce1 -> comp1
+      expect(relIds).toContain("r2"); // sys1 -> con1
+
+      // Verify the workspace is actually cleaned up
+      const ws = BaseCfour.getWorkspace();
+      const flat = flattenWorkspace(ws);
+      expect(flat.nodes.find((n) => n.id === "con1")).toBeUndefined();
+      expect(flat.nodes.find((n) => n.id === "comp1")).toBeUndefined();
+      expect(flat.nodes.find((n) => n.id === "ce1")).toBeUndefined();
+      expect(flat.nodes.find((n) => n.id === "ce2")).toBeUndefined();
+      expect(ws.relationships.find((r) => r.id === "r1")).toBeUndefined();
+      expect(ws.relationships.find((r) => r.id === "r2")).toBeUndefined();
+      unsub();
+    });
+
+    test("removeElement on leaf node has no removedDescendants", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("sys1");
+      const ev = events.find((e) => e.op === "remove" && e.elementId === "sys1");
+      expect(ev).toBeDefined();
+      expect(ev!.removedDescendants).toBeUndefined();
+      unsub();
+    });
+
+    test("removeElement on CodeElement has no removedDescendants", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("ce1");
+      const ev = events.find((e) => e.op === "remove" && e.elementId === "ce1");
+      expect(ev).toBeDefined();
+      expect(ev!.removedDescendants).toBeUndefined();
+      unsub();
+    });
+
+    test("removeElement cascades: removing System removes all nested nodes", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("sys1");
+
+      const ev = events.find((e) => e.op === "remove" && e.elementId === "sys1");
+      expect(ev).toBeDefined();
+      const descendantIds = ev!.removedDescendants!.nodes.map((n) => n.id);
+      expect(descendantIds).toEqual(expect.arrayContaining(["con1", "comp1", "ce1"]));
+      // Leaves-first: ce1 before comp1 before con1
+      expect(descendantIds.indexOf("ce1")).toBeLessThan(descendantIds.indexOf("comp1"));
+      expect(descendantIds.indexOf("comp1")).toBeLessThan(descendantIds.indexOf("con1"));
+
+      // Workspace should be empty
+      const ws = BaseCfour.getWorkspace();
+      expect(ws.softwareSystems.length).toBe(0);
+      unsub();
+    });
+
+    test("resetWorkspace emits reset event", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.resetWorkspace("test-reset");
+      const ev = events.find((e) => e.op === "reset" && e.workspaceName === "test-reset");
+      expect(ev).toBeDefined();
+      unsub();
+    });
+
+    test("import emits import event", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.import('{"name":"Imported","people":[],"softwareSystems":[],"relationships":[]}');
+      const ev = events.find((e) => e.op === "import");
+      expect(ev).toBeDefined();
+      unsub();
+    });
+
+    test("subscribe + addComponent: observe specific event without polling", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "Web" });
+      BaseCfour.addContainer({ id: "con1", name: "API", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "auth", name: "Auth", containerId: "con1" });
+
+      const addEvent = events.find((e) => e.op === "add" && e.elementId === "auth");
+      expect(addEvent).toBeDefined();
+      expect(addEvent?.elementKind).toBe("Component");
+      expect(addEvent?.path).toEqual(["sys1", "con1"]);
+      unsub();
+    });
+  });
+
+  describe("Batch API", () => {
+    test("batch defers notifications until callback completes", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.batch(() => {
+        BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+        expect(events.length).toBe(0);
+      });
+      expect(events.length).toBe(2);
+      expect(events[0].elementId).toBe("s1");
+      expect(events[1].elementId).toBe("s2");
+      unsub();
+    });
+
+    test("nested batch does not flush early", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.batch(() => {
+        BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+          expect(events.length).toBe(0);
+        });
+        expect(events.length).toBe(0);
+      });
+      expect(events.length).toBe(2);
+      unsub();
+    });
+
+    test("batch flushes in order", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.batch(() => {
+        BaseCfour.addPerson({ id: "p1", name: "P1" });
+        BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "s1" });
+      });
+      expect(events.map((e) => e.elementId)).toEqual(["p1", "s1", "c1"]);
+      unsub();
+    });
+
+    test("batch with no listeners does not throw", () => {
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        });
+      }).not.toThrow();
+    });
+
+    test("batch discards events if callback throws", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+          BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+          throw new Error("batch failed");
+        });
+      }).toThrow("batch failed");
+      expect(events.length).toBe(0);
+      unsub();
+    });
+
+    test("batch discards only queued events, not prior events", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.addSoftwareSystem({ id: "pre", name: "Pre" });
+      expect(events.length).toBe(1);
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+          throw new Error("batch failed");
+        });
+      }).toThrow("batch failed");
+      // pre-existing event stays, batched events are gone
+      expect(events.length).toBe(1);
+      expect(events[0].elementId).toBe("pre");
+      unsub();
+    });
+  });
+
+  describe("Behavior Field", () => {
+    test("behavior field round-trips through export/import", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addCodeElement({
+        id: "ce1",
+        name: "MyClass",
+        componentId: "comp1",
+        behavior: "function greet(name) { return `Hello ${name}`; }",
+      });
+
+      const json = BaseCfour.export();
+      BaseCfour.resetWorkspace();
+      BaseCfour.import(json);
+
+      const ws = BaseCfour.getWorkspace();
+      const ce = ws.softwareSystems[0].containers![0].components![0].codeElements![0];
+      expect(ce.behavior).toBe("function greet(name) { return `Hello ${name}`; }");
+    });
+
+    test("behavior field on Component round-trips through export/import", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({
+        id: "comp1",
+        name: "C1",
+        containerId: "con1",
+        behavior: "Handles authentication via JWT tokens",
+      });
+
+      const json = BaseCfour.export();
+      BaseCfour.resetWorkspace();
+      BaseCfour.import(json);
+
+      const ws = BaseCfour.getWorkspace();
+      const comp = ws.softwareSystems[0].containers![0].components![0];
+      expect(comp.behavior).toBe("Handles authentication via JWT tokens");
+    });
+
+    test("diffWorkspaces detects behavior changes on CodeElement", () => {
+      const wsA: C4Workspace = {
+        name: "A",
+        people: [],
+        softwareSystems: [
+          {
+            id: "sys1",
+            name: "S1",
+            kind: "SoftwareSystem",
+            containers: [
+              {
+                id: "con1",
+                name: "C1",
+                kind: "Container",
+                systemId: "sys1",
+                components: [
+                  {
+                    id: "comp1",
+                    name: "C1",
+                    kind: "Component",
+                    containerId: "con1",
+                    codeElements: [
+                      {
+                        id: "ce1",
+                        name: "CE1",
+                        kind: "Class",
+                        componentId: "comp1",
+                        behavior: "old behavior",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        relationships: [],
+      };
+      const wsB = JSON.parse(JSON.stringify(wsA)) as C4Workspace;
+      wsB.softwareSystems[0].containers![0].components![0].codeElements![0].behavior =
+        "new behavior";
+
+      const diff = diffWorkspaces(wsA, wsB);
+      expect(diff.nodes.modified.length).toBe(1);
+      expect(diff.nodes.modified[0].changes).toContain("behavior");
+    });
+
+    test("diffWorkspaces detects behavior changes on Component", () => {
+      const wsA: C4Workspace = {
+        name: "A",
+        people: [],
+        softwareSystems: [
+          {
+            id: "sys1",
+            name: "S1",
+            kind: "SoftwareSystem",
+            containers: [
+              {
+                id: "con1",
+                name: "C1",
+                kind: "Container",
+                systemId: "sys1",
+                components: [
+                  {
+                    id: "comp1",
+                    name: "C1",
+                    kind: "Component",
+                    containerId: "con1",
+                    behavior: "old",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        relationships: [],
+      };
+      const wsB = JSON.parse(JSON.stringify(wsA)) as C4Workspace;
+      wsB.softwareSystems[0].containers![0].components![0].behavior = "new";
+
+      const diff = diffWorkspaces(wsA, wsB);
+      expect(diff.nodes.modified.length).toBe(1);
+      expect(diff.nodes.modified[0].changes).toContain("behavior");
+    });
+
+    test("behavior field is optional and does not break workspace without it", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const ws = BaseCfour.getWorkspace();
+      const json = BaseCfour.export();
+      const parsed = JSON.parse(json);
+      expect(parsed.softwareSystems[0].behavior).toBeUndefined();
+    });
+  });
+
+  describe("Storage Interface", () => {
+    function createMemoryStorage(): CfourStorage & { store: Map<string, string> } {
+      const store = new Map<string, string>();
+      return {
+        store,
+        get: async (k) => store.get(k) ?? null,
+        put: async (k, v) => {
+          store.set(k, v);
+        },
+        delete: async (k) => {
+          store.delete(k);
+        },
+        list: async (p) => [...store.keys()].filter((k) => k.startsWith(p)),
+      };
+    }
+
+    test("saveSnapshot persists workspace via storage adapter", async () => {
+      const adapter = createMemoryStorage();
+      BaseCfour.setStorage(adapter);
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      await BaseCfour.saveSnapshot();
+      expect(adapter.store.has("workspace:default")).toBe(true);
+      expect(adapter.store.get("workspace:default")).toContain("S1");
+    });
+
+    test("loadSnapshot restores workspace from storage", async () => {
+      const adapter = createMemoryStorage();
+      BaseCfour.setStorage(adapter);
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      await BaseCfour.saveSnapshot();
+      BaseCfour.resetWorkspace();
+      expect(BaseCfour.getWorkspace().softwareSystems.length).toBe(0);
+      await BaseCfour.loadSnapshot();
+      expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("S1");
+    });
+
+    test("deleteSnapshot removes workspace from storage", async () => {
+      const adapter = createMemoryStorage();
+      BaseCfour.setStorage(adapter);
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      await BaseCfour.saveSnapshot();
+      await BaseCfour.deleteSnapshot();
+      expect(adapter.store.has("workspace:default")).toBe(false);
+    });
+
+    test("listSnapshots returns workspace names", async () => {
+      const adapter = createMemoryStorage();
+      BaseCfour.setStorage(adapter);
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      await BaseCfour.saveSnapshot();
+      BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" }, "other");
+      await BaseCfour.saveSnapshot("other");
+      const names = await BaseCfour.listSnapshots();
+      expect(names).toContain("default");
+      expect(names).toContain("other");
+    });
+
+    test("throws if no storage adapter configured", async () => {
+      BaseCfour.setStorage(null as any);
+      await expect(BaseCfour.saveSnapshot()).rejects.toThrow("No storage adapter");
     });
   });
 
