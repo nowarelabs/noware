@@ -45,6 +45,8 @@ export abstract class BaseCfour<
   private static _batchDepth = 0;
   private static _batchQueue: CfourChangeEvent[] = [];
   private static _storage: CfourStorage | null = null;
+  private static _eventLog: CfourChangeEvent[] = [];
+  private static _eventLogMax = 1000;
 
   /**
    * Subscribes to fine-grained workspace change events.
@@ -90,8 +92,16 @@ export abstract class BaseCfour<
       this._batchQueue.push(event);
       return;
     }
+    this._logEvent(event);
     for (const listener of this._listeners) {
       listener(event);
+    }
+  }
+
+  private static _logEvent(event: CfourChangeEvent) {
+    this._eventLog.push(event);
+    if (this._eventLog.length > this._eventLogMax) {
+      this._eventLog.splice(0, this._eventLog.length - this._eventLogMax);
     }
   }
 
@@ -123,6 +133,7 @@ export abstract class BaseCfour<
       if (this._batchDepth === 0) {
         const events = this._batchQueue.splice(0);
         for (const event of events) {
+          this._logEvent(event);
           for (const listener of this._listeners) {
             listener(event);
           }
@@ -300,6 +311,31 @@ export abstract class BaseCfour<
     });
   }
 
+  /** Updates an existing relationship's properties. */
+  static updateRelationship(
+    id: string,
+    patch: Partial<Omit<C4Relationship, "id" | "kind">>,
+    workspaceName = "default",
+  ) {
+    const ws = this.getWorkspace(workspaceName);
+    const rel = ws.relationships.find((r) => r.id === id);
+    if (rel) {
+      const before = snapshotNode(rel as any as C4Node);
+      Object.assign(rel, patch);
+      const changes = getObjectChanges(before, rel);
+      this._notify({
+        op: "update",
+        workspaceName,
+        elementId: id,
+        elementKind: "Relationship",
+        path: [],
+        before: before as any,
+        after: snapshotNode(rel as any as C4Node),
+        changes,
+      });
+    }
+  }
+
   /** Updates an existing element's properties. */
   static updateElement(
     id: string,
@@ -325,6 +361,20 @@ export abstract class BaseCfour<
         changes,
       });
     }
+  }
+
+  /**
+   * Refreshes a node's metadata from external data (e.g. after re-scanning a file).
+   * Semantically identical to `updateElement` — provided as a named alias
+   * for codebase-reconciliation workflows where "refresh from source of truth"
+   * reads more clearly than "update".
+   */
+  static refreshNode(
+    id: string,
+    data: Partial<Omit<C4Node, "id" | "kind">>,
+    workspaceName = "default",
+  ) {
+    this.updateElement(id, data, workspaceName);
   }
 
   /** Removes an element and all its children/relationships. */
@@ -740,6 +790,92 @@ export abstract class BaseCfour<
       }
       return true;
     });
+  }
+
+  /**
+   * Queries relationships based on filters.
+   * Example: findRelationships({ sourceId: 'comp1' })
+   */
+  static findRelationships(
+    filter: {
+      sourceId?: string;
+      destinationId?: string;
+      technology?: string;
+      tags?: string[];
+      interactionStyle?: "sync" | "async";
+      search?: string;
+    },
+    workspaceName = "default",
+  ): C4Relationship[] {
+    const ws = this.getWorkspace(workspaceName);
+    return ws.relationships.filter((rel) => {
+      if (filter.sourceId && rel.sourceId !== filter.sourceId) return false;
+      if (filter.destinationId && rel.destinationId !== filter.destinationId) return false;
+      if (filter.technology) {
+        if (!rel.technology?.toLowerCase().includes(filter.technology.toLowerCase())) return false;
+      }
+      if (filter.interactionStyle && rel.interactionStyle !== filter.interactionStyle) return false;
+      if (filter.tags && filter.tags.length > 0) {
+        if (!rel.tags || !filter.tags.every((t) => rel.tags!.includes(t))) return false;
+      }
+      if (filter.search) {
+        const search = filter.search.toLowerCase();
+        const inDesc = rel.description?.toLowerCase().includes(search) ?? false;
+        const inTech = rel.technology?.toLowerCase().includes(search) ?? false;
+        if (!inDesc && !inTech) return false;
+      }
+      return true;
+    });
+  }
+
+  // ── Graph Traversal ───────────────────────────────────────
+
+  /**
+   * Returns the ancestry of a node from root down to (but not including) the node itself.
+   * For a CodeElement in sys1/con1/comp1, returns [sys1, con1, comp1].
+   */
+  static getAncestors(id: string, workspaceName = "default"): C4Node[] {
+    const ws = this.getWorkspace(workspaceName);
+    const found = findNodeWithAncestry(ws, id);
+    if (!found) return [];
+    const nodeMap = buildNodeMap(flattenWorkspace(ws));
+    return found.path.map((ancestorId) => nodeMap.get(ancestorId)!).filter(Boolean);
+  }
+
+  /**
+   * Returns all descendants of a node in leaves-first order.
+   * For a SoftwareSystem, returns its containers, then their components, then code elements.
+   */
+  static getDescendants(id: string, workspaceName = "default"): C4Node[] {
+    const ws = this.getWorkspace(workspaceName);
+    const found = findNodeWithAncestry(ws, id);
+    if (!found) return [];
+    return collectDescendants(found.node);
+  }
+
+  // ── Event History ─────────────────────────────────────────
+
+  /** Returns all logged events (newest last). Capped at `eventLogMax` (default 1000). */
+  static getEventHistory(): readonly CfourChangeEvent[] {
+    return this._eventLog;
+  }
+
+  /** Returns the last `n` events. */
+  static getRecentEvents(n: number): CfourChangeEvent[] {
+    return this._eventLog.slice(-n);
+  }
+
+  /** Clears the event log. Does not affect listeners or the batch queue. */
+  static clearEventHistory() {
+    this._eventLog.length = 0;
+  }
+
+  /** Sets the maximum number of events retained in the log. Trims if current log exceeds the new limit. */
+  static setEventLogMax(max: number) {
+    this._eventLogMax = max;
+    if (this._eventLog.length > max) {
+      this._eventLog.splice(0, this._eventLog.length - max);
+    }
   }
 
   // ── Validation Engine ─────────────────────────────────────

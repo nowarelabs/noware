@@ -1287,6 +1287,242 @@ describe("C4 Model - cfour package", () => {
     });
   });
 
+  describe("findRelationships", () => {
+    test("filters by sourceId", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", description: "A",
+      });
+      BaseCfour.addRelationship({
+        id: "r2", kind: "Relationship", sourceId: "sys2", destinationId: "sys1", description: "B",
+      });
+      const rels = BaseCfour.findRelationships({ sourceId: "sys1" });
+      expect(rels.length).toBe(1);
+      expect(rels[0].id).toBe("r1");
+    });
+
+    test("filters by destinationId", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2",
+      });
+      const rels = BaseCfour.findRelationships({ destinationId: "sys2" });
+      expect(rels.length).toBe(1);
+      expect(rels[0].id).toBe("r1");
+    });
+
+    test("filters by technology", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", technology: "HTTPS",
+      });
+      BaseCfour.addRelationship({
+        id: "r2", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", technology: "gRPC",
+      });
+      const rels = BaseCfour.findRelationships({ technology: "HTTPS" });
+      expect(rels.length).toBe(1);
+      expect(rels[0].id).toBe("r1");
+    });
+
+    test("filters by tags", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", tags: ["internal"],
+      });
+      BaseCfour.addRelationship({
+        id: "r2", kind: "Relationship", sourceId: "sys1", destinationId: "sys2",
+      });
+      const rels = BaseCfour.findRelationships({ tags: ["internal"] });
+      expect(rels.length).toBe(1);
+      expect(rels[0].id).toBe("r1");
+    });
+
+    test("filters by search in description and technology", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2",
+        description: "Fetches user data", technology: "REST",
+      });
+      const rels = BaseCfour.findRelationships({ search: "user" });
+      expect(rels.length).toBe(1);
+      expect(rels[0].id).toBe("r1");
+    });
+
+    test("filters by interactionStyle", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", interactionStyle: "async",
+      });
+      BaseCfour.addRelationship({
+        id: "r2", kind: "Relationship", sourceId: "sys1", destinationId: "sys2", interactionStyle: "sync",
+      });
+      const rels = BaseCfour.findRelationships({ interactionStyle: "async" });
+      expect(rels.length).toBe(1);
+      expect(rels[0].id).toBe("r1");
+    });
+  });
+
+  describe("updateRelationship", () => {
+    test("updates relationship and emits event with before/after/changes", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2",
+        description: "Old", technology: "REST",
+      });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.updateRelationship("r1", { description: "New", technology: "gRPC" });
+      const ev = events.find((e) => e.op === "update" && e.elementId === "r1");
+      expect(ev).toBeDefined();
+      expect(ev!.before).toBeDefined();
+      expect(ev!.after).toBeDefined();
+      expect((ev!.before as any).description).toBe("Old");
+      expect((ev!.after as any).description).toBe("New");
+      expect(ev!.changes).toContain("description");
+      expect(ev!.changes).toContain("technology");
+      unsub();
+    });
+
+    test("no-op if relationship not found", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.updateRelationship("missing", { description: "X" });
+      expect(events.filter((e) => e.op === "update").length).toBe(0);
+      unsub();
+    });
+  });
+
+  describe("getAncestors / getDescendants", () => {
+    test("getAncestors returns path from root to node", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      const ancestors = BaseCfour.getAncestors("ce1");
+      expect(ancestors.map((n) => n.id)).toEqual(["sys1", "con1", "comp1"]);
+    });
+
+    test("getAncestors returns empty for top-level node", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      expect(BaseCfour.getAncestors("sys1")).toEqual([]);
+    });
+
+    test("getAncestors returns empty for unknown id", () => {
+      expect(BaseCfour.getAncestors("missing")).toEqual([]);
+    });
+
+    test("getDescendants returns leaves-first subtree", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addCodeElement({ id: "ce2", name: "CE2", componentId: "comp1" });
+      const descendants = BaseCfour.getDescendants("sys1");
+      const ids = descendants.map((n) => n.id);
+      expect(ids).toEqual(expect.arrayContaining(["con1", "comp1", "ce1", "ce2"]));
+      // leaves-first: code elements before component before container
+      expect(ids.indexOf("ce1")).toBeLessThan(ids.indexOf("comp1"));
+      expect(ids.indexOf("comp1")).toBeLessThan(ids.indexOf("con1"));
+    });
+
+    test("getDescendants returns empty for leaf node", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      expect(BaseCfour.getDescendants("sys1")).toEqual([]);
+    });
+
+    test("getDescendants returns empty for unknown id", () => {
+      expect(BaseCfour.getDescendants("missing")).toEqual([]);
+    });
+  });
+
+  describe("refreshNode", () => {
+    test("updates node metadata and emits update event", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "Old", description: "Keep" });
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.refreshNode("sys1", { name: "New", description: "Updated" });
+      const ev = events.find((e) => e.op === "update" && e.elementId === "sys1");
+      expect(ev).toBeDefined();
+      expect((ev!.after as any).name).toBe("New");
+      expect((ev!.after as any).description).toBe("Updated");
+      expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("New");
+      unsub();
+    });
+  });
+
+  describe("Event History", () => {
+    test("logs events from mutations", () => {
+      BaseCfour.clearEventHistory();
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      const history = BaseCfour.getEventHistory();
+      expect(history.length).toBeGreaterThanOrEqual(2);
+      expect(history[history.length - 2].elementId).toBe("sys1");
+      expect(history[history.length - 1].elementId).toBe("con1");
+    });
+
+    test("logs events from batch", () => {
+      BaseCfour.clearEventHistory();
+      BaseCfour.batch(() => {
+        BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+      });
+      const recent = BaseCfour.getRecentEvents(2);
+      expect(recent.length).toBe(2);
+      expect(recent[0].elementId).toBe("s1");
+      expect(recent[1].elementId).toBe("s2");
+    });
+
+    test("getRecentEvents returns last n", () => {
+      BaseCfour.clearEventHistory();
+      BaseCfour.addSoftwareSystem({ id: "a", name: "A" });
+      BaseCfour.addSoftwareSystem({ id: "b", name: "B" });
+      BaseCfour.addSoftwareSystem({ id: "c", name: "C" });
+      const last2 = BaseCfour.getRecentEvents(2);
+      expect(last2.length).toBe(2);
+      expect(last2[0].elementId).toBe("b");
+      expect(last2[1].elementId).toBe("c");
+    });
+
+    test("clearEventHistory empties the log", () => {
+      BaseCfour.addSoftwareSystem({ id: "x", name: "X" });
+      BaseCfour.clearEventHistory();
+      expect(BaseCfour.getEventHistory().length).toBe(0);
+    });
+
+    test("setEventLogMax trims old events", () => {
+      BaseCfour.clearEventHistory();
+      BaseCfour.setEventLogMax(3);
+      BaseCfour.addSoftwareSystem({ id: "a", name: "A" });
+      BaseCfour.addSoftwareSystem({ id: "b", name: "B" });
+      BaseCfour.addSoftwareSystem({ id: "c", name: "C" });
+      BaseCfour.addSoftwareSystem({ id: "d", name: "D" });
+      const history = BaseCfour.getEventHistory();
+      expect(history.length).toBe(3);
+      expect(history[0].elementId).toBe("b");
+      expect(history[2].elementId).toBe("d");
+      BaseCfour.setEventLogMax(1000); // restore default
+    });
+
+    test("does not log batch events if callback throws", () => {
+      BaseCfour.clearEventHistory();
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "fail", name: "F" });
+          throw new Error("boom");
+        });
+      }).toThrow("boom");
+      expect(BaseCfour.getEventHistory().length).toBe(0);
+    });
+  });
+
   describe("View Builders", () => {
     test("buildSystemContextView should include target, neighbors and all persons", () => {
       const view = buildSystemContextView(mockWorkspace, "sys1");
