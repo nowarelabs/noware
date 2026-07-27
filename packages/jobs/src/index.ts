@@ -19,11 +19,12 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export class BaseJob<
   Ctx extends JobContext = JobContext,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
+  _Env extends EnvLike = EnvLike,
+  _Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
@@ -44,21 +45,13 @@ export class BaseJob<
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
 
-  private static collectHooks(ctor: object, prop: string): RegisteredHook[] {
-    const hooks: RegisteredHook[] = [];
-    let current: any = ctor;
-    while (current && current !== Function.prototype) {
-      if (Object.hasOwn(current, prop)) {
-        hooks.unshift(...current[prop]);
-      }
-      current = Object.getPrototypeOf(current);
-    }
-    return hooks;
-  }
+  protected logger!: Logger;
 
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
     protected ctx: Ctx,
-  ) {}
+  ) {
+    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
 }

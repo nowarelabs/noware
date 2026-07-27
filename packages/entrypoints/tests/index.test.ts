@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike, EnvLike, EntrypointContext, WorkflowStep } from "@nowarelabs/shared";
+import type { EnvLike, EntrypointContext, RouterContext, WorkflowStep } from "@nowarelabs/shared";
 import {
   BaseEntrypoint,
   HttpEntrypoint,
@@ -207,7 +207,8 @@ describe("HttpEntrypoint", () => {
     const ctx = {
       waitUntil: () => {},
       passThroughOnException: () => {},
-    } as ContextLike;
+      params: {},
+    } as RouterContext;
     return { entrypoint: new entrypointClass(), request, env, ctx };
   }
 
@@ -238,8 +239,7 @@ describe("HttpEntrypoint", () => {
 
   test("static before hooks run before routing", async () => {
     const calls: string[] = [];
-    class HookedEntrypoint extends TestHttpEntrypoint {
-    }
+    class HookedEntrypoint extends TestHttpEntrypoint {}
 
     HookedEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -252,8 +252,7 @@ describe("HttpEntrypoint", () => {
 
   test("static after hooks run after routing", async () => {
     const calls: string[] = [];
-    class HookedEntrypoint extends TestHttpEntrypoint {
-    }
+    class HookedEntrypoint extends TestHttpEntrypoint {}
 
     HookedEntrypoint.after(async (_ep: any, result: Response) => {
       calls.push("after");
@@ -266,8 +265,7 @@ describe("HttpEntrypoint", () => {
   });
 
   test("before hook can short-circuit before routing", async () => {
-    class ProtectedEntrypoint extends TestHttpEntrypoint {
-    }
+    class ProtectedEntrypoint extends TestHttpEntrypoint {}
 
     ProtectedEntrypoint.before(async (_ep: any) => {
       return new Response("Blocked", { status: 403 });
@@ -282,8 +280,7 @@ describe("HttpEntrypoint", () => {
 
   test("around hook wraps the routing", async () => {
     const calls: string[] = [];
-    class AroundEntrypoint extends TestHttpEntrypoint {
-    }
+    class AroundEntrypoint extends TestHttpEntrypoint {}
 
     AroundEntrypoint.around(async (_ep: any, next: () => Promise<any>) => {
       calls.push("before-around");
@@ -321,8 +318,7 @@ describe("CliEntrypoint", () => {
   });
 
   test("main returns exit code from hooks pipeline", async () => {
-    class HookedCliEntrypoint extends TestCliEntrypoint {
-    }
+    class HookedCliEntrypoint extends TestCliEntrypoint {}
 
     HookedCliEntrypoint.before(async (_ep: any) => {
       return 99;
@@ -353,7 +349,7 @@ describe("RpcEntrypoint", () => {
   test("fetch delegates to router", async () => {
     const ep = new TestRpcEntrypoint();
     const request = new Request("http://localhost/rpc");
-    const response = await ep.fetch(request, {} as EnvLike, {} as EntrypointContext);
+    const response = await ep.fetch(request, {} as EnvLike, { params: {} } as RouterContext);
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toBe("rpc ok");
@@ -362,14 +358,13 @@ describe("RpcEntrypoint", () => {
   test("handle is an alias for fetch", async () => {
     const ep = new TestRpcEntrypoint();
     const request = new Request("http://localhost/rpc");
-    const response = await ep.handle(request, {} as EnvLike, {} as EntrypointContext);
+    const response = await ep.handle(request, {} as EnvLike, { params: {} } as RouterContext);
     expect(response.status).toBe(200);
   });
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedRpcEntrypoint extends TestRpcEntrypoint {
-    }
+    class HookedRpcEntrypoint extends TestRpcEntrypoint {}
 
     HookedRpcEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -377,7 +372,7 @@ describe("RpcEntrypoint", () => {
 
     const ep = new HookedRpcEntrypoint();
     const request = new Request("http://localhost/rpc");
-    await ep.fetch(request, {} as EnvLike, {} as EntrypointContext);
+    await ep.fetch(request, {} as EnvLike, { params: {} } as RouterContext);
     expect(calls).toEqual(["before"]);
   });
 });
@@ -412,8 +407,7 @@ describe("IotEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedIotEntrypoint extends TestIotEntrypoint {
-    }
+    class HookedIotEntrypoint extends TestIotEntrypoint {}
 
     HookedIotEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -448,8 +442,7 @@ describe("CronEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedCronEntrypoint extends TestCronEntrypoint {
-    }
+    class HookedCronEntrypoint extends TestCronEntrypoint {}
 
     HookedCronEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -484,8 +477,7 @@ describe("QueueEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedQueueEntrypoint extends TestQueueEntrypoint {
-    }
+    class HookedQueueEntrypoint extends TestQueueEntrypoint {}
 
     HookedQueueEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -524,8 +516,7 @@ describe("EmailEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedEmailEntrypoint extends TestEmailEntrypoint {
-    }
+    class HookedEmailEntrypoint extends TestEmailEntrypoint {}
 
     HookedEmailEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -558,7 +549,7 @@ describe("WebSocketEntrypoint", () => {
     const request = new Request("http://localhost", {
       headers: { Upgrade: "h2c" },
     });
-    const response = await ep.fetch(request, {} as EnvLike, {} as EntrypointContext);
+    const response = await ep.fetch(request, {} as EnvLike, { params: {} } as RouterContext);
     expect(response.status).toBe(426);
   });
 
@@ -567,7 +558,7 @@ describe("WebSocketEntrypoint", () => {
     const request = new Request("http://localhost", {
       headers: { Upgrade: "websocket" },
     });
-    const response = await ep.fetch(request, {} as EnvLike, {} as EntrypointContext);
+    const response = await ep.fetch(request, {} as EnvLike, { params: {} } as RouterContext);
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toBe("connected");
@@ -575,8 +566,7 @@ describe("WebSocketEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedWsEntrypoint extends TestWebSocketEntrypoint {
-    }
+    class HookedWsEntrypoint extends TestWebSocketEntrypoint {}
 
     HookedWsEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -586,7 +576,7 @@ describe("WebSocketEntrypoint", () => {
     const request = new Request("http://localhost", {
       headers: { Upgrade: "websocket" },
     });
-    await ep.fetch(request, {} as EnvLike, {} as EntrypointContext);
+    await ep.fetch(request, {} as EnvLike, { params: {} } as RouterContext);
     expect(calls).toEqual(["before"]);
   });
 });
@@ -614,8 +604,7 @@ describe("TcpEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedTcpEntrypoint extends TestTcpEntrypoint {
-    }
+    class HookedTcpEntrypoint extends TestTcpEntrypoint {}
 
     HookedTcpEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -650,8 +639,7 @@ describe("UdpEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedUdpEntrypoint extends TestUdpEntrypoint {
-    }
+    class HookedUdpEntrypoint extends TestUdpEntrypoint {}
 
     HookedUdpEntrypoint.before(async (_ep: any) => {
       calls.push("before");
@@ -701,8 +689,7 @@ describe("DurableObjectEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedDO extends TestDurableObjectEntrypoint {
-    }
+    class HookedDO extends TestDurableObjectEntrypoint {}
 
     HookedDO.before(async (_ep: any) => {
       calls.push("before");
@@ -774,8 +761,7 @@ describe("GrpcEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedGrpc extends TestGrpcEntrypoint {
-    }
+    class HookedGrpc extends TestGrpcEntrypoint {}
 
     HookedGrpc.before(async (_ep: any) => {
       calls.push("before");
@@ -823,8 +809,7 @@ describe("WorkflowEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedWorkflow extends TestWorkflowEntrypoint {
-    }
+    class HookedWorkflow extends TestWorkflowEntrypoint {}
 
     HookedWorkflow.before(async (_ep: any) => {
       calls.push("before");
@@ -836,8 +821,7 @@ describe("WorkflowEntrypoint", () => {
   });
 
   test("before hook can short-circuit", async () => {
-    class ShortCircuit extends TestWorkflowEntrypoint {
-    }
+    class ShortCircuit extends TestWorkflowEntrypoint {}
 
     ShortCircuit.before(async (_ep: any) => {
       return "short-circuit";
@@ -850,8 +834,7 @@ describe("WorkflowEntrypoint", () => {
 
   test("around hook wraps handler.run", async () => {
     const calls: string[] = [];
-    class AroundWorkflow extends TestWorkflowEntrypoint {
-    }
+    class AroundWorkflow extends TestWorkflowEntrypoint {}
 
     AroundWorkflow.around(async (_ep: any, next: () => Promise<any>) => {
       calls.push("before-around");
@@ -922,8 +905,7 @@ describe("MessageEntrypoint", () => {
 
   test("hooks run through the pipeline", async () => {
     const calls: string[] = [];
-    class HookedMsg extends TestMessageEntrypoint {
-    }
+    class HookedMsg extends TestMessageEntrypoint {}
 
     HookedMsg.before(async (_ep: any) => {
       calls.push("before");
@@ -940,8 +922,7 @@ describe("MessageEntrypoint", () => {
   });
 
   test("before hook can short-circuit", async () => {
-    class ProtectiveEntry extends TestMessageEntrypoint {
-    }
+    class ProtectiveEntry extends TestMessageEntrypoint {}
 
     ProtectiveEntry.before(async (_ep: any) => {
       // short-circuit — skips handler.handle

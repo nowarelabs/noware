@@ -16,6 +16,7 @@ import type {
   AdapterResponse,
   AdapterContext,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export type { AdapterRequest, AdapterResponse, AdapterContext } from "@nowarelabs/shared";
 
@@ -40,10 +41,12 @@ export abstract class BaseAdapter<
   protected env: Env;
   protected ctx: Ctx;
   protected metadata: Record<string, unknown> = {};
+  protected logger!: Logger;
 
   constructor(env: Env, ctx: Ctx) {
     this.env = env;
     this.ctx = ctx;
+    this.logger = new Logger(env as any, ctx as any, {} as any, { service: this.constructor.name });
   }
 
   protected setMetadata(key: string, value: unknown): void {
@@ -148,9 +151,7 @@ export abstract class BaseAdapter<
   protected async runAroundHooks<R = any>(action: () => Promise<R>): Promise<R> {
     const constructor = this.constructor as typeof BaseAdapter;
     const allHooks = BaseAdapter.collectHooks(constructor, "aroundHooks");
-    const applicableHooks = allHooks.filter(({ options }) =>
-      this.shouldRunHook(options),
-    );
+    const applicableHooks = allHooks.filter(({ options }) => this.shouldRunHook(options));
 
     if (applicableHooks.length === 0) {
       return action();
@@ -239,6 +240,9 @@ export abstract class DrivingAdapter<
 
   constructor(port: TPort, request: RequestLike, env: Env, ctx: Ctx) {
     super(env, ctx);
+    this.logger = new Logger(request as any, env as any, ctx as any, {
+      service: this.constructor.name,
+    });
     this.port = port;
     this.request = this.buildRequest(request);
     this.params = {};

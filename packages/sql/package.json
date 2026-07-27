@@ -32,7 +32,8 @@
   },
   "dependencies": {
     "@nowarelabs/result": "workspace:*",
-    "@nowarelabs/shared": "workspace:*"
+    "@nowarelabs/shared": "workspace:*",
+    "@nowarelabs/telemetry": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

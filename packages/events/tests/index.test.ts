@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vite-plus/test";
+import { describe, expect, test } from "vite-plus/test";
 import type { EventContext } from "@nowarelabs/shared";
 import { BaseEvent, EventEmitter } from "../src/index.ts";
 
@@ -6,19 +6,21 @@ describe("EventEmitter", () => {
   test("constructor accepts request, env, ctx", () => {
     const mockRequest = new Request("http://localhost");
     const mockEnv = {} as Record<string, unknown>;
-    const mockCtx = {} as any;
+    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} };
 
     const emitter = new EventEmitter(mockRequest, mockEnv, mockCtx);
     expect(emitter).toBeDefined();
   });
 
   test("on method exists", () => {
-    const emitter = new EventEmitter(new Request("http://localhost"), {}, {});
+    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} };
+    const emitter = new EventEmitter(new Request("http://localhost"), {}, mockCtx);
     expect(typeof emitter.on).toBe("function");
   });
 
   test("emit method exists", () => {
-    const emitter = new EventEmitter(new Request("http://localhost"), {}, {});
+    const mockCtx = { waitUntil: () => {}, passThroughOnException: () => {} };
+    const emitter = new EventEmitter(new Request("http://localhost"), {}, mockCtx);
     expect(typeof emitter.emit).toBe("function");
   });
 });

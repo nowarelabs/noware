@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import { context, trace } from "@opentelemetry/api";
+import { context } from "@opentelemetry/api";
 import { AsyncHooksContextManager } from "@opentelemetry/context-async-hooks";
 import type { LoggerContext, EnvLike, RequestLike } from "@nowarelabs/shared";
 import { Logger, LogLevel, BaseLogger, MetricsBuffer } from "../src/index.ts";

@@ -21,6 +21,7 @@ import {
   runAroundHooks,
   createRouterContext,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export abstract class BaseEntrypoint<
   TInput,
@@ -31,6 +32,8 @@ export abstract class BaseEntrypoint<
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
   static aroundHooks: RegisteredHook[] = [];
+
+  protected logger!: Logger;
 
   static before(fn: HookFunction<BaseEntrypoint<any, any, any, any>>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];
@@ -54,6 +57,7 @@ export abstract class BaseEntrypoint<
   }
 
   async handle(input: TInput, env: TEnv, ctx: TCtx): Promise<TOutput> {
+    this.logger = new Logger({} as any, env as any, ctx as any, { service: this.constructor.name });
     const Ctor = this.constructor;
     const shouldRunHook = (opts?: HookOptions) => this.shouldRunHook(opts);
 

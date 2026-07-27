@@ -223,7 +223,6 @@ export function formatMetricPretty(entry: MetricEntry): string {
   return `${ts} ${tp} (${svc}): ${entry.metric_type}/${name} = ${value}${traceInfo}`;
 }
 
-
 // ── Logger ─────────────────────────────────────────────────────────
 
 export class Logger<

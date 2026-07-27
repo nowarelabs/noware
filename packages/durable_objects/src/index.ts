@@ -19,6 +19,7 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export type DurableObjectState = {
   id: {
@@ -72,9 +73,13 @@ export class BaseDurableObject<
     return hooks;
   }
 
+  protected logger!: Logger;
+
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
     protected ctx: Ctx,
-  ) {}
+  ) {
+    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
 }

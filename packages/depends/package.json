@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@nowarelabs/shared": "workspace:*",
+    "@nowarelabs/telemetry": "workspace:*",
     "reactflow": "^11.11.4"
   },
   "devDependencies": {

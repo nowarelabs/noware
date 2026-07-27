@@ -33,6 +33,7 @@
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260522.1",
     "@nowarelabs/shared": "workspace:*",
+    "@nowarelabs/telemetry": "workspace:*",
     "@types/bun": "^1.3.14",
     "@types/node": "^25.5.0"
   },

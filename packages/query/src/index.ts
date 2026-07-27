@@ -13,11 +13,12 @@
  */
 
 import type { EnvLike, ContextLike, RequestLike } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export abstract class BaseQuery<
   Ctx extends ContextLike = ContextLike,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
+  _Env extends EnvLike = EnvLike,
+  _Request extends RequestLike = RequestLike,
   Persistence = unknown,
 > {
   static beforeHooks: unknown[] = [];
@@ -25,10 +26,14 @@ export abstract class BaseQuery<
 
   protected abstract persistence: Persistence;
 
+  protected logger!: Logger;
+
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
     protected ctx: Ctx,
-  ) {}
+  ) {
+    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
   protected abstract getPersistence(): Persistence;
 }

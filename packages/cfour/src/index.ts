@@ -8,11 +8,12 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 export abstract class BaseCfour<
   Ctx extends CfourContext = CfourContext,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
+  _Env extends EnvLike = EnvLike,
+  _Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
@@ -31,18 +32,6 @@ export abstract class BaseCfour<
   static around<T extends BaseCfour>(fn: AroundHookFunction<T>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
-  }
-
-  private static collectHooks(ctor: object, prop: string): RegisteredHook[] {
-    const hooks: RegisteredHook[] = [];
-    let current: any = ctor;
-    while (current && current !== Function.prototype) {
-      if (Object.hasOwn(current, prop)) {
-        hooks.unshift(...current[prop]);
-      }
-      current = Object.getPrototypeOf(current);
-    }
-    return hooks;
   }
 
   private static _workspaces: Map<string, C4Workspace> = new Map([
@@ -677,11 +666,15 @@ export abstract class BaseCfour<
     }
   }
 
+  protected logger!: Logger;
+
   constructor(
     protected request: RequestLike,
     protected env: EnvLike,
     protected ctx: Ctx,
-  ) {}
+  ) {
+    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
 }
 
 // C4 model
@@ -1658,7 +1651,7 @@ export function buildTeamView(workspace: C4Workspace, teamName: string): C4View 
  * Includes all relationships tagged with the given tag and their involved nodes.
  */
 export function buildFlowView(workspace: C4Workspace, tag: string, title?: string): C4View {
-  const flat = flattenWorkspace(workspace);
+  flattenWorkspace(workspace);
   const relationshipIds = new Set<string>();
   const elementIds = new Set<string>();
 

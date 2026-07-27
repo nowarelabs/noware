@@ -17,6 +17,7 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
+import { Logger } from "@nowarelabs/telemetry";
 
 /**
  * Helper to create a successful result
@@ -71,11 +72,17 @@ export abstract class BaseUseCase<
   protected env?: Env;
   protected ctx?: Ctx;
   protected metadata: Record<string, unknown> = {};
+  protected logger!: Logger;
   public input?: TInput;
 
   constructor(env?: Env, ctx?: Ctx) {
     this.env = env;
     this.ctx = ctx;
+    if (env && ctx) {
+      this.logger = new Logger({} as any, env as any, ctx as any, {
+        service: this.constructor.name,
+      });
+    }
   }
 
   // ============================================================================
@@ -95,18 +102,6 @@ export abstract class BaseUseCase<
   static around<T extends BaseUseCase>(fn: AroundHookFunction<T>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
-  }
-
-  private static collectHooks(ctor: object, prop: string): RegisteredHook[] {
-    const hooks: RegisteredHook[] = [];
-    let current: any = ctor;
-    while (current && current !== Function.prototype) {
-      if (Object.hasOwn(current, prop)) {
-        hooks.unshift(...current[prop]);
-      }
-      current = Object.getPrototypeOf(current);
-    }
-    return hooks;
   }
 
   static skipBefore<T extends BaseUseCase>(fn: HookFunction<T>): void {
