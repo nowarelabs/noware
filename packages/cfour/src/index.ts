@@ -47,6 +47,7 @@ export abstract class BaseCfour<
   private static _storage: CfourStorage | null = null;
   private static _eventLog: CfourChangeEvent[] = [];
   private static _eventLogMax = 1000;
+  private static _eventStorage: CfourEventStorage | null = null;
 
   /**
    * Subscribes to fine-grained workspace change events.
@@ -99,9 +100,13 @@ export abstract class BaseCfour<
   }
 
   private static _logEvent(event: CfourChangeEvent) {
-    this._eventLog.push(event);
+    const stamped = { ...event, timestamp: Date.now() };
+    this._eventLog.push(stamped);
     if (this._eventLog.length > this._eventLogMax) {
       this._eventLog.splice(0, this._eventLog.length - this._eventLogMax);
+    }
+    if (this._eventStorage) {
+      this._eventStorage.append(stamped).catch(() => {});
     }
   }
 
@@ -855,22 +860,70 @@ export abstract class BaseCfour<
 
   // ── Event History ─────────────────────────────────────────
 
-  /** Returns all logged events (newest last). Capped at `eventLogMax` (default 1000). */
-  static getEventHistory(): readonly CfourChangeEvent[] {
-    return this._eventLog;
+  /** Configures the persistent event storage adapter. */
+  static setEventStorage(storage: CfourEventStorage) {
+    this._eventStorage = storage;
   }
 
-  /** Returns the last `n` events. */
-  static getRecentEvents(n: number): CfourChangeEvent[] {
+  /** Returns the configured event storage adapter, if any. */
+  static getEventStorage(): CfourEventStorage | null {
+    return this._eventStorage;
+  }
+
+  /**
+   * Returns all logged events (newest last).
+   * When an event storage adapter is configured, reads from it (async).
+   * Otherwise reads from the in-memory ring buffer.
+   */
+  static async getEventHistory(): Promise<CfourChangeEvent[]> {
+    if (this._eventStorage) {
+      return this._eventStorage.query({});
+    }
+    return [...this._eventLog];
+  }
+
+  /**
+   * Returns the last `n` events.
+   * When an event storage adapter is configured, reads from it (async).
+   */
+  static async getRecentEvents(n: number): Promise<CfourChangeEvent[]> {
+    if (this._eventStorage) {
+      return this._eventStorage.query({ limit: n });
+    }
     return this._eventLog.slice(-n);
   }
 
-  /** Clears the event log. Does not affect listeners or the batch queue. */
-  static clearEventHistory() {
-    this._eventLog.length = 0;
+  /**
+   * Queries the event history with filters.
+   * Delegates to the event storage adapter when configured, otherwise filters the in-memory log.
+   */
+  static async queryEventHistory(filter: CfourEventQuery): Promise<CfourChangeEvent[]> {
+    if (this._eventStorage) {
+      return this._eventStorage.query(filter);
+    }
+    let results = [...this._eventLog];
+    if (filter.workspaceName) results = results.filter((e) => e.workspaceName === filter.workspaceName);
+    if (filter.op) results = results.filter((e) => e.op === filter.op);
+    if (filter.elementId) results = results.filter((e) => e.elementId === filter.elementId);
+    if (filter.elementKind) results = results.filter((e) => e.elementKind === filter.elementKind);
+    if (filter.since) results = results.filter((e) => (e.timestamp ?? 0) >= filter.since!);
+    if (filter.until) results = results.filter((e) => (e.timestamp ?? 0) <= filter.until!);
+    if (filter.offset) results = results.slice(filter.offset);
+    if (filter.limit) results = results.slice(0, filter.limit);
+    return results;
   }
 
-  /** Sets the maximum number of events retained in the log. Trims if current log exceeds the new limit. */
+  /**
+   * Clears the in-memory event log and the persistent event storage (if configured).
+   */
+  static async clearEventHistory(): Promise<void> {
+    this._eventLog.length = 0;
+    if (this._eventStorage) {
+      await this._eventStorage.clear();
+    }
+  }
+
+  /** Sets the maximum number of events retained in the in-memory log. Trims if current log exceeds the new limit. */
   static setEventLogMax(max: number) {
     this._eventLogMax = max;
     if (this._eventLog.length > max) {
@@ -1085,6 +1138,8 @@ export interface CfourChangeEvent {
     nodes: C4Node[];
     relationships: C4Relationship[];
   };
+  /** Millisecond timestamp (UTC). Added automatically by `_logEvent`. */
+  timestamp?: number;
 }
 
 // ----------------------------------------------------------------
@@ -1096,6 +1151,27 @@ export interface CfourStorage {
   put(key: string, value: string): Promise<void>;
   delete(key: string): Promise<void>;
   list(prefix: string): Promise<string[]>;
+}
+
+// ----------------------------------------------------------------
+// Event Storage — persistent event log adapter
+// ----------------------------------------------------------------
+
+export interface CfourEventQuery {
+  workspaceName?: string;
+  op?: CfourChangeEvent["op"];
+  elementId?: string;
+  elementKind?: C4ElementKind | "Relationship";
+  since?: number;
+  until?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CfourEventStorage {
+  append(event: CfourChangeEvent): Promise<void>;
+  query(filter: CfourEventQuery): Promise<CfourChangeEvent[]>;
+  clear(): Promise<void>;
 }
 
 // ----------------------------------------------------------------

@@ -12,6 +12,8 @@ import {
   type C4Workspace,
   type CfourChangeEvent,
   type CfourStorage,
+  type CfourEventStorage,
+  type CfourEventQuery,
 } from "../src/index.ts";
 
 // ----------------------------------------------------------------
@@ -1458,68 +1460,142 @@ describe("C4 Model - cfour package", () => {
   });
 
   describe("Event History", () => {
-    test("logs events from mutations", () => {
-      BaseCfour.clearEventHistory();
+    test("logs events from mutations", async () => {
+      await BaseCfour.clearEventHistory();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      const history = BaseCfour.getEventHistory();
+      const history = await BaseCfour.getEventHistory();
       expect(history.length).toBeGreaterThanOrEqual(2);
       expect(history[history.length - 2].elementId).toBe("sys1");
       expect(history[history.length - 1].elementId).toBe("con1");
     });
 
-    test("logs events from batch", () => {
-      BaseCfour.clearEventHistory();
+    test("logs events from batch", async () => {
+      await BaseCfour.clearEventHistory();
       BaseCfour.batch(() => {
         BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
         BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
       });
-      const recent = BaseCfour.getRecentEvents(2);
+      const recent = await BaseCfour.getRecentEvents(2);
       expect(recent.length).toBe(2);
       expect(recent[0].elementId).toBe("s1");
       expect(recent[1].elementId).toBe("s2");
     });
 
-    test("getRecentEvents returns last n", () => {
-      BaseCfour.clearEventHistory();
+    test("getRecentEvents returns last n", async () => {
+      await BaseCfour.clearEventHistory();
       BaseCfour.addSoftwareSystem({ id: "a", name: "A" });
       BaseCfour.addSoftwareSystem({ id: "b", name: "B" });
       BaseCfour.addSoftwareSystem({ id: "c", name: "C" });
-      const last2 = BaseCfour.getRecentEvents(2);
+      const last2 = await BaseCfour.getRecentEvents(2);
       expect(last2.length).toBe(2);
       expect(last2[0].elementId).toBe("b");
       expect(last2[1].elementId).toBe("c");
     });
 
-    test("clearEventHistory empties the log", () => {
+    test("clearEventHistory empties the log", async () => {
       BaseCfour.addSoftwareSystem({ id: "x", name: "X" });
-      BaseCfour.clearEventHistory();
-      expect(BaseCfour.getEventHistory().length).toBe(0);
+      await BaseCfour.clearEventHistory();
+      const history = await BaseCfour.getEventHistory();
+      expect(history.length).toBe(0);
     });
 
-    test("setEventLogMax trims old events", () => {
-      BaseCfour.clearEventHistory();
+    test("setEventLogMax trims old events", async () => {
+      await BaseCfour.clearEventHistory();
       BaseCfour.setEventLogMax(3);
       BaseCfour.addSoftwareSystem({ id: "a", name: "A" });
       BaseCfour.addSoftwareSystem({ id: "b", name: "B" });
       BaseCfour.addSoftwareSystem({ id: "c", name: "C" });
       BaseCfour.addSoftwareSystem({ id: "d", name: "D" });
-      const history = BaseCfour.getEventHistory();
+      const history = await BaseCfour.getEventHistory();
       expect(history.length).toBe(3);
       expect(history[0].elementId).toBe("b");
       expect(history[2].elementId).toBe("d");
       BaseCfour.setEventLogMax(1000); // restore default
     });
 
-    test("does not log batch events if callback throws", () => {
-      BaseCfour.clearEventHistory();
+    test("does not log batch events if callback throws", async () => {
+      await BaseCfour.clearEventHistory();
       expect(() => {
         BaseCfour.batch(() => {
           BaseCfour.addSoftwareSystem({ id: "fail", name: "F" });
           throw new Error("boom");
         });
       }).toThrow("boom");
-      expect(BaseCfour.getEventHistory().length).toBe(0);
+      const history = await BaseCfour.getEventHistory();
+      expect(history.length).toBe(0);
+    });
+  });
+
+  describe("Event Storage Adapter", () => {
+    const createMockStorage = (): CfourEventStorage & { events: CfourChangeEvent[] } => {
+      const events: CfourChangeEvent[] = [];
+      return {
+        events,
+        async append(event: CfourChangeEvent) {
+          events.push(event);
+        },
+        async query(filter: CfourEventQuery) {
+          let result = [...events];
+          if (filter.elementId) result = result.filter(e => e.elementId === filter.elementId);
+          if (filter.op) result = result.filter(e => e.op === filter.op);
+          if (filter.since) result = result.filter(e => (e.timestamp ?? 0) >= filter.since!);
+          if (filter.until) result = result.filter(e => (e.timestamp ?? 0) <= filter.until!);
+          if (filter.limit) result = result.slice(-filter.limit);
+          return result;
+        },
+        async clear() {
+          events.length = 0;
+        },
+      };
+    };
+
+    test("events are persisted to storage adapter", async () => {
+      const mock = createMockStorage();
+      BaseCfour.setEventStorage(mock);
+      await BaseCfour.clearEventHistory();
+      BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+      expect(mock.events.length).toBe(2);
+      expect(mock.events[0].elementId).toBe("s1");
+      expect(mock.events[1].elementId).toBe("s2");
+      BaseCfour.setEventStorage(null);
+    });
+
+    test("queryEventHistory delegates to adapter", async () => {
+      const mock = createMockStorage();
+      BaseCfour.setEventStorage(mock);
+      await BaseCfour.clearEventHistory();
+      BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+      BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "s1" });
+      const systems = await BaseCfour.queryEventHistory({ op: "add" });
+      const byId = await BaseCfour.queryEventHistory({ elementId: "s1" });
+      expect(systems.length).toBe(3);
+      expect(byId.length).toBe(1);
+      expect(byId[0].elementId).toBe("s1");
+      BaseCfour.setEventStorage(null);
+    });
+
+    test("clearEventHistory clears the adapter", async () => {
+      const mock = createMockStorage();
+      BaseCfour.setEventStorage(mock);
+      BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+      expect(mock.events.length).toBe(1);
+      await BaseCfour.clearEventHistory();
+      expect(mock.events.length).toBe(0);
+      BaseCfour.setEventStorage(null);
+    });
+
+    test("events still appear in in-memory log with storage adapter set", async () => {
+      const mock = createMockStorage();
+      BaseCfour.setEventStorage(mock);
+      await BaseCfour.clearEventHistory();
+      BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+      const history = await BaseCfour.getEventHistory();
+      expect(history.length).toBe(1);
+      expect(mock.events.length).toBe(1);
+      BaseCfour.setEventStorage(null);
     });
   });
 
