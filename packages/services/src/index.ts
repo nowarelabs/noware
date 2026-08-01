@@ -10,6 +10,7 @@ import type {
 } from "@nowarelabs/shared";
 import { runBeforeHooks, runAfterHooks, runAroundHooks } from "@nowarelabs/shared";
 import { Logger } from "@nowarelabs/telemetry";
+import { withTransaction } from "@nowarelabs/persistence";
 
 export abstract class BaseService<
   Ctx extends ServiceContext = ServiceContext,
@@ -33,6 +34,19 @@ export abstract class BaseService<
   }
 
   protected abstract getModel(): Model;
+
+  protected async withinTransaction<T>(fn: (ctx: Ctx) => Promise<T>): Promise<T> {
+    const model = this.getModel() as any;
+    const origCtx = model.ctx;
+    return withTransaction(this.ctx as any, model.db, async (txCtx) => {
+      model.ctx = txCtx;
+      try {
+        return await fn(txCtx as Ctx);
+      } finally {
+        model.ctx = origCtx;
+      }
+    });
+  }
 
   static before<T extends BaseService>(fn: HookFunction<T>, options?: HookOptions): void {
     if (!Object.hasOwn(this, "beforeHooks")) this.beforeHooks = [];

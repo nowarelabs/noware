@@ -162,3 +162,110 @@ describe("BaseService", () => {
     expect(calls).toEqual(["before", "after"]);
   });
 });
+
+describe("withinTransaction", () => {
+  function makeMockDb(captured: string[]) {
+    return {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          all: async () => {
+            captured.push(sql);
+            return { results: [] };
+          },
+        }),
+      }),
+    };
+  }
+
+  class TxService extends BaseService {
+    protected model: any;
+
+    protected getModel() {
+      return this.model;
+    }
+
+    public async callWithinTransaction<T>(fn: (ctx: any) => Promise<T>): Promise<T> {
+      return this.withinTransaction(fn as any);
+    }
+  }
+
+  function createService(captured: string[]) {
+    const request = new Request("http://localhost");
+    const env = {} as Record<string, unknown>;
+    const ctx = createServiceContext();
+    const service = new TxService(request, env, ctx);
+    (service as any).model = {
+      db: makeMockDb(captured),
+      ctx: { ...ctx },
+    };
+    return service;
+  }
+
+  test("executes callback and returns result", async () => {
+    const captured: string[] = [];
+    const service = createService(captured);
+    const result = await service.callWithinTransaction(async () => "done");
+    expect(result).toBe("done");
+  });
+
+  test("swaps model context during transaction and restores after", async () => {
+    const captured: string[] = [];
+    const service = createService(captured);
+    const model: any = (service as any).getModel();
+    const origCtx = model.ctx;
+    let txCtxDuring: any = null;
+
+    await service.callWithinTransaction(async (txCtx) => {
+      txCtxDuring = txCtx;
+      expect(model.ctx).toBe(txCtx);
+    });
+
+    expect(model.ctx).toBe(origCtx);
+    expect(txCtxDuring).not.toBe(origCtx);
+    expect(txCtxDuring.transaction).toBeDefined();
+  });
+
+  test("restores original context on error", async () => {
+    const captured: string[] = [];
+    const service = createService(captured);
+    const model: any = (service as any).getModel();
+    const origCtx = model.ctx;
+
+    try {
+      await service.callWithinTransaction(async () => {
+        throw new Error("boom");
+      });
+    } catch {
+      // expected
+    }
+
+    expect(model.ctx).toBe(origCtx);
+  });
+
+  test("issues BEGIN and COMMIT", async () => {
+    const captured: string[] = [];
+    const service = createService(captured);
+
+    await service.callWithinTransaction(async () => "ok");
+
+    expect(captured.filter((s) => s.includes("BEGIN"))).toHaveLength(1);
+    expect(captured.filter((s) => s.includes("COMMIT"))).toHaveLength(1);
+    expect(captured.filter((s) => s.includes("ROLLBACK"))).toHaveLength(0);
+  });
+
+  test("issues ROLLBACK on error", async () => {
+    const captured: string[] = [];
+    const service = createService(captured);
+
+    try {
+      await service.callWithinTransaction(async () => {
+        throw new Error("boom");
+      });
+    } catch {
+      // expected
+    }
+
+    expect(captured.filter((s) => s.includes("ROLLBACK"))).toHaveLength(1);
+    expect(captured.filter((s) => s.includes("COMMIT"))).toHaveLength(0);
+  });
+});

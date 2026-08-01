@@ -1,18 +1,3 @@
-/**
- * noware-persistence - BasePersistence
- *
- * Standard Gauge: Persistence layer (P in RCSM)
- *
- * Connection Flow:
- * BaseModel → BasePersistence → Database
- *
- * Connection: This layer → Database (Tier 1 - external)
- *
- * Static Plugin Points:
- * - migrations: Migration[]
- * - dialects: Record<string, Dialect>
- */
-
 import type {
   EnvLike,
   PersistenceContext,
@@ -24,6 +9,8 @@ import type {
   RegisteredHook,
 } from "@nowarelabs/shared";
 import { Logger } from "@nowarelabs/telemetry";
+
+export { type Transaction, getTransaction, withTransaction } from "./transaction.ts";
 
 export class BasePersistence<
   Ctx extends PersistenceContext = PersistenceContext,

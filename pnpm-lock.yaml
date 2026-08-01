@@ -491,6 +491,9 @@ importers:
 
   packages/models:
     dependencies:
+      '@nowarelabs/persistence':
+        specifier: workspace:*
+        version: link:../persistence
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
@@ -791,6 +794,9 @@ importers:
 
   packages/services:
     dependencies:
+      '@nowarelabs/persistence':
+        specifier: workspace:*
+        version: link:../persistence
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared

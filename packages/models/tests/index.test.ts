@@ -1,5 +1,7 @@
 import { describe, expect, test, beforeAll } from "vite-plus/test";
-import type { ContextLike } from "@nowarelabs/shared";
+import type { ContextLike, ModelContext } from "@nowarelabs/shared";
+import { createModelContext } from "@nowarelabs/shared";
+import { type Transaction, withTransaction } from "@nowarelabs/persistence";
 import {
   BaseModel,
   SqlPart,
@@ -2111,5 +2113,199 @@ describe("Security hardening", () => {
       await model.create({ val: "a\\b'c" } as any);
       expect(boundParams[0]).toBe("a\\b'c");
     });
+  });
+});
+
+describe("cross-model context transaction", () => {
+  class TxModel extends BaseModel {
+    static columnTypes = { id: "integer", name: "text", title: "text" };
+    protected persistence: any;
+    protected getPersistence() {
+      return this.persistence;
+    }
+  }
+
+  function makeMockDb(captured: string[], returnRow: any = { id: 1, name: "Alice" }) {
+    return {
+      prepare: (sql: string) => ({
+        bind: (..._params: any[]) => ({
+          all: async () => {
+            captured.push(sql);
+            return { results: [returnRow] };
+          },
+        }),
+      }),
+    };
+  }
+
+  function registerAllCallbacks(model: TxModel, handlers: Record<string, (data: any) => void>) {
+    for (const [event, fn] of Object.entries(handlers)) {
+      (model as any).callbacks[event].push({ fn: fn.bind(model), options: undefined });
+    }
+  }
+
+  test("create defers callbacks to context transaction", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const tx: Transaction = { id: "test-tx", callbacks: [] };
+    const ctx = createModelContext();
+    const txCtx = { ...ctx, transaction: tx } as ModelContext;
+
+    const model = new TxModel({ db, table: "users", ctx: txCtx });
+    const fired: string[] = [];
+
+    registerAllCallbacks(model, {
+      afterCreateCommit: (data: any) => fired.push(`afterCreateCommit:${data?.name}`),
+      afterSaveCommit: (data: any) => fired.push(`afterSaveCommit:${data?.name}`),
+    });
+
+    await model.create({ name: "Alice" });
+
+    expect(fired).toEqual([]);
+    expect(tx.callbacks.length).toBeGreaterThan(0);
+
+    for (const cb of tx.callbacks) {
+      await cb();
+    }
+
+    expect(fired).toContain("afterCreateCommit:Alice");
+    expect(fired).toContain("afterSaveCommit:Alice");
+  });
+
+  test("update defers callbacks to context transaction", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured, { id: 1, name: "Bob" });
+    const tx: Transaction = { id: "test-tx", callbacks: [] };
+    const ctx = createModelContext();
+    const txCtx = { ...ctx, transaction: tx } as ModelContext;
+
+    const model = new TxModel({ db, table: "users", ctx: txCtx });
+    const fired: string[] = [];
+
+    registerAllCallbacks(model, {
+      afterUpdateCommit: (data: any) => fired.push(`afterUpdateCommit:${data?.name}`),
+    });
+
+    await model.update(1, { name: "Bob" });
+
+    expect(fired).toEqual([]);
+    expect(tx.callbacks.length).toBeGreaterThan(0);
+
+    for (const cb of tx.callbacks) {
+      await cb();
+    }
+
+    expect(fired).toContain("afterUpdateCommit:Bob");
+  });
+
+  test("destroy defers callbacks to context transaction", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const tx: Transaction = { id: "test-tx", callbacks: [] };
+    const ctx = createModelContext();
+    const txCtx = { ...ctx, transaction: tx } as ModelContext;
+
+    const model = new TxModel({ db, table: "users", ctx: txCtx });
+    const fired: string[] = [];
+
+    registerAllCallbacks(model, {
+      afterCommit: (data: any) => fired.push(`afterCommit:${data?.id}`),
+      afterDestroyCommit: (data: any) => fired.push(`afterDestroyCommit:${data?.id}`),
+    });
+
+    await model.delete(1);
+
+    expect(fired).toEqual([]);
+    expect(tx.callbacks.length).toBeGreaterThan(0);
+
+    for (const cb of tx.callbacks) {
+      await cb();
+    }
+
+    expect(fired).toContain("afterCommit:1");
+    expect(fired).toContain("afterDestroyCommit:1");
+  });
+
+  test("two models share same transaction callback queue", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured, { id: 1 });
+    const tx: Transaction = { id: "shared-tx", callbacks: [] };
+    const ctx = createModelContext();
+    const txCtx = { ...ctx, transaction: tx } as ModelContext;
+
+    const model1 = new TxModel({ db, table: "users", ctx: txCtx });
+    const model2 = new TxModel({ db, table: "posts", ctx: txCtx });
+    const fired: string[] = [];
+
+    registerAllCallbacks(model1, {
+      afterCreateCommit: () => fired.push("user-created"),
+    });
+    registerAllCallbacks(model2, {
+      afterCreateCommit: () => fired.push("post-created"),
+    });
+
+    await model1.create({ name: "Alice" });
+    await model2.create({ title: "Hello" });
+
+    expect(tx.callbacks.length).toBe(2);
+
+    for (const cb of tx.callbacks) {
+      await cb();
+    }
+
+    expect(fired).toContain("user-created");
+    expect(fired).toContain("post-created");
+  });
+
+  test("without context transaction, callbacks fire immediately", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const ctx = createModelContext();
+
+    const model = new TxModel({ db, table: "users", ctx });
+    const fired: string[] = [];
+
+    registerAllCallbacks(model, {
+      afterCreateCommit: () => fired.push("fired"),
+    });
+
+    await model.create({ name: "Alice" });
+
+    expect(fired).toEqual(["fired"]);
+  });
+
+  test("legacy model.transaction still works alongside context transactions", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const model = new TxModel({ db, table: "users" });
+
+    await model.transaction(async (m) => {
+      await m.create({ name: "Alice" });
+    });
+
+    expect(captured.some((s) => s.includes("BEGIN"))).toBe(true);
+    expect(captured.some((s) => s.includes("COMMIT"))).toBe(true);
+  });
+
+  test("withTransaction integration: full roundtrip with model operations", async () => {
+    const captured: string[] = [];
+    const db = makeMockDb(captured);
+    const ctx = createModelContext();
+    const fired: string[] = [];
+
+    await withTransaction(ctx, db, async (txCtx) => {
+      const model = new TxModel({ db, table: "users", ctx: txCtx });
+
+      registerAllCallbacks(model, {
+        afterCreateCommit: () => fired.push("committed"),
+      });
+
+      await model.create({ name: "Alice" });
+      return "ok";
+    });
+
+    expect(captured.some((s) => s.includes("BEGIN"))).toBe(true);
+    expect(captured.some((s) => s.includes("COMMIT"))).toBe(true);
+    expect(fired).toEqual(["committed"]);
   });
 });

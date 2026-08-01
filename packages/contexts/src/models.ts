@@ -21,5 +21,5 @@ export function enhanceModelContext(
   ctx: ServiceContext,
   overrides?: Partial<Pick<ModelContext, "transaction">>,
 ): ModelContext {
-  return { ...ctx, transaction: undefined, ...overrides };
+  return { ...ctx, ...overrides };
 }

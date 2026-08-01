@@ -1,4 +1,5 @@
 import type { EnvLike, ModelContext, RequestLike } from "@nowarelabs/shared";
+import type { Transaction } from "@nowarelabs/persistence";
 
 export type DatabaseInstance = {
   prepare?: (sql: string) => {
@@ -2045,9 +2046,18 @@ export abstract class BaseModel<
       );
       this._transactionOps.push({ context: "create", data: record });
     } else {
-      await this.runCallbacks("afterCommit", "create", record);
-      await this.runCallbacks("afterCreateCommit", "create", record);
-      await this.runCallbacks("afterSaveCommit", "create", record);
+      const activeTx = this.ctx?.transaction as Transaction | undefined;
+      if (activeTx) {
+        activeTx.callbacks.push(async () => {
+          await this.runCallbacks("afterCommit", "create", record);
+          await this.runCallbacks("afterCreateCommit", "create", record);
+          await this.runCallbacks("afterSaveCommit", "create", record);
+        });
+      } else {
+        await this.runCallbacks("afterCommit", "create", record);
+        await this.runCallbacks("afterCreateCommit", "create", record);
+        await this.runCallbacks("afterSaveCommit", "create", record);
+      }
     }
     this.logger?.info(`[CREATED] ${tableName}#${(record as any).id}`);
     return record;
@@ -2116,9 +2126,18 @@ export abstract class BaseModel<
       );
       this._transactionOps.push({ context: "update", data: record });
     } else {
-      await this.runCallbacks("afterCommit", "update", record);
-      await this.runCallbacks("afterUpdateCommit", "update", record);
-      await this.runCallbacks("afterSaveCommit", "update", record);
+      const activeTx = this.ctx?.transaction as Transaction | undefined;
+      if (activeTx) {
+        activeTx.callbacks.push(async () => {
+          await this.runCallbacks("afterCommit", "update", record);
+          await this.runCallbacks("afterUpdateCommit", "update", record);
+          await this.runCallbacks("afterSaveCommit", "update", record);
+        });
+      } else {
+        await this.runCallbacks("afterCommit", "update", record);
+        await this.runCallbacks("afterUpdateCommit", "update", record);
+        await this.runCallbacks("afterSaveCommit", "update", record);
+      }
     }
     this.logger?.info(`[UPDATED] ${tableName}#${id}`);
     return record;
@@ -2151,8 +2170,16 @@ export abstract class BaseModel<
         );
         this._transactionOps.push({ context: "destroy", data: { id } });
       } else {
-        await this.runCallbacks("afterCommit", "destroy", { id });
-        await this.runCallbacks("afterDestroyCommit", "destroy", { id });
+        const activeTx = this.ctx?.transaction as Transaction | undefined;
+        if (activeTx) {
+          activeTx.callbacks.push(async () => {
+            await this.runCallbacks("afterCommit", "destroy", { id });
+            await this.runCallbacks("afterDestroyCommit", "destroy", { id });
+          });
+        } else {
+          await this.runCallbacks("afterCommit", "destroy", { id });
+          await this.runCallbacks("afterDestroyCommit", "destroy", { id });
+        }
       }
       this.logger?.info(`[DELETED] ${tableName}#${id}`);
     }
