@@ -1031,6 +1031,50 @@ describe("C4 Model - cfour package", () => {
       expect(events[0].elementId).toBe("pre");
       unsub();
     });
+
+    test("a throwing batch rolls back workspace mutations", () => {
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+          BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+          throw new Error("batch failed");
+        });
+      }).toThrow("batch failed");
+      // The workspace is untouched — no half-applied mutations linger.
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
+    });
+
+    test("a caught inner batch failure rolls back only the inner mutations", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.batch(() => {
+        BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        expect(() => {
+          BaseCfour.batch(() => {
+            BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+            throw new Error("inner failed");
+          });
+        }).toThrow("inner failed");
+        BaseCfour.addSoftwareSystem({ id: "s3", name: "S3" });
+      });
+      // Inner mutation rolled back; outer mutations committed and flushed.
+      expect(BaseCfour.getWorkspace().softwareSystems.map((s) => s.id)).toEqual(["s1", "s3"]);
+      expect(events.map((e) => e.elementId)).toEqual(["s1", "s3"]);
+      unsub();
+    });
+
+    test("an uncaught inner batch failure rolls back everything since the outer batch began", () => {
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+          BaseCfour.batch(() => {
+            BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+            throw new Error("inner failed");
+          });
+        });
+      }).toThrow("inner failed");
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
+    });
   });
 
   describe("Behavior Field", () => {

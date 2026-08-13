@@ -108,18 +108,29 @@ export abstract class BaseCfour<
       this._eventLog.splice(0, this._eventLog.length - this._eventLogMax);
     }
     if (this._eventStorage) {
-      this._eventStorage.append(stamped).catch(() => {});
+      this._eventStorage.append(stamped).catch((e) => {
+        // Fire-and-forget persistence: don't block the mutation, but never
+        // let a failing event-history adapter fail silently.
+        console.warn(
+          `[cfour] failed to persist change event to storage: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      });
     }
   }
 
   /**
-   * Executes `fn` inside a transaction that defers all change notifications
-   * until the callback completes. Notifications are flushed in the order
-   * they were queued. Nested calls to `batch` are no-ops (the outermost
-   * batch handles the flush).
+   * Executes `fn` inside an atomic transaction: change notifications are
+   * deferred until the callback completes, and every workspace mutation made
+   * inside the callback is rolled back if it throws. Notifications are
+   * flushed in order when the outermost batch completes.
+   *
+   * Nested calls to `batch` share the outermost flush, but each level takes
+   * its own snapshot: an inner failure rolls back only the mutations made
+   * since that inner call began (and rethrows, aborting the outer callback),
+   * so outer mutations are never left dangling with events wiped.
    *
    * ```ts
-   * BaseCfour.batch("default", () => {
+   * BaseCfour.batch(() => {
    *   addComponent({ ... })
    *   addComponent({ ... })
    *   // notifications are deferred
@@ -128,12 +139,18 @@ export abstract class BaseCfour<
    * ```
    */
   static batch(fn: () => void) {
+    const snapshot = this._snapshotWorkspaces();
+    const queueStart = this._batchQueue.length;
     this._batchDepth++;
     try {
       fn();
     } catch (e) {
-      // Discard queued events — the batch didn't complete atomically.
-      this._batchQueue.length = 0;
+      // Roll back workspace mutations and discard only the events queued
+      // since this batch began — a failed batch must not leave silent state
+      // drift between the workspace and anything persisting off the event
+      // stream (a caught inner failure keeps the outer batch's events).
+      this._restoreWorkspaces(snapshot);
+      this._batchQueue.length = queueStart;
       throw e;
     } finally {
       this._batchDepth--;
@@ -147,6 +164,15 @@ export abstract class BaseCfour<
         }
       }
     }
+  }
+
+  private static _snapshotWorkspaces(): Map<string, C4Workspace> {
+    return new Map(JSON.parse(JSON.stringify(Array.from(this._workspaces))));
+  }
+
+  private static _restoreWorkspaces(snapshot: Map<string, C4Workspace>) {
+    this._workspaces.clear();
+    for (const [name, ws] of snapshot) this._workspaces.set(name, ws);
   }
 
   /** Resets a specific C4 workspace or the default one. */
@@ -350,21 +376,20 @@ export abstract class BaseCfour<
     workspaceName = "default",
   ) {
     const ws = this.getWorkspace(workspaceName);
-    const flat = flattenWorkspace(ws);
-    const node = flat.nodes.find((n) => n.id === id);
-    if (node) {
-      const before = snapshotNode(node);
-      Object.assign(node, patch);
-      const found = findNodeWithAncestry(ws, id);
-      const changes = getObjectChanges(before, node);
+    // Single tree walk yields both the node and its ancestry path.
+    const found = findNodeWithAncestry(ws, id);
+    if (found) {
+      const before = snapshotNode(found.node);
+      Object.assign(found.node, patch);
+      const changes = getObjectChanges(before, found.node);
       this._notify({
         op: "update",
         workspaceName,
         elementId: id,
-        elementKind: node.kind,
-        path: found?.path ?? [],
+        elementKind: found.node.kind,
+        path: found.path,
         before,
-        after: snapshotNode(node),
+        after: snapshotNode(found.node),
         changes,
       });
     }
