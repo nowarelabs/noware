@@ -9,6 +9,8 @@ import type {
   RegisteredHook,
 } from "@nowarelabs/shared";
 import { Logger } from "@nowarelabs/telemetry";
+import { createHash } from "node:crypto";
+import { readFile, unlink } from "node:fs/promises";
 
 export abstract class BaseCfour<
   Ctx extends CfourContext = CfourContext,
@@ -731,14 +733,16 @@ export abstract class BaseCfour<
 
   /** Serialises the workspace and persists it via the storage adapter. */
   static async saveSnapshot(workspaceName = "default"): Promise<void> {
-    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    if (!this._storage)
+      throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     const json = this.export(workspaceName);
     await this._storage.put(`workspace:${workspaceName}`, json);
   }
 
   /** Loads a workspace from storage and imports it (triggers an "import" event). */
   static async loadSnapshot(workspaceName = "default"): Promise<void> {
-    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    if (!this._storage)
+      throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     const json = await this._storage.get(`workspace:${workspaceName}`);
     if (json) {
       this.import(json, workspaceName);
@@ -747,13 +751,15 @@ export abstract class BaseCfour<
 
   /** Deletes a persisted workspace snapshot. */
   static async deleteSnapshot(workspaceName = "default"): Promise<void> {
-    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    if (!this._storage)
+      throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     await this._storage.delete(`workspace:${workspaceName}`);
   }
 
   /** Lists all persisted workspace snapshot keys. */
   static async listSnapshots(): Promise<string[]> {
-    if (!this._storage) throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
+    if (!this._storage)
+      throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     const keys = await this._storage.list("workspace:");
     return keys.map((k) => k.replace(/^workspace:/, ""));
   }
@@ -860,8 +866,8 @@ export abstract class BaseCfour<
 
   // ── Event History ─────────────────────────────────────────
 
-  /** Configures the persistent event storage adapter. */
-  static setEventStorage(storage: CfourEventStorage) {
+  /** Configures the persistent event storage adapter. Pass `null` to detach it. */
+  static setEventStorage(storage: CfourEventStorage | null) {
     this._eventStorage = storage;
   }
 
@@ -902,7 +908,8 @@ export abstract class BaseCfour<
       return this._eventStorage.query(filter);
     }
     let results = [...this._eventLog];
-    if (filter.workspaceName) results = results.filter((e) => e.workspaceName === filter.workspaceName);
+    if (filter.workspaceName)
+      results = results.filter((e) => e.workspaceName === filter.workspaceName);
     if (filter.op) results = results.filter((e) => e.op === filter.op);
     if (filter.elementId) results = results.filter((e) => e.elementId === filter.elementId);
     if (filter.elementKind) results = results.filter((e) => e.elementKind === filter.elementKind);
@@ -1059,6 +1066,302 @@ export abstract class BaseCfour<
         },
         workspaceName,
       );
+    }
+  }
+
+  // ── Plan/Apply Generator Pipeline ─────────────────────────
+  //
+  // Two-workspace convention:
+  //   - "desired" — the editable workspace. Humans (via GUI), scripts, and
+  //     agents mutate ONLY this one, always inside `BaseCfour.batch(...)`.
+  //   - "applied" — a snapshot of what was last successfully generated to
+  //     disk. Only `planAndApply` is allowed to write to it, via
+  //     `resetWorkspace` + `import(export(...))`, exactly as the existing
+  //     import/export methods already support.
+  //
+  // The C4 workspace is the single source of truth for code generation.
+  // Nothing outside this class ever writes generated files directly; all
+  // writes flow through `planAndApply`, mirroring `terraform plan/apply`.
+
+  private static _generators: Map<string, Generator> = new Map();
+
+  /**
+   * Registers a generator for a C4 element kind, optionally narrowed by
+   * technology or stereotype.
+   *
+   * Key format: `"<C4ElementKind>"` (e.g. `"Component"`), or
+   * `"<C4ElementKind>:<technology>"` (e.g. `"Component:React"`), or
+   * `"<C4ElementKind>:<stereotype>"` (e.g. `"Class:entity"`). See
+   * `resolveGenerator` for the resolution order.
+   *
+   * **PURITY CONTRACT — READ CAREFULLY.** Generator bodies MUST be pure:
+   * the same `GeneratorContext` must always produce byte-identical
+   * `GeneratorResult` content. No `Date.now()`, `Math.random()`,
+   * `crypto.randomUUID()`, or ambient reads (clock, env vars, network, other
+   * files) inside generator bodies. This is the single biggest risk to the
+   * idempotence guarantee of `planAndApply` — drift detection and
+   * skip-on-unchanged behavior assume that regenerating a node rewrites
+   * exactly the same bytes. Use `assertGeneratorIsPure` in tests to verify
+   * this contract.
+   */
+  static registerGenerator(key: string, gen: Generator): void {
+    this._generators.set(key, gen);
+  }
+
+  /**
+   * Resolves the most specific generator registered for a node.
+   * Resolution order: stereotype match (when the node has a `stereotype`) >
+   * technology match (when the node has a `technology`) > bare kind match.
+   */
+  static resolveGenerator(node: C4Node): Generator | undefined {
+    if ("stereotype" in node && node.stereotype) {
+      const gen = this._generators.get(`${node.kind}:${node.stereotype}`);
+      if (gen) return gen;
+    }
+    const technology = getTechnology(node);
+    if (technology) {
+      const gen = this._generators.get(`${node.kind}:${technology}`);
+      if (gen) return gen;
+    }
+    return this._generators.get(node.kind);
+  }
+
+  /**
+   * Derives a stable, readable relationship id from its endpoints and label
+   * (label is slugified if it contains spaces). Regenerating the same logical
+   * relationship from a script/DSL always produces the same id, avoiding
+   * duplicate relationships on re-apply.
+   */
+  static deriveRelationshipId(sourceId: string, destinationId: string, label: string): string {
+    const slug = label
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]/g, "");
+    return `${sourceId}--${destinationId}--${slug}`;
+  }
+
+  /**
+   * Returns the sha256 hex digest of a file's contents, or `""` when the file
+   * does not exist (never throws).
+   */
+  static async hashFile(path: string): Promise<string> {
+    try {
+      const data = await readFile(path);
+      return createHash("sha256").update(data).digest("hex");
+    } catch {
+      return "";
+    }
+  }
+
+  /**
+   * Returns the list of paths whose current on-disk hash no longer matches the
+   * manifest's recorded hash (i.e. hand-edited since last generation).
+   * Deleted files are reported as drift (missing files hash to `""`).
+   */
+  static async detectDrift(entry: ManifestEntry): Promise<string[]> {
+    const drifted: string[] = [];
+    for (const [path, recordedHash] of Object.entries(entry.files)) {
+      const currentHash = await this.hashFile(path);
+      if (currentHash !== recordedHash) drifted.push(path);
+    }
+    return drifted;
+  }
+
+  /**
+   * Returns the touched nodes (added + modified) from a diff in topological
+   * order for apply: when a relationship's endpoints are BOTH touched, the
+   * destination is generated before the source.
+   *
+   * Throws a clear `Error` naming the cycle when the touched subgraph contains
+   * a dependency cycle — that means the architecture graph itself is invalid
+   * and must fail loudly rather than being silently reordered.
+   */
+  static topoOrderForApply(diffResult: C4WorkspaceDiff, workspaceName = "desired"): C4Node[] {
+    const touched = new Map<string, C4Node>();
+    for (const node of diffResult.nodes.added) touched.set(node.id, node);
+    for (const mod of diffResult.nodes.modified) touched.set(mod.after.id, mod.after);
+
+    const dependsOn = new Map<string, Set<string>>();
+    for (const id of touched.keys()) dependsOn.set(id, new Set());
+
+    for (const rel of this.findRelationships({}, workspaceName)) {
+      if (touched.has(rel.sourceId) && touched.has(rel.destinationId)) {
+        dependsOn.get(rel.sourceId)!.add(rel.destinationId);
+      }
+    }
+
+    const order: C4Node[] = [];
+    const state = new Map<string, 1 | 2>(); // 1 = in-progress, 2 = done
+    const path: string[] = [];
+
+    const visit = (id: string) => {
+      if (state.get(id) === 2) return;
+      if (state.get(id) === 1) {
+        const cycleStart = path.indexOf(id);
+        const cycle = [...path.slice(cycleStart), id];
+        throw new Error(`Dependency cycle detected among touched nodes: ${cycle.join(" -> ")}`);
+      }
+      state.set(id, 1);
+      path.push(id);
+      for (const dep of dependsOn.get(id)!) visit(dep);
+      path.pop();
+      state.set(id, 2);
+      order.push(touched.get(id)!);
+    };
+
+    for (const id of touched.keys()) visit(id);
+    return order;
+  }
+
+  /**
+   * Main generator pipeline — mirrors `terraform plan`/`terraform apply`.
+   *
+   * Reads "desired" and "applied" workspaces and the provided manifest to
+   * regenerate the touched nodes in dependency order, then — only after every
+   * step succeeds — promotes "desired" to "applied". If anything throws,
+   * "applied" and the returned manifest are left untouched so the next call
+   * retries against the same diff.
+   *
+   * Steps: validate ("desired") → diff ("applied" vs "desired") → remove files
+   * for removed nodes → regenerate added/modified nodes in topological order
+   * (honoring drift + `onDrift`) → commit.
+   *
+   * @param manifest The current `GenerationManifest` (persist it externally
+   *   between runs — it is returned updated and must be stored by the caller).
+   * @param options  Drift-handling callback.
+   * @returns The updated manifest reflecting what is now on disk.
+   */
+  static async planAndApply(
+    manifest: GenerationManifest,
+    options?: ApplyOptions,
+  ): Promise<GenerationManifest> {
+    // 1. Validate — hard stop on errors, warn-only on lint.
+    const validation = this.validate("desired");
+    const errors = validation.filter((v) => v.severity === "error");
+    if (errors.length > 0) {
+      throw new Error(
+        `planAndApply aborted: "desired" workspace failed validation.\n${errors
+          .map((e) => `  - [${e.id}] ${e.message}`)
+          .join("\n")}`,
+      );
+    }
+    for (const warning of this.lint(undefined, "desired")) {
+      console.warn(`[planAndApply:lint] ${warning.message}`);
+    }
+
+    // 2. Plan.
+    const diff = this.diff("applied", "desired");
+    const n = diff.nodes;
+    const r = diff.relationships;
+    console.log(
+      `[planAndApply] nodes +${n.added.length} ~${n.modified.length} -${n.removed.length}; ` +
+        `relationships +${r.added.length} ~${r.modified.length} -${r.removed.length}`,
+    );
+
+    const nextManifest: GenerationManifest = { ...manifest };
+
+    // 3. Apply removals first — delete every file a removed node owns.
+    for (const node of diff.nodes.removed) {
+      const entry = nextManifest[node.id];
+      if (!entry) continue;
+      for (const path of Object.keys(entry.files)) {
+        try {
+          await unlink(path);
+        } catch (e) {
+          if ((e as { code?: string })?.code !== "ENOENT") throw e;
+        }
+      }
+      delete nextManifest[node.id];
+    }
+
+    // 4. Apply additions/modifications in dependency order.
+    for (const node of this.topoOrderForApply(diff, "desired")) {
+      const existing = nextManifest[node.id];
+      if (existing) {
+        const driftedFiles = await this.detectDrift(existing);
+        if (driftedFiles.length > 0) {
+          const decision = options?.onDrift?.(node.id, driftedFiles) ?? "skip";
+          if (decision === "skip") {
+            console.warn(
+              `[planAndApply] Skipping ${node.id}: drifted files: ${driftedFiles.join(", ")}`,
+            );
+            continue;
+          }
+        }
+      }
+
+      const gen = this.resolveGenerator(node);
+      if (!gen) {
+        console.warn(
+          `[planAndApply] No generator for ${node.kind} "${node.id}"; skipping (partial coverage allowed)`,
+        );
+        continue;
+      }
+
+      const result = await gen({
+        node,
+        ancestors: this.getAncestors(node.id, "desired"),
+        relationships: this.findRelationships({ sourceId: node.id }, "desired"),
+      });
+
+      const files: Record<string, string> = {};
+      for (const path of result.filesWritten) {
+        files[path] = await this.hashFile(path);
+      }
+      nextManifest[node.id] = { elementId: node.id, files };
+    }
+
+    // 5. Commit — promote "desired" to "applied" only after everything above
+    //    succeeded. On throw, "applied" remains the previous snapshot.
+    this.resetWorkspace("applied");
+    this.import(this.export("desired"), "applied");
+
+    // 6. Return the updated manifest.
+    return nextManifest;
+  }
+
+  /**
+   * Dev-only helper for tests: runs `gen(ctx)` twice with the identical context
+   * and throws a clear `Error` if the two runs differ in the set of written
+   * paths or in the content of any written file — verifying the purity
+   * contract required by `registerGenerator`.
+   */
+  static async assertGeneratorIsPure(gen: Generator, ctx: GeneratorContext): Promise<void> {
+    const first = await gen(ctx);
+
+    // Snapshot the first run's output BEFORE running again — the second run
+    // overwrites the same files on disk, so comparing after both runs would
+    // compare each file with itself.
+    const firstContent = new Map<string, string | null>();
+    for (const path of first.filesWritten) {
+      firstContent.set(path, await readFile(path, "utf8").catch(() => null));
+    }
+
+    const second = await gen(ctx);
+
+    const listsEqual = (a: string[], b: string[]) =>
+      a.length === b.length && a.every((p, i) => p === b[i]);
+
+    if (!listsEqual(first.filesWritten, second.filesWritten)) {
+      throw new Error(
+        `Generator is not pure: filesWritten differs between runs.\n` +
+          `  first:  ${first.filesWritten.join(", ")}\n` +
+          `  second: ${second.filesWritten.join(", ")}`,
+      );
+    }
+    if (!listsEqual(first.filesDeleted, second.filesDeleted)) {
+      throw new Error(
+        `Generator is not pure: filesDeleted differs between runs.\n` +
+          `  first:  ${first.filesDeleted.join(", ")}\n` +
+          `  second: ${second.filesDeleted.join(", ")}`,
+      );
+    }
+
+    for (const path of first.filesWritten) {
+      const secondContent = await readFile(path, "utf8").catch(() => null);
+      if (firstContent.get(path) !== secondContent) {
+        throw new Error(`Generator is not pure: content of "${path}" differs between runs.`);
+      }
     }
   }
 
@@ -1372,6 +1675,48 @@ export interface C4WorkspaceDiff {
   relationships: C4DiffResult<C4Relationship>;
 }
 
+// ----------------------------------------------------------------
+// Generator pipeline — C4 workspace as single source of truth
+// ----------------------------------------------------------------
+
+/** Context handed to a generator for a single node during `planAndApply`. */
+export interface GeneratorContext {
+  node: C4Node;
+  ancestors: C4Node[];
+  relationships: C4Relationship[];
+}
+
+/**
+ * Result of running a generator for one node.
+ * `filesWritten` are absolute paths to files the generator wrote (or updated);
+ * `filesDeleted` are absolute paths to files it removed.
+ */
+export interface GeneratorResult {
+  filesWritten: string[]; // absolute paths
+  filesDeleted: string[];
+}
+
+/**
+ * A code generator for a single C4 node.
+ * MUST be pure: the same `GeneratorContext` always yields byte-identical
+ * output — see the purity contract on `BaseCfour.registerGenerator`.
+ */
+export type Generator = (ctx: GeneratorContext) => Promise<GeneratorResult>;
+
+/** Tracks which files a node owns on disk and their hash at generation time. */
+export interface ManifestEntry {
+  elementId: string;
+  files: Record<string, string>; // path -> sha256 hash at generation time
+}
+
+/** The full generation manifest: node id -> its owned files. */
+export type GenerationManifest = Record<string, ManifestEntry>;
+
+/** Callback options for `planAndApply`. */
+export interface ApplyOptions {
+  onDrift?: (elementId: string, driftedFiles: string[]) => "overwrite" | "skip";
+}
+
 /**
  * Compares two C4 workspaces and returns a structural diff.
  * Useful for visualizing changes between architecture versions.
@@ -1677,8 +2022,7 @@ function findNodeWithAncestry(
     for (const container of system.containers ?? []) {
       if (container.id === id) return { node: container, path: [system.id] };
       for (const component of container.components ?? []) {
-        if (component.id === id)
-          return { node: component, path: [system.id, container.id] };
+        if (component.id === id) return { node: component, path: [system.id, container.id] };
         for (const codeEl of component.codeElements ?? []) {
           if (codeEl.id === id)
             return { node: codeEl, path: [system.id, container.id, component.id] };

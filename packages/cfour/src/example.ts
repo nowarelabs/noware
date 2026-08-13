@@ -3,6 +3,7 @@
 // ============================================================
 
 import {
+  BaseCfour,
   c4ToReactFlow,
   buildSystemContextView,
   buildContainerView,
@@ -10,6 +11,9 @@ import {
   buildCodeView,
 } from "./index.ts";
 import type { C4Workspace, C4ReactFlowNode, C4ReactFlowEdge } from "./index.ts";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // ----------------------------------------------------------------
 // 1. Define the workspace (Levels 1–4)
@@ -324,7 +328,7 @@ console.log(`Component — ${componentNodes.length} nodes`);
 const codeView = buildCodeView(workspace, "accounts-controller");
 const { nodes: codeNodes, edges: codeEdges } = c4ToReactFlow(workspace, codeView, {
   // For code views, adjust node height dynamically based on member count
-  nodeTransformer: (node, el) => {
+  nodeTransformer: (node, _el) => {
     const memberCount = node.data.members?.length ?? 0;
     const memberRowHeight = 22;
     const headerHeight = 60;
@@ -384,3 +388,62 @@ codeEdges.forEach((e: C4ReactFlowEdge) =>
 // };
 //
 // <ReactFlow nodes={codeNodes} edges={codeEdges} nodeTypes={nodeTypes} />
+
+// ----------------------------------------------------------------
+// 7. Code generation via planAndApply
+//    The C4 workspace is the single source of truth for generated code.
+//    Register pure generators, run planAndApply, and every write flows
+//    through the pipeline (nothing outside BaseCfour writes files).
+// ----------------------------------------------------------------
+
+const generatedDir = await mkdtemp(join(tmpdir(), "banking-generated-"));
+console.log(`\n[planAndApply] writing generated files under ${generatedDir}`);
+
+// Load the example model into the "desired" workspace (the editable one).
+BaseCfour.import(JSON.stringify(workspace), "desired");
+
+// A pure generator: the same context always yields byte-identical output.
+// No Date.now(), no Math.random(), no ambient reads inside the body —
+// determinism is what makes re-apply idempotent.
+BaseCfour.registerGenerator("Container:Java / Spring Boot", async (ctx) => {
+  const file = join(generatedDir, `${ctx.node.id}.java`);
+  const header = ctx.ancestors.map((a) => `// depends-on: ${a.name}`).join("\n");
+  const className = ctx.node.name.replace(/\s+/g, "");
+  await writeFile(
+    file,
+    ["// GENERATED — do not edit.", header, `public final class ${className} {}`, ""].join("\n"),
+  );
+  return { filesWritten: [file], filesDeleted: [] };
+});
+
+// Deterministic ids: re-deriving a relationship id always yields the same
+// value, so regenerating the same logical edge never duplicates it.
+console.log(
+  `[planAndApply] relationship id: ${BaseCfour.deriveRelationshipId("api", "db", "Reads from and writes to")}`,
+);
+
+// Plan + apply: validate, diff "applied" vs "desired", generate in
+// dependency (topological) order, then promote "desired" to "applied".
+const manifest = await BaseCfour.planAndApply({});
+console.log(`[planAndApply] manifest entries: ${Object.keys(manifest).length}`);
+
+// Idempotence: a second run with no mutations writes nothing new.
+const secondManifest = await BaseCfour.planAndApply(manifest);
+console.log(
+  `[planAndApply] second apply is a no-op: ${JSON.stringify(secondManifest) === JSON.stringify(manifest)}`,
+);
+
+// Dev-only purity self-check for generator authors and tests.
+const apiContainer = BaseCfour.findNodes({ technology: "Spring Boot" }, "desired").find(
+  (n) => n.kind === "Container",
+)!;
+const resolvedGen = BaseCfour.resolveGenerator(apiContainer)!;
+await BaseCfour.assertGeneratorIsPure(resolvedGen, {
+  node: apiContainer,
+  ancestors: BaseCfour.getAncestors(apiContainer.id, "desired"),
+  relationships: BaseCfour.findRelationships({ sourceId: apiContainer.id }, "desired"),
+});
+console.log("[planAndApply] generator purity: verified");
+
+// Clean up the demo's generated files.
+await rm(generatedDir, { recursive: true, force: true });
