@@ -129,6 +129,12 @@ export abstract class BaseCfour<
    * since that inner call began (and rethrows, aborting the outer callback),
    * so outer mutations are never left dangling with events wiped.
    *
+   * COST NOTE: each level snapshots the full `_workspaces` map via
+   * `structuredClone` so it can restore any workspace on failure — a batch
+   * that touches a growing `"desired"` clones it (and `"applied"`) on every
+   * call. Prefer ONE `batch()` per logical step over wrapping each
+   * individual mutation, so the clone happens once per step, not per call.
+   *
    * ```ts
    * BaseCfour.batch(() => {
    *   addComponent({ ... })
@@ -167,7 +173,9 @@ export abstract class BaseCfour<
   }
 
   private static _snapshotWorkspaces(): Map<string, C4Workspace> {
-    return new Map(JSON.parse(JSON.stringify(Array.from(this._workspaces))));
+    // structuredClone is meaningfully faster than the JSON round-trip used
+    // elsewhere, and workspaces are pure data so semantics are identical.
+    return structuredClone(this._workspaces);
   }
 
   private static _restoreWorkspaces(snapshot: Map<string, C4Workspace>) {

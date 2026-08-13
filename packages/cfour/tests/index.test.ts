@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach } from "vite-plus/test";
+import { describe, expect, test, beforeEach, afterEach, vi } from "vite-plus/test";
 import type { CfourContext } from "@nowarelabs/shared";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -1075,6 +1075,22 @@ describe("C4 Model - cfour package", () => {
       }).toThrow("inner failed");
       expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
     });
+
+    test("a throwing batch rolls back non-default workspaces and drops workspaces created inside it", () => {
+      BaseCfour.addSoftwareSystem({ id: "keep", name: "Keep" }, "desired");
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.resetWorkspace("created-in-batch");
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" }, "desired");
+          throw new Error("batch failed");
+        });
+      }).toThrow("batch failed");
+
+      // Pre-existing content in a non-default workspace is restored…
+      expect(BaseCfour.getWorkspace("desired").softwareSystems.map((s) => s.id)).toEqual(["keep"]);
+      // …and a workspace born inside the failed batch no longer exists.
+      expect(BaseCfour.getWorkspaceNames()).not.toContain("created-in-batch");
+    });
   });
 
   describe("Behavior Field", () => {
@@ -1711,6 +1727,29 @@ describe("C4 Model - cfour package", () => {
       expect(history.length).toBe(1);
       expect(mock.events.length).toBe(1);
       BaseCfour.setEventStorage(null);
+    });
+
+    test("a failing event storage append warns instead of failing silently", async () => {
+      const failing: CfourEventStorage = {
+        async append() {
+          throw new Error("disk full");
+        },
+        async query() {
+          return [];
+        },
+        async clear() {},
+      };
+      BaseCfour.setEventStorage(failing);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+        // The append is fire-and-forget; let the rejection propagate to its catch.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("disk full"));
+      } finally {
+        warn.mockRestore();
+        BaseCfour.setEventStorage(null);
+      }
     });
   });
 
