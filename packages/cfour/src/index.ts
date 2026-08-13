@@ -1083,6 +1083,11 @@ export abstract class BaseCfour<
   // Nothing outside this class ever writes generated files directly; all
   // writes flow through `planAndApply`, mirroring `terraform plan/apply`.
 
+  // NOTE: deliberately a single static map shared by EVERY `BaseCfour`
+  // subclass — one global architecture model, one global generator registry.
+  // Unlike `beforeHooks`/`afterHooks` (which use `Object.hasOwn(this, ...)`
+  // for per-subclass isolation), generator keys must be unique repo-wide, so
+  // two subclasses share the same registry by design.
   private static _generators: Map<string, Generator> = new Map();
 
   /**
@@ -1142,14 +1147,25 @@ export abstract class BaseCfour<
 
   /**
    * Returns the sha256 hex digest of a file's contents, or `""` when the file
-   * does not exist (never throws).
+   * does not exist. Only a missing file maps to `""` — any other read error
+   * (permission, I/O) propagates so drift is never mistaken for a hand-edit.
    */
   static async hashFile(path: string): Promise<string> {
     try {
       const data = await readFile(path);
       return createHash("sha256").update(data).digest("hex");
-    } catch {
-      return "";
+    } catch (e) {
+      if ((e as { code?: string })?.code === "ENOENT") return "";
+      throw e;
+    }
+  }
+
+  /** Best-effort delete: ignores already-missing files, surfaces other errors. */
+  static async unlinkIfExists(path: string): Promise<void> {
+    try {
+      await unlink(path);
+    } catch (e) {
+      if ((e as { code?: string })?.code !== "ENOENT") throw e;
     }
   }
 
@@ -1218,9 +1234,16 @@ export abstract class BaseCfour<
    *
    * Reads "desired" and "applied" workspaces and the provided manifest to
    * regenerate the touched nodes in dependency order, then — only after every
-   * step succeeds — promotes "desired" to "applied". If anything throws,
-   * "applied" and the returned manifest are left untouched so the next call
-   * retries against the same diff.
+   * step succeeds — promotes "desired" to "applied". If anything throws, the
+   * `"applied"` workspace and the returned manifest are left untouched so the
+   * next call retries against the same diff.
+   *
+   * KNOWN LIMITATION (transactionality): file writes/deletes in steps 3–4 are
+   * applied to disk immediately and are not rolled back on a mid-run failure
+   * — the manifest/caller only sees a consistent picture when the function
+   * returns. Aborted runs self-heal on retry: removals re-attempt `unlink`
+   * and hit the swallowed `ENOENT`, and regenerated nodes are pure, so a
+   * retry rewrites byte-identical content.
    *
    * Steps: validate ("desired") → diff ("applied" vs "desired") → remove files
    * for removed nodes → regenerate added/modified nodes in topological order
@@ -1265,11 +1288,7 @@ export abstract class BaseCfour<
       const entry = nextManifest[node.id];
       if (!entry) continue;
       for (const path of Object.keys(entry.files)) {
-        try {
-          await unlink(path);
-        } catch (e) {
-          if ((e as { code?: string })?.code !== "ENOENT") throw e;
-        }
+        await this.unlinkIfExists(path);
       }
       delete nextManifest[node.id];
     }
@@ -1308,6 +1327,18 @@ export abstract class BaseCfour<
       for (const path of result.filesWritten) {
         files[path] = await this.hashFile(path);
       }
+
+      // Remove files the generator explicitly deleted, plus files this node
+      // used to own but no longer writes (output set shrank). Without this,
+      // old files drop out of the manifest but linger on disk as orphans.
+      for (const path of result.filesDeleted) {
+        await this.unlinkIfExists(path);
+      }
+      const previousFiles = existing ? Object.keys(existing.files) : [];
+      for (const path of previousFiles) {
+        if (!(path in files)) await this.unlinkIfExists(path);
+      }
+
       nextManifest[node.id] = { elementId: node.id, files };
     }
 

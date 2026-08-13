@@ -1933,6 +1933,60 @@ describe("C4 Model - cfour package", () => {
       expect(await readFile(pCon, "utf8")).toBe('module.exports = "con1";');
     });
 
+    test("a generator's filesDeleted are honored — files are removed and the manifest forgets them", async () => {
+      const pLegacy = join(tmp, "comp1.legacy.ts");
+      const pCurrent = join(tmp, "comp1.ts");
+      seedDesired();
+      BaseCfour.registerGenerator("Component:ts", async () => {
+        await writeFile(pCurrent, "current");
+        await writeFile(pLegacy, "legacy");
+        return { filesWritten: [pCurrent, pLegacy], filesDeleted: [] };
+      });
+      const m1 = await BaseCfour.planAndApply({});
+      expect(m1.comp1?.files[pLegacy]).toBeDefined();
+
+      // The generator stops writing pLegacy and signals it as deleted.
+      BaseCfour.updateElement("comp1", { name: "v2" }, "desired");
+      BaseCfour.registerGenerator("Component:ts", async () => {
+        await writeFile(pCurrent, "current-v2");
+        return { filesWritten: [pCurrent], filesDeleted: [pLegacy] };
+      });
+      const m2 = await BaseCfour.planAndApply(m1);
+
+      expect(m2.comp1?.files[pCurrent]).toBeDefined();
+      expect(m2.comp1?.files[pLegacy]).toBeUndefined();
+      await expect(readFile(pLegacy, "utf8")).rejects.toThrow(/ENOENT/);
+      expect(await readFile(pCurrent, "utf8")).toBe("current-v2");
+    });
+
+    test("a shrinking output set prunes orphaned files even when filesDeleted is empty", async () => {
+      const p1 = join(tmp, "comp1.ts");
+      const p2 = join(tmp, "comp1.spec.ts");
+      seedDesired();
+      BaseCfour.registerGenerator("Component:ts", async () => {
+        await writeFile(p1, "impl");
+        await writeFile(p2, "spec");
+        return { filesWritten: [p1, p2], filesDeleted: [] };
+      });
+      const m1 = await BaseCfour.planAndApply({});
+      expect(m1.comp1?.files[p1]).toBeDefined();
+      expect(m1.comp1?.files[p2]).toBeDefined();
+
+      // Output set shrinks; the generator forgets to mention filesDeleted.
+      BaseCfour.updateElement("comp1", { name: "v2" }, "desired");
+      BaseCfour.registerGenerator("Component:ts", async () => {
+        await writeFile(p1, "impl-v2");
+        return { filesWritten: [p1], filesDeleted: [] };
+      });
+      const m2 = await BaseCfour.planAndApply(m1);
+
+      // The stale file is pruned from disk AND from the manifest.
+      expect(m2.comp1?.files[p1]).toBeDefined();
+      expect(m2.comp1?.files[p2]).toBeUndefined();
+      await expect(readFile(p2, "utf8")).rejects.toThrow(/ENOENT/);
+      expect(await readFile(p1, "utf8")).toBe("impl-v2");
+    });
+
     test("a validation error in desired blocks every write and leaves applied untouched", async () => {
       const p = join(tmp, "x.txt");
       seedDesired();
