@@ -46,6 +46,10 @@ export abstract class BaseCfour<
   private static _listeners: Set<(event: CfourChangeEvent) => void> = new Set();
   private static _batchDepth = 0;
   private static _batchQueue: CfourChangeEvent[] = [];
+  // One lazily-populated snapshot map per active batch level: each level
+  // clones a workspace the first time it is accessed at that level, so it
+  // can restore it on failure (undefined = workspace didn't exist yet).
+  private static _batchSnapshots: Map<string, C4Workspace | undefined>[] = [];
   private static _storage: CfourStorage | null = null;
   private static _eventLog: CfourChangeEvent[] = [];
   private static _eventLogMax = 1000;
@@ -129,11 +133,11 @@ export abstract class BaseCfour<
    * since that inner call began (and rethrows, aborting the outer callback),
    * so outer mutations are never left dangling with events wiped.
    *
-   * COST NOTE: each level snapshots the full `_workspaces` map via
-   * `structuredClone` so it can restore any workspace on failure — a batch
-   * that touches a growing `"desired"` clones it (and `"applied"`) on every
-   * call. Prefer ONE `batch()` per logical step over wrapping each
-   * individual mutation, so the clone happens once per step, not per call.
+   * COST NOTE: snapshots are lazy per level — a workspace is cloned (via
+   * `structuredClone`) only on its first access at that level, and only
+   * if the level may need to roll back. A batch touching only `"desired"`
+   * never clones `"applied"`. A read counts as access, so prefer ONE
+   * `batch()` per logical step over per-mutation calls.
    *
    * ```ts
    * BaseCfour.batch(() => {
@@ -145,7 +149,8 @@ export abstract class BaseCfour<
    * ```
    */
   static batch(fn: () => void) {
-    const snapshot = this._snapshotWorkspaces();
+    const level = new Map<string, C4Workspace | undefined>();
+    this._batchSnapshots.push(level);
     const queueStart = this._batchQueue.length;
     this._batchDepth++;
     try {
@@ -155,11 +160,12 @@ export abstract class BaseCfour<
       // since this batch began — a failed batch must not leave silent state
       // drift between the workspace and anything persisting off the event
       // stream (a caught inner failure keeps the outer batch's events).
-      this._restoreWorkspaces(snapshot);
+      this._restoreLevel(level);
       this._batchQueue.length = queueStart;
       throw e;
     } finally {
       this._batchDepth--;
+      this._batchSnapshots.pop();
       if (this._batchDepth === 0) {
         const events = this._batchQueue.splice(0);
         for (const event of events) {
@@ -168,23 +174,42 @@ export abstract class BaseCfour<
             listener(event);
           }
         }
+      } else {
+        // Promote this level's baselines into the parent level so the parent
+        // can still roll back a workspace it only touched through a nested
+        // batch (parent's own earlier snapshot wins where both exist).
+        const parent = this._batchSnapshots[this._batchSnapshots.length - 1];
+        if (parent) {
+          for (const [name, snap] of level) {
+            if (!parent.has(name)) parent.set(name, snap);
+          }
+        }
       }
     }
   }
 
-  private static _snapshotWorkspaces(): Map<string, C4Workspace> {
-    // structuredClone is meaningfully faster than the JSON round-trip used
-    // elsewhere, and workspaces are pure data so semantics are identical.
-    return structuredClone(this._workspaces);
+  /** Records a pre-mutation snapshot of `name` on first access at this level. */
+  private static _captureLazySnapshot(name: string, current: C4Workspace | undefined) {
+    if (this._batchDepth > 0) {
+      const level = this._batchSnapshots[this._batchSnapshots.length - 1];
+      if (level && !level.has(name)) {
+        level.set(name, current === undefined ? undefined : structuredClone(current));
+      }
+    }
   }
 
-  private static _restoreWorkspaces(snapshot: Map<string, C4Workspace>) {
-    this._workspaces.clear();
-    for (const [name, ws] of snapshot) this._workspaces.set(name, ws);
+  private static _restoreLevel(level: Map<string, C4Workspace | undefined>) {
+    for (const [name, snap] of level) {
+      if (snap === undefined) this._workspaces.delete(name);
+      else this._workspaces.set(name, snap);
+    }
   }
 
   /** Resets a specific C4 workspace or the default one. */
   static resetWorkspace(workspaceName = "default", title?: string, description?: string) {
+    // Snapshot before overwriting so a failed batch can bring the old
+    // content back (or, for a never-seen name, drop the fresh workspace).
+    this._captureLazySnapshot(workspaceName, this._workspaces.get(workspaceName));
     this._workspaces.set(workspaceName, {
       name: title || (workspaceName === "default" ? "Framework Workspace" : workspaceName),
       description,
@@ -204,6 +229,9 @@ export abstract class BaseCfour<
       this.resetWorkspace(name);
       return this._workspaces.get(name)!;
     }
+    // Mutators fetch the live reference here before mutating it, so the
+    // snapshot taken now captures pre-mutation state for the batch rollback.
+    this._captureLazySnapshot(name, ws);
     return ws;
   }
 
@@ -752,6 +780,9 @@ export abstract class BaseCfour<
 
   /** Imports a workspace from a JSON string. */
   static import(json: string, workspaceName = "default") {
+    // Bypasses getWorkspace, so capture the pre-import content explicitly
+    // to keep a failed batch able to restore it.
+    this._captureLazySnapshot(workspaceName, this._workspaces.get(workspaceName));
     const ws = JSON.parse(json) as C4Workspace;
     this._workspaces.set(workspaceName, ws);
     this._notify({ op: "import", workspaceName });

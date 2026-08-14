@@ -1091,6 +1091,39 @@ describe("C4 Model - cfour package", () => {
       // …and a workspace born inside the failed batch no longer exists.
       expect(BaseCfour.getWorkspaceNames()).not.toContain("created-in-batch");
     });
+
+    test("outer rollback works even when the workspace was only touched via a successful inner batch", () => {
+      // The outer level never fetches "desired" itself, so its lazy snapshot
+      // can only exist if the inner level's baseline is promoted upward.
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.batch(() => {
+            BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+          });
+          throw new Error("outer failed");
+        });
+      }).toThrow("outer failed");
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
+    });
+
+    test("outer rollback after a caught inner failure restores the outer baseline", () => {
+      expect(() => {
+        BaseCfour.batch(() => {
+          BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
+          try {
+            BaseCfour.batch(() => {
+              BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
+              throw new Error("inner failed");
+            });
+          } catch {
+            // swallowed — outer continues
+          }
+          BaseCfour.addSoftwareSystem({ id: "s3", name: "S3" });
+          throw new Error("outer failed");
+        });
+      }).toThrow("outer failed");
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
+    });
   });
 
   describe("Behavior Field", () => {
