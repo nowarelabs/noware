@@ -5,19 +5,16 @@ import type {
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
-import { createHash, randomUUID } from "node:crypto";
-import { readFile, unlink } from "node:fs/promises";
 
 /**
  * cfour — a single-module C4 architecture model kernel.
  *
  * This file is intentionally one module: the C4 model (workspaces, systems,
  * containers, components, code elements, relationships) lives here alongside
- * its mutation semantics, claim/proposal collaboration rules, branch diffing
- * and merging, generator-driven code synthesis (plan/apply), and persistence
- * helpers. Keeping the model, its invariants, and its workflows co-located is
- * what lets them share private state without leaking it through a public API
- * surface.
+ * its mutation semantics, claim/proposal collaboration rules, and branch
+ * diffing and merging. Keeping the model, its invariants, and its workflows
+ * co-located is what lets them share private state without leaking it
+ * through a public API surface.
  *
  * The public entry point is `BaseCfour`, a per-instance model behind a static
  * facade: instantiate `new BaseCfour()` (or a subclass) for an isolated model,
@@ -26,17 +23,22 @@ import { readFile, unlink } from "node:fs/promises";
  * selection is claimed, the claim is enforced — an editor may only modify
  * elements they hold. Cross-editor relationship edits go through
  * `proposeRelationship` / `acceptRelationship` joint approval. Branches
- * (`createBranch`, `planMerge`, `applyMerge`) and generators
- * (`registerGenerator`, `planAndApply`) build on the same diff primitives.
+ * (`createBranch`, `planMerge`, `applyMerge`) build on the same diff
+ * primitives.
  *
- * Pure helpers (`flattenWorkspace`, `c4ToReactFlow`, `diffWorkspaces`,
- * `deriveRelationshipId`, view builders) are exported alongside the class.
+ * The generative DSL / codegen pipeline (generator registry, plan/apply,
+ * drift detection, `register`, `addBuildingBlock`) moved out to
+ * `@nowarelabs/gen-diesel` — this package is Workers-safe and free of node
+ * builtins.
+ *
+ * Pure helpers (`flattenWorkspace`, `c4ToReactFlow`, `diffWorkspaces`, view
+ * builders) are exported alongside the class.
  */
 
 /**
  * Editor id used for system-level model construction that has no human
- * editor in scope: `register`, `addBuildingBlock` and `applyMerge` node
- * additions. Claim enforcement treats it like any other editor id.
+ * editor in scope: `applyMerge` node additions. Claim enforcement treats it
+ * like any other editor id.
  */
 const REGISTER_EDITOR = "__system__";
 
@@ -89,7 +91,6 @@ export class BaseCfour {
     this._relationshipProposals = new Map();
     this._branchBase = new Map();
     this._claimTtlMs = 5 * 60 * 1000;
-    this._generators = new Map();
   }
 
   private _workspaces: Map<string, C4Workspace> = new Map([
@@ -1183,8 +1184,8 @@ export class BaseCfour {
   /**
    * Claims a selection for exclusive editing by `editorId`. The reserved
    * system identity `REGISTER_EDITOR` cannot be claimed — it is used by
-   * system-level operations (`register`, `addBuildingBlock`, `applyMerge`),
-   * so an external claim under that id would silently intersect with them.
+   * system-level operations (`applyMerge`), so an external claim under that
+   * id would silently intersect with them.
    * Throws if any element or relationship id in the selection is already
    * covered by an existing active claim in this workspace (regardless of who
    * holds it — re-claiming your own overlapping scope must also throw;
@@ -1225,7 +1226,7 @@ export class BaseCfour {
 
     const now = Date.now();
     const claim: C4Claim = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       editorId,
       workspaceName,
       elementIds: new Set(selection.elementIds),
@@ -1358,7 +1359,7 @@ export class BaseCfour {
     }
 
     const proposal: C4RelationshipProposal = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       relationship: rel,
       workspaceName,
       proposerId,
@@ -1784,429 +1785,6 @@ export class BaseCfour {
     return errors;
   }
 
-  /**
-   * Helper to register a framework "Building Block" as a Container.
-   * If the "Framework" system doesn't exist, it is created.
-   */
-  addBuildingBlock(
-    packageId: string,
-    name: string,
-    description?: string,
-    technology?: string,
-    workspaceName = "default",
-  ) {
-    const ws = this.getWorkspace(workspaceName);
-    let frameworkSystem = ws.softwareSystems.find((s) => s.id === "framework");
-    if (!frameworkSystem) {
-      this.addSoftwareSystem(
-        {
-          id: "framework",
-          name: "Framework",
-          description: "The core application framework building blocks.",
-        },
-        workspaceName,
-      );
-      frameworkSystem = ws.softwareSystems.find((s) => s.id === "framework")!;
-    }
-
-    // Check if container already exists to avoid duplicates during hot-reloading
-    const existing = frameworkSystem.containers?.find((c) => c.id === packageId);
-    if (existing) return;
-
-    this.addContainer(
-      {
-        id: packageId,
-        name,
-        description,
-        technology,
-        systemId: "framework",
-      },
-      workspaceName,
-      REGISTER_EDITOR,
-    );
-  }
-
-  /**
-   * Automatically registers a subclass as a Component or Code Element.
-   * This can be called in a static block or via class metadata.
-   */
-  register(
-    config: {
-      id?: string;
-      name?: string;
-      description?: string;
-      technology?: string;
-      parentId?: string; // containerId or componentId
-      kind?: C4ElementKind;
-      workspaceName?: string;
-    },
-    className = this.constructor.name,
-  ) {
-    const workspaceName = config.workspaceName || "default";
-    const id = config.id || className;
-    const name = config.name || className;
-
-    // Try to infer parent and kind
-    if (config.kind === "Component" || (!config.kind && config.parentId)) {
-      this.addComponent(
-        {
-          id,
-          name,
-          description: config.description,
-          technology: config.technology,
-          containerId: config.parentId!,
-        },
-        workspaceName,
-        REGISTER_EDITOR,
-      );
-    } else if (config.kind && CODE_ELEMENT_KINDS.has(config.kind)) {
-      this.addCodeElement(
-        {
-          id,
-          name,
-          description: config.description,
-          technology: config.technology,
-          componentId: config.parentId!,
-          kind: config.kind as C4CodeElementKind,
-        },
-        workspaceName,
-        REGISTER_EDITOR,
-      );
-    }
-  }
-
-  // ── Plan/Apply Generator Pipeline ─────────────────────────
-  //
-  // Two-workspace convention:
-  //   - "desired" — the editable workspace. Humans (via GUI), scripts, and
-  //     agents mutate ONLY this one, always inside `BaseCfour.batch(...)`.
-  //   - "applied" — a snapshot of what was last successfully generated to
-  //     disk. Only `planAndApply` is allowed to write to it, via
-  //     `resetWorkspace` + `import(export(...))`, exactly as the existing
-  //     import/export methods already support.
-  //
-  // The C4 workspace is the single source of truth for code generation.
-  // Nothing outside this class ever writes generated files directly; all
-  // writes flow through `planAndApply`, mirroring `terraform plan/apply`.
-
-  // NOTE: deliberately a single static map shared by EVERY `BaseCfour`
-  // subclass — one global architecture model, one global generator registry.
-  // Unlike `beforeHooks`/`afterHooks` (which use `Object.hasOwn(this, ...)`
-  // for per-subclass isolation), generator keys must be unique repo-wide, so
-  // two subclasses share the same registry by design.
-  private _generators: Map<string, Generator> = new Map();
-
-  /**
-   * Registers a generator for a C4 element kind, optionally narrowed by
-   * technology or stereotype.
-   *
-   * Key format: `"<C4ElementKind>"` (e.g. `"Component"`), or
-   * `"<C4ElementKind>:<technology>"` (e.g. `"Component:React"`), or
-   * `"<C4ElementKind>:<stereotype>"` (e.g. `"Class:entity"`). See
-   * `resolveGenerator` for the resolution order.
-   *
-   * **PURITY CONTRACT — READ CAREFULLY.** Generator bodies MUST be pure:
-   * the same `GeneratorContext` must always produce byte-identical
-   * `GeneratorResult` content. No `Date.now()`, `Math.random()`,
-   * `crypto.randomUUID()`, or ambient reads (clock, env vars, network, other
-   * files) inside generator bodies. This is the single biggest risk to the
-   * idempotence guarantee of `planAndApply` — drift detection and
-   * skip-on-unchanged behavior assume that regenerating a node rewrites
-   * exactly the same bytes. Use `assertGeneratorIsPure` in tests to verify
-   * this contract.
-   */
-  registerGenerator(key: string, gen: Generator): void {
-    this._generators.set(key, gen);
-  }
-
-  /**
-   * Resolves the most specific generator registered for a node.
-   * Resolution order: stereotype match (when the node has a `stereotype`) >
-   * technology match (when the node has a `technology`) > bare kind match.
-   */
-  resolveGenerator(node: C4Node): Generator | undefined {
-    if ("stereotype" in node && node.stereotype) {
-      const gen = this._generators.get(`${node.kind}:${node.stereotype}`);
-      if (gen) return gen;
-    }
-    const technology = getTechnology(node);
-    if (technology) {
-      const gen = this._generators.get(`${node.kind}:${technology}`);
-      if (gen) return gen;
-    }
-    return this._generators.get(node.kind);
-  }
-
-  /**
-   * Derives a stable, readable, injective relationship id from its endpoints
-   * and label. The label is slugified (spaces -> hyphens, punctuation dropped)
-   * and a short sha256 digest of the full label is appended, so labels that
-   * slugify to the same string ("uses-data" vs "uses  data", "Reads!" vs
-   * "Reads?") never collide. Regenerating the same logical relationship from a
-   * script/DSL always produces the same id, avoiding duplicate relationships
-   * on re-apply.
-   */
-  deriveRelationshipId(sourceId: string, destinationId: string, label: string): string {
-    const slug = label
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w-]/g, "");
-    const digest = createHash("sha256").update(label.trim()).digest("hex").slice(0, 8);
-    const tail = slug ? `${slug}--${digest}` : digest;
-    return `${sourceId}--${destinationId}--${tail}`;
-  }
-
-  /**
-   * Returns the sha256 hex digest of a file's contents, or `""` when the file
-   * does not exist. Only a missing file maps to `""` — any other read error
-   * (permission, I/O) propagates so drift is never mistaken for a hand-edit.
-   */
-  async hashFile(path: string): Promise<string> {
-    try {
-      const data = await readFile(path);
-      return createHash("sha256").update(data).digest("hex");
-    } catch (e) {
-      if ((e as { code?: string })?.code === "ENOENT") return "";
-      throw e;
-    }
-  }
-
-  /** Best-effort delete: ignores already-missing files, surfaces other errors. */
-  async unlinkIfExists(path: string): Promise<void> {
-    try {
-      await unlink(path);
-    } catch (e) {
-      if ((e as { code?: string })?.code !== "ENOENT") throw e;
-    }
-  }
-
-  /**
-   * Returns the list of paths whose current on-disk hash no longer matches the
-   * manifest's recorded hash (i.e. hand-edited since last generation).
-   * Deleted files are reported as drift (missing files hash to `""`).
-   */
-  async detectDrift(entry: ManifestEntry): Promise<string[]> {
-    const drifted: string[] = [];
-    for (const [path, recordedHash] of Object.entries(entry.files)) {
-      const currentHash = await this.hashFile(path);
-      if (currentHash !== recordedHash) drifted.push(path);
-    }
-    return drifted;
-  }
-
-  /**
-   * Returns the touched nodes (added + modified) from a diff in topological
-   * order for apply: when a relationship's endpoints are BOTH touched, the
-   * destination is generated before the source.
-   *
-   * Throws a clear `Error` naming the cycle when the touched subgraph contains
-   * a dependency cycle — that means the architecture graph itself is invalid
-   * and must fail loudly rather than being silently reordered.
-   */
-  topoOrderForApply(diffResult: C4WorkspaceDiff, workspaceName = "desired"): C4Node[] {
-    const touched = new Map<string, C4Node>();
-    for (const node of diffResult.nodes.added) touched.set(node.id, node);
-    for (const mod of diffResult.nodes.modified) touched.set(mod.after.id, mod.after);
-
-    const dependsOn = new Map<string, Set<string>>();
-    for (const id of touched.keys()) dependsOn.set(id, new Set());
-
-    for (const rel of this.findRelationships({}, workspaceName)) {
-      if (touched.has(rel.sourceId) && touched.has(rel.destinationId)) {
-        dependsOn.get(rel.sourceId)!.add(rel.destinationId);
-      }
-    }
-
-    const order: C4Node[] = [];
-    const state = new Map<string, 1 | 2>(); // 1 = in-progress, 2 = done
-    const path: string[] = [];
-
-    const visit = (id: string) => {
-      if (state.get(id) === 2) return;
-      if (state.get(id) === 1) {
-        const cycleStart = path.indexOf(id);
-        const cycle = [...path.slice(cycleStart), id];
-        throw new Error(`Dependency cycle detected among touched nodes: ${cycle.join(" -> ")}`);
-      }
-      state.set(id, 1);
-      path.push(id);
-      for (const dep of dependsOn.get(id)!) visit(dep);
-      path.pop();
-      state.set(id, 2);
-      order.push(touched.get(id)!);
-    };
-
-    for (const id of touched.keys()) visit(id);
-    return order;
-  }
-
-  /**
-   * Main generator pipeline — mirrors `terraform plan`/`terraform apply`.
-   *
-   * Reads "desired" and "applied" workspaces and the provided manifest to
-   * regenerate the touched nodes in dependency order, then — only after every
-   * step succeeds — promotes "desired" to "applied". If anything throws, the
-   * `"applied"` workspace and the returned manifest are left untouched so the
-   * next call retries against the same diff.
-   *
-   * KNOWN LIMITATION (transactionality): file writes/deletes in steps 3–4 are
-   * applied to disk immediately and are not rolled back on a mid-run failure
-   * — the manifest/caller only sees a consistent picture when the function
-   * returns. Aborted runs self-heal on retry: removals re-attempt `unlink`
-   * and hit the swallowed `ENOENT`, and regenerated nodes are pure, so a
-   * retry rewrites byte-identical content.
-   *
-   * Steps: validate ("desired") → diff ("applied" vs "desired") → remove files
-   * for removed nodes → regenerate added/modified nodes in topological order
-   * (honoring drift + `onDrift`) → commit.
-   *
-   * @param manifest The current `GenerationManifest` (persist it externally
-   *   between runs — it is returned updated and must be stored by the caller).
-   * @param options  Drift-handling callback.
-   * @returns The updated manifest reflecting what is now on disk.
-   */
-  async planAndApply(
-    manifest: GenerationManifest,
-    options?: ApplyOptions,
-  ): Promise<GenerationManifest> {
-    // 1. Validate — hard stop on errors, warn-only on lint.
-    const validation = this.validate("desired");
-    const errors = validation.filter((v) => v.severity === "error");
-    if (errors.length > 0) {
-      throw new Error(
-        `planAndApply aborted: "desired" workspace failed validation.\n${errors
-          .map((e) => `  - [${e.id}] ${e.message}`)
-          .join("\n")}`,
-      );
-    }
-    for (const warning of this.lint(undefined, "desired")) {
-      console.warn(`[planAndApply:lint] ${warning.message}`);
-    }
-
-    // 2. Plan.
-    const diff = this.diff("applied", "desired");
-    const n = diff.nodes;
-    const r = diff.relationships;
-    console.log(
-      `[planAndApply] nodes +${n.added.length} ~${n.modified.length} -${n.removed.length}; ` +
-        `relationships +${r.added.length} ~${r.modified.length} -${r.removed.length}`,
-    );
-
-    const nextManifest: GenerationManifest = { ...manifest };
-
-    // 3. Apply removals first — delete every file a removed node owns.
-    for (const node of diff.nodes.removed) {
-      const entry = nextManifest[node.id];
-      if (!entry) continue;
-      for (const path of Object.keys(entry.files)) {
-        await this.unlinkIfExists(path);
-      }
-      delete nextManifest[node.id];
-    }
-
-    // 4. Apply additions/modifications in dependency order.
-    for (const node of this.topoOrderForApply(diff, "desired")) {
-      const existing = nextManifest[node.id];
-      if (existing) {
-        const driftedFiles = await this.detectDrift(existing);
-        if (driftedFiles.length > 0) {
-          const decision = options?.onDrift?.(node.id, driftedFiles) ?? "skip";
-          if (decision === "skip") {
-            console.warn(
-              `[planAndApply] Skipping ${node.id}: drifted files: ${driftedFiles.join(", ")}`,
-            );
-            continue;
-          }
-        }
-      }
-
-      const gen = this.resolveGenerator(node);
-      if (!gen) {
-        console.warn(
-          `[planAndApply] No generator for ${node.kind} "${node.id}"; skipping (partial coverage allowed)`,
-        );
-        continue;
-      }
-
-      const result = await gen({
-        node,
-        ancestors: this.getAncestors(node.id, "desired"),
-        relationships: this.findRelationships({ sourceId: node.id }, "desired"),
-      });
-
-      const files: Record<string, string> = {};
-      for (const path of result.filesWritten) {
-        files[path] = await this.hashFile(path);
-      }
-
-      // Remove files the generator explicitly deleted, plus files this node
-      // used to own but no longer writes (output set shrank). Without this,
-      // old files drop out of the manifest but linger on disk as orphans.
-      for (const path of result.filesDeleted) {
-        await this.unlinkIfExists(path);
-      }
-      const previousFiles = existing ? Object.keys(existing.files) : [];
-      for (const path of previousFiles) {
-        if (!(path in files)) await this.unlinkIfExists(path);
-      }
-
-      nextManifest[node.id] = { elementId: node.id, files };
-    }
-
-    // 5. Commit — promote "desired" to "applied" only after everything above
-    //    succeeded. On throw, "applied" remains the previous snapshot.
-    this.resetWorkspace("applied");
-    this.import(this.export("desired"), "applied");
-
-    // 6. Return the updated manifest.
-    return nextManifest;
-  }
-
-  /**
-   * Dev-only helper for tests: runs `gen(ctx)` twice with the identical context
-   * and throws a clear `Error` if the two runs differ in the set of written
-   * paths or in the content of any written file — verifying the purity
-   * contract required by `registerGenerator`.
-   */
-  async assertGeneratorIsPure(gen: Generator, ctx: GeneratorContext): Promise<void> {
-    const first = await gen(ctx);
-
-    // Snapshot the first run's output BEFORE running again — the second run
-    // overwrites the same files on disk, so comparing after both runs would
-    // compare each file with itself.
-    const firstContent = new Map<string, string | null>();
-    for (const path of first.filesWritten) {
-      firstContent.set(path, await readFile(path, "utf8").catch(() => null));
-    }
-
-    const second = await gen(ctx);
-
-    const listsEqual = (a: string[], b: string[]) =>
-      a.length === b.length && a.every((p, i) => p === b[i]);
-
-    if (!listsEqual(first.filesWritten, second.filesWritten)) {
-      throw new Error(
-        `Generator is not pure: filesWritten differs between runs.\n` +
-          `  first:  ${first.filesWritten.join(", ")}\n` +
-          `  second: ${second.filesWritten.join(", ")}`,
-      );
-    }
-    if (!listsEqual(first.filesDeleted, second.filesDeleted)) {
-      throw new Error(
-        `Generator is not pure: filesDeleted differs between runs.\n` +
-          `  first:  ${first.filesDeleted.join(", ")}\n` +
-          `  second: ${second.filesDeleted.join(", ")}`,
-      );
-    }
-
-    for (const path of first.filesWritten) {
-      const secondContent = await readFile(path, "utf8").catch(() => null);
-      if (firstContent.get(path) !== secondContent) {
-        throw new Error(`Generator is not pure: content of "${path}" differs between runs.`);
-      }
-    }
-  }
-
   // ── Static facade ────────────────────────────────────────
   // One shared model per process by default: every `BaseCfour.x()` static
   // delegates to this single default instance, preserving the classic
@@ -2217,6 +1795,14 @@ export class BaseCfour {
   // `Parameters`/`ReturnType`, so they can never drift out of sync.
 
   private static _default = new BaseCfour();
+
+  /**
+   * Returns the shared default instance the static facade delegates to.
+   * `@nowarelabs/gen-diesel` binds its `defaultDiesel` to this instance.
+   */
+  static getDefault(): BaseCfour {
+    return BaseCfour._default;
+  }
 
   static reset(): void {
     BaseCfour._default.reset();
@@ -2639,72 +2225,6 @@ export class BaseCfour {
   ): ReturnType<_CFourInstance["validate"]> {
     return BaseCfour._default.validate(...args);
   }
-
-  static addBuildingBlock(
-    ...args: Parameters<_CFourInstance["addBuildingBlock"]>
-  ): ReturnType<_CFourInstance["addBuildingBlock"]> {
-    return BaseCfour._default.addBuildingBlock(...args);
-  }
-
-  static register(config: Parameters<_CFourInstance["register"]>[0]) {
-    // `this.name` captures the calling class (used by subclass static blocks)
-    // so id/name inference from the class name keeps working through the facade.
-    return BaseCfour._default.register(config, this.name);
-  }
-
-  static registerGenerator(
-    ...args: Parameters<_CFourInstance["registerGenerator"]>
-  ): ReturnType<_CFourInstance["registerGenerator"]> {
-    return BaseCfour._default.registerGenerator(...args);
-  }
-
-  static resolveGenerator(
-    ...args: Parameters<_CFourInstance["resolveGenerator"]>
-  ): ReturnType<_CFourInstance["resolveGenerator"]> {
-    return BaseCfour._default.resolveGenerator(...args);
-  }
-
-  static deriveRelationshipId(
-    ...args: Parameters<_CFourInstance["deriveRelationshipId"]>
-  ): ReturnType<_CFourInstance["deriveRelationshipId"]> {
-    return BaseCfour._default.deriveRelationshipId(...args);
-  }
-
-  static hashFile(
-    ...args: Parameters<_CFourInstance["hashFile"]>
-  ): ReturnType<_CFourInstance["hashFile"]> {
-    return BaseCfour._default.hashFile(...args);
-  }
-
-  static unlinkIfExists(
-    ...args: Parameters<_CFourInstance["unlinkIfExists"]>
-  ): ReturnType<_CFourInstance["unlinkIfExists"]> {
-    return BaseCfour._default.unlinkIfExists(...args);
-  }
-
-  static detectDrift(
-    ...args: Parameters<_CFourInstance["detectDrift"]>
-  ): ReturnType<_CFourInstance["detectDrift"]> {
-    return BaseCfour._default.detectDrift(...args);
-  }
-
-  static topoOrderForApply(
-    ...args: Parameters<_CFourInstance["topoOrderForApply"]>
-  ): ReturnType<_CFourInstance["topoOrderForApply"]> {
-    return BaseCfour._default.topoOrderForApply(...args);
-  }
-
-  static planAndApply(
-    ...args: Parameters<_CFourInstance["planAndApply"]>
-  ): ReturnType<_CFourInstance["planAndApply"]> {
-    return BaseCfour._default.planAndApply(...args);
-  }
-
-  static assertGeneratorIsPure(
-    ...args: Parameters<_CFourInstance["assertGeneratorIsPure"]>
-  ): ReturnType<_CFourInstance["assertGeneratorIsPure"]> {
-    return BaseCfour._default.assertGeneratorIsPure(...args);
-  }
 }
 
 type _CFourInstance = InstanceType<typeof BaseCfour>;
@@ -3097,48 +2617,6 @@ export interface C4MergePlan {
   /** Node or relationship ids touched on BOTH sides since the base
    * revision. Must be empty before applyMerge will proceed. */
   conflicts: string[];
-}
-
-// ----------------------------------------------------------------
-// Generator pipeline — C4 workspace as single source of truth
-// ----------------------------------------------------------------
-
-/** Context handed to a generator for a single node during `planAndApply`. */
-export interface GeneratorContext {
-  node: C4Node;
-  ancestors: C4Node[];
-  relationships: C4Relationship[];
-}
-
-/**
- * Result of running a generator for one node.
- * `filesWritten` are absolute paths to files the generator wrote (or updated);
- * `filesDeleted` are absolute paths to files it removed.
- */
-export interface GeneratorResult {
-  filesWritten: string[]; // absolute paths
-  filesDeleted: string[];
-}
-
-/**
- * A code generator for a single C4 node.
- * MUST be pure: the same `GeneratorContext` always yields byte-identical
- * output — see the purity contract on `BaseCfour.registerGenerator`.
- */
-export type Generator = (ctx: GeneratorContext) => Promise<GeneratorResult>;
-
-/** Tracks which files a node owns on disk and their hash at generation time. */
-export interface ManifestEntry {
-  elementId: string;
-  files: Record<string, string>; // path -> sha256 hash at generation time
-}
-
-/** The full generation manifest: node id -> its owned files. */
-export type GenerationManifest = Record<string, ManifestEntry>;
-
-/** Callback options for `planAndApply`. */
-export interface ApplyOptions {
-  onDrift?: (elementId: string, driftedFiles: string[]) => "overwrite" | "skip";
 }
 
 /**
