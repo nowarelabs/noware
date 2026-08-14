@@ -305,25 +305,29 @@ export class BaseCfour {
 
   /** Adds a Person to the workspace. */
   addPerson(person: Omit<C4Person, "kind">, workspaceName = "default") {
-    this.getWorkspace(workspaceName).people.push({ ...person, kind: "Person" });
+    const created: C4Person = { ...person, kind: "Person" };
+    this.getWorkspace(workspaceName).people.push(created);
     this._notify({
       op: "add",
       workspaceName,
       elementId: person.id,
       elementKind: "Person",
       path: [],
+      after: created,
     });
   }
 
   /** Adds a Software System to the workspace. */
   addSoftwareSystem(system: Omit<C4SoftwareSystem, "kind">, workspaceName = "default") {
-    this.getWorkspace(workspaceName).softwareSystems.push({ ...system, kind: "SoftwareSystem" });
+    const created: C4SoftwareSystem = { ...system, kind: "SoftwareSystem" };
+    this.getWorkspace(workspaceName).softwareSystems.push(created);
     this._notify({
       op: "add",
       workspaceName,
       elementId: system.id,
       elementKind: "SoftwareSystem",
       path: [],
+      after: created,
     });
   }
 
@@ -342,7 +346,8 @@ export class BaseCfour {
     }
     this._assertClaimAllows(container.systemId, editorId, workspaceName, "element");
     system.containers = system.containers || [];
-    system.containers.push({ ...container, kind: container.kind ?? "Container" });
+    const created: C4Container = { ...container, kind: container.kind ?? "Container" };
+    system.containers.push(created);
     this._absorbCreatedElement(container.systemId, container.id, editorId, workspaceName);
     this._notify({
       op: "add",
@@ -350,6 +355,7 @@ export class BaseCfour {
       elementId: container.id,
       elementKind: container.kind ?? "Container",
       path: [container.systemId],
+      after: created,
     });
   }
 
@@ -384,7 +390,8 @@ export class BaseCfour {
 
     this._assertClaimAllows(component.containerId, editorId, workspaceName, "element");
     container.components = container.components || [];
-    container.components.push({ ...component, kind: "Component" });
+    const created: C4Component = { ...component, kind: "Component" };
+    container.components.push(created);
     this._absorbCreatedElement(component.containerId, component.id, editorId, workspaceName);
     this._notify({
       op: "add",
@@ -392,6 +399,7 @@ export class BaseCfour {
       elementId: component.id,
       elementKind: "Component",
       path: [systemId, container.id],
+      after: created,
     });
   }
 
@@ -425,10 +433,11 @@ export class BaseCfour {
 
     this._assertClaimAllows(codeElement.componentId, editorId, workspaceName, "element");
     component.codeElements = component.codeElements || [];
-    component.codeElements.push({
+    const created: C4CodeElement = {
       ...codeElement,
       kind: codeElement.kind ?? "Class",
-    } as C4CodeElement);
+    } as C4CodeElement;
+    component.codeElements.push(created);
     this._absorbCreatedElement(codeElement.componentId, codeElement.id, editorId, workspaceName);
     this._notify({
       op: "add",
@@ -436,6 +445,7 @@ export class BaseCfour {
       elementId: codeElement.id,
       elementKind: codeElement.kind ?? "Class",
       path: [systemId, containerId, component.id],
+      after: created,
     });
   }
 
@@ -482,6 +492,7 @@ export class BaseCfour {
       elementId: rel.id,
       elementKind: "Relationship",
       path: [],
+      after: rel as any as C4Node,
     });
   }
 
@@ -904,6 +915,93 @@ export class BaseCfour {
     const ws = JSON.parse(json) as C4Workspace;
     this._workspaces.set(workspaceName, ws);
     this._notify({ op: "import", workspaceName });
+  }
+
+  // ── SQLite rows ─────────────────────────────────────────────
+  // The flat row representation a SQLite-backed storage layer (e.g. the
+  // WorkspaceDO Durable Object) uses. Rows are a lossless flattening of the
+  // nested workspace: nodeToRow/relationshipToRow reuse the same helpers
+  // (getParentId/getTechnology/getExternal/CODE_ELEMENT_KINDS) as the rest of
+  // the library, and rowsToWorkspace rebuilds the nested tree in dependency
+  // order (systems → containers → components → code elements).
+
+  /**
+   * Flattens a workspace to the row shape cfour-do-schema.sql expects.
+   * The inverse of `importRows` — `rowsToWorkspace(exportRows(name), name)`
+   * reconstructs an identical workspace (modulo child-collection identities).
+   */
+  exportRows(workspaceName = "default"): WorkspaceRows {
+    const flat = flattenWorkspace(this.getWorkspace(workspaceName));
+    return {
+      nodes: flat.nodes.map((n) => nodeToRow(n, workspaceName)),
+      relationships: flat.relationships.map((r) => relationshipToRow(r, workspaceName)),
+    };
+  }
+
+  /**
+   * Reconstructs a workspace from flat rows (e.g. read back from SQLite on a
+   * Durable Object cold start) and installs it, exactly as `import()` does for
+   * a JSON blob: same batch-rollback snapshot capture, same "import" event, so
+   * subscribers can't tell the source apart.
+   */
+  importRows(
+    rows: WorkspaceRows,
+    workspaceName = "default",
+    title?: string,
+    description?: string,
+  ): void {
+    this._captureLazySnapshot(workspaceName, this._workspaces.get(workspaceName));
+    this._workspaces.set(workspaceName, rowsToWorkspace(rows, workspaceName, title, description));
+    this._notify({ op: "import", workspaceName });
+  }
+
+  /**
+   * Exposes what branchWorkspace() already recorded internally — the parent
+   * workspace and the base snapshot JSON taken at branch time — so a storage
+   * layer can persist branch lineage without recomputing the diff. Returns
+   * undefined when `branchName` was never created via branchWorkspace().
+   */
+  getBranchBase(branchName: string): { parent: string; baseSnapshot: string } | undefined {
+    return this._branchBase.get(branchName);
+  }
+
+  /**
+   * Replaces the set of active claims for a workspace. Used by storage layers
+   * to rehydrate claim state on cold start; does not emit events.
+   */
+  restoreClaims(claims: C4Claim[], workspaceName = "default"): void {
+    const map = this._claimsFor(workspaceName);
+    map.clear();
+    for (const claim of claims) {
+      claim.elementIds = new Set(claim.elementIds);
+      claim.relationshipIds = new Set(claim.relationshipIds);
+      claim.workspaceName = workspaceName;
+      map.set(claim.id, claim);
+    }
+  }
+
+  /**
+   * Replaces the set of pending relationship proposals for a workspace. Used
+   * by storage layers to rehydrate proposal state on cold start; does not emit
+   * events.
+   */
+  restoreProposals(proposals: C4RelationshipProposal[], workspaceName = "default"): void {
+    const map = this._proposalsFor(workspaceName);
+    map.clear();
+    for (const proposal of proposals) {
+      proposal.pendingApprovals = new Set(proposal.pendingApprovals);
+      proposal.workspaceName = workspaceName;
+      map.set(proposal.id, proposal);
+    }
+  }
+
+  /**
+   * Restores a single branch-base entry recorded by branchWorkspace(). Used by
+   * storage layers to rehydrate branch lineage on cold start so planMerge()
+   * keeps working after a restart; does not emit events.
+   */
+  restoreBranchBase(branchName: string, parent: string, baseSnapshot: string): void {
+    this._branchBase.set(branchName, { parent, baseSnapshot });
   }
 
   // ── Storage — platform-agnostic persistence ────────────────
@@ -2304,6 +2402,42 @@ export class BaseCfour {
     return BaseCfour._default.import(...args);
   }
 
+  static exportRows(
+    ...args: Parameters<_CFourInstance["exportRows"]>
+  ): ReturnType<_CFourInstance["exportRows"]> {
+    return BaseCfour._default.exportRows(...args);
+  }
+
+  static importRows(
+    ...args: Parameters<_CFourInstance["importRows"]>
+  ): ReturnType<_CFourInstance["importRows"]> {
+    return BaseCfour._default.importRows(...args);
+  }
+
+  static getBranchBase(
+    ...args: Parameters<_CFourInstance["getBranchBase"]>
+  ): ReturnType<_CFourInstance["getBranchBase"]> {
+    return BaseCfour._default.getBranchBase(...args);
+  }
+
+  static restoreClaims(
+    ...args: Parameters<_CFourInstance["restoreClaims"]>
+  ): ReturnType<_CFourInstance["restoreClaims"]> {
+    return BaseCfour._default.restoreClaims(...args);
+  }
+
+  static restoreProposals(
+    ...args: Parameters<_CFourInstance["restoreProposals"]>
+  ): ReturnType<_CFourInstance["restoreProposals"]> {
+    return BaseCfour._default.restoreProposals(...args);
+  }
+
+  static restoreBranchBase(
+    ...args: Parameters<_CFourInstance["restoreBranchBase"]>
+  ): ReturnType<_CFourInstance["restoreBranchBase"]> {
+    return BaseCfour._default.restoreBranchBase(...args);
+  }
+
   static setStorage(
     ...args: Parameters<_CFourInstance["setStorage"]>
   ): ReturnType<_CFourInstance["setStorage"]> {
@@ -3496,6 +3630,213 @@ export function flattenWorkspace(workspace: C4Workspace): C4FlatModel {
 
 function buildNodeMap(flat: C4FlatModel): Map<string, C4Node> {
   return new Map(flat.nodes.map((n) => [n.id, n]));
+}
+
+// ----------------------------------------------------------------
+// SQLite rows — the flat storage shape a Durable Object persists
+// ----------------------------------------------------------------
+// Row shapes mirror cfour-do-schema.sql column-for-column. Branches are rows
+// tagged by `workspace_name` inside one DO — not separate DOs — so applyMerge's
+// batch-atomicity guarantee (which only holds within a single BaseCfour
+// instance) keeps working unchanged.
+
+export type NodeRow = {
+  workspace_name: string;
+  id: string;
+  kind: C4ElementKind;
+  name: string;
+  description: string | null;
+  owner: string | null;
+  icon: string | null;
+  tags: string | null; // JSON array
+  metadata: string | null; // JSON object
+  parent_id: string | null;
+  technology: string | null;
+  external: number | null; // 0 | 1
+  behavior: string | null;
+  stereotype: string | null;
+  namespace: string | null;
+  members: string | null; // JSON array of C4CodeMember
+};
+
+export type RelationshipRow = {
+  workspace_name: string;
+  id: string;
+  source_id: string;
+  destination_id: string;
+  description: string | null;
+  technology: string | null;
+  interaction_style: "sync" | "async" | null;
+  code_relationship_kind: C4CodeRelationshipKind | null;
+  tags: string | null; // JSON array
+};
+
+export interface WorkspaceRows {
+  nodes: NodeRow[];
+  relationships: RelationshipRow[];
+}
+
+/**
+ * Flattens a C4Node into the row shape cfour-do-schema.sql expects. Reuses
+ * getParentId/getTechnology/getExternal/CODE_ELEMENT_KINDS — the exact same
+ * helpers c4ToReactFlow relies on — so "what counts as this node's technology
+ * or parent" never drifts between consumers.
+ */
+export function nodeToRow(node: C4Node, workspaceName: string): NodeRow {
+  const isCode = CODE_ELEMENT_KINDS.has(node.kind);
+  const ext = getExternal(node);
+  return {
+    workspace_name: workspaceName,
+    id: node.id,
+    kind: node.kind,
+    name: node.name,
+    description: node.description ?? null,
+    owner: node.owner ?? null,
+    icon: node.icon ?? null,
+    tags: node.tags ? JSON.stringify(node.tags) : null,
+    metadata: node.metadata ? JSON.stringify(node.metadata) : null,
+    parent_id: getParentId(node) ?? null,
+    technology: getTechnology(node) ?? null,
+    external: ext === undefined ? null : ext ? 1 : 0,
+    behavior: (node as C4Component | C4CodeElement).behavior ?? null,
+    stereotype: isCode ? ((node as C4CodeElement).stereotype ?? null) : null,
+    namespace: isCode ? ((node as C4CodeElement).namespace ?? null) : null,
+    members:
+      isCode && (node as C4CodeElement).members
+        ? JSON.stringify((node as C4CodeElement).members)
+        : null,
+  };
+}
+
+/** Flattens a C4Relationship into the row shape cfour-do-schema.sql expects. */
+export function relationshipToRow(rel: C4Relationship, workspaceName: string): RelationshipRow {
+  return {
+    workspace_name: workspaceName,
+    id: rel.id,
+    source_id: rel.sourceId,
+    destination_id: rel.destinationId,
+    description: rel.description ?? null,
+    technology: rel.technology ?? null,
+    interaction_style: rel.interactionStyle ?? null,
+    code_relationship_kind: rel.codeRelationshipKind ?? null,
+    tags: rel.tags ? JSON.stringify(rel.tags) : null,
+  };
+}
+
+/**
+ * Reconstructs a nested C4Workspace from flat rows — the inverse of
+ * nodeToRow/relationshipToRow. Runs in dependency order (systems → containers
+ * → components → code elements) since each pass resolves `parent_id` against
+ * a map the previous pass built. Orphaned rows (a child whose parent is
+ * missing) are skipped rather than thrown, matching how flattenWorkspace can
+ * never produce them via normal mutators.
+ */
+export function rowsToWorkspace(
+  rows: WorkspaceRows,
+  workspaceName: string,
+  title = workspaceName,
+  description?: string,
+): C4Workspace {
+  const ws: C4Workspace = {
+    name: title,
+    description,
+    people: [],
+    softwareSystems: [],
+    relationships: [],
+  };
+
+  const base = (r: NodeRow) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description ?? undefined,
+    owner: r.owner ?? undefined,
+    icon: r.icon ?? undefined,
+    tags: r.tags ? JSON.parse(r.tags) : undefined,
+    metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+  });
+
+  const external = (r: NodeRow): boolean | undefined =>
+    r.external === null || r.external === undefined ? undefined : r.external === 1;
+
+  for (const r of rows.nodes.filter((n) => n.kind === "Person")) {
+    ws.people.push({
+      ...base(r),
+      kind: "Person",
+      external: external(r),
+    } as C4Person);
+  }
+
+  const systemMap = new Map<string, C4SoftwareSystem>();
+  for (const r of rows.nodes.filter((n) => n.kind === "SoftwareSystem")) {
+    const sys: C4SoftwareSystem = {
+      ...base(r),
+      kind: "SoftwareSystem",
+      external: external(r),
+      containers: [],
+    };
+    systemMap.set(r.id, sys);
+    ws.softwareSystems.push(sys);
+  }
+
+  const containerMap = new Map<string, C4Container>();
+  for (const r of rows.nodes.filter((n) => CONTAINER_KINDS.has(n.kind))) {
+    const system = r.parent_id ? systemMap.get(r.parent_id) : undefined;
+    if (!system) continue; // orphaned row — shouldn't happen via BaseCfour writes
+    const container: C4Container = {
+      ...base(r),
+      kind: r.kind as C4Container["kind"],
+      systemId: system.id,
+      technology: r.technology ?? undefined,
+      components: [],
+    };
+    containerMap.set(r.id, container);
+    system.containers!.push(container);
+  }
+
+  const componentMap = new Map<string, C4Component>();
+  for (const r of rows.nodes.filter((n) => n.kind === "Component")) {
+    const container = r.parent_id ? containerMap.get(r.parent_id) : undefined;
+    if (!container) continue;
+    const component: C4Component = {
+      ...base(r),
+      kind: "Component",
+      containerId: container.id,
+      technology: r.technology ?? undefined,
+      behavior: r.behavior ?? undefined,
+      codeElements: [],
+    };
+    componentMap.set(r.id, component);
+    container.components!.push(component);
+  }
+
+  for (const r of rows.nodes.filter((n) => CODE_ELEMENT_KINDS.has(n.kind))) {
+    const component = r.parent_id ? componentMap.get(r.parent_id) : undefined;
+    if (!component) continue;
+    component.codeElements!.push({
+      ...base(r),
+      kind: r.kind as C4CodeElementKind,
+      componentId: component.id,
+      technology: r.technology ?? undefined,
+      behavior: r.behavior ?? undefined,
+      stereotype: r.stereotype ?? undefined,
+      namespace: r.namespace ?? undefined,
+      members: r.members ? JSON.parse(r.members) : undefined,
+    } as C4CodeElement);
+  }
+
+  ws.relationships = rows.relationships.map((r) => ({
+    id: r.id,
+    kind: "Relationship" as const,
+    sourceId: r.source_id,
+    destinationId: r.destination_id,
+    description: r.description ?? undefined,
+    technology: r.technology ?? undefined,
+    interactionStyle: r.interaction_style ?? undefined,
+    codeRelationshipKind: r.code_relationship_kind ?? undefined,
+    tags: r.tags ? JSON.parse(r.tags) : undefined,
+  }));
+
+  return ws;
 }
 
 // ----------------------------------------------------------------

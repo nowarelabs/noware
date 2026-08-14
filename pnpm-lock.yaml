@@ -970,6 +970,31 @@ importers:
         specifier: ^0.1.14
         version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.11(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.4))(yaml@2.8.4)
 
+  packages/workspace-do:
+    dependencies:
+      '@nowarelabs/cfour':
+        specifier: workspace:*
+        version: link:../cfour
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260522.1
+        version: 4.20260522.1
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.6.2
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      bumpp:
+        specifier: ^11.0.1
+        version: 11.1.0
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.11(@types/node@25.6.2)(jiti@2.7.0)(yaml@2.8.4))(yaml@2.8.4)
+
 packages:
 
   '@cloudflare/workers-types@4.20260522.1':

@@ -12,6 +12,7 @@ import {
   buildComponentView,
   buildCodeView,
   diffWorkspaces,
+  rowsToWorkspace,
   type C4Workspace,
   type CfourChangeEvent,
   type CfourStorage,
@@ -3149,6 +3150,185 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.releaseAllClaimsFor("bob", "main");
       BaseCfour.applyMerge(plan, "main");
       expect(BaseCfour.getWorkspace("main").relationships.map((r) => r.id)).toEqual(["r1"]);
+    });
+  });
+
+  describe("Add event payload", () => {
+    test("every add event carries the created element in `after`", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "sys" });
+      BaseCfour.addPerson({ id: "p1", name: "P1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent(
+        { id: "comp1", name: "Comp1", containerId: "con1" },
+        "default",
+        "local",
+      );
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship(
+        { id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2" },
+        "default",
+        "local",
+      );
+
+      const byId = new Map(events.map((e) => [e.elementId, e]));
+      expect((byId.get("sys1")!.after as C4Node).kind).toBe("SoftwareSystem");
+      expect((byId.get("sys1")!.after as C4Node).name).toBe("S1");
+      expect((byId.get("p1")!.after as C4Node).kind).toBe("Person");
+      expect((byId.get("con1")!.after as C4Node).kind).toBe("Container");
+      expect((byId.get("comp1")!.after as C4Node).kind).toBe("Component");
+      expect((byId.get("ce1")!.after as C4Node).kind).toBe("Class");
+      const relAfter = byId.get("r1")!.after as unknown as C4Relationship;
+      expect(relAfter.id).toBe("r1");
+      expect(relAfter.sourceId).toBe("sys1");
+      unsub();
+    });
+  });
+
+  describe("Row persistence round-trip", () => {
+    test("exportRows -> rowsToWorkspace reproduces an identical workspace (zero-change diff)", () => {
+      BaseCfour.addSoftwareSystem({
+        id: "sys1",
+        name: "S1",
+        description: "sys",
+        tags: ["a", "b"],
+        metadata: { repo: "acme" },
+      });
+      BaseCfour.addPerson({ id: "p1", name: "P1", external: true });
+      BaseCfour.addContainer(
+        { id: "con1", name: "C1", systemId: "sys1", technology: "Go" },
+        "default",
+        "local",
+      );
+      BaseCfour.addComponent(
+        { id: "comp1", name: "Comp1", containerId: "con1", behavior: "auth" },
+        "default",
+        "local",
+      );
+      BaseCfour.addCodeElement(
+        {
+          id: "ce1",
+          name: "CE1",
+          componentId: "comp1",
+          stereotype: "interface",
+          namespace: "acme",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          description: "calls",
+          technology: "http",
+        },
+        "default",
+        "local",
+      );
+
+      const original = BaseCfour.getWorkspace();
+      const rows = BaseCfour.exportRows();
+
+      // Flattening is lossless at the row level: JSON fields round-trip.
+      const sysRow = rows.nodes.find((n) => n.id === "sys1");
+      expect(sysRow?.tags).toBe(JSON.stringify(["a", "b"]));
+      expect(sysRow?.metadata).toBe(JSON.stringify({ repo: "acme" }));
+      expect(sysRow?.kind).toBe("SoftwareSystem");
+      expect(rows.nodes.find((n) => n.id === "p1")?.external).toBe(1);
+      expect(rows.nodes.find((n) => n.id === "ce1")?.stereotype).toBe("interface");
+      expect(rows.relationships[0]).toMatchObject({
+        id: "r1",
+        source_id: "sys1",
+        destination_id: "sys2",
+        technology: "http",
+      });
+
+      // Nested tree is rebuilt in dependency order with no drift.
+      const rebuilt = rowsToWorkspace(rows, "default");
+      const diff = diffWorkspaces(original, rebuilt);
+      expect(diff.nodes.added).toEqual([]);
+      expect(diff.nodes.removed).toEqual([]);
+      expect(diff.nodes.modified).toEqual([]);
+      expect(diff.relationships.added).toEqual([]);
+      expect(diff.relationships.removed).toEqual([]);
+      expect(diff.relationships.modified).toEqual([]);
+    });
+
+    test("importRows installs a workspace exactly like import(): same rows, event, and title", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addRelationship(
+        { id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys1" },
+        "default",
+        "local",
+      );
+      const rows = BaseCfour.exportRows();
+      BaseCfour.resetWorkspace();
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.importRows(rows, "default", "Titled", "a description");
+
+      const ws = BaseCfour.getWorkspace();
+      expect(ws.name).toBe("Titled");
+      expect(ws.description).toBe("a description");
+      expect(ws.softwareSystems.map((s) => s.id)).toEqual(["sys1"]);
+      expect(ws.relationships.map((r) => r.id)).toEqual(["r1"]);
+      expect(events.map((e) => e.op)).toEqual(["import"]);
+      unsub();
+
+      // Works in any workspace name — rows carry their own workspace_name but
+      // the target wins.
+      BaseCfour.importRows(rows, "renamed");
+      expect(BaseCfour.getWorkspace("renamed").softwareSystems.map((s) => s.id)).toEqual(["sys1"]);
+    });
+  });
+
+  describe("Branch lineage persistence", () => {
+    test("getBranchBase exposes what branchWorkspace recorded; restoreBranchBase rehydrates it", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.branchWorkspace("default", "lin-feature");
+      BaseCfour.addSoftwareSystem({ id: "feat", name: "F" }, "lin-feature");
+
+      const base = BaseCfour.getBranchBase("lin-feature");
+      expect(base).toBeDefined();
+      expect(base!.parent).toBe("default");
+      expect(
+        (JSON.parse(base!.baseSnapshot) as C4Workspace).softwareSystems.map((s) => s.id),
+      ).toEqual(["sys1"]);
+
+      // A fresh instance is lineage-less until restoreBranchBase — the exact
+      // cold-start path the storage layer (WorkspaceDO) follows.
+      const fresh = new BaseCfour();
+      expect(fresh.getBranchBase("lin-feature")).toBeUndefined();
+      fresh.importRows(BaseCfour.exportRows("default"), "default");
+      fresh.importRows(BaseCfour.exportRows("lin-feature"), "lin-feature");
+      fresh.restoreBranchBase("lin-feature", base!.parent, base!.baseSnapshot);
+
+      const plan = fresh.planMerge("lin-feature", "default");
+      expect(plan.branch).toBe("lin-feature");
+      expect(plan.into).toBe("default");
+      expect(plan.conflicts).toEqual([]);
+      expect(plan.branchChanges.nodes.added.map((n) => n.id)).toEqual(["feat"]);
+
+      fresh.applyMerge(plan, "default");
+      expect(
+        fresh
+          .getWorkspace("default")
+          .softwareSystems.map((s) => s.id)
+          .sort(),
+      ).toEqual(["feat", "sys1"]);
     });
   });
 });
