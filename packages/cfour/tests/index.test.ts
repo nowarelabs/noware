@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, afterEach, vi } from "vite-plus/test";
-import type { CfourContext } from "@nowarelabs/shared";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -142,19 +141,17 @@ describe("C4 Model - cfour package", () => {
   describe("BaseCfour", () => {
     class TestQuery extends BaseCfour {}
 
-    test("constructor accepts request, env, ctx", () => {
-      const mockRequest = new Request("http://localhost");
-      const mockEnv = { DB: {} } as Record<string, unknown>;
-      const mockCtx = {
-        waitUntil: () => {},
-        passThroughOnException: () => {},
-      } as CfourContext;
+    test("each instance is an isolated model; the static facade shares one default", () => {
+      const a = new TestQuery();
+      const b = new BaseCfour();
 
-      const query = new TestQuery(mockRequest, mockEnv, mockCtx);
+      a.addSoftwareSystem({ id: "only-in-a", name: "A" });
+      b.addSoftwareSystem({ id: "only-in-b", name: "B" });
 
-      expect(query).toBeDefined();
-      expect((query as any).request).toBe(mockRequest);
-      expect((query as any).env).toBe(mockEnv);
+      expect(a.getWorkspace().softwareSystems.map((s) => s.id)).toEqual(["only-in-a"]);
+      expect(b.getWorkspace().softwareSystems.map((s) => s.id)).toEqual(["only-in-b"]);
+      // The static facade delegates to its own default instance, untouched here.
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
     });
 
     test("static hooks exist", () => {
@@ -168,15 +165,31 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.resetWorkspace("default", "Framework Architecture");
 
       BaseCfour.addSoftwareSystem({ id: "sys-main", name: "Main System" });
-      BaseCfour.addContainer({ id: "con-web", name: "Web App", systemId: "sys-main" });
-      BaseCfour.addComponent({ id: "comp-auth", name: "Auth", containerId: "con-web" });
-      BaseCfour.addCodeElement({ id: "class-user", name: "User", componentId: "comp-auth" });
-      BaseCfour.addRelationship({
-        id: "rel-1",
-        kind: "Relationship",
-        sourceId: "class-user",
-        destinationId: "comp-auth",
-      });
+      BaseCfour.addContainer(
+        { id: "con-web", name: "Web App", systemId: "sys-main" },
+        "default",
+        "local",
+      );
+      BaseCfour.addComponent(
+        { id: "comp-auth", name: "Auth", containerId: "con-web" },
+        "default",
+        "local",
+      );
+      BaseCfour.addCodeElement(
+        { id: "class-user", name: "User", componentId: "comp-auth" },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "rel-1",
+          kind: "Relationship",
+          sourceId: "class-user",
+          destinationId: "comp-auth",
+        },
+        "default",
+        "local",
+      );
 
       const ws = BaseCfour.getWorkspace();
       expect(ws.name).toBe("Framework Architecture");
@@ -265,15 +278,19 @@ describe("C4 Model - cfour package", () => {
 
     test("should throw error when parent is missing", () => {
       BaseCfour.resetWorkspace();
-      expect(() => BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "missing" })).toThrow(
-        /Software System with id "missing" not found/,
-      );
+      expect(() =>
+        BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "missing" }, "default", "local"),
+      ).toThrow(/Software System with id "missing" not found/);
     });
 
     test("should support drilling by providing childCount and canDrill metadata", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "System 1" });
-      BaseCfour.addContainer({ id: "con1", name: "Container 1", systemId: "sys1" });
+      BaseCfour.addContainer(
+        { id: "con1", name: "Container 1", systemId: "sys1" },
+        "default",
+        "local",
+      );
 
       const ws = BaseCfour.getWorkspace();
       const { nodes } = c4ToReactFlow(ws);
@@ -291,7 +308,11 @@ describe("C4 Model - cfour package", () => {
     test("should provide static view builders that use global workspace", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "System 1" });
-      BaseCfour.addContainer({ id: "con1", name: "Container 1", systemId: "sys1" });
+      BaseCfour.addContainer(
+        { id: "con1", name: "Container 1", systemId: "sys1" },
+        "default",
+        "local",
+      );
 
       const view = BaseCfour.getContainerView("sys1");
       expect(view.kind).toBe("Container");
@@ -348,11 +369,11 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Original" });
 
       // Update
-      BaseCfour.updateElement("sys1", { name: "Updated" });
+      BaseCfour.updateElement("sys1", { name: "Updated" }, "default", "local");
       expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("Updated");
 
       // Remove
-      BaseCfour.removeElement("sys1");
+      BaseCfour.removeElement("sys1", "default", "local");
       expect(BaseCfour.getWorkspace().softwareSystems.length).toBe(0);
     });
 
@@ -434,13 +455,17 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "svc-3", name: "Service 3", owner: "Team Beta" });
 
       // Interaction
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "svc-1",
-        destinationId: "svc-3",
-        description: "Calls",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "svc-1",
+          destinationId: "svc-3",
+          description: "Calls",
+        },
+        "default",
+        "local",
+      );
 
       const view = BaseCfour.getTeamView("Team Alpha");
 
@@ -460,25 +485,33 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addBuildingBlock("db", "Database", "Sensitive data", "PostgreSQL");
 
       // Network flows
-      BaseCfour.addRelationship({
-        id: "f1",
-        kind: "Relationship",
-        sourceId: "internet",
-        destinationId: "gateway",
-        description: "Inbound traffic",
-        technology: "HTTPS/443",
-        tags: ["internet-flow", "security-critical"],
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "f1",
+          kind: "Relationship",
+          sourceId: "internet",
+          destinationId: "gateway",
+          description: "Inbound traffic",
+          technology: "HTTPS/443",
+          tags: ["internet-flow", "security-critical"],
+        },
+        "default",
+        "local",
+      );
 
-      BaseCfour.addRelationship({
-        id: "f2",
-        kind: "Relationship",
-        sourceId: "gateway",
-        destinationId: "db",
-        description: "Database access",
-        technology: "SQL/5432",
-        tags: ["internal-flow"],
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "f2",
+          kind: "Relationship",
+          sourceId: "gateway",
+          destinationId: "db",
+          description: "Database access",
+          technology: "SQL/5432",
+          tags: ["internal-flow"],
+        },
+        "default",
+        "local",
+      );
 
       // 1. Get the View for the CISO presentation
       const flowView = BaseCfour.getFlowView("internet-flow", "CISO: Internet Facing Flows");
@@ -519,20 +552,32 @@ describe("C4 Model - cfour package", () => {
 
       // System A with Container A
       BaseCfour.addSoftwareSystem({ id: "sysA", name: "System A" });
-      BaseCfour.addContainer({ id: "conA", name: "Container A", systemId: "sysA" });
+      BaseCfour.addContainer(
+        { id: "conA", name: "Container A", systemId: "sysA" },
+        "default",
+        "local",
+      );
 
       // System B with Container B
       BaseCfour.addSoftwareSystem({ id: "sysB", name: "System B" });
-      BaseCfour.addContainer({ id: "conB", name: "Container B", systemId: "sysB" });
+      BaseCfour.addContainer(
+        { id: "conB", name: "Container B", systemId: "sysB" },
+        "default",
+        "local",
+      );
 
       // Relationship at the GRANULAR level (Container to Container)
-      BaseCfour.addRelationship({
-        id: "rel-deep",
-        kind: "Relationship",
-        sourceId: "conA",
-        destinationId: "conB",
-        description: "Sends data",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "rel-deep",
+          kind: "Relationship",
+          sourceId: "conA",
+          destinationId: "conB",
+          description: "Sends data",
+        },
+        "default",
+        "local",
+      );
 
       // 1. Verify Level 1 View (System Context)
       // It should automatically show an arrow from SysA to SysB
@@ -556,12 +601,16 @@ describe("C4 Model - cfour package", () => {
     test("should validate architectural integrity", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Empty System" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "missing",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "missing",
+        },
+        "default",
+        "local",
+      );
 
       const errors = BaseCfour.validate();
 
@@ -612,15 +661,23 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       // Use addContainer directly to ensure 'React' tech is set on the container
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1", technology: "React" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-        description: "Uses",
-        technology: "HTTPS",
-      });
+      BaseCfour.addContainer(
+        { id: "con1", name: "C1", systemId: "sys1", technology: "React" },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+          description: "Uses",
+          technology: "HTTPS",
+        },
+        "default",
+        "local",
+      );
 
       const view = BaseCfour.getContainerView("sys1");
       const legend = BaseCfour.getLegend(view);
@@ -638,12 +695,16 @@ describe("C4 Model - cfour package", () => {
       // Add a node with missing description and technology
       BaseCfour.addBuildingBlock("api", "API");
       // Add a relationship with missing description and technology
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "api",
-        destinationId: "api",
-      } as any);
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "api",
+          destinationId: "api",
+        } as any,
+        "default",
+        "local",
+      );
 
       const violations = BaseCfour.lint();
 
@@ -660,19 +721,27 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.resetWorkspace();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Messaging System" });
 
-      BaseCfour.addQueue({
-        id: "q1",
-        name: "Order Processing Queue",
-        systemId: "sys1",
-        technology: "RabbitMQ",
-      });
+      BaseCfour.addQueue(
+        {
+          id: "q1",
+          name: "Order Processing Queue",
+          systemId: "sys1",
+          technology: "RabbitMQ",
+        },
+        "default",
+        "local",
+      );
 
-      BaseCfour.addTopic({
-        id: "t1",
-        name: "Customer Events Topic",
-        systemId: "sys1",
-        technology: "Kafka",
-      });
+      BaseCfour.addTopic(
+        {
+          id: "t1",
+          name: "Customer Events Topic",
+          systemId: "sys1",
+          technology: "Kafka",
+        },
+        "default",
+        "local",
+      );
 
       const ws = BaseCfour.getWorkspace();
       const containers = ws.softwareSystems[0].containers!;
@@ -722,7 +791,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
       const ev = events.find((e) => e.elementId === "con1");
       expect(ev).toBeDefined();
       expect(ev!.op).toBe("add");
@@ -733,10 +802,14 @@ describe("C4 Model - cfour package", () => {
 
     test("addComponent emits event with full ancestry path", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.addComponent({ id: "comp1", name: "Comp1", containerId: "con1" });
+      BaseCfour.addComponent(
+        { id: "comp1", name: "Comp1", containerId: "con1" },
+        "default",
+        "local",
+      );
       const ev = events.find((e) => e.elementId === "comp1");
       expect(ev).toBeDefined();
       expect(ev!.op).toBe("add");
@@ -747,11 +820,19 @@ describe("C4 Model - cfour package", () => {
 
     test("addCodeElement emits event with full ancestry path", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "Comp1", containerId: "con1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent(
+        { id: "comp1", name: "Comp1", containerId: "con1" },
+        "default",
+        "local",
+      );
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
       const ev = events.find((e) => e.elementId === "ce1");
       expect(ev).toBeDefined();
       expect(ev!.op).toBe("add");
@@ -765,12 +846,16 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+        },
+        "default",
+        "local",
+      );
       const ev = events.find((e) => e.elementId === "r1");
       expect(ev).toBeDefined();
       expect(ev!.op).toBe("add");
@@ -782,7 +867,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Old Name", description: "Keep" });
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.updateElement("sys1", { name: "New Name" });
+      BaseCfour.updateElement("sys1", { name: "New Name" }, "default", "local");
       const ev = events.find((e) => e.op === "update" && e.elementId === "sys1");
       expect(ev).toBeDefined();
       expect(ev!.before).toBeDefined();
@@ -798,7 +883,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("sys1");
+      BaseCfour.removeElement("sys1", "default", "local");
       const ev = events.find((e) => e.op === "remove" && e.elementId === "sys1");
       expect(ev).toBeDefined();
       expect(ev!.elementKind).toBe("SoftwareSystem");
@@ -807,11 +892,11 @@ describe("C4 Model - cfour package", () => {
 
     test("removeElement on nested node includes ancestry path", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("comp1");
+      BaseCfour.removeElement("comp1", "default", "local");
       const ev = events.find((e) => e.op === "remove" && e.elementId === "comp1");
       expect(ev).toBeDefined();
       expect(ev!.path).toEqual(["sys1", "con1"]);
@@ -820,26 +905,42 @@ describe("C4 Model - cfour package", () => {
 
     test("removeElement includes removedDescendants with full subtree", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
-      BaseCfour.addCodeElement({ id: "ce2", name: "CE2", componentId: "comp1" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "ce1",
-        destinationId: "comp1",
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-      });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
+      BaseCfour.addCodeElement(
+        { id: "ce2", name: "CE2", componentId: "comp1" },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "ce1",
+          destinationId: "comp1",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+        },
+        "default",
+        "local",
+      );
 
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("con1");
+      BaseCfour.removeElement("con1", "default", "local");
 
       const ev = events.find((e) => e.op === "remove" && e.elementId === "con1");
       expect(ev).toBeDefined();
@@ -875,7 +976,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("sys1");
+      BaseCfour.removeElement("sys1", "default", "local");
       const ev = events.find((e) => e.op === "remove" && e.elementId === "sys1");
       expect(ev).toBeDefined();
       expect(ev!.removedDescendants).toBeUndefined();
@@ -884,12 +985,16 @@ describe("C4 Model - cfour package", () => {
 
     test("removeElement on CodeElement has no removedDescendants", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("ce1");
+      BaseCfour.removeElement("ce1", "default", "local");
       const ev = events.find((e) => e.op === "remove" && e.elementId === "ce1");
       expect(ev).toBeDefined();
       expect(ev!.removedDescendants).toBeUndefined();
@@ -898,13 +1003,17 @@ describe("C4 Model - cfour package", () => {
 
     test("removeElement cascades: removing System removes all nested nodes", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
 
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("sys1");
+      BaseCfour.removeElement("sys1", "default", "local");
 
       const ev = events.find((e) => e.op === "remove" && e.elementId === "sys1");
       expect(ev).toBeDefined();
@@ -943,8 +1052,8 @@ describe("C4 Model - cfour package", () => {
       const unsub = BaseCfour.subscribe((e) => events.push(e));
 
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Web" });
-      BaseCfour.addContainer({ id: "con1", name: "API", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "auth", name: "Auth", containerId: "con1" });
+      BaseCfour.addContainer({ id: "con1", name: "API", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "auth", name: "Auth", containerId: "con1" }, "default", "local");
 
       const addEvent = events.find((e) => e.op === "add" && e.elementId === "auth");
       expect(addEvent).toBeDefined();
@@ -990,7 +1099,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.batch(() => {
         BaseCfour.addPerson({ id: "p1", name: "P1" });
         BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
-        BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "s1" });
+        BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "s1" }, "default", "local");
       });
       expect(events.map((e) => e.elementId)).toEqual(["p1", "s1", "c1"]);
       unsub();
@@ -1132,14 +1241,18 @@ describe("C4 Model - cfour package", () => {
   describe("Behavior Field", () => {
     test("behavior field round-trips through export/import", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
-      BaseCfour.addCodeElement({
-        id: "ce1",
-        name: "MyClass",
-        componentId: "comp1",
-        behavior: "function greet(name) { return `Hello ${name}`; }",
-      });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        {
+          id: "ce1",
+          name: "MyClass",
+          componentId: "comp1",
+          behavior: "function greet(name) { return `Hello ${name}`; }",
+        },
+        "default",
+        "local",
+      );
 
       const json = BaseCfour.export();
       BaseCfour.resetWorkspace();
@@ -1152,13 +1265,17 @@ describe("C4 Model - cfour package", () => {
 
     test("behavior field on Component round-trips through export/import", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({
-        id: "comp1",
-        name: "C1",
-        containerId: "con1",
-        behavior: "Handles authentication via JWT tokens",
-      });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent(
+        {
+          id: "comp1",
+          name: "C1",
+          containerId: "con1",
+          behavior: "Handles authentication via JWT tokens",
+        },
+        "default",
+        "local",
+      );
 
       const json = BaseCfour.export();
       BaseCfour.resetWorkspace();
@@ -1252,6 +1369,41 @@ describe("C4 Model - cfour package", () => {
       const diff = diffWorkspaces(wsA, wsB);
       expect(diff.nodes.modified.length).toBe(1);
       expect(diff.nodes.modified[0].changes).toContain("behavior");
+    });
+
+    test("diffWorkspaces ignores key order and explicit undefined values", () => {
+      const base: C4Workspace = {
+        name: "A",
+        people: [],
+        softwareSystems: [
+          {
+            id: "sys1",
+            name: "S1",
+            kind: "SoftwareSystem",
+            description: "d",
+          },
+        ],
+        relationships: [],
+      };
+
+      // Same data, keys reordered and one explicit undefined field added.
+      const reordered = JSON.parse(JSON.stringify(base)) as C4Workspace;
+      const sys = reordered.softwareSystems[0];
+      const { id, name, kind, description } = sys;
+      reordered.softwareSystems[0] = {
+        kind,
+        description,
+        name,
+        id,
+        technology: undefined,
+      } as any;
+
+      expect(diffWorkspaces(base, reordered).nodes.modified).toHaveLength(0);
+
+      // A real value change is still detected.
+      const changed = JSON.parse(JSON.stringify(base)) as C4Workspace;
+      changed.softwareSystems[0].description = "different";
+      expect(diffWorkspaces(base, changed).nodes.modified.length).toBe(1);
     });
 
     test("behavior field is optional and does not break workspace without it", () => {
@@ -1418,20 +1570,28 @@ describe("C4 Model - cfour package", () => {
     test("filters by sourceId", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        description: "A",
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "sys2",
-        destinationId: "sys1",
-        description: "B",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          description: "A",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "sys2",
+          destinationId: "sys1",
+          description: "B",
+        },
+        "default",
+        "local",
+      );
       const rels = BaseCfour.findRelationships({ sourceId: "sys1" });
       expect(rels.length).toBe(1);
       expect(rels[0].id).toBe("r1");
@@ -1440,12 +1600,16 @@ describe("C4 Model - cfour package", () => {
     test("filters by destinationId", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+        },
+        "default",
+        "local",
+      );
       const rels = BaseCfour.findRelationships({ destinationId: "sys2" });
       expect(rels.length).toBe(1);
       expect(rels[0].id).toBe("r1");
@@ -1454,20 +1618,28 @@ describe("C4 Model - cfour package", () => {
     test("filters by technology", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        technology: "HTTPS",
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        technology: "gRPC",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          technology: "HTTPS",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          technology: "gRPC",
+        },
+        "default",
+        "local",
+      );
       const rels = BaseCfour.findRelationships({ technology: "HTTPS" });
       expect(rels.length).toBe(1);
       expect(rels[0].id).toBe("r1");
@@ -1476,19 +1648,27 @@ describe("C4 Model - cfour package", () => {
     test("filters by tags", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        tags: ["internal"],
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          tags: ["internal"],
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+        },
+        "default",
+        "local",
+      );
       const rels = BaseCfour.findRelationships({ tags: ["internal"] });
       expect(rels.length).toBe(1);
       expect(rels[0].id).toBe("r1");
@@ -1497,14 +1677,18 @@ describe("C4 Model - cfour package", () => {
     test("filters by search in description and technology", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        description: "Fetches user data",
-        technology: "REST",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          description: "Fetches user data",
+          technology: "REST",
+        },
+        "default",
+        "local",
+      );
       const rels = BaseCfour.findRelationships({ search: "user" });
       expect(rels.length).toBe(1);
       expect(rels[0].id).toBe("r1");
@@ -1513,20 +1697,28 @@ describe("C4 Model - cfour package", () => {
     test("filters by interactionStyle", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        interactionStyle: "async",
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        interactionStyle: "sync",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          interactionStyle: "async",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          interactionStyle: "sync",
+        },
+        "default",
+        "local",
+      );
       const rels = BaseCfour.findRelationships({ interactionStyle: "async" });
       expect(rels.length).toBe(1);
       expect(rels[0].id).toBe("r1");
@@ -1537,17 +1729,26 @@ describe("C4 Model - cfour package", () => {
     test("updates relationship and emits event with before/after/changes", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-        description: "Old",
-        technology: "REST",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          description: "Old",
+          technology: "REST",
+        },
+        "default",
+        "local",
+      );
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.updateRelationship("r1", { description: "New", technology: "gRPC" });
+      BaseCfour.updateRelationship(
+        "r1",
+        { description: "New", technology: "gRPC" },
+        "default",
+        "local",
+      );
       const ev = events.find((e) => e.op === "update" && e.elementId === "r1");
       expect(ev).toBeDefined();
       expect(ev!.before).toBeDefined();
@@ -1562,7 +1763,7 @@ describe("C4 Model - cfour package", () => {
     test("no-op if relationship not found", () => {
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.updateRelationship("missing", { description: "X" });
+      BaseCfour.updateRelationship("missing", { description: "X" }, "default", "local");
       expect(events.filter((e) => e.op === "update").length).toBe(0);
       unsub();
     });
@@ -1571,9 +1772,13 @@ describe("C4 Model - cfour package", () => {
   describe("getAncestors / getDescendants", () => {
     test("getAncestors returns path from root to node", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
       const ancestors = BaseCfour.getAncestors("ce1");
       expect(ancestors.map((n) => n.id)).toEqual(["sys1", "con1", "comp1"]);
     });
@@ -1589,10 +1794,18 @@ describe("C4 Model - cfour package", () => {
 
     test("getDescendants returns leaves-first subtree", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
-      BaseCfour.addCodeElement({ id: "ce2", name: "CE2", componentId: "comp1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "C1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
+      BaseCfour.addCodeElement(
+        { id: "ce2", name: "CE2", componentId: "comp1" },
+        "default",
+        "local",
+      );
       const descendants = BaseCfour.getDescendants("sys1");
       const ids = descendants.map((n) => n.id);
       expect(ids).toEqual(expect.arrayContaining(["con1", "comp1", "ce1", "ce2"]));
@@ -1616,7 +1829,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "Old", description: "Keep" });
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.refreshNode("sys1", { name: "New", description: "Updated" });
+      BaseCfour.refreshNode("sys1", { name: "New", description: "Updated" }, "default", "local");
       const ev = events.find((e) => e.op === "update" && e.elementId === "sys1");
       expect(ev).toBeDefined();
       expect((ev!.after as any).name).toBe("New");
@@ -1630,7 +1843,7 @@ describe("C4 Model - cfour package", () => {
     test("logs events from mutations", async () => {
       await BaseCfour.clearEventHistory();
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
       const history = await BaseCfour.getEventHistory();
       expect(history.length).toBeGreaterThanOrEqual(2);
       expect(history[history.length - 2].elementId).toBe("sys1");
@@ -1735,7 +1948,7 @@ describe("C4 Model - cfour package", () => {
       await BaseCfour.clearEventHistory();
       BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "s2", name: "S2" });
-      BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "s1" });
+      BaseCfour.addContainer({ id: "c1", name: "C1", systemId: "s1" }, "default", "local");
       const systems = await BaseCfour.queryEventHistory({ op: "add" });
       const byId = await BaseCfour.queryEventHistory({ elementId: "s1" });
       expect(systems.length).toBe(3);
@@ -1840,7 +2053,7 @@ describe("C4 Model - cfour package", () => {
     let tmp: string;
 
     beforeEach(() => {
-      (BaseCfour as any)._generators.clear();
+      BaseCfour.reset();
     });
 
     beforeEach(async () => {
@@ -1874,10 +2087,12 @@ describe("C4 Model - cfour package", () => {
         BaseCfour.addContainer(
           { id: "con1", name: "C1", systemId: "sys1", technology: "node", description: "api" },
           "desired",
+          "local",
         );
         BaseCfour.addComponent(
           { id: "comp1", name: "P1", containerId: "con1", technology: "ts", description: "impl" },
           "desired",
+          "local",
         );
       });
     }
@@ -1938,14 +2153,16 @@ describe("C4 Model - cfour package", () => {
           BaseCfour.addContainer(
             { id: "con", name: "C", systemId: "sys", description: "d" },
             "desired",
+            "local",
           );
           for (const id of ids) {
             BaseCfour.addComponent(
               { id, name: id, containerId: "con", description: "d" },
               "desired",
+              "local",
             );
           }
-          for (const r of rels) BaseCfour.addRelationship(r, "desired");
+          for (const r of rels) BaseCfour.addRelationship(r, "desired", "local");
         });
 
         const order = BaseCfour.topoOrderForApply(BaseCfour.diff("applied", "desired"), "desired");
@@ -1971,30 +2188,37 @@ describe("C4 Model - cfour package", () => {
         BaseCfour.addContainer(
           { id: "con1", name: "C1", systemId: "sys1", description: "d" },
           "desired",
+          "local",
         );
         BaseCfour.addComponent(
           { id: "a", name: "A", containerId: "con1", description: "d" },
           "desired",
+          "local",
         );
         BaseCfour.addComponent(
           { id: "b", name: "B", containerId: "con1", description: "d" },
           "desired",
+          "local",
         );
         BaseCfour.addComponent(
           { id: "c", name: "C", containerId: "con1", description: "d" },
           "desired",
+          "local",
         );
         BaseCfour.addRelationship(
           { id: "ab", kind: "Relationship", sourceId: "a", destinationId: "b", description: "d" },
           "desired",
+          "local",
         );
         BaseCfour.addRelationship(
           { id: "bc", kind: "Relationship", sourceId: "b", destinationId: "c", description: "d" },
           "desired",
+          "local",
         );
         BaseCfour.addRelationship(
           { id: "ca", kind: "Relationship", sourceId: "c", destinationId: "a", description: "d" },
           "desired",
+          "local",
         );
       });
 
@@ -2038,7 +2262,7 @@ describe("C4 Model - cfour package", () => {
       expect(m1.comp1?.files[p2]).toBeDefined();
       expect(m1.con1?.files[pCon]).toBeDefined();
 
-      BaseCfour.removeElement("comp1", "desired");
+      BaseCfour.removeElement("comp1", "desired", "local");
       const m2 = await BaseCfour.planAndApply(m1);
 
       // comp1's owned files are gone and its manifest entry is gone…
@@ -2065,7 +2289,7 @@ describe("C4 Model - cfour package", () => {
       expect(m1.comp1?.files[pLegacy]).toBeDefined();
 
       // The generator stops writing pLegacy and signals it as deleted.
-      BaseCfour.updateElement("comp1", { name: "v2" }, "desired");
+      BaseCfour.updateElement("comp1", { name: "v2" }, "desired", "local");
       BaseCfour.registerGenerator("Component:ts", async () => {
         await writeFile(pCurrent, "current-v2");
         return { filesWritten: [pCurrent], filesDeleted: [pLegacy] };
@@ -2092,7 +2316,7 @@ describe("C4 Model - cfour package", () => {
       expect(m1.comp1?.files[p2]).toBeDefined();
 
       // Output set shrinks; the generator forgets to mention filesDeleted.
-      BaseCfour.updateElement("comp1", { name: "v2" }, "desired");
+      BaseCfour.updateElement("comp1", { name: "v2" }, "desired", "local");
       BaseCfour.registerGenerator("Component:ts", async () => {
         await writeFile(p1, "impl-v2");
         return { filesWritten: [p1], filesDeleted: [] };
@@ -2112,6 +2336,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addRelationship(
         { id: "dangling", kind: "Relationship", sourceId: "ghost", destinationId: "comp1" },
         "desired",
+        "local",
       );
 
       let invocations = 0;
@@ -2136,7 +2361,7 @@ describe("C4 Model - cfour package", () => {
       const appliedBefore = JSON.stringify(BaseCfour.getWorkspace("applied"));
 
       // Mutate desired, then make generation fail mid-apply.
-      BaseCfour.updateElement("comp1", { name: "v2" }, "desired");
+      BaseCfour.updateElement("comp1", { name: "v2" }, "desired", "local");
       BaseCfour.registerGenerator("Component:ts", async () => {
         throw new Error("boom");
       });
@@ -2162,7 +2387,7 @@ describe("C4 Model - cfour package", () => {
       // Hand-edit the generated file and touch the node so the next apply
       // regenerates it.
       await writeFile(p, "HAND-EDITED");
-      BaseCfour.updateElement("comp1", { name: "v2" }, "desired");
+      BaseCfour.updateElement("comp1", { name: "v2" }, "desired", "local");
 
       const driftCalls: Array<[string, string[]]> = [];
       const m2 = await BaseCfour.planAndApply(m1, {
@@ -2179,7 +2404,7 @@ describe("C4 Model - cfour package", () => {
       // Re-touch + re-edit, then apply with "overwrite": bytes are restored and
       // the manifest is updated to match the new disk state.
       await writeFile(p, "HAND-EDITED-2");
-      BaseCfour.updateElement("comp1", { name: "v3" }, "desired");
+      BaseCfour.updateElement("comp1", { name: "v3" }, "desired", "local");
       const m3 = await BaseCfour.planAndApply(m2, { onDrift: () => "overwrite" });
       expect(await readFile(p, "utf8")).toBe("generated");
       expect(m3.comp1?.files[p]).toBe(await diskHash(p));
@@ -2226,21 +2451,29 @@ describe("C4 Model - cfour package", () => {
     });
 
     test("deriveRelationshipId is deterministic, slugified, and injective across labels", () => {
-      expect(BaseCfour.deriveRelationshipId("a", "b", "wires")).toBe("a--b--wires");
+      // Readable, address-like prefix plus a label digest.
+      expect(BaseCfour.deriveRelationshipId("a", "b", "wires")).toBe("a--b--wires--5c8ad06e");
       // Determinism: identical inputs always map to the identical id.
       expect(BaseCfour.deriveRelationshipId("a", "b", "wires")).toBe(
         BaseCfour.deriveRelationshipId("a", "b", "wires"),
       );
       // Spaces in the label are slugified.
       expect(BaseCfour.deriveRelationshipId("a", "b", "Reads customer data")).toBe(
-        "a--b--Reads-customer-data",
+        "a--b--Reads-customer-data--19165a70",
       );
       // Injectivity across labels: distinct labels never collide for one endpoint pair.
       const labels = ["implements", "depends", "wires", "uses", "calls", "part-of"];
       const ids = labels.map((l) => BaseCfour.deriveRelationshipId("a", "b", l));
       expect(new Set(ids).size).toBe(ids.length);
-      // Readable, address-like prefix.
       expect(ids.every((id) => id.startsWith("a--b--"))).toBe(true);
+      // Labels that slugify identically still get distinct ids.
+      const near = [
+        BaseCfour.deriveRelationshipId("a", "b", "uses-data"),
+        BaseCfour.deriveRelationshipId("a", "b", "uses  data"),
+        BaseCfour.deriveRelationshipId("a", "b", "Reads!"),
+        BaseCfour.deriveRelationshipId("a", "b", "Reads?"),
+      ];
+      expect(new Set(near).size).toBe(near.length);
     });
 
     test("assertGeneratorIsPure enforces the purity contract at the content level", async () => {
@@ -2266,29 +2499,39 @@ describe("C4 Model - cfour package", () => {
 
   describe("Selections (getSubtree / getSelection)", () => {
     beforeEach(() => {
-      (BaseCfour as any)._claims.clear();
-      (BaseCfour as any)._relationshipProposals.clear();
-      (BaseCfour as any)._branchBase.clear();
+      BaseCfour.reset();
     });
 
     test("getSubtree returns root + all descendants + only-internal relationships", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "comp1",
-        destinationId: "sys2",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "comp1",
+          destinationId: "sys2",
+        },
+        "default",
+        "local",
+      );
 
       const sel = BaseCfour.getSubtree("sys1");
       expect(sel.elementIds.sort()).toEqual(["ce1", "comp1", "con1", "sys1"]);
@@ -2311,24 +2554,36 @@ describe("C4 Model - cfour package", () => {
         tags: ["frontend"],
       });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "API" });
-      BaseCfour.addContainer({
-        id: "con1",
-        name: "Web Gateway",
-        systemId: "sys1",
-        technology: "React",
-      });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-      });
-      BaseCfour.addRelationship({
-        id: "r2",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-      });
+      BaseCfour.addContainer(
+        {
+          id: "con1",
+          name: "Web Gateway",
+          systemId: "sys1",
+          technology: "React",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+        },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+        },
+        "default",
+        "local",
+      );
 
       const bySearch = BaseCfour.getSelection({ search: "Web" });
       expect(bySearch.elementIds.sort()).toEqual(["con1", "sys1"]);
@@ -2350,9 +2605,7 @@ describe("C4 Model - cfour package", () => {
 
   describe("Claims", () => {
     beforeEach(() => {
-      (BaseCfour as any)._claims.clear();
-      (BaseCfour as any)._relationshipProposals.clear();
-      (BaseCfour as any)._branchBase.clear();
+      BaseCfour.reset();
     });
 
     test("claim rejects overlap with an existing claim, including your own, and emits a claim event", () => {
@@ -2439,22 +2692,28 @@ describe("C4 Model - cfour package", () => {
 
   describe("Claim Enforcement on Mutators", () => {
     beforeEach(() => {
-      (BaseCfour as any)._claims.clear();
-      (BaseCfour as any)._relationshipProposals.clear();
-      (BaseCfour as any)._branchBase.clear();
+      BaseCfour.reset();
     });
 
     test("mutators reject edits from a different editorId than the claim holder", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" });
-      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-      });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" }, "default", "local");
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+        },
+        "default",
+        "local",
+      );
 
       BaseCfour.claim(
         { elementIds: ["sys1", "con1", "comp1", "ce1"], relationshipIds: ["r1"] },
@@ -2491,22 +2750,37 @@ describe("C4 Model - cfour package", () => {
       ).toThrow(/claimed by editor "alice"/);
     });
 
-    test("today's no-editorId call patterns work unchanged on claimed elements", () => {
+    test("editing a claimed element requires holding that claim", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-      });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+        },
+        "default",
+        "local",
+      );
       BaseCfour.claim({ elementIds: ["sys1", "con1"], relationshipIds: ["r1"] }, "alice");
 
-      // All calls omit editorId → claim enforcement is a complete no-op.
-      BaseCfour.updateElement("sys1", { name: "Renamed" });
-      BaseCfour.updateRelationship("r1", { description: "updated" });
-      BaseCfour.addContainer({ id: "con2", name: "C2", systemId: "sys1" });
-      BaseCfour.removeElement("con2");
+      // Any caller who is not the claim holder is rejected.
+      expect(() =>
+        BaseCfour.updateElement("sys1", { name: "Renamed" }, "default", "local"),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.updateRelationship("r1", { description: "updated" }, "default", "local"),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.addContainer({ id: "con2", name: "C2", systemId: "sys1" }, "default", "local"),
+      ).toThrow(/claimed by editor "alice"/);
+
+      // The claim holder may edit freely, and their children auto-absorb.
+      BaseCfour.updateElement("sys1", { name: "Renamed" }, "default", "alice");
+      BaseCfour.updateRelationship("r1", { description: "updated" }, "default", "alice");
+      BaseCfour.addContainer({ id: "con2", name: "C2", systemId: "sys1" }, "default", "alice");
+      BaseCfour.removeElement("con2", "default", "alice");
 
       expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("Renamed");
       expect(BaseCfour.getWorkspace().relationships[0].description).toBe("updated");
@@ -2534,12 +2808,16 @@ describe("C4 Model - cfour package", () => {
     test("updateRelationship on a claim-uncovered relationship is a no-op check", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "sys2",
-      });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+        },
+        "default",
+        "local",
+      );
       BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
 
       expect(() =>
@@ -2551,20 +2829,22 @@ describe("C4 Model - cfour package", () => {
 
   describe("removeElement claim integration", () => {
     beforeEach(() => {
-      (BaseCfour as any)._claims.clear();
-      (BaseCfour as any)._relationshipProposals.clear();
-      (BaseCfour as any)._branchBase.clear();
+      BaseCfour.reset();
     });
 
     test("removeElement purges removed ids from claims and auto-releases an emptied claim", () => {
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
-      BaseCfour.addRelationship({
-        id: "r1",
-        kind: "Relationship",
-        sourceId: "sys1",
-        destinationId: "con1",
-      });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "local");
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+        },
+        "default",
+        "local",
+      );
       const claim = BaseCfour.claim(
         { elementIds: ["sys1", "con1"], relationshipIds: ["r1"] },
         "alice",
@@ -2572,7 +2852,7 @@ describe("C4 Model - cfour package", () => {
 
       const events: CfourChangeEvent[] = [];
       const unsub = BaseCfour.subscribe((e) => events.push(e));
-      BaseCfour.removeElement("sys1");
+      BaseCfour.removeElement("sys1", "default", "alice");
       unsub();
 
       expect(claim.elementIds.has("sys1")).toBe(false);
@@ -2592,7 +2872,7 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
       const claim = BaseCfour.claim({ elementIds: ["sys1", "sys2"], relationshipIds: [] }, "alice");
 
-      BaseCfour.removeElement("sys1");
+      BaseCfour.removeElement("sys1", "default", "alice");
 
       expect(claim.elementIds.has("sys1")).toBe(false);
       expect(claim.elementIds.has("sys2")).toBe(true);
@@ -2604,9 +2884,7 @@ describe("C4 Model - cfour package", () => {
 
   describe("Relationship Joint-Claim Proposals", () => {
     beforeEach(() => {
-      (BaseCfour as any)._claims.clear();
-      (BaseCfour as any)._relationshipProposals.clear();
-      (BaseCfour as any)._branchBase.clear();
+      BaseCfour.reset();
     });
 
     function seedCrossClaimedWorkspace() {
@@ -2635,9 +2913,11 @@ describe("C4 Model - cfour package", () => {
         /proposeRelationship/i,
       );
 
-      // Omitted editorId is unaffected
-      expect(() => BaseCfour.addRelationship({ ...rel, id: "r2" })).not.toThrow();
-      expect(BaseCfour.findRelationships({}).map((r) => r.id)).toContain("r2");
+      // A relationship spanning two editors' claims is rejected for every caller,
+      // including editors who hold neither endpoint
+      expect(() => BaseCfour.addRelationship({ ...rel, id: "r2" }, "default", "local")).toThrow(
+        /proposeRelationship/i,
+      );
 
       // Endpoints claimed by the same single editor are fine
       BaseCfour.addSoftwareSystem({ id: "sys3", name: "S3" });
@@ -2743,17 +3023,13 @@ describe("C4 Model - cfour package", () => {
 
   describe("Branching & Merging", () => {
     beforeEach(() => {
-      (BaseCfour as any)._claims.clear();
-      (BaseCfour as any)._relationshipProposals.clear();
-      (BaseCfour as any)._branchBase.clear();
-      (BaseCfour as any)._workspaces.delete("main");
-      (BaseCfour as any)._workspaces.delete("feature");
+      BaseCfour.reset();
     });
 
     test("branchWorkspace + planMerge + applyMerge full happy path", () => {
       BaseCfour.resetWorkspace("main", "Main");
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "system" }, "main");
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main");
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main", "local");
       BaseCfour.addRelationship(
         {
           id: "r1",
@@ -2763,13 +3039,14 @@ describe("C4 Model - cfour package", () => {
           description: "uses",
         },
         "main",
+        "local",
       );
 
       BaseCfour.branchWorkspace("main", "feature");
 
       // Independent change on the branch
-      BaseCfour.updateElement("sys1", { name: "S1-branch" }, "feature");
-      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" }, "feature");
+      BaseCfour.updateElement("sys1", { name: "S1-branch" }, "feature", "local");
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" }, "feature", "local");
       BaseCfour.addRelationship(
         {
           id: "r2",
@@ -2779,11 +3056,12 @@ describe("C4 Model - cfour package", () => {
           description: "belongs",
         },
         "feature",
+        "local",
       );
 
       // Independent change on the target
       BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "main");
-      BaseCfour.updateElement("con1", { description: "updated on main" }, "main");
+      BaseCfour.updateElement("con1", { description: "updated on main" }, "main", "local");
 
       const plan = BaseCfour.planMerge("feature", "main");
       expect(plan.branch).toBe("feature");
@@ -2814,11 +3092,11 @@ describe("C4 Model - cfour package", () => {
     test("planMerge flags conflicts and applyMerge throws without mutating into", () => {
       BaseCfour.resetWorkspace("main", "Main");
       BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "base" }, "main");
-      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main");
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main", "local");
 
       BaseCfour.branchWorkspace("main", "feature");
-      BaseCfour.updateElement("sys1", { name: "branch-name" }, "feature");
-      BaseCfour.updateElement("sys1", { name: "main-name" }, "main");
+      BaseCfour.updateElement("sys1", { name: "branch-name" }, "feature", "local");
+      BaseCfour.updateElement("sys1", { name: "main-name" }, "main", "local");
 
       const plan = BaseCfour.planMerge("feature", "main");
       expect(plan.conflicts).toContain("sys1");

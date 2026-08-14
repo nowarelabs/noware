@@ -1,22 +1,46 @@
 import type {
-  EnvLike,
-  CfourContext,
-  RequestLike,
   HookOptions,
   HookFunction,
   AfterHookFunction,
   AroundHookFunction,
   RegisteredHook,
 } from "@nowarelabs/shared";
-import { Logger } from "@nowarelabs/telemetry";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 
-export abstract class BaseCfour<
-  Ctx extends CfourContext = CfourContext,
-  _Env extends EnvLike = EnvLike,
-  _Request extends RequestLike = RequestLike,
-> {
+/**
+ * cfour — a single-module C4 architecture model kernel.
+ *
+ * This file is intentionally one module: the C4 model (workspaces, systems,
+ * containers, components, code elements, relationships) lives here alongside
+ * its mutation semantics, claim/proposal collaboration rules, branch diffing
+ * and merging, generator-driven code synthesis (plan/apply), and persistence
+ * helpers. Keeping the model, its invariants, and its workflows co-located is
+ * what lets them share private state without leaking it through a public API
+ * surface.
+ *
+ * The public entry point is `BaseCfour`, a per-instance model behind a static
+ * facade: instantiate `new BaseCfour()` (or a subclass) for an isolated model,
+ * or call the static methods directly, which delegate to a shared default
+ * instance. Mutating methods take a workspace name plus an `editorId`; when a
+ * selection is claimed, the claim is enforced — an editor may only modify
+ * elements they hold. Cross-editor relationship edits go through
+ * `proposeRelationship` / `acceptRelationship` joint approval. Branches
+ * (`createBranch`, `planMerge`, `applyMerge`) and generators
+ * (`registerGenerator`, `planAndApply`) build on the same diff primitives.
+ *
+ * Pure helpers (`flattenWorkspace`, `c4ToReactFlow`, `diffWorkspaces`,
+ * `deriveRelationshipId`, view builders) are exported alongside the class.
+ */
+
+/**
+ * Editor id used for system-level model construction that has no human
+ * editor in scope: `register`, `addBuildingBlock` and `applyMerge` node
+ * additions. Claim enforcement treats it like any other editor id.
+ */
+const REGISTER_EDITOR = "__system__";
+
+export class BaseCfour {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
   static aroundHooks: RegisteredHook[] = [];
@@ -36,29 +60,60 @@ export abstract class BaseCfour<
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }
 
-  private static _workspaces: Map<string, C4Workspace> = new Map([
+  /**
+   * Resets every piece of mutable state on this instance back to its initial
+   * value: workspaces, claims, relationship proposals, branch bases, the
+   * event log, and the generator registry. Listeners, storage adapters and
+   * the event-log cap are left alone. Use `BaseCfour.reset()` (the static
+   * facade) for test isolation, or call it on your own instance to tear a
+   * model down.
+   */
+  reset(): void {
+    this._workspaces = new Map([
+      [
+        "default",
+        {
+          name: "Default Workspace",
+          people: [],
+          softwareSystems: [],
+          relationships: [],
+          views: [],
+        },
+      ],
+    ]);
+    this._batchDepth = 0;
+    this._batchQueue = [];
+    this._batchSnapshots = [];
+    this._eventLog = [];
+    this._claims = new Map();
+    this._relationshipProposals = new Map();
+    this._branchBase = new Map();
+    this._claimTtlMs = 5 * 60 * 1000;
+    this._generators = new Map();
+  }
+
+  private _workspaces: Map<string, C4Workspace> = new Map([
     [
       "default",
       { name: "Default Workspace", people: [], softwareSystems: [], relationships: [], views: [] },
     ],
   ]);
 
-  private static _listeners: Set<(event: CfourChangeEvent) => void> = new Set();
-  private static _batchDepth = 0;
-  private static _batchQueue: CfourChangeEvent[] = [];
+  private _listeners: Set<(event: CfourChangeEvent) => void> = new Set();
+  private _batchDepth = 0;
+  private _batchQueue: CfourChangeEvent[] = [];
   // One lazily-populated snapshot map per active batch level: each level
   // clones a workspace the first time it is accessed at that level, so it
   // can restore it on failure (undefined = workspace didn't exist yet).
-  private static _batchSnapshots: Map<string, C4Workspace | undefined>[] = [];
-  private static _storage: CfourStorage | null = null;
-  private static _eventLog: CfourChangeEvent[] = [];
-  private static _eventLogMax = 1000;
-  private static _eventStorage: CfourEventStorage | null = null;
-  private static _claims: Map<string, Map<string, C4Claim>> = new Map(); // workspaceName -> claimId -> claim
-  private static _relationshipProposals: Map<string, Map<string, C4RelationshipProposal>> =
-    new Map(); // workspaceName -> proposalId -> proposal
-  private static _branchBase: Map<string, { parent: string; baseSnapshot: string }> = new Map(); // branchName -> parent + JSON snapshot at branch time
-  private static _claimTtlMs = 5 * 60 * 1000; // default; overridable via setClaimTtl
+  private _batchSnapshots: Map<string, C4Workspace | undefined>[] = [];
+  private _storage: CfourStorage | null = null;
+  private _eventLog: CfourChangeEvent[] = [];
+  private _eventLogMax = 1000;
+  private _eventStorage: CfourEventStorage | null = null;
+  private _claims: Map<string, Map<string, C4Claim>> = new Map(); // workspaceName -> claimId -> claim
+  private _relationshipProposals: Map<string, Map<string, C4RelationshipProposal>> = new Map(); // workspaceName -> proposalId -> proposal
+  private _branchBase: Map<string, { parent: string; baseSnapshot: string }> = new Map(); // branchName -> parent + JSON snapshot at branch time
+  private _claimTtlMs = 5 * 60 * 1000; // default; overridable via setClaimTtl
 
   /**
    * Subscribes to fine-grained workspace change events.
@@ -94,12 +149,12 @@ export abstract class BaseCfour<
    *
    * Returns an unsubscribe function.
    */
-  static subscribe(listener: (event: CfourChangeEvent) => void) {
+  subscribe(listener: (event: CfourChangeEvent) => void) {
     this._listeners.add(listener);
     return () => this._listeners.delete(listener);
   }
 
-  private static _notify(event: CfourChangeEvent) {
+  private _notify(event: CfourChangeEvent) {
     if (this._batchDepth > 0) {
       this._batchQueue.push(event);
       return;
@@ -110,7 +165,7 @@ export abstract class BaseCfour<
     }
   }
 
-  private static _logEvent(event: CfourChangeEvent) {
+  private _logEvent(event: CfourChangeEvent) {
     const stamped = { ...event, timestamp: Date.now() };
     this._eventLog.push(stamped);
     if (this._eventLog.length > this._eventLogMax) {
@@ -153,7 +208,7 @@ export abstract class BaseCfour<
    * // -> two events emitted here, in order
    * ```
    */
-  static batch(fn: () => void) {
+  batch(fn: () => void) {
     const level = new Map<string, C4Workspace | undefined>();
     this._batchSnapshots.push(level);
     const queueStart = this._batchQueue.length;
@@ -194,7 +249,7 @@ export abstract class BaseCfour<
   }
 
   /** Records a pre-mutation snapshot of `name` on first access at this level. */
-  private static _captureLazySnapshot(name: string, current: C4Workspace | undefined) {
+  private _captureLazySnapshot(name: string, current: C4Workspace | undefined) {
     if (this._batchDepth > 0) {
       const level = this._batchSnapshots[this._batchSnapshots.length - 1];
       if (level && !level.has(name)) {
@@ -203,7 +258,7 @@ export abstract class BaseCfour<
     }
   }
 
-  private static _restoreLevel(level: Map<string, C4Workspace | undefined>) {
+  private _restoreLevel(level: Map<string, C4Workspace | undefined>) {
     for (const [name, snap] of level) {
       if (snap === undefined) this._workspaces.delete(name);
       else this._workspaces.set(name, snap);
@@ -211,7 +266,7 @@ export abstract class BaseCfour<
   }
 
   /** Resets a specific C4 workspace or the default one. */
-  static resetWorkspace(workspaceName = "default", title?: string, description?: string) {
+  resetWorkspace(workspaceName = "default", title?: string, description?: string) {
     // Snapshot before overwriting so a failed batch can bring the old
     // content back (or, for a never-seen name, drop the fresh workspace).
     this._captureLazySnapshot(workspaceName, this._workspaces.get(workspaceName));
@@ -230,7 +285,7 @@ export abstract class BaseCfour<
   }
 
   /** Returns a specific C4 workspace or the default one. */
-  static getWorkspace(name = "default"): C4Workspace {
+  getWorkspace(name = "default"): C4Workspace {
     const ws = this._workspaces.get(name);
     if (!ws) {
       // Lazy initialization if workspace doesn't exist
@@ -244,12 +299,12 @@ export abstract class BaseCfour<
   }
 
   /** Returns all workspace names. */
-  static getWorkspaceNames(): string[] {
+  getWorkspaceNames(): string[] {
     return Array.from(this._workspaces.keys());
   }
 
   /** Adds a Person to the workspace. */
-  static addPerson(person: Omit<C4Person, "kind">, workspaceName = "default") {
+  addPerson(person: Omit<C4Person, "kind">, workspaceName = "default") {
     this.getWorkspace(workspaceName).people.push({ ...person, kind: "Person" });
     this._notify({
       op: "add",
@@ -261,7 +316,7 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Software System to the workspace. */
-  static addSoftwareSystem(system: Omit<C4SoftwareSystem, "kind">, workspaceName = "default") {
+  addSoftwareSystem(system: Omit<C4SoftwareSystem, "kind">, workspaceName = "default") {
     this.getWorkspace(workspaceName).softwareSystems.push({ ...system, kind: "SoftwareSystem" });
     this._notify({
       op: "add",
@@ -273,10 +328,10 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Container to a Software System. */
-  static addContainer(
+  addContainer(
     container: Omit<C4Container, "kind"> & { kind?: "Container" | "Queue" | "Topic" },
     workspaceName = "default",
-    editorId?: string,
+    editorId: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
     const system = ws.softwareSystems.find((s) => s.id === container.systemId);
@@ -288,9 +343,7 @@ export abstract class BaseCfour<
     this._assertClaimAllows(container.systemId, editorId, workspaceName, "element");
     system.containers = system.containers || [];
     system.containers.push({ ...container, kind: container.kind ?? "Container" });
-    if (editorId !== undefined) {
-      this._absorbCreatedElement(container.systemId, container.id, editorId, workspaceName);
-    }
+    this._absorbCreatedElement(container.systemId, container.id, editorId, workspaceName);
     this._notify({
       op: "add",
       workspaceName,
@@ -301,21 +354,17 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Queue to a Software System (specialized container). */
-  static addQueue(queue: Omit<C4Container, "kind">, workspaceName = "default", editorId?: string) {
+  addQueue(queue: Omit<C4Container, "kind">, workspaceName = "default", editorId: string) {
     this.addContainer({ ...queue, kind: "Queue" }, workspaceName, editorId);
   }
 
   /** Adds a Topic to a Software System (specialized container). */
-  static addTopic(topic: Omit<C4Container, "kind">, workspaceName = "default", editorId?: string) {
+  addTopic(topic: Omit<C4Container, "kind">, workspaceName = "default", editorId: string) {
     this.addContainer({ ...topic, kind: "Topic" }, workspaceName, editorId);
   }
 
   /** Adds a Component to a Container. */
-  static addComponent(
-    component: Omit<C4Component, "kind">,
-    workspaceName = "default",
-    editorId?: string,
-  ) {
+  addComponent(component: Omit<C4Component, "kind">, workspaceName = "default", editorId: string) {
     const ws = this.getWorkspace(workspaceName);
     let container: C4Container | undefined;
     let systemId = "";
@@ -336,9 +385,7 @@ export abstract class BaseCfour<
     this._assertClaimAllows(component.containerId, editorId, workspaceName, "element");
     container.components = container.components || [];
     container.components.push({ ...component, kind: "Component" });
-    if (editorId !== undefined) {
-      this._absorbCreatedElement(component.containerId, component.id, editorId, workspaceName);
-    }
+    this._absorbCreatedElement(component.containerId, component.id, editorId, workspaceName);
     this._notify({
       op: "add",
       workspaceName,
@@ -349,10 +396,10 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Code Element to a Component. */
-  static addCodeElement(
+  addCodeElement(
     codeElement: Omit<C4CodeElement, "kind"> & { kind?: C4CodeElementKind },
     workspaceName = "default",
-    editorId?: string,
+    editorId: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
     let component: C4Component | undefined;
@@ -382,9 +429,7 @@ export abstract class BaseCfour<
       ...codeElement,
       kind: codeElement.kind ?? "Class",
     } as C4CodeElement);
-    if (editorId !== undefined) {
-      this._absorbCreatedElement(codeElement.componentId, codeElement.id, editorId, workspaceName);
-    }
+    this._absorbCreatedElement(codeElement.componentId, codeElement.id, editorId, workspaceName);
     this._notify({
       op: "add",
       workspaceName,
@@ -394,19 +439,36 @@ export abstract class BaseCfour<
     });
   }
 
-  /** Adds a Relationship between any two elements. */
-  static addRelationship(rel: C4Relationship, workspaceName = "default", editorId?: string) {
-    if (editorId !== undefined) {
-      const sourceClaim = this.getClaimFor(rel.sourceId, workspaceName);
-      const destinationClaim = this.getClaimFor(rel.destinationId, workspaceName);
-      const sourceEditor = sourceClaim?.editorId;
-      const destinationEditor = destinationClaim?.editorId;
-      if (sourceEditor && destinationEditor && sourceEditor !== destinationEditor) {
-        throw new Error(
-          `Relationship "${rel.id}" spans claims held by editors "${sourceEditor}" and "${destinationEditor}" in workspace "${workspaceName}". Use proposeRelationship() to request joint approval instead.`,
-        );
-      }
+  /**
+   * Adds a Relationship between any two elements. The caller must hold any
+   * claim that covers either endpoint; a relationship spanning two different
+   * editors' claims requires joint approval via proposeRelationship().
+   */
+  addRelationship(rel: C4Relationship, workspaceName = "default", editorId: string) {
+    const sourceClaim = this.getClaimFor(rel.sourceId, workspaceName);
+    const destinationClaim = this.getClaimFor(rel.destinationId, workspaceName);
+    const sourceEditor = sourceClaim?.editorId;
+    const destinationEditor = destinationClaim?.editorId;
+    if (sourceEditor && destinationEditor && sourceEditor !== destinationEditor) {
+      throw new Error(
+        `Relationship "${rel.id}" spans claims held by editors "${sourceEditor}" and "${destinationEditor}" in workspace "${workspaceName}". Use proposeRelationship() to request joint approval instead.`,
+      );
     }
+    if (sourceEditor && sourceEditor !== editorId) {
+      throw new Error(
+        `Element "${rel.sourceId}" is claimed by editor "${sourceEditor}" in workspace "${workspaceName}".`,
+      );
+    }
+    if (destinationEditor && destinationEditor !== editorId) {
+      throw new Error(
+        `Element "${rel.destinationId}" is claimed by editor "${destinationEditor}" in workspace "${workspaceName}".`,
+      );
+    }
+    this._addRelationshipRaw(rel, workspaceName);
+  }
+
+  /** Appends a relationship without claim enforcement, for system-level ops. */
+  private _addRelationshipRaw(rel: C4Relationship, workspaceName: string) {
     this.getWorkspace(workspaceName).relationships.push(rel);
     this._notify({
       op: "add",
@@ -418,11 +480,11 @@ export abstract class BaseCfour<
   }
 
   /** Updates an existing relationship's properties. */
-  static updateRelationship(
+  updateRelationship(
     id: string,
     patch: Partial<Omit<C4Relationship, "id" | "kind">>,
     workspaceName = "default",
-    editorId?: string,
+    editorId: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
     this._assertClaimAllows(id, editorId, workspaceName, "relationship");
@@ -445,11 +507,11 @@ export abstract class BaseCfour<
   }
 
   /** Updates an existing element's properties. */
-  static updateElement(
+  updateElement(
     id: string,
     patch: Partial<Omit<C4Node, "id" | "kind">>,
     workspaceName = "default",
-    editorId?: string,
+    editorId: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
     this._assertClaimAllows(id, editorId, workspaceName, "element");
@@ -478,16 +540,17 @@ export abstract class BaseCfour<
    * for codebase-reconciliation workflows where "refresh from source of truth"
    * reads more clearly than "update".
    */
-  static refreshNode(
+  refreshNode(
     id: string,
     data: Partial<Omit<C4Node, "id" | "kind">>,
     workspaceName = "default",
+    editorId: string,
   ) {
-    this.updateElement(id, data, workspaceName);
+    this.updateElement(id, data, workspaceName, editorId);
   }
 
   /** Removes an element and all its children/relationships. */
-  static removeElement(id: string, workspaceName = "default", editorId?: string) {
+  removeElement(id: string, workspaceName = "default", editorId: string) {
     const ws = this.getWorkspace(workspaceName);
     this._assertClaimAllows(id, editorId, workspaceName, "element");
 
@@ -554,27 +617,27 @@ export abstract class BaseCfour<
   // ── View Builders (Drilling) ───────────────────────────────
 
   /** Gets a System Context view for a system in the registry. */
-  static getSystemContextView(systemId: string, workspaceName = "default") {
+  getSystemContextView(systemId: string, workspaceName = "default") {
     return buildSystemContextView(this.getWorkspace(workspaceName), systemId);
   }
 
   /** Gets a Container view for a system in the registry. */
-  static getContainerView(systemId: string, workspaceName = "default") {
+  getContainerView(systemId: string, workspaceName = "default") {
     return buildContainerView(this.getWorkspace(workspaceName), systemId);
   }
 
   /** Gets a Component view for a container in the registry. */
-  static getComponentView(containerId: string, workspaceName = "default") {
+  getComponentView(containerId: string, workspaceName = "default") {
     return buildComponentView(this.getWorkspace(workspaceName), containerId);
   }
 
   /** Gets a Code view for a component in the registry. */
-  static getCodeView(componentId: string, workspaceName = "default") {
+  getCodeView(componentId: string, workspaceName = "default") {
     return buildCodeView(this.getWorkspace(workspaceName), componentId);
   }
 
   /** Gets a Team view for a specific team in the registry. */
-  static getTeamView(teamName: string, workspaceName = "default") {
+  getTeamView(teamName: string, workspaceName = "default") {
     return buildTeamView(this.getWorkspace(workspaceName), teamName);
   }
 
@@ -582,7 +645,7 @@ export abstract class BaseCfour<
    * Gets a Flow view (ephemeral viewpoint) for specific tags (e.g. 'internet', 'pci').
    * Useful for security audits (CISO) or network flow analysis.
    */
-  static getFlowView(tag: string, title?: string, workspaceName = "default") {
+  getFlowView(tag: string, title?: string, workspaceName = "default") {
     return buildFlowView(this.getWorkspace(workspaceName), tag, title);
   }
 
@@ -590,7 +653,7 @@ export abstract class BaseCfour<
    * Generates a structured catalog of network flows for a given tag.
    * Returns a list of relationships with source/destination names and tech.
    */
-  static getFlowCatalog(
+  getFlowCatalog(
     tag: string,
     workspaceName = "default",
   ): Array<{
@@ -616,7 +679,7 @@ export abstract class BaseCfour<
   }
 
   /** Diffs two workspaces in the registry. */
-  static diff(workspaceNameA: string, workspaceNameB: string): C4WorkspaceDiff {
+  diff(workspaceNameA: string, workspaceNameB: string): C4WorkspaceDiff {
     return diffWorkspaces(this.getWorkspace(workspaceNameA), this.getWorkspace(workspaceNameB));
   }
 
@@ -624,7 +687,7 @@ export abstract class BaseCfour<
    * Generates a legend for a given view.
    * Scans all elements and relationships in the view to identify unique kinds and technologies.
    */
-  static getLegend(
+  getLegend(
     view: C4View,
     workspaceName = "default",
   ): {
@@ -688,7 +751,7 @@ export abstract class BaseCfour<
    * Lints a view or workspace against the Software Architecture Diagram Review Checklist.
    * Returns a list of checklist violations.
    */
-  static lint(
+  lint(
     view?: C4View,
     workspaceName = "default",
   ): Array<{ check: string; message: string; category: "General" | "Elements" | "Relationships" }> {
@@ -768,7 +831,7 @@ export abstract class BaseCfour<
   }
 
   /** Updates a node position in a specific view. */
-  static updateViewPosition(
+  updateViewPosition(
     viewId: string,
     elementId: string,
     x: number,
@@ -802,7 +865,7 @@ export abstract class BaseCfour<
   }
 
   /** Persists a view to the workspace. */
-  static saveView(view: C4View, workspaceName = "default") {
+  saveView(view: C4View, workspaceName = "default") {
     const ws = this.getWorkspace(workspaceName);
     ws.views = ws.views || [];
     const idx = ws.views.findIndex((v) => v.id === view.id);
@@ -823,12 +886,12 @@ export abstract class BaseCfour<
   // ── Persistence ───────────────────────────────────────────
 
   /** Exports a workspace to a JSON string. */
-  static export(workspaceName = "default"): string {
+  export(workspaceName = "default"): string {
     return JSON.stringify(this.getWorkspace(workspaceName), null, 2);
   }
 
   /** Imports a workspace from a JSON string. */
-  static import(json: string, workspaceName = "default") {
+  import(json: string, workspaceName = "default") {
     // Bypasses getWorkspace, so capture the pre-import content explicitly
     // to keep a failed batch able to restore it.
     this._captureLazySnapshot(workspaceName, this._workspaces.get(workspaceName));
@@ -840,12 +903,12 @@ export abstract class BaseCfour<
   // ── Storage — platform-agnostic persistence ────────────────
 
   /** Configures the storage adapter used by snapshot helpers. */
-  static setStorage(storage: CfourStorage) {
+  setStorage(storage: CfourStorage) {
     this._storage = storage;
   }
 
   /** Serialises the workspace and persists it via the storage adapter. */
-  static async saveSnapshot(workspaceName = "default"): Promise<void> {
+  async saveSnapshot(workspaceName = "default"): Promise<void> {
     if (!this._storage)
       throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     const json = this.export(workspaceName);
@@ -853,7 +916,7 @@ export abstract class BaseCfour<
   }
 
   /** Loads a workspace from storage and imports it (triggers an "import" event). */
-  static async loadSnapshot(workspaceName = "default"): Promise<void> {
+  async loadSnapshot(workspaceName = "default"): Promise<void> {
     if (!this._storage)
       throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     const json = await this._storage.get(`workspace:${workspaceName}`);
@@ -863,14 +926,14 @@ export abstract class BaseCfour<
   }
 
   /** Deletes a persisted workspace snapshot. */
-  static async deleteSnapshot(workspaceName = "default"): Promise<void> {
+  async deleteSnapshot(workspaceName = "default"): Promise<void> {
     if (!this._storage)
       throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     await this._storage.delete(`workspace:${workspaceName}`);
   }
 
   /** Lists all persisted workspace snapshot keys. */
-  static async listSnapshots(): Promise<string[]> {
+  async listSnapshots(): Promise<string[]> {
     if (!this._storage)
       throw new Error("No storage adapter configured. Call BaseCfour.setStorage() first.");
     const keys = await this._storage.list("workspace:");
@@ -883,7 +946,7 @@ export abstract class BaseCfour<
    * Queries nodes based on filters.
    * Example: findNodes({ kind: 'Container', technology: 'React' })
    */
-  static findNodes(
+  findNodes(
     filter: {
       kind?: C4ElementKind;
       technology?: string;
@@ -920,7 +983,7 @@ export abstract class BaseCfour<
    * Queries relationships based on filters.
    * Example: findRelationships({ sourceId: 'comp1' })
    */
-  static findRelationships(
+  findRelationships(
     filter: {
       sourceId?: string;
       destinationId?: string;
@@ -958,7 +1021,7 @@ export abstract class BaseCfour<
    * Returns the ancestry of a node from root down to (but not including) the node itself.
    * For a CodeElement in sys1/con1/comp1, returns [sys1, con1, comp1].
    */
-  static getAncestors(id: string, workspaceName = "default"): C4Node[] {
+  getAncestors(id: string, workspaceName = "default"): C4Node[] {
     const ws = this.getWorkspace(workspaceName);
     const found = findNodeWithAncestry(ws, id);
     if (!found) return [];
@@ -970,7 +1033,7 @@ export abstract class BaseCfour<
    * Returns all descendants of a node in leaves-first order.
    * For a SoftwareSystem, returns its containers, then their components, then code elements.
    */
-  static getDescendants(id: string, workspaceName = "default"): C4Node[] {
+  getDescendants(id: string, workspaceName = "default"): C4Node[] {
     const ws = this.getWorkspace(workspaceName);
     const found = findNodeWithAncestry(ws, id);
     if (!found) return [];
@@ -985,7 +1048,7 @@ export abstract class BaseCfour<
    * whose source AND destination both fall inside that combined set. Throws
    * if rootId does not exist.
    */
-  static getSubtree(rootId: string, workspaceName = "default"): C4Selection {
+  getSubtree(rootId: string, workspaceName = "default"): C4Selection {
     const ws = this.getWorkspace(workspaceName);
     if (!findNodeWithAncestry(ws, rootId)) {
       throw new Error(`Element with id "${rootId}" not found in workspace "${workspaceName}".`);
@@ -1004,7 +1067,7 @@ export abstract class BaseCfour<
    * relationships are still included, contributing nothing to
    * relationshipIds.
    */
-  static getSelection(query: SelectionQuery, workspaceName = "default"): C4Selection {
+  getSelection(query: SelectionQuery, workspaceName = "default"): C4Selection {
     const ws = this.getWorkspace(workspaceName);
     const elementIds = this.findNodes(query, workspaceName).map((n) => n.id);
     return {
@@ -1021,7 +1084,7 @@ export abstract class BaseCfour<
    * re-claim explicitly instead). Returns the created C4Claim. Emits a
    * "claim" event with `payload` set to the created claim.
    */
-  static claim(selection: C4Selection, editorId: string, workspaceName = "default"): C4Claim {
+  claim(selection: C4Selection, editorId: string, workspaceName = "default"): C4Claim {
     const claims = this._claimsFor(workspaceName);
     const conflicting = new Map<string, C4Claim>();
     for (const claim of claims.values()) {
@@ -1068,7 +1131,7 @@ export abstract class BaseCfour<
    * expired or released). Emits a "release" event with `payload` set to the
    * released claim.
    */
-  static release(claimId: string, workspaceName = "default"): void {
+  release(claimId: string, workspaceName = "default"): void {
     const claims = this._claimsFor(workspaceName);
     const claim = claims.get(claimId);
     if (!claim) return;
@@ -1081,7 +1144,7 @@ export abstract class BaseCfour<
    * clean disconnect handling by the host application. Emits one "release"
    * event per claim released.
    */
-  static releaseAllClaimsFor(editorId: string, workspaceName = "default"): void {
+  releaseAllClaimsFor(editorId: string, workspaceName = "default"): void {
     const claims = this._claimsFor(workspaceName);
     for (const [claimId, claim] of claims) {
       if (claim.editorId === editorId) {
@@ -1097,7 +1160,7 @@ export abstract class BaseCfour<
    * applications call this on whatever heartbeat cadence their own transport
    * uses — this library does not run its own timers.
    */
-  static touchClaim(claimId: string, workspaceName = "default"): void {
+  touchClaim(claimId: string, workspaceName = "default"): void {
     const claim = this._claimsFor(workspaceName).get(claimId);
     if (!claim) {
       throw new Error(`Claim with id "${claimId}" not found in workspace "${workspaceName}".`);
@@ -1112,7 +1175,7 @@ export abstract class BaseCfour<
    * for calling this periodically from its own scheduler — this library
    * never calls it automatically.
    */
-  static expireStaleClaims(workspaceName = "default", maxAgeMs?: number): string[] {
+  expireStaleClaims(workspaceName = "default", maxAgeMs?: number): string[] {
     const threshold = maxAgeMs ?? this._claimTtlMs;
     const now = Date.now();
     const expired: string[] = [];
@@ -1129,17 +1192,17 @@ export abstract class BaseCfour<
 
   /** Sets the default staleness threshold used by expireStaleClaims when no
    * explicit maxAgeMs is passed. */
-  static setClaimTtl(ms: number): void {
+  setClaimTtl(ms: number): void {
     this._claimTtlMs = ms;
   }
 
   /** Returns all currently active claims in a workspace. */
-  static getClaims(workspaceName = "default"): C4Claim[] {
+  getClaims(workspaceName = "default"): C4Claim[] {
     return Array.from(this._claimsFor(workspaceName).values());
   }
 
   /** Returns the active claim covering `elementId`, if any. */
-  static getClaimFor(elementId: string, workspaceName = "default"): C4Claim | undefined {
+  getClaimFor(elementId: string, workspaceName = "default"): C4Claim | undefined {
     for (const claim of this._claimsFor(workspaceName).values()) {
       if (claim.elementIds.has(elementId) || claim.relationshipIds.has(elementId)) {
         return claim;
@@ -1162,7 +1225,7 @@ export abstract class BaseCfour<
    * directly in that case). Emits a "proposeRelationship" event with
    * `payload` set to the created proposal.
    */
-  static proposeRelationship(
+  proposeRelationship(
     rel: C4Relationship,
     proposerId: string,
     workspaceName = "default",
@@ -1205,11 +1268,7 @@ export abstract class BaseCfour<
    * emits an "acceptRelationship" event with `payload` set to the
    * now-completed proposal.
    */
-  static acceptRelationship(
-    proposalId: string,
-    accepterId: string,
-    workspaceName = "default",
-  ): void {
+  acceptRelationship(proposalId: string, accepterId: string, workspaceName = "default"): void {
     const proposals = this._proposalsFor(workspaceName);
     const proposal = proposals.get(proposalId);
     if (!proposal) {
@@ -1225,7 +1284,7 @@ export abstract class BaseCfour<
     proposal.pendingApprovals.delete(accepterId);
     if (proposal.pendingApprovals.size === 0) {
       proposals.delete(proposalId);
-      this.addRelationship(proposal.relationship, workspaceName);
+      this._addRelationshipRaw(proposal.relationship, workspaceName);
       this._notify({ op: "acceptRelationship", workspaceName, payload: proposal });
     }
   }
@@ -1236,7 +1295,7 @@ export abstract class BaseCfour<
    * is unknown or the caller has no standing to reject it. Emits a
    * "rejectRelationship" event with `payload` set to the withdrawn proposal.
    */
-  static rejectRelationship(proposalId: string, editorId: string, workspaceName = "default"): void {
+  rejectRelationship(proposalId: string, editorId: string, workspaceName = "default"): void {
     const proposals = this._proposalsFor(workspaceName);
     const proposal = proposals.get(proposalId);
     if (!proposal) {
@@ -1255,7 +1314,7 @@ export abstract class BaseCfour<
   }
 
   /** Returns all pending relationship proposals in a workspace. */
-  static getRelationshipProposals(workspaceName = "default"): C4RelationshipProposal[] {
+  getRelationshipProposals(workspaceName = "default"): C4RelationshipProposal[] {
     return Array.from(this._proposalsFor(workspaceName).values());
   }
 
@@ -1267,7 +1326,7 @@ export abstract class BaseCfour<
    * planMerge/applyMerge calls involving this branch. Throws if `newBranch`
    * already exists. Emits a "branch" event with `payload: { branch: newBranch, from }`.
    */
-  static branchWorkspace(from: string, newBranch: string): void {
+  branchWorkspace(from: string, newBranch: string): void {
     if (this._workspaces.has(newBranch)) {
       throw new Error(`Workspace with name "${newBranch}" already exists.`);
     }
@@ -1287,7 +1346,7 @@ export abstract class BaseCfour<
    * since the base revision. Throws if `branch` has no recorded base
    * revision (i.e. was never created via branchWorkspace).
    */
-  static planMerge(branch: string, into: string): C4MergePlan {
+  planMerge(branch: string, into: string): C4MergePlan {
     const base = this._branchBase.get(branch);
     if (!base) {
       throw new Error(
@@ -1332,7 +1391,7 @@ export abstract class BaseCfour<
    * atomic and rolls back cleanly if any step throws. Emits a "merge" event
    * with `payload` set to the applied plan after everything succeeds.
    */
-  static applyMerge(plan: C4MergePlan, into: string): void {
+  applyMerge(plan: C4MergePlan, into: string): void {
     if (plan.conflicts.length > 0) {
       throw new Error(
         `Cannot apply merge into "${into}": conflicting changes on: ${plan.conflicts.join(
@@ -1347,21 +1406,21 @@ export abstract class BaseCfour<
       );
       for (const node of added) this._applyNodeAddition(node, into);
       for (const rel of plan.branchChanges.relationships.added) {
-        this.addRelationship(rel, into);
+        this._addRelationshipRaw(rel, into);
       }
       for (const mod of plan.branchChanges.nodes.modified) {
         const patch: Record<string, any> = {};
         for (const key of mod.changes) patch[key] = (mod.after as any)[key];
-        this.updateElement(mod.id, patch, into);
+        this.updateElement(mod.id, patch, into, REGISTER_EDITOR);
       }
       for (const mod of plan.branchChanges.relationships.modified) {
         const patch: Record<string, any> = {};
         for (const key of mod.changes) patch[key] = (mod.after as any)[key];
-        this.updateRelationship(mod.id, patch, into);
+        this.updateRelationship(mod.id, patch, into, REGISTER_EDITOR);
       }
       for (const node of plan.branchChanges.nodes.removed) {
         if (findNodeWithAncestry(this.getWorkspace(into), node.id)) {
-          this.removeElement(node.id, into);
+          this.removeElement(node.id, into, REGISTER_EDITOR);
         }
       }
       for (const rel of plan.branchChanges.relationships.removed) {
@@ -1374,16 +1433,13 @@ export abstract class BaseCfour<
     });
   }
 
-  private static _internalRelationshipIds(
-    relationships: C4Relationship[],
-    idSet: Set<string>,
-  ): string[] {
+  private _internalRelationshipIds(relationships: C4Relationship[], idSet: Set<string>): string[] {
     return relationships
       .filter((rel) => idSet.has(rel.sourceId) && idSet.has(rel.destinationId))
       .map((rel) => rel.id);
   }
 
-  private static _claimsFor(workspaceName: string): Map<string, C4Claim> {
+  private _claimsFor(workspaceName: string): Map<string, C4Claim> {
     let map = this._claims.get(workspaceName);
     if (!map) {
       map = new Map();
@@ -1392,7 +1448,7 @@ export abstract class BaseCfour<
     return map;
   }
 
-  private static _proposalsFor(workspaceName: string): Map<string, C4RelationshipProposal> {
+  private _proposalsFor(workspaceName: string): Map<string, C4RelationshipProposal> {
     let map = this._relationshipProposals.get(workspaceName);
     if (!map) {
       map = new Map();
@@ -1404,15 +1460,14 @@ export abstract class BaseCfour<
   /**
    * Throws if `elementId` (or, when kind is "relationship", relationshipId)
    * is covered by an active claim held by an editor other than `editorId`.
-   * A complete no-op when `editorId` is undefined.
+   * Throws when `editorId` differs from the editor holding a claim on `id`.
    */
-  private static _assertClaimAllows(
+  private _assertClaimAllows(
     id: string,
-    editorId: string | undefined,
+    editorId: string,
     workspaceName: string,
     kind: "element" | "relationship",
   ): void {
-    if (editorId === undefined) return;
     for (const claim of this._claimsFor(workspaceName).values()) {
       const covered =
         kind === "relationship" ? claim.relationshipIds.has(id) : claim.elementIds.has(id);
@@ -1426,7 +1481,7 @@ export abstract class BaseCfour<
   }
 
   /** Absorbs a newly created element's id into the editor's claim on its parent. */
-  private static _absorbCreatedElement(
+  private _absorbCreatedElement(
     parentId: string,
     createdId: string,
     editorId: string,
@@ -1439,7 +1494,7 @@ export abstract class BaseCfour<
   }
 
   /** Purges removed ids from every claim, auto-releasing claims left empty. */
-  private static _purgeRemovedFromClaims(
+  private _purgeRemovedFromClaims(
     removedIds: Set<string>,
     removedRelationshipIds: Set<string>,
     workspaceName: string,
@@ -1456,7 +1511,7 @@ export abstract class BaseCfour<
     }
   }
 
-  private static _applyNodeAddition(node: C4Node, workspaceName: string): void {
+  private _applyNodeAddition(node: C4Node, workspaceName: string): void {
     switch (node.kind) {
       case "Person":
         this.addPerson(node, workspaceName);
@@ -1467,18 +1522,18 @@ export abstract class BaseCfour<
       case "Container":
       case "Queue":
       case "Topic":
-        this.addContainer(node as C4Container, workspaceName);
+        this.addContainer(node as C4Container, workspaceName, REGISTER_EDITOR);
         break;
       case "Component":
-        this.addComponent(node as C4Component, workspaceName);
+        this.addComponent(node as C4Component, workspaceName, REGISTER_EDITOR);
         break;
       default:
-        this.addCodeElement(node as C4CodeElement, workspaceName);
+        this.addCodeElement(node as C4CodeElement, workspaceName, REGISTER_EDITOR);
         break;
     }
   }
 
-  private static _removeRelationship(workspaceName: string, id: string): void {
+  private _removeRelationship(workspaceName: string, id: string): void {
     const ws = this.getWorkspace(workspaceName);
     ws.relationships = ws.relationships.filter((r) => r.id !== id);
     this._notify({
@@ -1493,12 +1548,12 @@ export abstract class BaseCfour<
   // ── Event History ─────────────────────────────────────────
 
   /** Configures the persistent event storage adapter. Pass `null` to detach it. */
-  static setEventStorage(storage: CfourEventStorage | null) {
+  setEventStorage(storage: CfourEventStorage | null) {
     this._eventStorage = storage;
   }
 
   /** Returns the configured event storage adapter, if any. */
-  static getEventStorage(): CfourEventStorage | null {
+  getEventStorage(): CfourEventStorage | null {
     return this._eventStorage;
   }
 
@@ -1507,7 +1562,7 @@ export abstract class BaseCfour<
    * When an event storage adapter is configured, reads from it (async).
    * Otherwise reads from the in-memory ring buffer.
    */
-  static async getEventHistory(): Promise<CfourChangeEvent[]> {
+  async getEventHistory(): Promise<CfourChangeEvent[]> {
     if (this._eventStorage) {
       return this._eventStorage.query({});
     }
@@ -1518,7 +1573,7 @@ export abstract class BaseCfour<
    * Returns the last `n` events.
    * When an event storage adapter is configured, reads from it (async).
    */
-  static async getRecentEvents(n: number): Promise<CfourChangeEvent[]> {
+  async getRecentEvents(n: number): Promise<CfourChangeEvent[]> {
     if (this._eventStorage) {
       return this._eventStorage.query({ limit: n });
     }
@@ -1529,7 +1584,7 @@ export abstract class BaseCfour<
    * Queries the event history with filters.
    * Delegates to the event storage adapter when configured, otherwise filters the in-memory log.
    */
-  static async queryEventHistory(filter: CfourEventQuery): Promise<CfourChangeEvent[]> {
+  async queryEventHistory(filter: CfourEventQuery): Promise<CfourChangeEvent[]> {
     if (this._eventStorage) {
       return this._eventStorage.query(filter);
     }
@@ -1549,7 +1604,7 @@ export abstract class BaseCfour<
   /**
    * Clears the in-memory event log and the persistent event storage (if configured).
    */
-  static async clearEventHistory(): Promise<void> {
+  async clearEventHistory(): Promise<void> {
     this._eventLog.length = 0;
     if (this._eventStorage) {
       await this._eventStorage.clear();
@@ -1557,7 +1612,7 @@ export abstract class BaseCfour<
   }
 
   /** Sets the maximum number of events retained in the in-memory log. Trims if current log exceeds the new limit. */
-  static setEventLogMax(max: number) {
+  setEventLogMax(max: number) {
     this._eventLogMax = max;
     if (this._eventLog.length > max) {
       this._eventLog.splice(0, this._eventLog.length - max);
@@ -1570,7 +1625,7 @@ export abstract class BaseCfour<
    * Validates the integrity of the workspace.
    * Returns a list of errors found (dangling relationships, etc).
    */
-  static validate(
+  validate(
     workspaceName = "default",
   ): Array<{ id: string; message: string; severity: "error" | "warning" }> {
     const ws = this.getWorkspace(workspaceName);
@@ -1614,7 +1669,7 @@ export abstract class BaseCfour<
    * Helper to register a framework "Building Block" as a Container.
    * If the "Framework" system doesn't exist, it is created.
    */
-  static addBuildingBlock(
+  addBuildingBlock(
     packageId: string,
     name: string,
     description?: string,
@@ -1648,6 +1703,7 @@ export abstract class BaseCfour<
         systemId: "framework",
       },
       workspaceName,
+      REGISTER_EDITOR,
     );
   }
 
@@ -1655,18 +1711,21 @@ export abstract class BaseCfour<
    * Automatically registers a subclass as a Component or Code Element.
    * This can be called in a static block or via class metadata.
    */
-  static register(config: {
-    id?: string;
-    name?: string;
-    description?: string;
-    technology?: string;
-    parentId?: string; // containerId or componentId
-    kind?: C4ElementKind;
-    workspaceName?: string;
-  }) {
+  register(
+    config: {
+      id?: string;
+      name?: string;
+      description?: string;
+      technology?: string;
+      parentId?: string; // containerId or componentId
+      kind?: C4ElementKind;
+      workspaceName?: string;
+    },
+    className = this.constructor.name,
+  ) {
     const workspaceName = config.workspaceName || "default";
-    const id = config.id || this.name;
-    const name = config.name || this.name;
+    const id = config.id || className;
+    const name = config.name || className;
 
     // Try to infer parent and kind
     if (config.kind === "Component" || (!config.kind && config.parentId)) {
@@ -1679,6 +1738,7 @@ export abstract class BaseCfour<
           containerId: config.parentId!,
         },
         workspaceName,
+        REGISTER_EDITOR,
       );
     } else if (config.kind && CODE_ELEMENT_KINDS.has(config.kind)) {
       this.addCodeElement(
@@ -1691,6 +1751,7 @@ export abstract class BaseCfour<
           kind: config.kind as C4CodeElementKind,
         },
         workspaceName,
+        REGISTER_EDITOR,
       );
     }
   }
@@ -1714,7 +1775,7 @@ export abstract class BaseCfour<
   // Unlike `beforeHooks`/`afterHooks` (which use `Object.hasOwn(this, ...)`
   // for per-subclass isolation), generator keys must be unique repo-wide, so
   // two subclasses share the same registry by design.
-  private static _generators: Map<string, Generator> = new Map();
+  private _generators: Map<string, Generator> = new Map();
 
   /**
    * Registers a generator for a C4 element kind, optionally narrowed by
@@ -1735,7 +1796,7 @@ export abstract class BaseCfour<
    * exactly the same bytes. Use `assertGeneratorIsPure` in tests to verify
    * this contract.
    */
-  static registerGenerator(key: string, gen: Generator): void {
+  registerGenerator(key: string, gen: Generator): void {
     this._generators.set(key, gen);
   }
 
@@ -1744,7 +1805,7 @@ export abstract class BaseCfour<
    * Resolution order: stereotype match (when the node has a `stereotype`) >
    * technology match (when the node has a `technology`) > bare kind match.
    */
-  static resolveGenerator(node: C4Node): Generator | undefined {
+  resolveGenerator(node: C4Node): Generator | undefined {
     if ("stereotype" in node && node.stereotype) {
       const gen = this._generators.get(`${node.kind}:${node.stereotype}`);
       if (gen) return gen;
@@ -1758,17 +1819,22 @@ export abstract class BaseCfour<
   }
 
   /**
-   * Derives a stable, readable relationship id from its endpoints and label
-   * (label is slugified if it contains spaces). Regenerating the same logical
-   * relationship from a script/DSL always produces the same id, avoiding
-   * duplicate relationships on re-apply.
+   * Derives a stable, readable, injective relationship id from its endpoints
+   * and label. The label is slugified (spaces -> hyphens, punctuation dropped)
+   * and a short sha256 digest of the full label is appended, so labels that
+   * slugify to the same string ("uses-data" vs "uses  data", "Reads!" vs
+   * "Reads?") never collide. Regenerating the same logical relationship from a
+   * script/DSL always produces the same id, avoiding duplicate relationships
+   * on re-apply.
    */
-  static deriveRelationshipId(sourceId: string, destinationId: string, label: string): string {
+  deriveRelationshipId(sourceId: string, destinationId: string, label: string): string {
     const slug = label
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^\w-]/g, "");
-    return `${sourceId}--${destinationId}--${slug}`;
+    const digest = createHash("sha256").update(label.trim()).digest("hex").slice(0, 8);
+    const tail = slug ? `${slug}--${digest}` : digest;
+    return `${sourceId}--${destinationId}--${tail}`;
   }
 
   /**
@@ -1776,7 +1842,7 @@ export abstract class BaseCfour<
    * does not exist. Only a missing file maps to `""` — any other read error
    * (permission, I/O) propagates so drift is never mistaken for a hand-edit.
    */
-  static async hashFile(path: string): Promise<string> {
+  async hashFile(path: string): Promise<string> {
     try {
       const data = await readFile(path);
       return createHash("sha256").update(data).digest("hex");
@@ -1787,7 +1853,7 @@ export abstract class BaseCfour<
   }
 
   /** Best-effort delete: ignores already-missing files, surfaces other errors. */
-  static async unlinkIfExists(path: string): Promise<void> {
+  async unlinkIfExists(path: string): Promise<void> {
     try {
       await unlink(path);
     } catch (e) {
@@ -1800,7 +1866,7 @@ export abstract class BaseCfour<
    * manifest's recorded hash (i.e. hand-edited since last generation).
    * Deleted files are reported as drift (missing files hash to `""`).
    */
-  static async detectDrift(entry: ManifestEntry): Promise<string[]> {
+  async detectDrift(entry: ManifestEntry): Promise<string[]> {
     const drifted: string[] = [];
     for (const [path, recordedHash] of Object.entries(entry.files)) {
       const currentHash = await this.hashFile(path);
@@ -1818,7 +1884,7 @@ export abstract class BaseCfour<
    * a dependency cycle — that means the architecture graph itself is invalid
    * and must fail loudly rather than being silently reordered.
    */
-  static topoOrderForApply(diffResult: C4WorkspaceDiff, workspaceName = "desired"): C4Node[] {
+  topoOrderForApply(diffResult: C4WorkspaceDiff, workspaceName = "desired"): C4Node[] {
     const touched = new Map<string, C4Node>();
     for (const node of diffResult.nodes.added) touched.set(node.id, node);
     for (const mod of diffResult.nodes.modified) touched.set(mod.after.id, mod.after);
@@ -1880,7 +1946,7 @@ export abstract class BaseCfour<
    * @param options  Drift-handling callback.
    * @returns The updated manifest reflecting what is now on disk.
    */
-  static async planAndApply(
+  async planAndApply(
     manifest: GenerationManifest,
     options?: ApplyOptions,
   ): Promise<GenerationManifest> {
@@ -1983,7 +2049,7 @@ export abstract class BaseCfour<
    * paths or in the content of any written file — verifying the purity
    * contract required by `registerGenerator`.
    */
-  static async assertGeneratorIsPure(gen: Generator, ctx: GeneratorContext): Promise<void> {
+  async assertGeneratorIsPure(gen: Generator, ctx: GeneratorContext): Promise<void> {
     const first = await gen(ctx);
 
     // Snapshot the first run's output BEFORE running again — the second run
@@ -2022,16 +2088,471 @@ export abstract class BaseCfour<
     }
   }
 
-  protected logger!: Logger;
+  // ── Static facade ────────────────────────────────────────
+  // One shared model per process by default: every `BaseCfour.x()` static
+  // delegates to this single default instance, preserving the classic
+  // "one architecture model" behavior. Create your own instance with
+  // `new BaseCfour()` when you need an isolated model (e.g. per editor).
+  //
+  // Forwarder signatures are derived from the instance methods via
+  // `Parameters`/`ReturnType`, so they can never drift out of sync.
 
-  constructor(
-    protected request: RequestLike,
-    protected env: EnvLike,
-    protected ctx: Ctx,
-  ) {
-    this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  private static _default = new BaseCfour();
+
+  static reset(): void {
+    BaseCfour._default.reset();
+  }
+
+  static subscribe(
+    ...args: Parameters<_CFourInstance["subscribe"]>
+  ): ReturnType<_CFourInstance["subscribe"]> {
+    return BaseCfour._default.subscribe(...args);
+  }
+
+  static batch(...args: Parameters<_CFourInstance["batch"]>): ReturnType<_CFourInstance["batch"]> {
+    return BaseCfour._default.batch(...args);
+  }
+
+  static resetWorkspace(
+    ...args: Parameters<_CFourInstance["resetWorkspace"]>
+  ): ReturnType<_CFourInstance["resetWorkspace"]> {
+    return BaseCfour._default.resetWorkspace(...args);
+  }
+
+  static getWorkspace(
+    ...args: Parameters<_CFourInstance["getWorkspace"]>
+  ): ReturnType<_CFourInstance["getWorkspace"]> {
+    return BaseCfour._default.getWorkspace(...args);
+  }
+
+  static getWorkspaceNames(
+    ...args: Parameters<_CFourInstance["getWorkspaceNames"]>
+  ): ReturnType<_CFourInstance["getWorkspaceNames"]> {
+    return BaseCfour._default.getWorkspaceNames(...args);
+  }
+
+  static addPerson(
+    ...args: Parameters<_CFourInstance["addPerson"]>
+  ): ReturnType<_CFourInstance["addPerson"]> {
+    return BaseCfour._default.addPerson(...args);
+  }
+
+  static addSoftwareSystem(
+    ...args: Parameters<_CFourInstance["addSoftwareSystem"]>
+  ): ReturnType<_CFourInstance["addSoftwareSystem"]> {
+    return BaseCfour._default.addSoftwareSystem(...args);
+  }
+
+  static addContainer(
+    ...args: Parameters<_CFourInstance["addContainer"]>
+  ): ReturnType<_CFourInstance["addContainer"]> {
+    return BaseCfour._default.addContainer(...args);
+  }
+
+  static addQueue(
+    ...args: Parameters<_CFourInstance["addQueue"]>
+  ): ReturnType<_CFourInstance["addQueue"]> {
+    return BaseCfour._default.addQueue(...args);
+  }
+
+  static addTopic(
+    ...args: Parameters<_CFourInstance["addTopic"]>
+  ): ReturnType<_CFourInstance["addTopic"]> {
+    return BaseCfour._default.addTopic(...args);
+  }
+
+  static addComponent(
+    ...args: Parameters<_CFourInstance["addComponent"]>
+  ): ReturnType<_CFourInstance["addComponent"]> {
+    return BaseCfour._default.addComponent(...args);
+  }
+
+  static addCodeElement(
+    ...args: Parameters<_CFourInstance["addCodeElement"]>
+  ): ReturnType<_CFourInstance["addCodeElement"]> {
+    return BaseCfour._default.addCodeElement(...args);
+  }
+
+  static addRelationship(
+    ...args: Parameters<_CFourInstance["addRelationship"]>
+  ): ReturnType<_CFourInstance["addRelationship"]> {
+    return BaseCfour._default.addRelationship(...args);
+  }
+
+  static updateRelationship(
+    ...args: Parameters<_CFourInstance["updateRelationship"]>
+  ): ReturnType<_CFourInstance["updateRelationship"]> {
+    return BaseCfour._default.updateRelationship(...args);
+  }
+
+  static updateElement(
+    ...args: Parameters<_CFourInstance["updateElement"]>
+  ): ReturnType<_CFourInstance["updateElement"]> {
+    return BaseCfour._default.updateElement(...args);
+  }
+
+  static refreshNode(
+    ...args: Parameters<_CFourInstance["refreshNode"]>
+  ): ReturnType<_CFourInstance["refreshNode"]> {
+    return BaseCfour._default.refreshNode(...args);
+  }
+
+  static removeElement(
+    ...args: Parameters<_CFourInstance["removeElement"]>
+  ): ReturnType<_CFourInstance["removeElement"]> {
+    return BaseCfour._default.removeElement(...args);
+  }
+
+  static getSystemContextView(
+    ...args: Parameters<_CFourInstance["getSystemContextView"]>
+  ): ReturnType<_CFourInstance["getSystemContextView"]> {
+    return BaseCfour._default.getSystemContextView(...args);
+  }
+
+  static getContainerView(
+    ...args: Parameters<_CFourInstance["getContainerView"]>
+  ): ReturnType<_CFourInstance["getContainerView"]> {
+    return BaseCfour._default.getContainerView(...args);
+  }
+
+  static getComponentView(
+    ...args: Parameters<_CFourInstance["getComponentView"]>
+  ): ReturnType<_CFourInstance["getComponentView"]> {
+    return BaseCfour._default.getComponentView(...args);
+  }
+
+  static getCodeView(
+    ...args: Parameters<_CFourInstance["getCodeView"]>
+  ): ReturnType<_CFourInstance["getCodeView"]> {
+    return BaseCfour._default.getCodeView(...args);
+  }
+
+  static getTeamView(
+    ...args: Parameters<_CFourInstance["getTeamView"]>
+  ): ReturnType<_CFourInstance["getTeamView"]> {
+    return BaseCfour._default.getTeamView(...args);
+  }
+
+  static getFlowView(
+    ...args: Parameters<_CFourInstance["getFlowView"]>
+  ): ReturnType<_CFourInstance["getFlowView"]> {
+    return BaseCfour._default.getFlowView(...args);
+  }
+
+  static getFlowCatalog(
+    ...args: Parameters<_CFourInstance["getFlowCatalog"]>
+  ): ReturnType<_CFourInstance["getFlowCatalog"]> {
+    return BaseCfour._default.getFlowCatalog(...args);
+  }
+
+  static diff(...args: Parameters<_CFourInstance["diff"]>): ReturnType<_CFourInstance["diff"]> {
+    return BaseCfour._default.diff(...args);
+  }
+
+  static getLegend(
+    ...args: Parameters<_CFourInstance["getLegend"]>
+  ): ReturnType<_CFourInstance["getLegend"]> {
+    return BaseCfour._default.getLegend(...args);
+  }
+
+  static lint(...args: Parameters<_CFourInstance["lint"]>): ReturnType<_CFourInstance["lint"]> {
+    return BaseCfour._default.lint(...args);
+  }
+
+  static updateViewPosition(
+    ...args: Parameters<_CFourInstance["updateViewPosition"]>
+  ): ReturnType<_CFourInstance["updateViewPosition"]> {
+    return BaseCfour._default.updateViewPosition(...args);
+  }
+
+  static saveView(
+    ...args: Parameters<_CFourInstance["saveView"]>
+  ): ReturnType<_CFourInstance["saveView"]> {
+    return BaseCfour._default.saveView(...args);
+  }
+
+  static export(
+    ...args: Parameters<_CFourInstance["export"]>
+  ): ReturnType<_CFourInstance["export"]> {
+    return BaseCfour._default.export(...args);
+  }
+
+  static import(
+    ...args: Parameters<_CFourInstance["import"]>
+  ): ReturnType<_CFourInstance["import"]> {
+    return BaseCfour._default.import(...args);
+  }
+
+  static setStorage(
+    ...args: Parameters<_CFourInstance["setStorage"]>
+  ): ReturnType<_CFourInstance["setStorage"]> {
+    return BaseCfour._default.setStorage(...args);
+  }
+
+  static saveSnapshot(
+    ...args: Parameters<_CFourInstance["saveSnapshot"]>
+  ): ReturnType<_CFourInstance["saveSnapshot"]> {
+    return BaseCfour._default.saveSnapshot(...args);
+  }
+
+  static loadSnapshot(
+    ...args: Parameters<_CFourInstance["loadSnapshot"]>
+  ): ReturnType<_CFourInstance["loadSnapshot"]> {
+    return BaseCfour._default.loadSnapshot(...args);
+  }
+
+  static deleteSnapshot(
+    ...args: Parameters<_CFourInstance["deleteSnapshot"]>
+  ): ReturnType<_CFourInstance["deleteSnapshot"]> {
+    return BaseCfour._default.deleteSnapshot(...args);
+  }
+
+  static listSnapshots(
+    ...args: Parameters<_CFourInstance["listSnapshots"]>
+  ): ReturnType<_CFourInstance["listSnapshots"]> {
+    return BaseCfour._default.listSnapshots(...args);
+  }
+
+  static findNodes(
+    ...args: Parameters<_CFourInstance["findNodes"]>
+  ): ReturnType<_CFourInstance["findNodes"]> {
+    return BaseCfour._default.findNodes(...args);
+  }
+
+  static findRelationships(
+    ...args: Parameters<_CFourInstance["findRelationships"]>
+  ): ReturnType<_CFourInstance["findRelationships"]> {
+    return BaseCfour._default.findRelationships(...args);
+  }
+
+  static getAncestors(
+    ...args: Parameters<_CFourInstance["getAncestors"]>
+  ): ReturnType<_CFourInstance["getAncestors"]> {
+    return BaseCfour._default.getAncestors(...args);
+  }
+
+  static getDescendants(
+    ...args: Parameters<_CFourInstance["getDescendants"]>
+  ): ReturnType<_CFourInstance["getDescendants"]> {
+    return BaseCfour._default.getDescendants(...args);
+  }
+
+  static getSubtree(
+    ...args: Parameters<_CFourInstance["getSubtree"]>
+  ): ReturnType<_CFourInstance["getSubtree"]> {
+    return BaseCfour._default.getSubtree(...args);
+  }
+
+  static getSelection(
+    ...args: Parameters<_CFourInstance["getSelection"]>
+  ): ReturnType<_CFourInstance["getSelection"]> {
+    return BaseCfour._default.getSelection(...args);
+  }
+
+  static claim(...args: Parameters<_CFourInstance["claim"]>): ReturnType<_CFourInstance["claim"]> {
+    return BaseCfour._default.claim(...args);
+  }
+
+  static release(
+    ...args: Parameters<_CFourInstance["release"]>
+  ): ReturnType<_CFourInstance["release"]> {
+    return BaseCfour._default.release(...args);
+  }
+
+  static releaseAllClaimsFor(
+    ...args: Parameters<_CFourInstance["releaseAllClaimsFor"]>
+  ): ReturnType<_CFourInstance["releaseAllClaimsFor"]> {
+    return BaseCfour._default.releaseAllClaimsFor(...args);
+  }
+
+  static touchClaim(
+    ...args: Parameters<_CFourInstance["touchClaim"]>
+  ): ReturnType<_CFourInstance["touchClaim"]> {
+    return BaseCfour._default.touchClaim(...args);
+  }
+
+  static expireStaleClaims(
+    ...args: Parameters<_CFourInstance["expireStaleClaims"]>
+  ): ReturnType<_CFourInstance["expireStaleClaims"]> {
+    return BaseCfour._default.expireStaleClaims(...args);
+  }
+
+  static setClaimTtl(
+    ...args: Parameters<_CFourInstance["setClaimTtl"]>
+  ): ReturnType<_CFourInstance["setClaimTtl"]> {
+    return BaseCfour._default.setClaimTtl(...args);
+  }
+
+  static getClaims(
+    ...args: Parameters<_CFourInstance["getClaims"]>
+  ): ReturnType<_CFourInstance["getClaims"]> {
+    return BaseCfour._default.getClaims(...args);
+  }
+
+  static getClaimFor(
+    ...args: Parameters<_CFourInstance["getClaimFor"]>
+  ): ReturnType<_CFourInstance["getClaimFor"]> {
+    return BaseCfour._default.getClaimFor(...args);
+  }
+
+  static proposeRelationship(
+    ...args: Parameters<_CFourInstance["proposeRelationship"]>
+  ): ReturnType<_CFourInstance["proposeRelationship"]> {
+    return BaseCfour._default.proposeRelationship(...args);
+  }
+
+  static acceptRelationship(
+    ...args: Parameters<_CFourInstance["acceptRelationship"]>
+  ): ReturnType<_CFourInstance["acceptRelationship"]> {
+    return BaseCfour._default.acceptRelationship(...args);
+  }
+
+  static rejectRelationship(
+    ...args: Parameters<_CFourInstance["rejectRelationship"]>
+  ): ReturnType<_CFourInstance["rejectRelationship"]> {
+    return BaseCfour._default.rejectRelationship(...args);
+  }
+
+  static getRelationshipProposals(
+    ...args: Parameters<_CFourInstance["getRelationshipProposals"]>
+  ): ReturnType<_CFourInstance["getRelationshipProposals"]> {
+    return BaseCfour._default.getRelationshipProposals(...args);
+  }
+
+  static branchWorkspace(
+    ...args: Parameters<_CFourInstance["branchWorkspace"]>
+  ): ReturnType<_CFourInstance["branchWorkspace"]> {
+    return BaseCfour._default.branchWorkspace(...args);
+  }
+
+  static planMerge(
+    ...args: Parameters<_CFourInstance["planMerge"]>
+  ): ReturnType<_CFourInstance["planMerge"]> {
+    return BaseCfour._default.planMerge(...args);
+  }
+
+  static applyMerge(
+    ...args: Parameters<_CFourInstance["applyMerge"]>
+  ): ReturnType<_CFourInstance["applyMerge"]> {
+    return BaseCfour._default.applyMerge(...args);
+  }
+
+  static setEventStorage(
+    ...args: Parameters<_CFourInstance["setEventStorage"]>
+  ): ReturnType<_CFourInstance["setEventStorage"]> {
+    return BaseCfour._default.setEventStorage(...args);
+  }
+
+  static getEventStorage(
+    ...args: Parameters<_CFourInstance["getEventStorage"]>
+  ): ReturnType<_CFourInstance["getEventStorage"]> {
+    return BaseCfour._default.getEventStorage(...args);
+  }
+
+  static getEventHistory(
+    ...args: Parameters<_CFourInstance["getEventHistory"]>
+  ): ReturnType<_CFourInstance["getEventHistory"]> {
+    return BaseCfour._default.getEventHistory(...args);
+  }
+
+  static getRecentEvents(
+    ...args: Parameters<_CFourInstance["getRecentEvents"]>
+  ): ReturnType<_CFourInstance["getRecentEvents"]> {
+    return BaseCfour._default.getRecentEvents(...args);
+  }
+
+  static queryEventHistory(
+    ...args: Parameters<_CFourInstance["queryEventHistory"]>
+  ): ReturnType<_CFourInstance["queryEventHistory"]> {
+    return BaseCfour._default.queryEventHistory(...args);
+  }
+
+  static clearEventHistory(
+    ...args: Parameters<_CFourInstance["clearEventHistory"]>
+  ): ReturnType<_CFourInstance["clearEventHistory"]> {
+    return BaseCfour._default.clearEventHistory(...args);
+  }
+
+  static setEventLogMax(
+    ...args: Parameters<_CFourInstance["setEventLogMax"]>
+  ): ReturnType<_CFourInstance["setEventLogMax"]> {
+    return BaseCfour._default.setEventLogMax(...args);
+  }
+
+  static validate(
+    ...args: Parameters<_CFourInstance["validate"]>
+  ): ReturnType<_CFourInstance["validate"]> {
+    return BaseCfour._default.validate(...args);
+  }
+
+  static addBuildingBlock(
+    ...args: Parameters<_CFourInstance["addBuildingBlock"]>
+  ): ReturnType<_CFourInstance["addBuildingBlock"]> {
+    return BaseCfour._default.addBuildingBlock(...args);
+  }
+
+  static register(config: Parameters<_CFourInstance["register"]>[0]) {
+    // `this.name` captures the calling class (used by subclass static blocks)
+    // so id/name inference from the class name keeps working through the facade.
+    return BaseCfour._default.register(config, this.name);
+  }
+
+  static registerGenerator(
+    ...args: Parameters<_CFourInstance["registerGenerator"]>
+  ): ReturnType<_CFourInstance["registerGenerator"]> {
+    return BaseCfour._default.registerGenerator(...args);
+  }
+
+  static resolveGenerator(
+    ...args: Parameters<_CFourInstance["resolveGenerator"]>
+  ): ReturnType<_CFourInstance["resolveGenerator"]> {
+    return BaseCfour._default.resolveGenerator(...args);
+  }
+
+  static deriveRelationshipId(
+    ...args: Parameters<_CFourInstance["deriveRelationshipId"]>
+  ): ReturnType<_CFourInstance["deriveRelationshipId"]> {
+    return BaseCfour._default.deriveRelationshipId(...args);
+  }
+
+  static hashFile(
+    ...args: Parameters<_CFourInstance["hashFile"]>
+  ): ReturnType<_CFourInstance["hashFile"]> {
+    return BaseCfour._default.hashFile(...args);
+  }
+
+  static unlinkIfExists(
+    ...args: Parameters<_CFourInstance["unlinkIfExists"]>
+  ): ReturnType<_CFourInstance["unlinkIfExists"]> {
+    return BaseCfour._default.unlinkIfExists(...args);
+  }
+
+  static detectDrift(
+    ...args: Parameters<_CFourInstance["detectDrift"]>
+  ): ReturnType<_CFourInstance["detectDrift"]> {
+    return BaseCfour._default.detectDrift(...args);
+  }
+
+  static topoOrderForApply(
+    ...args: Parameters<_CFourInstance["topoOrderForApply"]>
+  ): ReturnType<_CFourInstance["topoOrderForApply"]> {
+    return BaseCfour._default.topoOrderForApply(...args);
+  }
+
+  static planAndApply(
+    ...args: Parameters<_CFourInstance["planAndApply"]>
+  ): ReturnType<_CFourInstance["planAndApply"]> {
+    return BaseCfour._default.planAndApply(...args);
+  }
+
+  static assertGeneratorIsPure(
+    ...args: Parameters<_CFourInstance["assertGeneratorIsPure"]>
+  ): ReturnType<_CFourInstance["assertGeneratorIsPure"]> {
+    return BaseCfour._default.assertGeneratorIsPure(...args);
   }
 }
+
+type _CFourInstance = InstanceType<typeof BaseCfour>;
 
 // C4 model
 
@@ -2521,6 +3042,39 @@ export function diffWorkspaces(before: C4Workspace, after: C4Workspace): C4Works
   return { nodes: diffNodes, relationships: diffRels };
 }
 
+/**
+ * Deep, key-order-insensitive comparison used by getObjectChanges. Object
+ * property order is ignored, and an explicit `undefined` value is treated as
+ * equivalent to an absent property (mirroring JSON.stringify, which omits
+ * such keys) — so two objects differing only in key order or explicit
+ * undefined values are not reported as changed.
+ */
+function deepEqual(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || a === null || b === null) return false;
+  if (typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((v, i) => deepEqual(v, b[i]));
+  }
+  const aKeys = Object.keys(a);
+  const bKeys = new Set(Object.keys(b));
+  for (const k of aKeys) {
+    if (!bKeys.has(k) && a[k] !== undefined) return false;
+    if (bKeys.has(k) && !deepEqual(a[k], b[k])) return false;
+  }
+  for (const k of bKeys) {
+    if (!Object.prototype.hasOwnProperty.call(a, k) && b[k] !== undefined) return false;
+  }
+  return true;
+}
+
+/**
+ * Returns the property names whose values differ between two snapshots of the
+ * same node/relationship. Comparison is deep and key-order-insensitive; nested
+ * children collections are skipped because they are handled by the flat
+ * workspace diff.
+ */
 function getObjectChanges(obj1: any, obj2: any): string[] {
   const changes: string[] = [];
   const allKeys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
@@ -2532,7 +3086,7 @@ function getObjectChanges(obj1: any, obj2: any): string[] {
     const val1 = obj1[key];
     const val2 = obj2[key];
 
-    if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+    if (!deepEqual(val1, val2)) {
       changes.push(key);
     }
   }
