@@ -22,6 +22,9 @@ import {
   type GeneratorContext,
   type C4Node,
   type C4Relationship,
+  type C4Claim,
+  type C4RelationshipProposal,
+  type C4MergePlan,
 } from "../src/index.ts";
 
 // ----------------------------------------------------------------
@@ -2258,6 +2261,580 @@ describe("C4 Model - cfour package", () => {
         return { filesWritten: [p], filesDeleted: [] };
       };
       await expect(BaseCfour.assertGeneratorIsPure(impure, ctx)).rejects.toThrow(/not pure/i);
+    });
+  });
+
+  describe("Selections (getSubtree / getSelection)", () => {
+    beforeEach(() => {
+      (BaseCfour as any)._claims.clear();
+      (BaseCfour as any)._relationshipProposals.clear();
+      (BaseCfour as any)._branchBase.clear();
+    });
+
+    test("getSubtree returns root + all descendants + only-internal relationships", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+      });
+      BaseCfour.addRelationship({
+        id: "r2",
+        kind: "Relationship",
+        sourceId: "comp1",
+        destinationId: "sys2",
+      });
+
+      const sel = BaseCfour.getSubtree("sys1");
+      expect(sel.elementIds.sort()).toEqual(["ce1", "comp1", "con1", "sys1"]);
+      // r1 is internal; r2 crosses outside the subtree and must be excluded.
+      expect(sel.relationshipIds).toEqual(["r1"]);
+
+      const nested = BaseCfour.getSubtree("con1");
+      expect(nested.elementIds.sort()).toEqual(["ce1", "comp1", "con1"]);
+      // r1's source (sys1) is outside the nested subtree, so it is excluded.
+      expect(nested.relationshipIds).toEqual([]);
+
+      expect(() => BaseCfour.getSubtree("missing")).toThrow(/not found/);
+    });
+
+    test("getSelection matches filters and excludes cross-boundary relationships", () => {
+      BaseCfour.addSoftwareSystem({
+        id: "sys1",
+        name: "Web",
+        owner: "Team A",
+        tags: ["frontend"],
+      });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "API" });
+      BaseCfour.addContainer({
+        id: "con1",
+        name: "Web Gateway",
+        systemId: "sys1",
+        technology: "React",
+      });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "sys2",
+      });
+      BaseCfour.addRelationship({
+        id: "r2",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+      });
+
+      const bySearch = BaseCfour.getSelection({ search: "Web" });
+      expect(bySearch.elementIds.sort()).toEqual(["con1", "sys1"]);
+      // r1 crosses to sys2 (outside) → excluded; r2 is internal → included.
+      expect(bySearch.relationshipIds).toEqual(["r2"]);
+
+      // technology only matches Container/Component/CodeElement (SoftwareSystem is excluded)
+      expect(BaseCfour.getSelection({ technology: "React" }).elementIds).toEqual(["con1"]);
+      expect(BaseCfour.getSelection({ technology: "node" }).elementIds).toEqual([]);
+      expect(BaseCfour.getSelection({ owner: "Team A" }).elementIds).toEqual(["sys1"]);
+      expect(BaseCfour.getSelection({ tags: ["frontend"] }).elementIds).toEqual(["sys1"]);
+
+      const allSystems = BaseCfour.getSelection({ kind: "SoftwareSystem" });
+      expect(allSystems.elementIds.sort()).toEqual(["sys1", "sys2"]);
+      // r1 endpoints are both inside the matched set; r2 crosses to con1 (outside).
+      expect(allSystems.relationshipIds).toEqual(["r1"]);
+    });
+  });
+
+  describe("Claims", () => {
+    beforeEach(() => {
+      (BaseCfour as any)._claims.clear();
+      (BaseCfour as any)._relationshipProposals.clear();
+      (BaseCfour as any)._branchBase.clear();
+    });
+
+    test("claim rejects overlap with an existing claim, including your own, and emits a claim event", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+
+      const alice = BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+      expect(alice.id).toBeDefined();
+      expect(alice.editorId).toBe("alice");
+
+      const claimEv = events.find((e) => e.op === "claim");
+      expect(claimEv).toBeDefined();
+      expect((claimEv!.payload as C4Claim).id).toBe(alice.id);
+      expect((claimEv!.payload as C4Claim).editorId).toBe("alice");
+      unsub();
+
+      // Different editor overlapping
+      expect(() => BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "bob")).toThrow(
+        /overlaps claim/,
+      );
+
+      // Same editor re-claiming overlapping scope must also throw
+      expect(() =>
+        BaseCfour.claim({ elementIds: ["sys1", "sys2"], relationshipIds: [] }, "alice"),
+      ).toThrow(/overlaps claim/);
+
+      // Disjoint selection succeeds
+      const bob = BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob");
+      expect(bob.editorId).toBe("bob");
+      expect(BaseCfour.getClaims().map((c) => c.id)).toEqual([alice.id, bob.id]);
+    });
+
+    test("release is a no-op for unknown ids; releaseAllClaimsFor releases every claim of an editor", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addSoftwareSystem({ id: "sys3", name: "S3" });
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+
+      BaseCfour.release("does-not-exist"); // no-op, must not throw
+      const a1 = BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+      BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob");
+      const a2 = BaseCfour.claim({ elementIds: ["sys3"], relationshipIds: [] }, "alice");
+
+      BaseCfour.releaseAllClaimsFor("alice");
+      expect(BaseCfour.getClaims().map((c) => c.editorId)).toEqual(["bob"]);
+      const releases = events.filter((e) => e.op === "release");
+      expect(releases.length).toBe(2);
+      expect(releases.map((e) => (e.payload as C4Claim).id).sort()).toEqual([a1.id, a2.id].sort());
+      unsub();
+    });
+
+    test("touchClaim refreshes a claim and expireStaleClaims releases only stale ones", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+
+      const stale = BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+      stale.lastSeenAt = Date.now() - 100_000;
+
+      const fresh = BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob");
+      BaseCfour.touchClaim(fresh.id);
+
+      const expired = BaseCfour.expireStaleClaims("default", 60_000);
+      expect(expired).toEqual([stale.id]);
+      expect(BaseCfour.getClaimFor("sys1")).toBeUndefined();
+      expect(BaseCfour.getClaimFor("sys2")?.id).toBe(fresh.id);
+
+      expect(() => BaseCfour.touchClaim("missing")).toThrow(/not found/);
+    });
+
+    test("setClaimTtl drives the expireStaleClaims default threshold", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.setClaimTtl(1);
+      const claim = BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+      claim.lastSeenAt = Date.now() - 1000;
+      expect(BaseCfour.expireStaleClaims()).toContain(claim.id);
+      BaseCfour.setClaimTtl(5 * 60 * 1000); // restore default
+    });
+  });
+
+  describe("Claim Enforcement on Mutators", () => {
+    beforeEach(() => {
+      (BaseCfour as any)._claims.clear();
+      (BaseCfour as any)._relationshipProposals.clear();
+      (BaseCfour as any)._branchBase.clear();
+    });
+
+    test("mutators reject edits from a different editorId than the claim holder", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" });
+      BaseCfour.addCodeElement({ id: "ce1", name: "CE1", componentId: "comp1" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+      });
+
+      BaseCfour.claim(
+        { elementIds: ["sys1", "con1", "comp1", "ce1"], relationshipIds: ["r1"] },
+        "alice",
+      );
+
+      expect(() => BaseCfour.updateElement("sys1", { name: "X" }, "default", "bob")).toThrow(
+        /claimed by editor "alice"/,
+      );
+      expect(() => BaseCfour.removeElement("sys1", "default", "bob")).toThrow(
+        /claimed by editor "alice"/,
+      );
+      expect(() =>
+        BaseCfour.addContainer({ id: "con2", name: "C2", systemId: "sys1" }, "default", "bob"),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.addComponent({ id: "comp2", name: "P2", containerId: "con1" }, "default", "bob"),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.addCodeElement(
+          { id: "ce2", name: "CE2", componentId: "comp1" },
+          "default",
+          "bob",
+        ),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.addQueue({ id: "q1", name: "Q1", systemId: "sys1" }, "default", "bob"),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.addTopic({ id: "t1", name: "T1", systemId: "sys1" }, "default", "bob"),
+      ).toThrow(/claimed by editor "alice"/);
+      expect(() =>
+        BaseCfour.updateRelationship("r1", { description: "x" }, "default", "bob"),
+      ).toThrow(/claimed by editor "alice"/);
+    });
+
+    test("today's no-editorId call patterns work unchanged on claimed elements", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+      });
+      BaseCfour.claim({ elementIds: ["sys1", "con1"], relationshipIds: ["r1"] }, "alice");
+
+      // All calls omit editorId → claim enforcement is a complete no-op.
+      BaseCfour.updateElement("sys1", { name: "Renamed" });
+      BaseCfour.updateRelationship("r1", { description: "updated" });
+      BaseCfour.addContainer({ id: "con2", name: "C2", systemId: "sys1" });
+      BaseCfour.removeElement("con2");
+
+      expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("Renamed");
+      expect(BaseCfour.getWorkspace().relationships[0].description).toBe("updated");
+      expect(BaseCfour.getWorkspace().softwareSystems[0].containers!.length).toBe(1);
+    });
+
+    test("creating a child under a claimed parent auto-absorbs the child's id", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const claim = BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "default", "alice");
+      expect(claim.elementIds.has("con1")).toBe(true);
+
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" }, "default", "alice");
+      expect(claim.elementIds.has("comp1")).toBe(true);
+
+      BaseCfour.addCodeElement(
+        { id: "ce1", name: "CE1", componentId: "comp1" },
+        "default",
+        "alice",
+      );
+      expect(claim.elementIds.has("ce1")).toBe(true);
+    });
+
+    test("updateRelationship on a claim-uncovered relationship is a no-op check", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "sys2",
+      });
+      BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+
+      expect(() =>
+        BaseCfour.updateRelationship("r1", { description: "z" }, "default", "bob"),
+      ).not.toThrow();
+      expect(BaseCfour.getWorkspace().relationships[0].description).toBe("z");
+    });
+  });
+
+  describe("removeElement claim integration", () => {
+    beforeEach(() => {
+      (BaseCfour as any)._claims.clear();
+      (BaseCfour as any)._relationshipProposals.clear();
+      (BaseCfour as any)._branchBase.clear();
+    });
+
+    test("removeElement purges removed ids from claims and auto-releases an emptied claim", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" });
+      BaseCfour.addRelationship({
+        id: "r1",
+        kind: "Relationship",
+        sourceId: "sys1",
+        destinationId: "con1",
+      });
+      const claim = BaseCfour.claim(
+        { elementIds: ["sys1", "con1"], relationshipIds: ["r1"] },
+        "alice",
+      );
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.removeElement("sys1");
+      unsub();
+
+      expect(claim.elementIds.has("sys1")).toBe(false);
+      expect(claim.elementIds.has("con1")).toBe(false);
+      expect(claim.relationshipIds.has("r1")).toBe(false);
+      expect(BaseCfour.getClaims()).toHaveLength(0);
+
+      const releaseEv = events.find((e) => e.op === "release");
+      expect(releaseEv).toBeDefined();
+      expect((releaseEv!.payload as C4Claim).id).toBe(claim.id);
+      const removeEv = events.find((e) => e.op === "remove" && e.elementId === "sys1");
+      expect(removeEv).toBeDefined();
+    });
+
+    test("removeElement purges only removed ids, keeping the rest of a claim", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      const claim = BaseCfour.claim({ elementIds: ["sys1", "sys2"], relationshipIds: [] }, "alice");
+
+      BaseCfour.removeElement("sys1");
+
+      expect(claim.elementIds.has("sys1")).toBe(false);
+      expect(claim.elementIds.has("sys2")).toBe(true);
+      expect(BaseCfour.getClaims()).toHaveLength(1);
+      expect(BaseCfour.getClaimFor("sys2")).toBe(claim);
+      expect(BaseCfour.getClaimFor("sys1")).toBeUndefined();
+    });
+  });
+
+  describe("Relationship Joint-Claim Proposals", () => {
+    beforeEach(() => {
+      (BaseCfour as any)._claims.clear();
+      (BaseCfour as any)._relationshipProposals.clear();
+      (BaseCfour as any)._branchBase.clear();
+    });
+
+    function seedCrossClaimedWorkspace() {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice");
+      BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob");
+    }
+
+    test("addRelationship throws across two editors' claims, pointing at proposeRelationship", () => {
+      seedCrossClaimedWorkspace();
+      const rel = {
+        id: "r1",
+        kind: "Relationship" as const,
+        sourceId: "sys1",
+        destinationId: "sys2",
+        description: "calls",
+      };
+
+      // A third editor crosses two different editors' claims
+      expect(() => BaseCfour.addRelationship(rel, "default", "carol")).toThrow(
+        /proposeRelationship/i,
+      );
+      // Even one of the two claim holders cannot add it directly
+      expect(() => BaseCfour.addRelationship(rel, "default", "alice")).toThrow(
+        /proposeRelationship/i,
+      );
+
+      // Omitted editorId is unaffected
+      expect(() => BaseCfour.addRelationship({ ...rel, id: "r2" })).not.toThrow();
+      expect(BaseCfour.findRelationships({}).map((r) => r.id)).toContain("r2");
+
+      // Endpoints claimed by the same single editor are fine
+      BaseCfour.addSoftwareSystem({ id: "sys3", name: "S3" });
+      BaseCfour.claim({ elementIds: ["sys3"], relationshipIds: [] }, "dave");
+      expect(() =>
+        BaseCfour.addRelationship(
+          { id: "r3", kind: "Relationship", sourceId: "sys3", destinationId: "sys3" },
+          "default",
+          "dave",
+        ),
+      ).not.toThrow();
+    });
+
+    test("proposeRelationship → acceptRelationship end-to-end", () => {
+      seedCrossClaimedWorkspace();
+      const rel = {
+        id: "r1",
+        kind: "Relationship" as const,
+        sourceId: "sys1",
+        destinationId: "sys2",
+        description: "calls",
+      };
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+
+      const proposal = BaseCfour.proposeRelationship(rel, "carol");
+      expect(Array.from(proposal.pendingApprovals).sort()).toEqual(["alice", "bob"]);
+      expect(BaseCfour.getRelationshipProposals().map((p) => p.id)).toEqual([proposal.id]);
+
+      // Relationship does not exist yet
+      expect(BaseCfour.findRelationships({ sourceId: "sys1" })).toHaveLength(0);
+
+      // The proposer has no approval standing
+      expect(() => BaseCfour.acceptRelationship(proposal.id, "carol")).toThrow(/not required/);
+
+      // First approval recorded — still not created
+      BaseCfour.acceptRelationship(proposal.id, "alice");
+      expect(BaseCfour.findRelationships({ sourceId: "sys1" })).toHaveLength(0);
+      expect(events.filter((e) => e.op === "add").length).toBe(0);
+
+      // Final approval → created via the normal path + acceptRelationship event
+      BaseCfour.acceptRelationship(proposal.id, "bob");
+      expect(BaseCfour.findRelationships({ sourceId: "sys1" }).map((r) => r.id)).toEqual(["r1"]);
+      expect(BaseCfour.getRelationshipProposals()).toHaveLength(0);
+
+      const addEv = events.find((e) => e.op === "add" && e.elementId === "r1");
+      expect(addEv).toBeDefined();
+      expect(addEv!.elementKind).toBe("Relationship");
+
+      const acceptEv = events.find((e) => e.op === "acceptRelationship");
+      expect(acceptEv).toBeDefined();
+      expect((acceptEv!.payload as C4RelationshipProposal).id).toBe(proposal.id);
+      unsub();
+    });
+
+    test("rejectRelationship withdraws a proposal without creating the relationship", () => {
+      seedCrossClaimedWorkspace();
+      const rel = {
+        id: "r1",
+        kind: "Relationship" as const,
+        sourceId: "sys1",
+        destinationId: "sys2",
+      };
+
+      const proposal = BaseCfour.proposeRelationship(rel, "carol");
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.rejectRelationship(proposal.id, "alice");
+      unsub();
+
+      expect(BaseCfour.getRelationshipProposals()).toHaveLength(0);
+      expect(BaseCfour.findRelationships({ sourceId: "sys1" })).toHaveLength(0);
+      expect(events.find((e) => e.op === "rejectRelationship")).toBeDefined();
+
+      // Unknown proposal id throws
+      expect(() => BaseCfour.rejectRelationship(proposal.id, "alice")).toThrow(/not found/);
+
+      // No standing throws
+      const p2 = BaseCfour.proposeRelationship(rel, "carol");
+      expect(() => BaseCfour.rejectRelationship(p2.id, "someone-else")).toThrow(/no standing/);
+      expect(BaseCfour.getRelationshipProposals().map((p) => p.id)).toEqual([p2.id]);
+
+      // The proposer can withdraw
+      const p3 = BaseCfour.proposeRelationship(rel, "carol");
+      BaseCfour.rejectRelationship(p3.id, "carol");
+      expect(BaseCfour.getRelationshipProposals().map((p) => p.id)).toEqual([p2.id]);
+    });
+
+    test("proposeRelationship throws when the relationship does not cross a claim boundary", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.claim({ elementIds: ["sys1", "sys2"], relationshipIds: [] }, "carol");
+
+      expect(() =>
+        BaseCfour.proposeRelationship(
+          { id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2" },
+          "carol",
+        ),
+      ).toThrow(/use addRelationship/i);
+    });
+  });
+
+  describe("Branching & Merging", () => {
+    beforeEach(() => {
+      (BaseCfour as any)._claims.clear();
+      (BaseCfour as any)._relationshipProposals.clear();
+      (BaseCfour as any)._branchBase.clear();
+      (BaseCfour as any)._workspaces.delete("main");
+      (BaseCfour as any)._workspaces.delete("feature");
+    });
+
+    test("branchWorkspace + planMerge + applyMerge full happy path", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "system" }, "main");
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main");
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "con1",
+          description: "uses",
+        },
+        "main",
+      );
+
+      BaseCfour.branchWorkspace("main", "feature");
+
+      // Independent change on the branch
+      BaseCfour.updateElement("sys1", { name: "S1-branch" }, "feature");
+      BaseCfour.addComponent({ id: "comp1", name: "P1", containerId: "con1" }, "feature");
+      BaseCfour.addRelationship(
+        {
+          id: "r2",
+          kind: "Relationship",
+          sourceId: "comp1",
+          destinationId: "sys1",
+          description: "belongs",
+        },
+        "feature",
+      );
+
+      // Independent change on the target
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "main");
+      BaseCfour.updateElement("con1", { description: "updated on main" }, "main");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.branch).toBe("feature");
+      expect(plan.into).toBe("main");
+      expect(plan.conflicts).toEqual([]);
+      expect(plan.branchChanges.nodes.modified.map((m) => m.id)).toContain("sys1");
+      expect(plan.branchChanges.nodes.added.map((n) => n.id)).toContain("comp1");
+      expect(plan.targetChanges.nodes.added.map((n) => n.id)).toContain("sys2");
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.applyMerge(plan, "main");
+      unsub();
+
+      const ws = BaseCfour.getWorkspace("main");
+      expect(ws.softwareSystems.map((s) => s.id).sort()).toEqual(["sys1", "sys2"]);
+      const sys1 = ws.softwareSystems.find((s) => s.id === "sys1")!;
+      expect(sys1.name).toBe("S1-branch"); // branch change applied
+      expect(sys1.containers![0].description).toBe("updated on main"); // target change preserved
+      expect(sys1.containers![0].components![0].id).toBe("comp1");
+      expect(ws.relationships.map((r) => r.id).sort()).toEqual(["r1", "r2"]);
+
+      const mergeEv = events.find((e) => e.op === "merge");
+      expect(mergeEv).toBeDefined();
+      expect((mergeEv!.payload as C4MergePlan).branch).toBe("feature");
+    });
+
+    test("planMerge flags conflicts and applyMerge throws without mutating into", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "base" }, "main");
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main");
+
+      BaseCfour.branchWorkspace("main", "feature");
+      BaseCfour.updateElement("sys1", { name: "branch-name" }, "feature");
+      BaseCfour.updateElement("sys1", { name: "main-name" }, "main");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.conflicts).toContain("sys1");
+
+      const before = JSON.stringify(BaseCfour.getWorkspace("main"));
+      expect(() => BaseCfour.applyMerge(plan, "main")).toThrow(/conflict/i);
+      // into is completely untouched when conflicts are present
+      expect(JSON.stringify(BaseCfour.getWorkspace("main"))).toBe(before);
+      expect(BaseCfour.getWorkspace("main").softwareSystems[0].name).toBe("main-name");
+    });
+
+    test("branchWorkspace throws when the branch exists; planMerge throws without a base", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.branchWorkspace("main", "feature");
+      expect(() => BaseCfour.branchWorkspace("main", "feature")).toThrow(/already exists/);
+      expect(() => BaseCfour.planMerge("main", "feature")).toThrow(/no recorded base revision/);
     });
   });
 });

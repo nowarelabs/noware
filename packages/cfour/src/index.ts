@@ -9,7 +9,7 @@ import type {
   RegisteredHook,
 } from "@nowarelabs/shared";
 import { Logger } from "@nowarelabs/telemetry";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 
 export abstract class BaseCfour<
@@ -54,6 +54,11 @@ export abstract class BaseCfour<
   private static _eventLog: CfourChangeEvent[] = [];
   private static _eventLogMax = 1000;
   private static _eventStorage: CfourEventStorage | null = null;
+  private static _claims: Map<string, Map<string, C4Claim>> = new Map(); // workspaceName -> claimId -> claim
+  private static _relationshipProposals: Map<string, Map<string, C4RelationshipProposal>> =
+    new Map(); // workspaceName -> proposalId -> proposal
+  private static _branchBase: Map<string, { parent: string; baseSnapshot: string }> = new Map(); // branchName -> parent + JSON snapshot at branch time
+  private static _claimTtlMs = 5 * 60 * 1000; // default; overridable via setClaimTtl
 
   /**
    * Subscribes to fine-grained workspace change events.
@@ -218,6 +223,9 @@ export abstract class BaseCfour<
       relationships: [],
       views: [],
     });
+    this._claims.delete(workspaceName);
+    this._relationshipProposals.delete(workspaceName);
+    this._branchBase.delete(workspaceName);
     this._notify({ op: "reset", workspaceName });
   }
 
@@ -268,6 +276,7 @@ export abstract class BaseCfour<
   static addContainer(
     container: Omit<C4Container, "kind"> & { kind?: "Container" | "Queue" | "Topic" },
     workspaceName = "default",
+    editorId?: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
     const system = ws.softwareSystems.find((s) => s.id === container.systemId);
@@ -276,8 +285,12 @@ export abstract class BaseCfour<
         `Software System with id "${container.systemId}" not found in workspace "${workspaceName}".`,
       );
     }
+    this._assertClaimAllows(container.systemId, editorId, workspaceName, "element");
     system.containers = system.containers || [];
     system.containers.push({ ...container, kind: container.kind ?? "Container" });
+    if (editorId !== undefined) {
+      this._absorbCreatedElement(container.systemId, container.id, editorId, workspaceName);
+    }
     this._notify({
       op: "add",
       workspaceName,
@@ -288,17 +301,21 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Queue to a Software System (specialized container). */
-  static addQueue(queue: Omit<C4Container, "kind">, workspaceName = "default") {
-    this.addContainer({ ...queue, kind: "Queue" }, workspaceName);
+  static addQueue(queue: Omit<C4Container, "kind">, workspaceName = "default", editorId?: string) {
+    this.addContainer({ ...queue, kind: "Queue" }, workspaceName, editorId);
   }
 
   /** Adds a Topic to a Software System (specialized container). */
-  static addTopic(topic: Omit<C4Container, "kind">, workspaceName = "default") {
-    this.addContainer({ ...topic, kind: "Topic" }, workspaceName);
+  static addTopic(topic: Omit<C4Container, "kind">, workspaceName = "default", editorId?: string) {
+    this.addContainer({ ...topic, kind: "Topic" }, workspaceName, editorId);
   }
 
   /** Adds a Component to a Container. */
-  static addComponent(component: Omit<C4Component, "kind">, workspaceName = "default") {
+  static addComponent(
+    component: Omit<C4Component, "kind">,
+    workspaceName = "default",
+    editorId?: string,
+  ) {
     const ws = this.getWorkspace(workspaceName);
     let container: C4Container | undefined;
     let systemId = "";
@@ -316,8 +333,12 @@ export abstract class BaseCfour<
       );
     }
 
+    this._assertClaimAllows(component.containerId, editorId, workspaceName, "element");
     container.components = container.components || [];
     container.components.push({ ...component, kind: "Component" });
+    if (editorId !== undefined) {
+      this._absorbCreatedElement(component.containerId, component.id, editorId, workspaceName);
+    }
     this._notify({
       op: "add",
       workspaceName,
@@ -331,6 +352,7 @@ export abstract class BaseCfour<
   static addCodeElement(
     codeElement: Omit<C4CodeElement, "kind"> & { kind?: C4CodeElementKind },
     workspaceName = "default",
+    editorId?: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
     let component: C4Component | undefined;
@@ -354,11 +376,15 @@ export abstract class BaseCfour<
       );
     }
 
+    this._assertClaimAllows(codeElement.componentId, editorId, workspaceName, "element");
     component.codeElements = component.codeElements || [];
     component.codeElements.push({
       ...codeElement,
       kind: codeElement.kind ?? "Class",
     } as C4CodeElement);
+    if (editorId !== undefined) {
+      this._absorbCreatedElement(codeElement.componentId, codeElement.id, editorId, workspaceName);
+    }
     this._notify({
       op: "add",
       workspaceName,
@@ -369,7 +395,18 @@ export abstract class BaseCfour<
   }
 
   /** Adds a Relationship between any two elements. */
-  static addRelationship(rel: C4Relationship, workspaceName = "default") {
+  static addRelationship(rel: C4Relationship, workspaceName = "default", editorId?: string) {
+    if (editorId !== undefined) {
+      const sourceClaim = this.getClaimFor(rel.sourceId, workspaceName);
+      const destinationClaim = this.getClaimFor(rel.destinationId, workspaceName);
+      const sourceEditor = sourceClaim?.editorId;
+      const destinationEditor = destinationClaim?.editorId;
+      if (sourceEditor && destinationEditor && sourceEditor !== destinationEditor) {
+        throw new Error(
+          `Relationship "${rel.id}" spans claims held by editors "${sourceEditor}" and "${destinationEditor}" in workspace "${workspaceName}". Use proposeRelationship() to request joint approval instead.`,
+        );
+      }
+    }
     this.getWorkspace(workspaceName).relationships.push(rel);
     this._notify({
       op: "add",
@@ -385,8 +422,10 @@ export abstract class BaseCfour<
     id: string,
     patch: Partial<Omit<C4Relationship, "id" | "kind">>,
     workspaceName = "default",
+    editorId?: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
+    this._assertClaimAllows(id, editorId, workspaceName, "relationship");
     const rel = ws.relationships.find((r) => r.id === id);
     if (rel) {
       const before = snapshotNode(rel as any as C4Node);
@@ -410,8 +449,10 @@ export abstract class BaseCfour<
     id: string,
     patch: Partial<Omit<C4Node, "id" | "kind">>,
     workspaceName = "default",
+    editorId?: string,
   ) {
     const ws = this.getWorkspace(workspaceName);
+    this._assertClaimAllows(id, editorId, workspaceName, "element");
     // Single tree walk yields both the node and its ancestry path.
     const found = findNodeWithAncestry(ws, id);
     if (found) {
@@ -446,8 +487,9 @@ export abstract class BaseCfour<
   }
 
   /** Removes an element and all its children/relationships. */
-  static removeElement(id: string, workspaceName = "default") {
+  static removeElement(id: string, workspaceName = "default", editorId?: string) {
     const ws = this.getWorkspace(workspaceName);
+    this._assertClaimAllows(id, editorId, workspaceName, "element");
 
     // Capture before state and collect full subtree
     const found = findNodeWithAncestry(ws, id);
@@ -487,6 +529,13 @@ export abstract class BaseCfour<
     // Remove associated relationships
     ws.relationships = ws.relationships.filter(
       (r) => !removedIds.has(r.sourceId) && !removedIds.has(r.destinationId),
+    );
+
+    // Purge the removed ids from every claim, auto-releasing claims left empty.
+    this._purgeRemovedFromClaims(
+      removedIds,
+      new Set(removedRelationships.map((r) => r.id)),
+      workspaceName,
     );
 
     this._notify({
@@ -926,6 +975,519 @@ export abstract class BaseCfour<
     const found = findNodeWithAncestry(ws, id);
     if (!found) return [];
     return collectDescendants(found.node);
+  }
+
+  // ── Collaborative Editing (Selections & Claims) ───────
+
+  /**
+   * Returns the structural subtree rooted at `rootId`: the root element
+   * itself, every descendant (via getDescendants), and every relationship
+   * whose source AND destination both fall inside that combined set. Throws
+   * if rootId does not exist.
+   */
+  static getSubtree(rootId: string, workspaceName = "default"): C4Selection {
+    const ws = this.getWorkspace(workspaceName);
+    if (!findNodeWithAncestry(ws, rootId)) {
+      throw new Error(`Element with id "${rootId}" not found in workspace "${workspaceName}".`);
+    }
+    const elementIds = [rootId, ...this.getDescendants(rootId, workspaceName).map((n) => n.id)];
+    return {
+      elementIds,
+      relationshipIds: this._internalRelationshipIds(ws.relationships, new Set(elementIds)),
+    };
+  }
+
+  /**
+   * Returns every node matching `query` (same filter semantics as
+   * findNodes), plus every relationship whose source AND destination both
+   * fall inside the matched set. Nodes that match but have no internal
+   * relationships are still included, contributing nothing to
+   * relationshipIds.
+   */
+  static getSelection(query: SelectionQuery, workspaceName = "default"): C4Selection {
+    const ws = this.getWorkspace(workspaceName);
+    const elementIds = this.findNodes(query, workspaceName).map((n) => n.id);
+    return {
+      elementIds,
+      relationshipIds: this._internalRelationshipIds(ws.relationships, new Set(elementIds)),
+    };
+  }
+
+  /**
+   * Claims a selection for exclusive editing by `editorId`. Throws if any
+   * element or relationship id in the selection is already covered by an
+   * existing active claim in this workspace (regardless of who holds it —
+   * re-claiming your own overlapping scope must also throw; release and
+   * re-claim explicitly instead). Returns the created C4Claim. Emits a
+   * "claim" event with `payload` set to the created claim.
+   */
+  static claim(selection: C4Selection, editorId: string, workspaceName = "default"): C4Claim {
+    const claims = this._claimsFor(workspaceName);
+    const conflicting = new Map<string, C4Claim>();
+    for (const claim of claims.values()) {
+      for (const id of claim.elementIds) {
+        if (!conflicting.has(id)) conflicting.set(id, claim);
+      }
+      for (const id of claim.relationshipIds) {
+        if (!conflicting.has(id)) conflicting.set(id, claim);
+      }
+    }
+
+    const overlapping = new Set<C4Claim>();
+    for (const id of [...selection.elementIds, ...selection.relationshipIds]) {
+      const holder = conflicting.get(id);
+      if (holder) overlapping.add(holder);
+    }
+
+    if (overlapping.size > 0) {
+      const holders = Array.from(overlapping)
+        .map((c) => `"${c.id}" (editor "${c.editorId}")`)
+        .join(", ");
+      throw new Error(
+        `Cannot claim selection in workspace "${workspaceName}": selection overlaps claim ${holders}. Release and re-claim explicitly.`,
+      );
+    }
+
+    const now = Date.now();
+    const claim: C4Claim = {
+      id: randomUUID(),
+      editorId,
+      workspaceName,
+      elementIds: new Set(selection.elementIds),
+      relationshipIds: new Set(selection.relationshipIds),
+      createdAt: now,
+      lastSeenAt: now,
+    };
+    claims.set(claim.id, claim);
+    this._notify({ op: "claim", workspaceName, payload: claim });
+    return claim;
+  }
+
+  /**
+   * Releases a claim early. No-op if the claim id is unknown (already
+   * expired or released). Emits a "release" event with `payload` set to the
+   * released claim.
+   */
+  static release(claimId: string, workspaceName = "default"): void {
+    const claims = this._claimsFor(workspaceName);
+    const claim = claims.get(claimId);
+    if (!claim) return;
+    claims.delete(claimId);
+    this._notify({ op: "release", workspaceName, payload: claim });
+  }
+
+  /**
+   * Releases every claim currently held by `editorId` in a workspace — for
+   * clean disconnect handling by the host application. Emits one "release"
+   * event per claim released.
+   */
+  static releaseAllClaimsFor(editorId: string, workspaceName = "default"): void {
+    const claims = this._claimsFor(workspaceName);
+    for (const [claimId, claim] of claims) {
+      if (claim.editorId === editorId) {
+        claims.delete(claimId);
+        this._notify({ op: "release", workspaceName, payload: claim });
+      }
+    }
+  }
+
+  /**
+   * Refreshes a claim's lastSeenAt to the current time, so it is not reaped
+   * by expireStaleClaims. Throws if the claim id is unknown. Host
+   * applications call this on whatever heartbeat cadence their own transport
+   * uses — this library does not run its own timers.
+   */
+  static touchClaim(claimId: string, workspaceName = "default"): void {
+    const claim = this._claimsFor(workspaceName).get(claimId);
+    if (!claim) {
+      throw new Error(`Claim with id "${claimId}" not found in workspace "${workspaceName}".`);
+    }
+    claim.lastSeenAt = Date.now();
+  }
+
+  /**
+   * Releases every claim in `workspaceName` whose lastSeenAt is older than
+   * `maxAgeMs` (defaults to the value set via setClaimTtl). Returns the ids
+   * of the claims that were released. The host application is responsible
+   * for calling this periodically from its own scheduler — this library
+   * never calls it automatically.
+   */
+  static expireStaleClaims(workspaceName = "default", maxAgeMs?: number): string[] {
+    const threshold = maxAgeMs ?? this._claimTtlMs;
+    const now = Date.now();
+    const expired: string[] = [];
+    const claims = this._claimsFor(workspaceName);
+    for (const [claimId, claim] of claims) {
+      if (now - claim.lastSeenAt > threshold) {
+        claims.delete(claimId);
+        expired.push(claimId);
+        this._notify({ op: "release", workspaceName, payload: claim });
+      }
+    }
+    return expired;
+  }
+
+  /** Sets the default staleness threshold used by expireStaleClaims when no
+   * explicit maxAgeMs is passed. */
+  static setClaimTtl(ms: number): void {
+    this._claimTtlMs = ms;
+  }
+
+  /** Returns all currently active claims in a workspace. */
+  static getClaims(workspaceName = "default"): C4Claim[] {
+    return Array.from(this._claimsFor(workspaceName).values());
+  }
+
+  /** Returns the active claim covering `elementId`, if any. */
+  static getClaimFor(elementId: string, workspaceName = "default"): C4Claim | undefined {
+    for (const claim of this._claimsFor(workspaceName).values()) {
+      if (claim.elementIds.has(elementId) || claim.relationshipIds.has(elementId)) {
+        return claim;
+      }
+    }
+    return undefined;
+  }
+
+  // ── Relationship Joint-Claim Proposals ────────────────
+
+  /**
+   * Proposes a relationship whose endpoints are claimed by two or more
+   * different editors, at least one of which is not `proposerId`. Returns
+   * the created C4RelationshipProposal; the relationship does NOT exist in
+   * the workspace yet. `pendingApprovals` is the set of distinct editorIds
+   * (other than proposerId) who own a claim covering either endpoint — every
+   * one of them must call acceptRelationship before the relationship is
+   * actually created. Throws if the relationship doesn't actually cross a
+   * claim boundary requiring another editor's approval (use addRelationship
+   * directly in that case). Emits a "proposeRelationship" event with
+   * `payload` set to the created proposal.
+   */
+  static proposeRelationship(
+    rel: C4Relationship,
+    proposerId: string,
+    workspaceName = "default",
+  ): C4RelationshipProposal {
+    const sourceClaim = this.getClaimFor(rel.sourceId, workspaceName);
+    const destinationClaim = this.getClaimFor(rel.destinationId, workspaceName);
+    const pendingApprovals = new Set<string>();
+    if (sourceClaim && sourceClaim.editorId !== proposerId)
+      pendingApprovals.add(sourceClaim.editorId);
+    if (destinationClaim && destinationClaim.editorId !== proposerId) {
+      pendingApprovals.add(destinationClaim.editorId);
+    }
+
+    if (pendingApprovals.size === 0) {
+      throw new Error(
+        `Relationship "${rel.id}" does not cross a claim boundary in workspace "${workspaceName}"; use addRelationship() directly.`,
+      );
+    }
+
+    const proposal: C4RelationshipProposal = {
+      id: randomUUID(),
+      relationship: rel,
+      workspaceName,
+      proposerId,
+      pendingApprovals,
+      createdAt: Date.now(),
+    };
+    this._proposalsFor(workspaceName).set(proposal.id, proposal);
+    this._notify({ op: "proposeRelationship", workspaceName, payload: proposal });
+    return proposal;
+  }
+
+  /**
+   * Records `accepterId`'s approval of a pending proposal. Throws if
+   * `accepterId` is not in the proposal's `pendingApprovals`, or if the
+   * proposal id is unknown. Once every required approval has been recorded,
+   * the relationship is created via the same path `addRelationship` uses
+   * (so it raises the same validation and emits the normal "add" event for
+   * the relationship), the proposal is deleted, and this method additionally
+   * emits an "acceptRelationship" event with `payload` set to the
+   * now-completed proposal.
+   */
+  static acceptRelationship(
+    proposalId: string,
+    accepterId: string,
+    workspaceName = "default",
+  ): void {
+    const proposals = this._proposalsFor(workspaceName);
+    const proposal = proposals.get(proposalId);
+    if (!proposal) {
+      throw new Error(
+        `Relationship proposal with id "${proposalId}" not found in workspace "${workspaceName}".`,
+      );
+    }
+    if (!proposal.pendingApprovals.has(accepterId)) {
+      throw new Error(
+        `Editor "${accepterId}" is not required to approve proposal "${proposalId}" in workspace "${workspaceName}".`,
+      );
+    }
+    proposal.pendingApprovals.delete(accepterId);
+    if (proposal.pendingApprovals.size === 0) {
+      proposals.delete(proposalId);
+      this.addRelationship(proposal.relationship, workspaceName);
+      this._notify({ op: "acceptRelationship", workspaceName, payload: proposal });
+    }
+  }
+
+  /**
+   * Withdraws a pending proposal. Callable by the original proposer or by
+   * any editor still listed in pendingApprovals. Throws if the proposal id
+   * is unknown or the caller has no standing to reject it. Emits a
+   * "rejectRelationship" event with `payload` set to the withdrawn proposal.
+   */
+  static rejectRelationship(proposalId: string, editorId: string, workspaceName = "default"): void {
+    const proposals = this._proposalsFor(workspaceName);
+    const proposal = proposals.get(proposalId);
+    if (!proposal) {
+      throw new Error(
+        `Relationship proposal with id "${proposalId}" not found in workspace "${workspaceName}".`,
+      );
+    }
+    const hasStanding = editorId === proposal.proposerId || proposal.pendingApprovals.has(editorId);
+    if (!hasStanding) {
+      throw new Error(
+        `Editor "${editorId}" has no standing to reject proposal "${proposalId}" in workspace "${workspaceName}".`,
+      );
+    }
+    proposals.delete(proposalId);
+    this._notify({ op: "rejectRelationship", workspaceName, payload: proposal });
+  }
+
+  /** Returns all pending relationship proposals in a workspace. */
+  static getRelationshipProposals(workspaceName = "default"): C4RelationshipProposal[] {
+    return Array.from(this._proposalsFor(workspaceName).values());
+  }
+
+  // ── Branching & Merging ───────────────────────────────
+
+  /**
+   * Creates a new named workspace `newBranch` as a copy of `from`'s current
+   * state, and records that state as the base revision for future
+   * planMerge/applyMerge calls involving this branch. Throws if `newBranch`
+   * already exists. Emits a "branch" event with `payload: { branch: newBranch, from }`.
+   */
+  static branchWorkspace(from: string, newBranch: string): void {
+    if (this._workspaces.has(newBranch)) {
+      throw new Error(`Workspace with name "${newBranch}" already exists.`);
+    }
+    const snapshot = this.export(from);
+    this._branchBase.set(newBranch, { parent: from, baseSnapshot: snapshot });
+    this._captureLazySnapshot(newBranch, undefined);
+    this._workspaces.set(newBranch, JSON.parse(snapshot) as C4Workspace);
+    this._notify({ op: "branch", workspaceName: newBranch, payload: { branch: newBranch, from } });
+  }
+
+  /**
+   * Computes a three-way comparison between `branch` and `into`, using the
+   * base revision recorded when `branch` was created (NOT into's current
+   * state) as the common ancestor — so changes made to `into` since the
+   * branch point are correctly distinguished from changes made on `branch`.
+   * `conflicts` lists every node/relationship id that changed on both sides
+   * since the base revision. Throws if `branch` has no recorded base
+   * revision (i.e. was never created via branchWorkspace).
+   */
+  static planMerge(branch: string, into: string): C4MergePlan {
+    const base = this._branchBase.get(branch);
+    if (!base) {
+      throw new Error(
+        `Branch "${branch}" has no recorded base revision. Create it with branchWorkspace() before planning a merge.`,
+      );
+    }
+    const baseWorkspace = JSON.parse(base.baseSnapshot) as C4Workspace;
+    const branchChanges = diffWorkspaces(baseWorkspace, this.getWorkspace(branch));
+    const targetChanges = diffWorkspaces(baseWorkspace, this.getWorkspace(into));
+
+    const touchedIds = (diff: C4WorkspaceDiff): Set<string> => {
+      const ids = new Set<string>();
+      for (const node of diff.nodes.added) ids.add(node.id);
+      for (const mod of diff.nodes.modified) ids.add(mod.id);
+      for (const node of diff.nodes.removed) ids.add(node.id);
+      for (const rel of diff.relationships.added) ids.add(rel.id);
+      for (const mod of diff.relationships.modified) ids.add(mod.id);
+      for (const rel of diff.relationships.removed) ids.add(rel.id);
+      return ids;
+    };
+
+    const branchTouched = touchedIds(branchChanges);
+    const targetTouched = touchedIds(targetChanges);
+    const conflicts = Array.from(branchTouched).filter((id) => targetTouched.has(id));
+
+    return { branch, into, branchChanges, targetChanges, conflicts };
+  }
+
+  /**
+   * Applies `plan.branchChanges` onto workspace `into`. Throws immediately,
+   * without applying anything, if `plan.conflicts` is non-empty — callers
+   * must resolve conflicts (by editing one of the two workspaces and calling
+   * planMerge again) before this will proceed. Applies each added, modified,
+   * and removed node/relationship in `branchChanges` by dispatching through
+   * the SAME public mutators used everywhere else in this file
+   * (addPerson/addSoftwareSystem/addContainer/addComponent/addCodeElement/
+   * addRelationship for additions; updateElement/updateRelationship for
+   * modifications, applying only the fields listed in each diff entry's
+   * `changes` array; removeElement for removals, guarding against an id that
+   * was already removed via cascade) — do not hand-roll direct array
+   * mutation. Wraps the whole operation in `this.batch(...)` so it is
+   * atomic and rolls back cleanly if any step throws. Emits a "merge" event
+   * with `payload` set to the applied plan after everything succeeds.
+   */
+  static applyMerge(plan: C4MergePlan, into: string): void {
+    if (plan.conflicts.length > 0) {
+      throw new Error(
+        `Cannot apply merge into "${into}": conflicting changes on: ${plan.conflicts.join(
+          ", ",
+        )}. Resolve conflicts and call planMerge() again before applyMerge().`,
+      );
+    }
+
+    this.batch(() => {
+      const added = [...plan.branchChanges.nodes.added].sort(
+        (a, b) => KIND_DEPTH[a.kind] - KIND_DEPTH[b.kind],
+      );
+      for (const node of added) this._applyNodeAddition(node, into);
+      for (const rel of plan.branchChanges.relationships.added) {
+        this.addRelationship(rel, into);
+      }
+      for (const mod of plan.branchChanges.nodes.modified) {
+        const patch: Record<string, any> = {};
+        for (const key of mod.changes) patch[key] = (mod.after as any)[key];
+        this.updateElement(mod.id, patch, into);
+      }
+      for (const mod of plan.branchChanges.relationships.modified) {
+        const patch: Record<string, any> = {};
+        for (const key of mod.changes) patch[key] = (mod.after as any)[key];
+        this.updateRelationship(mod.id, patch, into);
+      }
+      for (const node of plan.branchChanges.nodes.removed) {
+        if (findNodeWithAncestry(this.getWorkspace(into), node.id)) {
+          this.removeElement(node.id, into);
+        }
+      }
+      for (const rel of plan.branchChanges.relationships.removed) {
+        const ws = this.getWorkspace(into);
+        if (ws.relationships.some((r) => r.id === rel.id)) {
+          this._removeRelationship(into, rel.id);
+        }
+      }
+      this._notify({ op: "merge", workspaceName: into, payload: plan });
+    });
+  }
+
+  private static _internalRelationshipIds(
+    relationships: C4Relationship[],
+    idSet: Set<string>,
+  ): string[] {
+    return relationships
+      .filter((rel) => idSet.has(rel.sourceId) && idSet.has(rel.destinationId))
+      .map((rel) => rel.id);
+  }
+
+  private static _claimsFor(workspaceName: string): Map<string, C4Claim> {
+    let map = this._claims.get(workspaceName);
+    if (!map) {
+      map = new Map();
+      this._claims.set(workspaceName, map);
+    }
+    return map;
+  }
+
+  private static _proposalsFor(workspaceName: string): Map<string, C4RelationshipProposal> {
+    let map = this._relationshipProposals.get(workspaceName);
+    if (!map) {
+      map = new Map();
+      this._relationshipProposals.set(workspaceName, map);
+    }
+    return map;
+  }
+
+  /**
+   * Throws if `elementId` (or, when kind is "relationship", relationshipId)
+   * is covered by an active claim held by an editor other than `editorId`.
+   * A complete no-op when `editorId` is undefined.
+   */
+  private static _assertClaimAllows(
+    id: string,
+    editorId: string | undefined,
+    workspaceName: string,
+    kind: "element" | "relationship",
+  ): void {
+    if (editorId === undefined) return;
+    for (const claim of this._claimsFor(workspaceName).values()) {
+      const covered =
+        kind === "relationship" ? claim.relationshipIds.has(id) : claim.elementIds.has(id);
+      if (covered && claim.editorId !== editorId) {
+        const label = kind === "relationship" ? "Relationship" : "Element";
+        throw new Error(
+          `${label} with id "${id}" is claimed by editor "${claim.editorId}" in workspace "${workspaceName}".`,
+        );
+      }
+    }
+  }
+
+  /** Absorbs a newly created element's id into the editor's claim on its parent. */
+  private static _absorbCreatedElement(
+    parentId: string,
+    createdId: string,
+    editorId: string,
+    workspaceName: string,
+  ): void {
+    const holder = this.getClaimFor(parentId, workspaceName);
+    if (holder && holder.editorId === editorId) {
+      holder.elementIds.add(createdId);
+    }
+  }
+
+  /** Purges removed ids from every claim, auto-releasing claims left empty. */
+  private static _purgeRemovedFromClaims(
+    removedIds: Set<string>,
+    removedRelationshipIds: Set<string>,
+    workspaceName: string,
+  ): void {
+    const claims = this._claims.get(workspaceName);
+    if (!claims) return;
+    for (const [claimId, claim] of claims) {
+      for (const id of removedIds) claim.elementIds.delete(id);
+      for (const id of removedRelationshipIds) claim.relationshipIds.delete(id);
+      if (claim.elementIds.size === 0 && claim.relationshipIds.size === 0) {
+        claims.delete(claimId);
+        this._notify({ op: "release", workspaceName, payload: claim });
+      }
+    }
+  }
+
+  private static _applyNodeAddition(node: C4Node, workspaceName: string): void {
+    switch (node.kind) {
+      case "Person":
+        this.addPerson(node, workspaceName);
+        break;
+      case "SoftwareSystem":
+        this.addSoftwareSystem(node, workspaceName);
+        break;
+      case "Container":
+      case "Queue":
+      case "Topic":
+        this.addContainer(node as C4Container, workspaceName);
+        break;
+      case "Component":
+        this.addComponent(node as C4Component, workspaceName);
+        break;
+      default:
+        this.addCodeElement(node as C4CodeElement, workspaceName);
+        break;
+    }
+  }
+
+  private static _removeRelationship(workspaceName: string, id: string): void {
+    const ws = this.getWorkspace(workspaceName);
+    ws.relationships = ws.relationships.filter((r) => r.id !== id);
+    this._notify({
+      op: "remove",
+      workspaceName,
+      elementId: id,
+      elementKind: "Relationship",
+      path: [],
+    });
   }
 
   // ── Event History ─────────────────────────────────────────
@@ -1511,7 +2073,19 @@ export type Tag = string;
 
 export interface CfourChangeEvent {
   /** The operation that triggered this event. */
-  op: "add" | "update" | "remove" | "reset" | "import";
+  op:
+    | "add"
+    | "update"
+    | "remove"
+    | "reset"
+    | "import"
+    | "claim"
+    | "release"
+    | "branch"
+    | "merge"
+    | "proposeRelationship"
+    | "acceptRelationship"
+    | "rejectRelationship";
   /** The workspace that was mutated. */
   workspaceName: string;
   /** The id of the changed node (present for add/update/remove). */
@@ -1526,6 +2100,13 @@ export interface CfourChangeEvent {
   after?: C4Node;
   /** Property names that changed (reuses getObjectChanges output, present for update). */
   changes?: string[];
+  /**
+   * Payload for collaboration events (claim/release/branch/merge/
+   * proposeRelationship/acceptRelationship/rejectRelationship). Lets
+   * subscribers see what happened without a follow-up call. Never set by the
+   * core add/update/remove/reset/import ops.
+   */
+  payload?: C4Claim | C4RelationshipProposal | C4MergePlan | { branch: string; from: string };
   /**
    * All descendants removed along with the element, in leaves-first order
    * (code elements before components before containers before systems).
@@ -1768,6 +2349,78 @@ export interface C4DiffResult<T> {
 export interface C4WorkspaceDiff {
   nodes: C4DiffResult<C4Node>;
   relationships: C4DiffResult<C4Relationship>;
+}
+
+// ----------------------------------------------------------------
+// Collaborative editing — selections, claims, proposals, merges
+// ----------------------------------------------------------------
+
+/**
+ * A flat set of element and relationship ids. Returned by getSubtree and
+ * getSelection, and consumed by claim(). relationshipIds only ever contains
+ * relationships that are fully internal to the selection (both endpoints
+ * are also in elementIds) — a relationship crossing outside the selection
+ * is never implicitly included.
+ */
+export interface C4Selection {
+  elementIds: string[];
+  relationshipIds: string[];
+}
+
+/**
+ * Structured filter for getSelection. Intentionally identical in shape to
+ * findNodes' filter — "intent" is expressed as the same tags/owner/
+ * technology/search criteria the rest of the API already uses, not as
+ * free text or graph expansion.
+ */
+export interface SelectionQuery {
+  kind?: C4ElementKind;
+  technology?: string;
+  owner?: string;
+  tags?: string[];
+  search?: string;
+}
+
+/** An active claim over a C4Selection, held by a single editor. */
+export interface C4Claim {
+  id: string;
+  editorId: string;
+  workspaceName: string;
+  elementIds: Set<string>;
+  relationshipIds: Set<string>;
+  createdAt: number;
+  lastSeenAt: number;
+}
+
+/**
+ * A pending request to create a relationship whose endpoints are claimed by
+ * two (or more) different editors. Not yet part of the workspace — only
+ * created once every entry in pendingApprovals has called
+ * acceptRelationship.
+ */
+export interface C4RelationshipProposal {
+  id: string;
+  relationship: C4Relationship;
+  workspaceName: string;
+  proposerId: string;
+  pendingApprovals: Set<string>;
+  createdAt: number;
+}
+
+/** Result of planMerge — a reviewable three-way diff between a branch and
+ * its merge target, computed against the branch's recorded base revision. */
+export interface C4MergePlan {
+  branch: string;
+  into: string;
+  /** What changed on `branch` since it was created, relative to the base
+   * revision recorded at branch time. */
+  branchChanges: C4WorkspaceDiff;
+  /** What changed on `into` since the same base revision — i.e. what a
+   * merge must not clobber. */
+  targetChanges: C4WorkspaceDiff;
+  /** Node or relationship ids touched on BOTH sides since the base
+   * revision. Must be empty before applyMerge will proceed. */
+  conflicts: string[];
 }
 
 // ----------------------------------------------------------------
@@ -2080,6 +2733,23 @@ const DEFAULT_DIMENSIONS: Record<C4ElementKind, { width: number; height: number 
 // ----------------------------------------------------------------
 
 const CONTAINER_KINDS = new Set<C4ElementKind>(["Container", "Queue", "Topic"]);
+
+/** Tree depth of each element kind — used to order additions so parents are created before children. */
+const KIND_DEPTH: Record<C4ElementKind, number> = {
+  Person: 0,
+  SoftwareSystem: 0,
+  Container: 1,
+  Queue: 1,
+  Topic: 1,
+  Component: 2,
+  Class: 3,
+  Interface: 3,
+  AbstractClass: 3,
+  Enum: 3,
+  Function: 3,
+  Table: 3,
+  Object: 3,
+};
 
 function getTechnology(el: C4Node): string | undefined {
   if (CONTAINER_KINDS.has(el.kind)) return (el as C4Container).technology;
