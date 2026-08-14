@@ -91,6 +91,9 @@ export class BaseCfour {
     this._relationshipProposals = new Map();
     this._branchBase = new Map();
     this._claimTtlMs = 5 * 60 * 1000;
+    this._claimTtlByWorkspace = new Map();
+    this._proposalTtlMs = 5 * 60 * 1000;
+    this._proposalTtlByWorkspace = new Map();
   }
 
   private _workspaces: Map<string, C4Workspace> = new Map([
@@ -114,7 +117,10 @@ export class BaseCfour {
   private _claims: Map<string, Map<string, C4Claim>> = new Map(); // workspaceName -> claimId -> claim
   private _relationshipProposals: Map<string, Map<string, C4RelationshipProposal>> = new Map(); // workspaceName -> proposalId -> proposal
   private _branchBase: Map<string, { parent: string; baseSnapshot: string }> = new Map(); // branchName -> parent + JSON snapshot at branch time
-  private _claimTtlMs = 5 * 60 * 1000; // default; overridable via setClaimTtl
+  private _claimTtlMs = 5 * 60 * 1000; // instance default; overridable via setClaimTtl
+  private _claimTtlByWorkspace = new Map<string, number>(); // per-workspace override; wins over _claimTtlMs
+  private _proposalTtlMs = 5 * 60 * 1000; // instance default; overridable via setProposalTtl
+  private _proposalTtlByWorkspace = new Map<string, number>(); // per-workspace override; wins over _proposalTtlMs
 
   /**
    * Subscribes to fine-grained workspace change events.
@@ -264,6 +270,64 @@ export class BaseCfour {
       if (snap === undefined) this._workspaces.delete(name);
       else this._workspaces.set(name, snap);
     }
+  }
+
+  // ── Batch Operations (agent primitive) ──────────────────────
+  // Executes a typed list of CfourOperations atomically: notifications are
+  // deferred until every op has run, every workspace mutation rolls back if
+  // any op throws, and each op is dispatched through the SAME public mutators
+  // the interactive API uses — so claim enforcement, validation, and event
+  // emission are identical to a caller running the ops one by one. The ops
+  // themselves do NOT carry a workspaceName/editorId; those are provided once
+  // per call (execution itself is the workspace-do host's job in Phase 3.6).
+
+  /**
+   * Runs `ops` inside a single atomic `batch` transaction. Each op dispatches
+   * to its public mutator with `editorId` (defaults to the reserved system
+   * identity). On any error the whole batch rolls back and rethrows. Emits
+   * every mutation event (batch defers, never suppresses).
+   */
+  applyOperations(
+    ops: CfourOperation[],
+    workspaceName = "default",
+    editorId = REGISTER_EDITOR,
+  ): void {
+    this.batch(() => {
+      for (const op of ops) {
+        switch (op.op) {
+          case "addPerson":
+            this.addPerson(op.args[0], workspaceName);
+            break;
+          case "addSoftwareSystem":
+            this.addSoftwareSystem(op.args[0], workspaceName);
+            break;
+          case "addContainer":
+            this.addContainer(op.args[0], workspaceName, editorId);
+            break;
+          case "addComponent":
+            this.addComponent(op.args[0], workspaceName, editorId);
+            break;
+          case "addCodeElement":
+            this.addCodeElement(op.args[0], workspaceName, editorId);
+            break;
+          case "addRelationship":
+            this.addRelationship(op.args[0], workspaceName, editorId);
+            break;
+          case "updateElement":
+            this.updateElement(op.args[0], op.args[1], workspaceName, editorId);
+            break;
+          case "updateRelationship":
+            this.updateRelationship(op.args[0], op.args[1], workspaceName, editorId);
+            break;
+          case "removeElement":
+            this.removeElement(op.args[0], workspaceName, editorId);
+            break;
+          case "removeRelationship":
+            this.removeRelationship(op.args[0], workspaceName, editorId);
+            break;
+        }
+      }
+    });
   }
 
   /** Resets a specific C4 workspace or the default one. */
@@ -878,7 +942,9 @@ export class BaseCfour {
       op: "update",
       workspaceName,
       elementId: viewId,
+      elementKind: "View",
       path: [],
+      after: view,
     });
   }
 
@@ -897,7 +963,9 @@ export class BaseCfour {
       op: isNew ? "add" : "update",
       workspaceName,
       elementId: view.id,
+      elementKind: "View",
       path: [],
+      after: view,
     });
   }
 
@@ -979,6 +1047,21 @@ export class BaseCfour {
       claim.workspaceName = workspaceName;
       map.set(claim.id, claim);
     }
+  }
+
+  /**
+   * Replaces the set of persisted views for a workspace. Used by storage
+   * layers to rehydrate view state on cold start; does not emit events.
+   * Arrays are copied so the caller's view objects cannot alias the
+   * workspace's.
+   */
+  restoreViews(views: C4View[], workspaceName = "default"): void {
+    const ws = this.getWorkspace(workspaceName);
+    ws.views = views.map((v) => ({
+      ...v,
+      elements: [...(v.elements ?? [])],
+      relationships: [...(v.relationships ?? [])],
+    }));
   }
 
   /**
@@ -1289,7 +1372,7 @@ export class BaseCfour {
    * never calls it automatically.
    */
   expireStaleClaims(workspaceName = "default", maxAgeMs?: number): string[] {
-    const threshold = maxAgeMs ?? this._claimTtlMs;
+    const threshold = maxAgeMs ?? this._claimTtlByWorkspace.get(workspaceName) ?? this._claimTtlMs;
     const now = Date.now();
     const expired: string[] = [];
     const claims = this._claimsFor(workspaceName);
@@ -1304,9 +1387,12 @@ export class BaseCfour {
   }
 
   /** Sets the default staleness threshold used by expireStaleClaims when no
-   * explicit maxAgeMs is passed. */
-  setClaimTtl(ms: number): void {
-    this._claimTtlMs = ms;
+   * explicit maxAgeMs is passed. Pass a workspaceName to override the
+   * threshold for that workspace only; the per-workspace override wins over
+   * the instance default inside expireStaleClaims. */
+  setClaimTtl(ms: number, workspaceName?: string): void {
+    if (workspaceName === undefined) this._claimTtlMs = ms;
+    else this._claimTtlByWorkspace.set(workspaceName, ms);
   }
 
   /** Returns all currently active claims in a workspace. */
@@ -1431,6 +1517,42 @@ export class BaseCfour {
     return Array.from(this._proposalsFor(workspaceName).values());
   }
 
+  /**
+   * Sets the default staleness threshold used by expireStaleProposals when no
+   * explicit maxAgeMs is passed. Pass a workspaceName to override the
+   * threshold for that workspace only; the per-workspace override wins over
+   * the instance default inside expireStaleProposals.
+   */
+  setProposalTtl(ms: number, workspaceName?: string): void {
+    if (workspaceName === undefined) this._proposalTtlMs = ms;
+    else this._proposalTtlByWorkspace.set(workspaceName, ms);
+  }
+
+  /**
+   * Removes every pending proposal in `workspaceName` whose createdAt is older
+   * than `maxAgeMs` (defaults to the value set via setProposalTtl). Returns the
+   * ids of the proposals that were removed. Deliberately emits NO events:
+   * expiry is persistence-side cleanup owned by the host's alarm sweep, so a
+   * "rejectRelationship" event that a storage layer would persist as a delete
+   * is the wrong signal for a silent sweep. The host application is
+   * responsible for calling this periodically from its own scheduler — this
+   * library never calls it automatically.
+   */
+  expireStaleProposals(workspaceName = "default", maxAgeMs?: number): string[] {
+    const threshold =
+      maxAgeMs ?? this._proposalTtlByWorkspace.get(workspaceName) ?? this._proposalTtlMs;
+    const now = Date.now();
+    const expired: string[] = [];
+    const proposals = this._proposalsFor(workspaceName);
+    for (const [proposalId, proposal] of proposals) {
+      if (now - proposal.createdAt > threshold) {
+        proposals.delete(proposalId);
+        expired.push(proposalId);
+      }
+    }
+    return expired;
+  }
+
   // ── Branching & Merging ───────────────────────────────
 
   /**
@@ -1485,24 +1607,37 @@ export class BaseCfour {
     const targetTouched = touchedIds(targetChanges);
     const conflicts = Array.from(branchTouched).filter((id) => targetTouched.has(id));
 
-    return { branch, into, branchChanges, targetChanges, conflicts };
+    // Advisory, mirrors applyMerge's claim enforcement: every id the branch
+    // plan touches on `into` is checked via getClaimFor. REGISTER_EDITOR never
+    // claims, so a blocker is always held by a real editor who would block the
+    // merge under the reserved system identity.
+    const claimBlockers: C4MergePlan["claimBlockers"] = [];
+    for (const id of branchTouched) {
+      const claim = this.getClaimFor(id, into);
+      if (claim) claimBlockers.push({ elementId: id, holderEditorId: claim.editorId });
+    }
+
+    return { branch, into, branchChanges, targetChanges, conflicts, claimBlockers };
   }
 
   /**
    * Applies `plan.branchChanges` onto workspace `into`. Throws immediately,
    * without applying anything, if `plan.conflicts` is non-empty — callers
-   * must resolve conflicts (by editing one of the two workspaces and calling
-   * planMerge again) before this will proceed. Applies each added, modified,
-   * and removed node/relationship in `branchChanges` by dispatching through
+   * must resolve conflicts (via resolveMerge, or by editing one of the two
+   * workspaces and calling planMerge again) before this will proceed. A plan
+   * produced by resolveMerge carries `resolutions`; every conflict id resolved
+   * to `take: "target"` is skipped here (the branch-side change is dropped so
+   * the target version is kept). Applies each added, modified, and removed
+   * node/relationship in the effective branch changes by dispatching through
    * the SAME public mutators used everywhere else in this file
    * (addPerson/addSoftwareSystem/addContainer/addComponent/addCodeElement/
    * addRelationship for additions; updateElement/updateRelationship for
    * modifications, applying only the fields listed in each diff entry's
-   * `changes` array; removeElement for removals, guarding against an id that
-   * was already removed via cascade) — do not hand-roll direct array
-   * mutation. Wraps the whole operation in `this.batch(...)` so it is
-   * atomic and rolls back cleanly if any step throws. Emits a "merge" event
-   * with `payload` set to the applied plan after everything succeeds.
+   * `changes` array; removeElement/removeRelationship for removals, guarding
+   * against an id that was already removed via cascade) — do not hand-roll
+   * direct array mutation. Wraps the whole operation in `this.batch(...)` so
+   * it is atomic and rolls back cleanly if any step throws. Emits a "merge"
+   * event with `payload` set to the applied plan after everything succeeds.
    *
    * Claim enforcement is honored here exactly like an interactive edit: the
    * plan applies under the reserved system identity `REGISTER_EDITOR`, so a
@@ -1519,38 +1654,101 @@ export class BaseCfour {
       );
     }
 
+    const branchChanges = this._withResolutions(plan.branchChanges, plan.resolutions ?? []);
+
     this.batch(() => {
-      const added = [...plan.branchChanges.nodes.added].sort(
+      const added = [...branchChanges.nodes.added].sort(
         (a, b) => KIND_DEPTH[a.kind] - KIND_DEPTH[b.kind],
       );
       for (const node of added) this._applyNodeAddition(node, into);
-      for (const rel of plan.branchChanges.relationships.added) {
+      for (const rel of branchChanges.relationships.added) {
         this.addRelationship(rel, into, REGISTER_EDITOR);
       }
-      for (const mod of plan.branchChanges.nodes.modified) {
+      for (const mod of branchChanges.nodes.modified) {
         const patch: Record<string, any> = {};
         for (const key of mod.changes) patch[key] = (mod.after as any)[key];
         this.updateElement(mod.id, patch, into, REGISTER_EDITOR);
       }
-      for (const mod of plan.branchChanges.relationships.modified) {
+      for (const mod of branchChanges.relationships.modified) {
         const patch: Record<string, any> = {};
         for (const key of mod.changes) patch[key] = (mod.after as any)[key];
         this.updateRelationship(mod.id, patch, into, REGISTER_EDITOR);
       }
-      for (const node of plan.branchChanges.nodes.removed) {
+      for (const node of branchChanges.nodes.removed) {
         if (findNodeWithAncestry(this.getWorkspace(into), node.id)) {
           this.removeElement(node.id, into, REGISTER_EDITOR);
         }
       }
-      for (const rel of plan.branchChanges.relationships.removed) {
+      for (const rel of branchChanges.relationships.removed) {
         const ws = this.getWorkspace(into);
         if (ws.relationships.some((r) => r.id === rel.id)) {
-          this._assertClaimAllows(rel.id, REGISTER_EDITOR, into, "relationship");
-          this._removeRelationship(into, rel.id);
+          this.removeRelationship(rel.id, into, REGISTER_EDITOR);
         }
       }
       this._notify({ op: "merge", workspaceName: into, payload: plan });
     });
+  }
+
+  /**
+   * Returns `branchChanges` with every change whose id was resolved to
+   * `take: "target"` removed, so applyMerge keeps the target-side version.
+   * A plan with no resolutions (or only "branch" resolutions) passes through
+   * unchanged.
+   */
+  private _withResolutions(
+    branchChanges: C4WorkspaceDiff,
+    resolutions: C4MergeResolution[],
+  ): C4WorkspaceDiff {
+    const drop = new Set(resolutions.filter((r) => r.take === "target").map((r) => r.id));
+    if (drop.size === 0) return branchChanges;
+    const filterList = <T extends { id: string }>(items: T[]): T[] =>
+      items.filter((item) => !drop.has(item.id));
+    const filterMod = <T>(items: Array<{ id: string; before: T; after: T; changes: string[] }>) =>
+      items.filter((m) => !drop.has(m.id));
+    return {
+      nodes: {
+        added: filterList(branchChanges.nodes.added),
+        modified: filterMod(branchChanges.nodes.modified),
+        removed: filterList(branchChanges.nodes.removed),
+      },
+      relationships: {
+        added: filterList(branchChanges.relationships.added),
+        modified: filterMod(branchChanges.relationships.modified),
+        removed: filterList(branchChanges.relationships.removed),
+      },
+    };
+  }
+
+  /**
+   * Returns a copy of `plan` with `conflicts` cleared and the resolutions
+   * embedded, so `applyMerge` can apply it without re-planning. `take:
+   * "branch"` applies the branch-side version of the conflict; `take:
+   * "target"` keeps the target-side version. Every conflict id must be
+   * resolved and every resolution must name a real conflict id — throws
+   * otherwise. The returned plan's `branchChanges` is left untouched;
+   * applyMerge itself filters by the embedded resolutions.
+   */
+  resolveMerge(plan: C4MergePlan, resolutions: C4MergeResolution[]): C4MergePlan {
+    const conflictSet = new Set(plan.conflicts);
+    for (const id of plan.conflicts) {
+      if (!resolutions.some((r) => r.id === id)) {
+        throw new Error(
+          `Cannot resolve merge into "${plan.into}": conflict "${id}" has no resolution.`,
+        );
+      }
+    }
+    for (const r of resolutions) {
+      if (!conflictSet.has(r.id)) {
+        throw new Error(
+          `Cannot resolve merge into "${plan.into}": "${r.id}" is not a conflict id.`,
+        );
+      }
+    }
+    return {
+      ...plan,
+      conflicts: [],
+      resolutions: resolutions.map((r) => ({ ...r })),
+    };
   }
 
   private _internalRelationshipIds(relationships: C4Relationship[], idSet: Set<string>): string[] {
@@ -1653,8 +1851,14 @@ export class BaseCfour {
     }
   }
 
-  private _removeRelationship(workspaceName: string, id: string): void {
+  /**
+   * Removes a relationship directly. Enforces claims like any other
+   * relationship mutator: the caller must hold the claim covering `id`, if
+   * any. Emits a "remove" event with elementKind "Relationship".
+   */
+  removeRelationship(id: string, workspaceName = "default", editorId: string): void {
     const ws = this.getWorkspace(workspaceName);
+    this._assertClaimAllows(id, editorId, workspaceName, "relationship");
     ws.relationships = ws.relationships.filter((r) => r.id !== id);
     this._notify({
       op: "remove",
@@ -1818,6 +2022,12 @@ export class BaseCfour {
     return BaseCfour._default.batch(...args);
   }
 
+  static applyOperations(
+    ...args: Parameters<_CFourInstance["applyOperations"]>
+  ): ReturnType<_CFourInstance["applyOperations"]> {
+    return BaseCfour._default.applyOperations(...args);
+  }
+
   static resetWorkspace(
     ...args: Parameters<_CFourInstance["resetWorkspace"]>
   ): ReturnType<_CFourInstance["resetWorkspace"]> {
@@ -1906,6 +2116,12 @@ export class BaseCfour {
     ...args: Parameters<_CFourInstance["removeElement"]>
   ): ReturnType<_CFourInstance["removeElement"]> {
     return BaseCfour._default.removeElement(...args);
+  }
+
+  static removeRelationship(
+    ...args: Parameters<_CFourInstance["removeRelationship"]>
+  ): ReturnType<_CFourInstance["removeRelationship"]> {
+    return BaseCfour._default.removeRelationship(...args);
   }
 
   static getSystemContextView(
@@ -2010,6 +2226,12 @@ export class BaseCfour {
     ...args: Parameters<_CFourInstance["restoreClaims"]>
   ): ReturnType<_CFourInstance["restoreClaims"]> {
     return BaseCfour._default.restoreClaims(...args);
+  }
+
+  static restoreViews(
+    ...args: Parameters<_CFourInstance["restoreViews"]>
+  ): ReturnType<_CFourInstance["restoreViews"]> {
+    return BaseCfour._default.restoreViews(...args);
   }
 
   static restoreProposals(
@@ -2124,6 +2346,18 @@ export class BaseCfour {
     return BaseCfour._default.setClaimTtl(...args);
   }
 
+  static setProposalTtl(
+    ...args: Parameters<_CFourInstance["setProposalTtl"]>
+  ): ReturnType<_CFourInstance["setProposalTtl"]> {
+    return BaseCfour._default.setProposalTtl(...args);
+  }
+
+  static expireStaleProposals(
+    ...args: Parameters<_CFourInstance["expireStaleProposals"]>
+  ): ReturnType<_CFourInstance["expireStaleProposals"]> {
+    return BaseCfour._default.expireStaleProposals(...args);
+  }
+
   static getClaims(
     ...args: Parameters<_CFourInstance["getClaims"]>
   ): ReturnType<_CFourInstance["getClaims"]> {
@@ -2176,6 +2410,12 @@ export class BaseCfour {
     ...args: Parameters<_CFourInstance["applyMerge"]>
   ): ReturnType<_CFourInstance["applyMerge"]> {
     return BaseCfour._default.applyMerge(...args);
+  }
+
+  static resolveMerge(
+    ...args: Parameters<_CFourInstance["resolveMerge"]>
+  ): ReturnType<_CFourInstance["resolveMerge"]> {
+    return BaseCfour._default.resolveMerge(...args);
   }
 
   static setEventStorage(
@@ -2286,14 +2526,14 @@ export interface CfourChangeEvent {
   workspaceName: string;
   /** The id of the changed node (present for add/update/remove). */
   elementId?: string;
-  /** The kind of the changed node (present for add/update/remove). */
-  elementKind?: C4ElementKind | "Relationship";
+  /** The kind of the changed node (present for add/update/remove; "View" for view save/position events). */
+  elementKind?: C4ElementKind | "Relationship" | "View";
   /** Ancestry from workspace root down to this element (ids only). Empty for top-level elements. */
   path?: string[];
   /** Snapshot of the node before mutation (present for update). */
   before?: C4Node;
-  /** Snapshot of the node after mutation (present for update). */
-  after?: C4Node;
+  /** Snapshot of the node after mutation (present for update); the view itself for view events. */
+  after?: C4Node | C4View;
   /** Property names that changed (reuses getObjectChanges output, present for update). */
   changes?: string[];
   /**
@@ -2336,7 +2576,7 @@ export interface CfourEventQuery {
   workspaceName?: string;
   op?: CfourChangeEvent["op"];
   elementId?: string;
-  elementKind?: C4ElementKind | "Relationship";
+  elementKind?: C4ElementKind | "Relationship" | "View";
   since?: number;
   until?: number;
   limit?: number;
@@ -2603,6 +2843,13 @@ export interface C4RelationshipProposal {
   createdAt: number;
 }
 
+/** One resolved conflict inside a C4MergePlan. `take: "branch"` applies the
+ * branch-side version; `take: "target"` keeps the target-side version. */
+export interface C4MergeResolution {
+  id: string;
+  take: "branch" | "target";
+}
+
 /** Result of planMerge — a reviewable three-way diff between a branch and
  * its merge target, computed against the branch's recorded base revision. */
 export interface C4MergePlan {
@@ -2617,6 +2864,21 @@ export interface C4MergePlan {
   /** Node or relationship ids touched on BOTH sides since the base
    * revision. Must be empty before applyMerge will proceed. */
   conflicts: string[];
+  /**
+   * Advisory list of branch-touched ids that are currently claimed by
+   * another editor in the target workspace (`into`) — mirroring exactly what
+   * applyMerge's claim enforcement would throw on. Lets the UI/agent see
+   * before merging who would block the merge; applyMerge remains the
+   * authoritative check and still throws on races. REGISTER_EDITOR never
+   * claims, so a blocker is always held by a real editor.
+   */
+  claimBlockers: { elementId: string; holderEditorId: string }[];
+  /**
+   * Embedded conflict resolutions from resolveMerge. Present only on resolved
+   * plans; applyMerge drops every conflict id resolved to `take: "target"`
+   * from the branch changes it applies.
+   */
+  resolutions?: C4MergeResolution[];
 }
 
 /**
@@ -2759,6 +3021,38 @@ export interface C4FlatModel {
   nodes: C4Node[];
   relationships: C4Relationship[];
 }
+
+// ----------------------------------------------------------------
+// Batch operations — the typed, atomic multi-op primitive
+// ----------------------------------------------------------------
+
+/**
+ * One typed mutation in a `applyOperations` batch. `args` is a tuple matching
+ * the signature of the corresponding public mutator (minus the workspaceName
+ * and editorId, which are provided once per applyOperations call). The
+ * discriminated union keeps every op's args statically typed — no unknown[]
+ * smuggling.
+ */
+export type CfourOperation =
+  | { op: "addPerson"; args: [person: Omit<C4Person, "kind">] }
+  | { op: "addSoftwareSystem"; args: [system: Omit<C4SoftwareSystem, "kind">] }
+  | {
+      op: "addContainer";
+      args: [container: Omit<C4Container, "kind"> & { kind?: "Container" | "Queue" | "Topic" }];
+    }
+  | { op: "addComponent"; args: [component: Omit<C4Component, "kind">] }
+  | {
+      op: "addCodeElement";
+      args: [codeElement: Omit<C4CodeElement, "kind"> & { kind?: C4CodeElementKind }];
+    }
+  | { op: "addRelationship"; args: [rel: C4Relationship] }
+  | { op: "updateElement"; args: [id: string, patch: Partial<Omit<C4Node, "id" | "kind">>] }
+  | {
+      op: "updateRelationship";
+      args: [id: string, patch: Partial<Omit<C4Relationship, "id" | "kind">>];
+    }
+  | { op: "removeElement"; args: [id: string] }
+  | { op: "removeRelationship"; args: [id: string] };
 
 // ----------------------------------------------------------------
 // View definitions — which elements appear on a given diagram

@@ -19,6 +19,7 @@ import {
   type C4Claim,
   type C4RelationshipProposal,
   type C4MergePlan,
+  type C4View,
 } from "../src/index.ts";
 
 // ----------------------------------------------------------------
@@ -2153,6 +2154,28 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.setClaimTtl(5 * 60 * 1000); // restore default
     });
 
+    test("setClaimTtl per-workspace override wins only in that workspace", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "other");
+      BaseCfour.setClaimTtl(5 * 60 * 1000); // reset the instance default
+      BaseCfour.setClaimTtl(1, "main");
+
+      // "main" uses its 1ms override — the stale claim is reaped.
+      const claimed = BaseCfour.claim(
+        { elementIds: ["sys1"], relationshipIds: [] },
+        "alice",
+        "main",
+      );
+      claimed.lastSeenAt = Date.now() - 1000;
+      expect(BaseCfour.expireStaleClaims("main")).toContain(claimed.id);
+
+      // "other" falls back to the instance default (5 min) — not reaped.
+      const other = BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob", "other");
+      other.lastSeenAt = Date.now() - 1000;
+      expect(BaseCfour.expireStaleClaims("other")).toEqual([]);
+      BaseCfour.setClaimTtl(5 * 60 * 1000); // restore default
+    });
+
     test("claim rejects the reserved system editor id", () => {
       expect(() =>
         BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "__system__"),
@@ -2614,6 +2637,39 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.applyMerge(plan, "main");
       expect(BaseCfour.getWorkspace("main").relationships.map((r) => r.id)).toEqual(["r1"]);
     });
+
+    test("planMerge reports claimBlockers for branch-touched ids claimed in the target", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+      BaseCfour.branchWorkspace("main", "feature");
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "feature");
+
+      // Unclaimed target: no blockers.
+      let plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.claimBlockers).toEqual([]);
+
+      // Claim the id the branch adds → the holder shows up as a blocker.
+      BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob", "main");
+      plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.claimBlockers).toEqual([{ elementId: "sys2", holderEditorId: "bob" }]);
+      expect(plan.conflicts).toEqual([]); // claims are not conflicts
+    });
+
+    test("claimBlockers are independent of conflicts", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+      BaseCfour.branchWorkspace("main", "feature");
+      // sys1 changed on both sides → a conflict, but nobody claims it.
+      BaseCfour.updateElement("sys1", { name: "branch-name" }, "feature", "local");
+      BaseCfour.updateElement("sys1", { name: "main-name" }, "main", "local");
+      // sys2 added only on the branch, but claimed on the target → a blocker.
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "feature");
+      BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob", "main");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.conflicts).toEqual(["sys1"]);
+      expect(plan.claimBlockers).toEqual([{ elementId: "sys2", holderEditorId: "bob" }]);
+    });
   });
 
   describe("Add event payload", () => {
@@ -2755,6 +2811,329 @@ describe("C4 Model - cfour package", () => {
       // the target wins.
       BaseCfour.importRows(rows, "renamed");
       expect(BaseCfour.getWorkspace("renamed").softwareSystems.map((s) => s.id)).toEqual(["sys1"]);
+    });
+  });
+
+  describe("Proposal TTL", () => {
+    beforeEach(() => {
+      BaseCfour.reset();
+    });
+
+    function seedCrossClaimed(workspaceName: string) {
+      BaseCfour.addSoftwareSystem({ id: "src", name: "Src" }, workspaceName);
+      BaseCfour.addSoftwareSystem({ id: "dst", name: "Dst" }, workspaceName);
+      BaseCfour.claim({ elementIds: ["src"], relationshipIds: [] }, "alice", workspaceName);
+      BaseCfour.claim({ elementIds: ["dst"], relationshipIds: [] }, "bob", workspaceName);
+    }
+
+    test("expireStaleProposals removes stale proposals by createdAt and returns their ids, emitting nothing", () => {
+      seedCrossClaimed("default");
+      const rel = {
+        id: "r1",
+        kind: "Relationship" as const,
+        sourceId: "src",
+        destinationId: "dst",
+        description: "calls",
+      };
+
+      const stale = BaseCfour.proposeRelationship(rel, "carol");
+      expect(stale.createdAt).toBeDefined();
+      expect(stale.createdAt).toBeLessThanOrEqual(Date.now());
+      stale.createdAt = Date.now() - 100_000;
+      const fresh = BaseCfour.proposeRelationship({ ...rel, id: "r2" }, "carol");
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      const expired = BaseCfour.expireStaleProposals("default", 60_000);
+      unsub();
+
+      expect(expired).toEqual([stale.id]);
+      expect(BaseCfour.getRelationshipProposals().map((p) => p.id)).toEqual([fresh.id]);
+      // Expiry is a silent sweep: no rejectRelationship (or any) events fire.
+      expect(events).toHaveLength(0);
+    });
+
+    test("setProposalTtl drives the expireStaleProposals default threshold", () => {
+      seedCrossClaimed("default");
+      const rel = {
+        id: "r1",
+        kind: "Relationship" as const,
+        sourceId: "src",
+        destinationId: "dst",
+      };
+      BaseCfour.setProposalTtl(1);
+      const proposal = BaseCfour.proposeRelationship(rel, "carol");
+      proposal.createdAt = Date.now() - 1000;
+      expect(BaseCfour.expireStaleProposals()).toContain(proposal.id);
+      BaseCfour.setProposalTtl(5 * 60 * 1000); // restore default
+    });
+
+    test("setProposalTtl per-workspace override wins only in that workspace", () => {
+      seedCrossClaimed("main");
+      seedCrossClaimed("other");
+      BaseCfour.setProposalTtl(5 * 60 * 1000); // reset the instance default
+      BaseCfour.setProposalTtl(1, "main");
+
+      const rel = {
+        id: "r1",
+        kind: "Relationship" as const,
+        sourceId: "src",
+        destinationId: "dst",
+      };
+      const mainProp = BaseCfour.proposeRelationship(rel, "carol", "main");
+      mainProp.createdAt = Date.now() - 1000;
+      const otherProp = BaseCfour.proposeRelationship({ ...rel, id: "r2" }, "carol", "other");
+      otherProp.createdAt = Date.now() - 1000;
+
+      expect(BaseCfour.expireStaleProposals("main")).toEqual([mainProp.id]);
+      expect(BaseCfour.expireStaleProposals("other")).toEqual([]);
+      BaseCfour.setProposalTtl(5 * 60 * 1000); // restore default
+    });
+  });
+
+  describe("Structured conflict resolution", () => {
+    beforeEach(() => {
+      BaseCfour.reset();
+    });
+
+    test("resolveMerge with mixed branch/target resolutions yields the expected final workspace", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "base" }, "main");
+      BaseCfour.addContainer({ id: "con1", name: "C1", systemId: "sys1" }, "main", "local");
+      BaseCfour.branchWorkspace("main", "feature");
+
+      // sys1: modified on both sides; con1: modified on both sides; sys2: added on branch only.
+      BaseCfour.updateElement(
+        "sys1",
+        { name: "branch-sys", description: "branch-desc" },
+        "feature",
+        "local",
+      );
+      BaseCfour.updateElement("con1", { name: "branch-con" }, "feature", "local");
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2-branch" }, "feature");
+      BaseCfour.updateElement("sys1", { name: "main-sys" }, "main", "local");
+      BaseCfour.updateElement("con1", { name: "main-con" }, "main", "local");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.conflicts.sort()).toEqual(["con1", "sys1"]);
+
+      // sys1 → keep target; con1 → take branch.
+      const resolved = BaseCfour.resolveMerge(plan, [
+        { id: "sys1", take: "target" },
+        { id: "con1", take: "branch" },
+      ]);
+      expect(resolved.conflicts).toEqual([]);
+      expect(resolved.resolutions).toEqual([
+        { id: "sys1", take: "target" },
+        { id: "con1", take: "branch" },
+      ]);
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.applyMerge(resolved, "main");
+      unsub();
+
+      const ws = BaseCfour.getWorkspace("main");
+      expect(ws.softwareSystems.map((s) => s.id).sort()).toEqual(["sys1", "sys2"]);
+      const sys1 = ws.softwareSystems.find((s) => s.id === "sys1")!;
+      expect(sys1.name).toBe("main-sys"); // target wins for sys1
+      expect(sys1.containers![0].name).toBe("branch-con"); // branch wins for con1
+      expect(ws.softwareSystems.find((s) => s.id === "sys2")!.name).toBe("S2-branch");
+      // Merge events still fire per the applied plan.
+      expect(events.filter((e) => e.op === "merge").length).toBe(1);
+    });
+
+    test("take target on a removal conflict keeps the element on the target", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+      BaseCfour.branchWorkspace("main", "feature");
+      BaseCfour.removeElement("sys1", "feature", "local");
+      BaseCfour.updateElement("sys1", { name: "kept" }, "main", "local");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.conflicts).toEqual(["sys1"]);
+      const resolved = BaseCfour.resolveMerge(plan, [{ id: "sys1", take: "target" }]);
+      BaseCfour.applyMerge(resolved, "main");
+
+      const sys1 = BaseCfour.getWorkspace("main").softwareSystems.find((s) => s.id === "sys1");
+      expect(sys1).toBeDefined();
+      expect(sys1!.name).toBe("kept");
+    });
+
+    test("a fully branch-resolved plan applies every branch change", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1", description: "base" }, "main");
+      BaseCfour.branchWorkspace("main", "feature");
+      BaseCfour.updateElement("sys1", { name: "branch-name" }, "feature", "local");
+      BaseCfour.updateElement("sys1", { name: "main-name" }, "main", "local");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      const resolved = BaseCfour.resolveMerge(plan, [{ id: "sys1", take: "branch" }]);
+      BaseCfour.applyMerge(resolved, "main");
+      expect(BaseCfour.getWorkspace("main").softwareSystems[0].name).toBe("branch-name");
+    });
+
+    test("resolveMerge throws on an unresolved conflict id and on an unknown resolution id", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "main");
+      BaseCfour.branchWorkspace("main", "feature");
+      BaseCfour.updateElement("sys1", { name: "b1" }, "feature", "local");
+      BaseCfour.updateElement("sys2", { name: "b2" }, "feature", "local");
+      BaseCfour.updateElement("sys1", { name: "m1" }, "main", "local");
+      BaseCfour.updateElement("sys2", { name: "m2" }, "main", "local");
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.conflicts.sort()).toEqual(["sys1", "sys2"]);
+
+      // Only one of the two conflicts resolved.
+      expect(() => BaseCfour.resolveMerge(plan, [{ id: "sys1", take: "branch" }])).toThrow(
+        /no resolution/,
+      );
+      // A resolution naming a non-conflict id.
+      expect(() =>
+        BaseCfour.resolveMerge(plan, [
+          { id: "sys1", take: "branch" },
+          { id: "sys2", take: "branch" },
+          { id: "nope", take: "target" },
+        ]),
+      ).toThrow(/not a conflict/);
+    });
+  });
+
+  describe("View events & restoreViews", () => {
+    beforeEach(() => {
+      BaseCfour.reset();
+    });
+
+    test("saveView and updateViewPosition events carry elementKind View and the view in after", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      const view = BaseCfour.getSystemContextView("sys1");
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+
+      BaseCfour.saveView(view);
+      BaseCfour.updateViewPosition(view.id, "sys1", 100, 200);
+      unsub();
+
+      const saveEv = events.find((e) => e.op === "add" && e.elementId === view.id);
+      expect(saveEv).toBeDefined();
+      expect(saveEv!.elementKind).toBe("View");
+      expect((saveEv!.after as C4View).id).toBe(view.id);
+      expect((saveEv!.after as C4View).elements.length).toBeGreaterThan(0);
+
+      const updateEv = events.find((e) => e.op === "update" && e.elementId === view.id);
+      expect(updateEv).toBeDefined();
+      expect(updateEv!.elementKind).toBe("View");
+      const after = updateEv!.after as C4View;
+      expect(after.id).toBe(view.id);
+      expect(after.elements.find((ve) => ve.elementId === "sys1")?.x).toBe(100);
+      expect(after.elements.find((ve) => ve.elementId === "sys1")?.y).toBe(200);
+    });
+
+    test("restoreViews replaces the workspace views without emitting events", () => {
+      const view: C4View = {
+        id: "ctx-1",
+        kind: "SystemContext",
+        title: "Context",
+        elements: [{ elementId: "sys1", x: 1, y: 2 }],
+        relationships: [],
+      };
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.restoreViews([view]);
+      unsub();
+
+      const restored = BaseCfour.getWorkspace().views![0];
+      expect(restored.id).toBe("ctx-1");
+      expect(restored.elements).toEqual([{ elementId: "sys1", x: 1, y: 2 }]);
+      expect(events).toHaveLength(0);
+
+      // Mutating the caller's view does not alias the workspace's copy.
+      view.elements.push({ elementId: "other" });
+      expect(BaseCfour.getWorkspace().views![0].elements).toHaveLength(1);
+    });
+  });
+
+  describe("Batch Operations (applyOperations)", () => {
+    beforeEach(() => {
+      BaseCfour.reset();
+    });
+
+    test("applies a mixed batch atomically and emits every mutation event", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.applyOperations([
+        { op: "addSoftwareSystem", args: [{ id: "sys1", name: "S1" }] },
+        { op: "addContainer", args: [{ id: "con1", name: "C1", systemId: "sys1" }] },
+        { op: "addComponent", args: [{ id: "comp1", name: "P1", containerId: "con1" }] },
+        { op: "addCodeElement", args: [{ id: "cls1", name: "K1", componentId: "comp1" }] },
+        { op: "updateElement", args: ["sys1", { name: "S1-renamed" }] },
+      ]);
+      unsub();
+
+      const ws = BaseCfour.getWorkspace();
+      expect(ws.softwareSystems[0].name).toBe("S1-renamed");
+      expect(ws.softwareSystems[0].containers![0].components![0].codeElements![0].id).toBe("cls1");
+      // Four adds + one update, each flushed in order.
+      expect(events.filter((e) => e.op === "add").length).toBe(4);
+      expect(events.filter((e) => e.op === "update").length).toBe(1);
+    });
+
+    test("mid-batch failure rolls everything back and rethrows without events", () => {
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      expect(() =>
+        BaseCfour.applyOperations([
+          { op: "addSoftwareSystem", args: [{ id: "sys1", name: "S1" }] },
+          // The container's parent does not exist → throws mid-batch.
+          { op: "addContainer", args: [{ id: "con1", name: "C1", systemId: "missing" }] },
+        ]),
+      ).toThrow(/not found/i);
+      unsub();
+
+      expect(BaseCfour.getWorkspace().softwareSystems).toHaveLength(0);
+      expect(events).toHaveLength(0);
+    });
+
+    test("claim enforcement applies per op", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "bob");
+      expect(() =>
+        BaseCfour.applyOperations(
+          [{ op: "updateElement", args: ["sys1", { name: "S1-hacked" }] }],
+          "default",
+          "alice",
+        ),
+      ).toThrow(/claimed by editor "bob"/);
+      expect(BaseCfour.getWorkspace().softwareSystems[0].name).toBe("S1");
+    });
+
+    test("removeRelationship op removes a relationship through the public mutator", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" });
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" });
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "sys1",
+          destinationId: "sys2",
+          description: "uses",
+        },
+        "default",
+        "local",
+      );
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.applyOperations([{ op: "removeRelationship", args: ["r1"] }]);
+      unsub();
+
+      expect(BaseCfour.getWorkspace().relationships).toHaveLength(0);
+      const removeEv = events.find((e) => e.op === "remove" && e.elementId === "r1");
+      expect(removeEv?.elementKind).toBe("Relationship");
     });
   });
 
