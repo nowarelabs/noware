@@ -467,7 +467,13 @@ export class BaseCfour {
     this._addRelationshipRaw(rel, workspaceName);
   }
 
-  /** Appends a relationship without claim enforcement, for system-level ops. */
+  /**
+   * Appends a relationship without claim enforcement. Reachable only from
+   * `acceptRelationship`, the deliberate joint-approval escape hatch: once
+   * every required claim holder has approved a proposal, the relationship is
+   * materialized even though it crosses their claims. Nothing else should
+   * call this.
+   */
   private _addRelationshipRaw(rel: C4Relationship, workspaceName: string) {
     this.getWorkspace(workspaceName).relationships.push(rel);
     this._notify({
@@ -1077,14 +1083,22 @@ export class BaseCfour {
   }
 
   /**
-   * Claims a selection for exclusive editing by `editorId`. Throws if any
-   * element or relationship id in the selection is already covered by an
-   * existing active claim in this workspace (regardless of who holds it —
-   * re-claiming your own overlapping scope must also throw; release and
-   * re-claim explicitly instead). Returns the created C4Claim. Emits a
-   * "claim" event with `payload` set to the created claim.
+   * Claims a selection for exclusive editing by `editorId`. The reserved
+   * system identity `REGISTER_EDITOR` cannot be claimed — it is used by
+   * system-level operations (`register`, `addBuildingBlock`, `applyMerge`),
+   * so an external claim under that id would silently intersect with them.
+   * Throws if any element or relationship id in the selection is already
+   * covered by an existing active claim in this workspace (regardless of who
+   * holds it — re-claiming your own overlapping scope must also throw;
+   * release and re-claim explicitly instead). Returns the created C4Claim.
+   * Emits a "claim" event with `payload` set to the created claim.
    */
   claim(selection: C4Selection, editorId: string, workspaceName = "default"): C4Claim {
+    if (editorId === REGISTER_EDITOR) {
+      throw new Error(
+        `Editor id "${REGISTER_EDITOR}" is reserved for system-level operations and cannot be claimed.`,
+      );
+    }
     const claims = this._claimsFor(workspaceName);
     const conflicting = new Map<string, C4Claim>();
     for (const claim of claims.values()) {
@@ -1390,6 +1404,12 @@ export class BaseCfour {
    * mutation. Wraps the whole operation in `this.batch(...)` so it is
    * atomic and rolls back cleanly if any step throws. Emits a "merge" event
    * with `payload` set to the applied plan after everything succeeds.
+   *
+   * Claim enforcement is honored here exactly like an interactive edit: the
+   * plan applies under the reserved system identity `REGISTER_EDITOR`, so a
+   * caller-supplied `C4MergePlan` cannot smuggle changes past active claims —
+   * any change touching an element or relationship covered by someone else's
+   * claim throws and the whole merge rolls back.
    */
   applyMerge(plan: C4MergePlan, into: string): void {
     if (plan.conflicts.length > 0) {
@@ -1406,7 +1426,7 @@ export class BaseCfour {
       );
       for (const node of added) this._applyNodeAddition(node, into);
       for (const rel of plan.branchChanges.relationships.added) {
-        this._addRelationshipRaw(rel, into);
+        this.addRelationship(rel, into, REGISTER_EDITOR);
       }
       for (const mod of plan.branchChanges.nodes.modified) {
         const patch: Record<string, any> = {};
@@ -1426,6 +1446,7 @@ export class BaseCfour {
       for (const rel of plan.branchChanges.relationships.removed) {
         const ws = this.getWorkspace(into);
         if (ws.relationships.some((r) => r.id === rel.id)) {
+          this._assertClaimAllows(rel.id, REGISTER_EDITOR, into, "relationship");
           this._removeRelationship(into, rel.id);
         }
       }
@@ -3059,6 +3080,10 @@ function deepEqual(a: any, b: any): boolean {
   }
   const aKeys = Object.keys(a);
   const bKeys = new Set(Object.keys(b));
+  // Deliberately asymmetric handling of explicit-undefined vs absent keys, done
+  // in BOTH directions: the first loop lets `k` be absent from b when a[k] is
+  // undefined, the second lets `k` be absent from a when b[k] is undefined.
+  // Neither loop is redundant — each covers the direction the other omits.
   for (const k of aKeys) {
     if (!bKeys.has(k) && a[k] !== undefined) return false;
     if (bKeys.has(k) && !deepEqual(a[k], b[k])) return false;

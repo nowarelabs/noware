@@ -2688,6 +2688,13 @@ describe("C4 Model - cfour package", () => {
       expect(BaseCfour.expireStaleClaims()).toContain(claim.id);
       BaseCfour.setClaimTtl(5 * 60 * 1000); // restore default
     });
+
+    test("claim rejects the reserved system editor id", () => {
+      expect(() =>
+        BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "__system__"),
+      ).toThrow(/reserved for system-level operations/);
+      expect(BaseCfour.getClaims()).toHaveLength(0);
+    });
   });
 
   describe("Claim Enforcement on Mutators", () => {
@@ -3113,6 +3120,35 @@ describe("C4 Model - cfour package", () => {
       BaseCfour.branchWorkspace("main", "feature");
       expect(() => BaseCfour.branchWorkspace("main", "feature")).toThrow(/already exists/);
       expect(() => BaseCfour.planMerge("main", "feature")).toThrow(/no recorded base revision/);
+    });
+
+    test("applyMerge honors claims — a hand-crafted plan cannot bypass enforcement", () => {
+      BaseCfour.resetWorkspace("main", "Main");
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+      BaseCfour.branchWorkspace("main", "feature");
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "feature");
+      BaseCfour.addRelationship(
+        { id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2" },
+        "feature",
+        "local",
+      );
+
+      const plan = BaseCfour.planMerge("feature", "main");
+      expect(plan.conflicts).toHaveLength(0);
+
+      // Someone holds an active claim on the merge's destination endpoint.
+      BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob", "main");
+
+      // The plan applies under the reserved system identity, which does not
+      // hold bob's claim — the merge is rejected and rolls back atomically.
+      expect(() => BaseCfour.applyMerge(plan, "main")).toThrow(/claimed by editor "bob"/);
+      expect(BaseCfour.getWorkspace("main").softwareSystems.map((s) => s.id)).toEqual(["sys1"]);
+      expect(BaseCfour.getWorkspace("main").relationships).toHaveLength(0);
+
+      // After the claim is released, the same plan applies cleanly.
+      BaseCfour.releaseAllClaimsFor("bob", "main");
+      BaseCfour.applyMerge(plan, "main");
+      expect(BaseCfour.getWorkspace("main").relationships.map((r) => r.id)).toEqual(["r1"]);
     });
   });
 });
