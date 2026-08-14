@@ -322,6 +322,37 @@ describe("WorkspaceDO persistence", () => {
     await expect(do2.planMerge("feature", "default")).rejects.toThrow(/no recorded base revision/);
   });
 
+  test("resetting one workspace leaves another workspace's claim junctions intact", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+
+    // bob holds an active claim on a DIFFERENT workspace.
+    await do_.addSoftwareSystem({ id: "s1", name: "S1" }, "other");
+    const claim = await do_.claim({ elementIds: ["s1"], relationshipIds: [] }, "bob", "other");
+    expect(counts(state).claims).toBe(1);
+
+    // Reset an unrelated workspace — this used to delete every claim_elements
+    // row in the DO, because the orphan cleanup compared element ids against
+    // claim UUIDs (which never match).
+    await do_.addSoftwareSystem({ id: "a1", name: "A1" });
+    await do_.resetWorkspace("default");
+
+    expect(counts(state).claims).toBe(1);
+    const junction = state.query<{ claim_id: string; element_id: string }>(
+      "SELECT claim_id, element_id FROM claim_elements",
+    );
+    expect(junction).toEqual([{ claim_id: claim.id, element_id: "s1" }]);
+
+    // The claim is still live: its element set survives a restart intact.
+    const state2 = createState(state.db);
+    const do2 = new WorkspaceDO(state2.state as never, ENV as never);
+    await state2.whenReady();
+    const claims = await do2.getClaims("other");
+    expect(claims.map((c) => c.id)).toEqual([claim.id]);
+    expect(claims[0].elementIds.has("s1")).toBe(true);
+  });
+
   test("exported rows reconstruct a workspace with a zero-change diff", async () => {
     const state1 = createState();
     const do1 = new WorkspaceDO(state1.state as never, ENV as never);

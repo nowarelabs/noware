@@ -297,10 +297,16 @@ export class WorkspaceDO extends DurableObject<Env> {
         sql.exec(`DELETE FROM nodes WHERE workspace_name = ?`, ws);
         sql.exec(`DELETE FROM relationships WHERE workspace_name = ?`, ws);
         sql.exec(`DELETE FROM claims WHERE workspace_name = ?`, ws);
-        sql.exec(`DELETE FROM claim_elements WHERE element_id NOT IN (SELECT id FROM claims)`);
-        sql.exec(
-          `DELETE FROM claim_relationships WHERE relationship_id NOT IN (SELECT id FROM claims)`,
-        );
+        // `claims` was just wiped for this workspace; drop the junction rows
+        // orphaned by that delete. Keyed by claim_id — comparing element ids
+        // against claim UUIDs would (wrongly) match nothing and delete every
+        // junction row in the whole DO, including other workspaces' claims.
+        // `claims` was just wiped for this workspace; drop the junction rows
+        // orphaned by that delete. Keyed by claim_id — comparing element ids
+        // against claim UUIDs would (wrongly) match nothing and delete every
+        // junction row in the whole DO, including other workspaces' claims.
+        sql.exec(`DELETE FROM claim_elements WHERE claim_id NOT IN (SELECT id FROM claims)`);
+        sql.exec(`DELETE FROM claim_relationships WHERE claim_id NOT IN (SELECT id FROM claims)`);
         sql.exec(`DELETE FROM relationship_proposals WHERE workspace_name = ?`, ws);
         sql.exec(
           `DELETE FROM proposal_pending_approvals WHERE proposal_id NOT IN (SELECT id FROM relationship_proposals)`,
@@ -509,7 +515,10 @@ export class WorkspaceDO extends DurableObject<Env> {
   // RPCs into the same workspace are serialized (each waits for the previous
   // one's chain), while RPCs into different workspaces never wait on each
   // other. cfour calls are synchronous so nothing can interleave inside a
-  // single chain step.
+  // single chain step. The lock bookkeeping below is atomic because there is
+  // no await between the Map read and the Map write — a single DO instance
+  // never interleaves two handlers' synchronous sections, so no explicit
+  // mutex primitive is needed.
 
   private runForWorkspace<T>(workspaceName: string, fn: () => T | Promise<T>): Promise<T> {
     const prev = this._workspaceLocks.get(workspaceName) ?? Promise.resolve();
@@ -822,12 +831,17 @@ export class WorkspaceDO extends DurableObject<Env> {
         `SELECT DISTINCT workspace_name FROM claims`,
       ),
     ].map((row) => row.workspace_name);
-    for (const workspaceName of workspaceNames) {
-      this.hydrate(workspaceName);
-      this.runForWorkspace(workspaceName, () => this.cfour.expireStaleClaims(workspaceName)).catch(
-        () => undefined,
-      );
-    }
+    // Await every sweep before rescheduling: an expiry queued behind an
+    // in-flight write lock would otherwise be cut short if the DO is evicted
+    // right after this alarm handler resolves.
+    await Promise.all(
+      workspaceNames.map((workspaceName) => {
+        this.hydrate(workspaceName);
+        return this.runForWorkspace(workspaceName, () =>
+          this.cfour.expireStaleClaims(workspaceName),
+        ).catch(() => undefined);
+      }),
+    );
     await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
   }
 }
