@@ -101,7 +101,7 @@ function createFakeClient(): WorkspaceDoClient & {
 // Fake clock
 // ----------------------------------------------------------------
 
-function createFakeClock(startMs = 1000): Clock & { advance(ms: number): void } {
+function createFakeClock(startMs = 1000): Clock & { advance(ms: number): Promise<void> } {
   let time = startMs;
   const timers: Array<{ fn: () => void; at: number; interval: boolean; id: number }> = [];
   let nextId = 1;
@@ -130,7 +130,7 @@ function createFakeClock(startMs = 1000): Clock & { advance(ms: number): void } 
         },
       };
     },
-    advance(ms) {
+    async advance(ms) {
       time += ms;
       // Fire all due timers (collect first to avoid mutation issues)
       while (true) {
@@ -140,6 +140,8 @@ function createFakeClock(startMs = 1000): Clock & { advance(ms: number): void } 
           const idx = timers.indexOf(t);
           if (idx >= 0) timers.splice(idx, 1);
           t.fn();
+          // Flush microtasks so async callbacks (heartbeat loops) resolve
+          await Promise.resolve();
           if (t.interval) {
             t.at = time + ms; // reschedule at the same interval from now
             timers.push(t);
@@ -211,7 +213,7 @@ describe("Lease / claim mapping", () => {
     const claim = client.claims.get(session.lease.claimIds[0]);
     expect(claim).toBeDefined();
     expect(claim!.editorId).toBe("agent-a");
-    expect(claim!.elementIds).toEqual(["node-1", "node-2"]);
+    expect(claim!.elementIds).toEqual(new Set(["node-1", "node-2"]));
     expect(claim!.workspaceName).toBe("do-stuff");
   });
 
@@ -261,12 +263,12 @@ describe("Heartbeat loop", () => {
     loop.start();
 
     // Advance 1 second — first heartbeat
-    clock.advance(1000);
+    await clock.advance(1000);
     expect(client.touchCount.get("c1")).toBe(1);
     expect(client.touchCount.get("c2")).toBe(1);
 
     // Advance another second — second heartbeat
-    clock.advance(1000);
+    await clock.advance(1000);
     expect(client.touchCount.get("c1")).toBe(2);
     expect(client.touchCount.get("c2")).toBe(2);
 
@@ -282,11 +284,11 @@ describe("Heartbeat loop", () => {
       clock,
     });
     loop.start();
-    clock.advance(1000);
+    await clock.advance(1000);
     expect(client.touchCount.get("c1")).toBe(1);
 
     loop.stop();
-    clock.advance(1000);
+    await clock.advance(1000);
     // No additional heartbeat after stop
     expect(client.touchCount.get("c1")).toBe(1);
   });
@@ -301,7 +303,7 @@ describe("Heartbeat loop", () => {
       clock,
     });
     loop.start();
-    clock.advance(500);
+    await clock.advance(500);
 
     for (const id of ids) {
       expect(client.touchCount.get(id)).toBe(1);
@@ -319,7 +321,7 @@ describe("Heartbeat loop", () => {
     });
     loop.start();
     loop.start(); // second start is a no-op
-    clock.advance(1000);
+    await clock.advance(1000);
     expect(client.touchCount.get("c1")).toBe(1);
     loop.stop();
   });
@@ -507,7 +509,7 @@ describe("Agent runner", () => {
       task,
       handler: async (session, t) => {
         handlerCalls.push(t.id);
-        expect(session.lease.workspaceName).toBe("build-login");
+        expect(session.lease.workspaceName).toBe("build-the-login-page");
       },
       heartbeatMs: 1000,
       clock,
@@ -615,7 +617,7 @@ describe("Agent runner", () => {
       task: heartbeatTask,
       handler: async (_session) => {
         // Simulate work that takes 3 seconds
-        clock.advance(3000);
+        await clock.advance(3000);
       },
       heartbeatMs: 1000,
       clock,
