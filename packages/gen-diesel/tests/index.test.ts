@@ -2,13 +2,19 @@
 
 import { describe, expect, test, beforeEach, afterEach } from "vite-plus/test";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BaseCfour, type C4Node, type C4Relationship } from "@nowarelabs/cfour";
 import {
   defaultDiesel,
   resetGenerators,
+  createStubExtractor,
+  extractWorkspace,
+  renderMermaid,
+  renderPlantUml,
+  writeDiagram,
+  createReactNodePack,
   type Generator,
   type GeneratorContext,
 } from "../src/index.ts";
@@ -603,5 +609,298 @@ describe("Plan/Apply Generator Pipeline", () => {
       return { filesWritten: [p], filesDeleted: [] };
     };
     await expect(defaultDiesel.assertGeneratorIsPure(fs, impure, ctx)).rejects.toThrow(/not pure/i);
+  });
+});
+
+// ----------------------------------------------------------------
+// Phase 4 — Extractors
+// ----------------------------------------------------------------
+
+describe("Extractor round-trip", () => {
+  let tmp: string;
+
+  beforeEach(async () => {
+    tmp = await mkdtemp(join(tmpdir(), "gen-diesel-ext-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  test("createStubExtractor maps directories to systems and source files to components", async () => {
+    const tmpFs = createNodeCodebaseFs(tmp);
+    // Set up a directory tree: src/ with a.ts and b.ts, lib/ with c.ts
+    await mkdir(join(tmp, "src"), { recursive: true });
+    await mkdir(join(tmp, "lib"), { recursive: true });
+    await writeFile(join(tmp, "src", "a.ts"), "export {};");
+    await writeFile(join(tmp, "src", "b.ts"), "export {};");
+    await writeFile(join(tmp, "lib", "c.ts"), "export {};");
+    // A stray .md file should be ignored by the stub
+    await writeFile(join(tmp, "README.md"), "# Hello");
+
+    const extractor = createStubExtractor();
+    const ws = await extractWorkspace(tmpFs, extractor, {
+      workspaceName: "test-extract",
+    });
+
+    expect(ws.name).toBe("test-extract");
+    expect(ws.people).toEqual([]);
+    // src and lib directories → 2 systems
+    const sysIds = ws.softwareSystems.map((s) => s.id).sort();
+    expect(sysIds).toEqual(["lib", "src"]);
+    // src system has one default container
+    const srcSys = ws.softwareSystems.find((s) => s.id === "src")!;
+    expect(srcSys.containers).toHaveLength(1);
+    expect(srcSys.containers![0].id).toBe("src-default");
+    // Source files at root (if any) → components under a "root" system
+    // No .ts/.js at root in this test, so no root system.
+    const rootSys = ws.softwareSystems.find((s) => s.id === "root");
+    expect(rootSys).toBeUndefined();
+  });
+});
+
+// ----------------------------------------------------------------
+// Phase 4 — reportDrift
+// ----------------------------------------------------------------
+
+describe("reportDrift", () => {
+  let tmp: string;
+  const fs = createNodeCodebaseFs();
+
+  beforeEach(async () => {
+    BaseCfour.reset();
+    resetGenerators();
+    tmp = await mkdtemp(join(tmpdir(), "gen-diesel-drift-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  test("no drift when manifest matches disk and model is unchanged", async () => {
+    const p = join(tmp, "comp1.ts");
+    BaseCfour.resetWorkspace("desired", "D");
+    BaseCfour.batch(() => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "desired");
+      BaseCfour.addContainer(
+        { id: "con1", name: "C1", systemId: "sys1", technology: "ts" },
+        "desired",
+        "local",
+      );
+      BaseCfour.addComponent(
+        { id: "comp1", name: "P1", containerId: "con1", technology: "ts" },
+        "desired",
+        "local",
+      );
+    });
+    defaultDiesel.registerGenerator("Component:ts", async () => {
+      await writeFile(p, "generated");
+      return { filesWritten: [p], filesDeleted: [] };
+    });
+    const manifest = await defaultDiesel.planAndApply(fs, {});
+
+    const report = await defaultDiesel.reportDrift(fs, manifest);
+    expect(report.driftedFiles.size).toBe(0);
+    expect(report.modelDiff.nodes.added.length).toBe(0);
+    expect(report.modelDiff.nodes.modified.length).toBe(0);
+    expect(report.orphans).toEqual([]);
+  });
+
+  test("drifted files appear in driftedFiles when hand-edited", async () => {
+    const p = join(tmp, "comp1.ts");
+    BaseCfour.resetWorkspace("desired", "D");
+    BaseCfour.batch(() => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "desired");
+      BaseCfour.addContainer(
+        { id: "con1", name: "C1", systemId: "sys1", technology: "ts" },
+        "desired",
+        "local",
+      );
+      BaseCfour.addComponent(
+        { id: "comp1", name: "P1", containerId: "con1", technology: "ts" },
+        "desired",
+        "local",
+      );
+    });
+    defaultDiesel.registerGenerator("Component:ts", async () => {
+      await writeFile(p, "generated");
+      return { filesWritten: [p], filesDeleted: [] };
+    });
+    const manifest = await defaultDiesel.planAndApply(fs, {});
+
+    // Hand-edit the file
+    await writeFile(p, "HAND-EDITED");
+
+    const report = await defaultDiesel.reportDrift(fs, manifest);
+    expect(report.driftedFiles.has("comp1")).toBe(true);
+    expect(report.driftedFiles.get("comp1")).toEqual([p]);
+  });
+
+  test("model diff shows added nodes when desired differs from applied", async () => {
+    BaseCfour.resetWorkspace("desired", "D");
+    BaseCfour.batch(() => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "desired");
+      BaseCfour.addContainer(
+        { id: "con1", name: "C1", systemId: "sys1", technology: "ts" },
+        "desired",
+        "local",
+      );
+    });
+    // Apply once to create "applied"
+    await defaultDiesel.planAndApply(fs, {});
+
+    // Now add a component to desired
+    BaseCfour.addComponent(
+      { id: "comp1", name: "P1", containerId: "con1", technology: "ts" },
+      "desired",
+      "local",
+    );
+
+    const report = await defaultDiesel.reportDrift(fs, {});
+    expect(report.modelDiff.nodes.added.length).toBe(1);
+    expect(report.modelDiff.nodes.added[0]).toMatchObject({ id: "comp1" });
+  });
+});
+
+// ----------------------------------------------------------------
+// Phase 4 — Diagram renderers
+// ----------------------------------------------------------------
+
+describe("renderMermaid", () => {
+  test("renders systems, containers, components and relationships", () => {
+    BaseCfour.resetWorkspace("default");
+    BaseCfour.batch(() => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "Banking" }, "default");
+      BaseCfour.addContainer(
+        { id: "web", name: "Web App", systemId: "sys1", technology: "React" },
+        "default",
+        "local",
+      );
+      BaseCfour.addComponent(
+        { id: "auth", name: "Auth", containerId: "web", technology: "TypeScript" },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "auth",
+          destinationId: "sys1",
+          description: "authenticates",
+        },
+        "default",
+        "local",
+      );
+    });
+    const ws = BaseCfour.getWorkspace("default");
+    const mermaid = renderMermaid(ws);
+
+    expect(mermaid).toContain("C4");
+    expect(mermaid).toContain('System("sys1", "Banking")');
+    expect(mermaid).toContain('Container("web", "Web App", "React", "sys1")');
+    expect(mermaid).toContain('Component("auth", "Auth", "TypeScript", "web")');
+    expect(mermaid).toContain('Rel("auth", "sys1", "authenticates")');
+  });
+
+  test("empty workspace produces a minimal diagram", () => {
+    BaseCfour.resetWorkspace("default");
+    const ws = BaseCfour.getWorkspace("default");
+    const mermaid = renderMermaid(ws);
+    expect(mermaid).toContain("C4");
+    expect(mermaid).not.toContain("System(");
+  });
+});
+
+describe("renderPlantUml", () => {
+  test("renders systems, containers and relationships", () => {
+    BaseCfour.resetWorkspace("default");
+    BaseCfour.batch(() => {
+      BaseCfour.addSoftwareSystem(
+        { id: "sys1", name: "Banking", description: "Core banking" },
+        "default",
+      );
+      BaseCfour.addContainer(
+        { id: "api", name: "API", systemId: "sys1", technology: "Java" },
+        "default",
+        "local",
+      );
+      BaseCfour.addRelationship(
+        {
+          id: "r1",
+          kind: "Relationship",
+          sourceId: "api",
+          destinationId: "sys1",
+          description: "uses",
+        },
+        "default",
+        "local",
+      );
+    });
+    const ws = BaseCfour.getWorkspace("default");
+    const puml = renderPlantUml(ws);
+
+    expect(puml).toContain("@startuml");
+    expect(puml).toContain("@enduml");
+    expect(puml).toContain('Container(sys1, "Banking", "Core banking")');
+    expect(puml).toContain('Container(api, "API", "Java", "")');
+    expect(puml).toContain('Rel(api, sys1, "uses")');
+  });
+
+  test("empty workspace produces a valid wrapper", () => {
+    BaseCfour.resetWorkspace("default");
+    const ws = BaseCfour.getWorkspace("default");
+    const puml = renderPlantUml(ws);
+    expect(puml).toContain("@startuml");
+    expect(puml).toContain("@enduml");
+  });
+});
+
+describe("writeDiagram", () => {
+  test("writes a diagram string to disk via CodebaseFs", async () => {
+    const fs = createNodeCodebaseFs();
+    const tmp = await mkdtemp(join(tmpdir(), "gen-diesel-diag-"));
+    try {
+      const path = join(tmp, "diagram.mmd");
+      await writeDiagram("graph TD\n  A-->B", path, fs);
+      const content = await readFile(path, "utf8");
+      expect(content).toBe("graph TD\n  A-->B");
+    } finally {
+      await rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ----------------------------------------------------------------
+// Phase 4 — Template packs
+// ----------------------------------------------------------------
+
+describe("Template pack", () => {
+  beforeEach(() => {
+    resetGenerators();
+  });
+
+  test("createReactNodePack registers generators that resolve and produce files", async () => {
+    const pack = createReactNodePack();
+    expect(pack.name).toBe("react-node-starter");
+    pack.register(defaultDiesel);
+
+    const reactNode: C4Node = {
+      id: "auth",
+      name: "Auth",
+      kind: "Component",
+      containerId: "web",
+      technology: "React",
+    };
+    const gen = defaultDiesel.resolveGenerator(reactNode);
+    expect(gen).toBeDefined();
+
+    const result = await gen!({
+      node: reactNode,
+      ancestors: [],
+      relationships: [],
+    });
+    expect(result.filesWritten[0]).toBe("src/components/auth.tsx");
+    expect(result.filesDeleted).toEqual([]);
   });
 });

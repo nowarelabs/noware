@@ -1,9 +1,11 @@
 import {
   BaseCfour,
   type C4CodeElementKind,
+  type C4Container,
   type C4ElementKind,
   type C4Node,
   type C4Relationship,
+  type C4Workspace,
   type C4WorkspaceDiff,
 } from "@nowarelabs/cfour";
 
@@ -497,6 +499,277 @@ function bytesEqual(a: Uint8Array | null, b: Uint8Array | null): boolean {
 }
 
 // ----------------------------------------------------------------
+// Extractors — reverse direction: source code → C4 workspace
+// ----------------------------------------------------------------
+
+/** Options for `extractWorkspace` / `Extractor.extract`. */
+export interface ExtractOpts {
+  workspaceName?: string;
+  workspaceDescription?: string;
+}
+
+/**
+ * The reverse of a generator: reads a source tree (via `CodebaseFs`) and
+ * produces a cfour `C4Workspace` — enabling onboarding without hand-writing
+ * the model. Implementations range from stubs (directory-name heuristics) to
+ * full AST parsers.
+ */
+export interface Extractor {
+  extract(source: CodebaseFs, opts?: ExtractOpts): Promise<C4Workspace>;
+}
+
+/**
+ * Convenience wrapper: extracts a workspace from a source tree using the
+ * given extractor.
+ */
+export async function extractWorkspace(
+  source: CodebaseFs,
+  extractor: Extractor,
+  opts?: ExtractOpts,
+): Promise<C4Workspace> {
+  return extractor.extract(source, opts);
+}
+
+/** Slugifies a name into a stable, lowercase, hyphen-separated id. */
+function slugify(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Stub extractor for demonstration and testing. Reads the root directory
+ * and maps subdirectories to `SoftwareSystem`s (each with one `Container`),
+ * and `.ts`/`.js` files at the root to `Component`s. This is a heuristic
+ * stub — real extractors parse ASTs.
+ */
+export function createStubExtractor(): Extractor {
+  return {
+    async extract(source: CodebaseFs, opts) {
+      const ws: C4Workspace = {
+        name: opts?.workspaceName ?? "extracted",
+        description: opts?.workspaceDescription,
+        people: [],
+        softwareSystems: [],
+        relationships: [],
+      };
+
+      const rootEntries = await source.readDir(".");
+      for (const entry of rootEntries) {
+        if (entry.startsWith(".") || entry === "node_modules") continue;
+
+        // Try reading as a directory first — if it succeeds, it's a directory.
+        let childEntries: string[];
+        try {
+          childEntries = await source.readDir(entry);
+        } catch {
+          childEntries = [];
+        }
+
+        const isDir = childEntries.length > 0 || !/\.\w+$/.test(entry);
+
+        if (isDir && childEntries.length > 0) {
+          // Directory → SoftwareSystem with one Container
+          const sysId = slugify(entry);
+          const containers: C4Container[] = [
+            {
+              id: `${sysId}-default`,
+              name: entry,
+              kind: "Container",
+              systemId: sysId,
+            },
+          ];
+          ws.softwareSystems.push({
+            id: sysId,
+            name: entry,
+            kind: "SoftwareSystem",
+            containers,
+          });
+        } else if (/\.(ts|js|tsx|jsx|mjs)$/.test(entry)) {
+          // Source file → Component under a default "root" system
+          let rootSys = ws.softwareSystems.find((s) => s.id === "root");
+          if (!rootSys) {
+            rootSys = {
+              id: "root",
+              name: "Root",
+              kind: "SoftwareSystem",
+              containers: [
+                {
+                  id: "root-default",
+                  name: "Root",
+                  kind: "Container",
+                  systemId: "root",
+                  components: [],
+                },
+              ],
+            };
+            ws.softwareSystems.push(rootSys);
+          }
+          const name = entry.replace(/\.[^.]+$/, "");
+          rootSys.containers![0].components!.push({
+            id: slugify(name),
+            name,
+            kind: "Component",
+            containerId: "root-default",
+          });
+        }
+      }
+
+      return ws;
+    },
+  };
+}
+
+// ----------------------------------------------------------------
+// Drift reports — structured summary of model vs. disk state
+// ----------------------------------------------------------------
+
+/**
+ * Structured drift report combining per-node file-level drift, the
+ * cfour-level model diff, and (future) orphaned on-disk files.
+ */
+export interface DriftReport {
+  /** Files whose on-disk hash no longer matches the manifest record. */
+  driftedFiles: Map<string, string[]>;
+  /** The cfour-level diff between the "applied" and "desired" workspaces. */
+  modelDiff: C4WorkspaceDiff;
+  /** Files on disk that are not owned by any manifest entry (reserved). */
+  orphans: string[];
+}
+
+/**
+ * Builds a structured drift report by combining per-node file-level hash
+ * checks (`detectDrift`) with the cfour model diff between "applied" and
+ * "desired". `orphans` is reserved for future use.
+ */
+export async function reportDrift(
+  cfour: Pick<BaseCfour, "diff">,
+  fs: CodebaseFs,
+  manifest: GenerationManifest,
+): Promise<DriftReport> {
+  const driftedFiles = new Map<string, string[]>();
+  for (const [id, entry] of Object.entries(manifest)) {
+    const files = await detectDrift(fs, entry);
+    if (files.length > 0) driftedFiles.set(id, files);
+  }
+  const modelDiff = cfour.diff("applied", "desired");
+  return { driftedFiles, modelDiff, orphans: [] };
+}
+
+// ----------------------------------------------------------------
+// Diagram renderers — pure functions returning markup strings
+// ----------------------------------------------------------------
+
+/**
+ * Renders a C4 workspace as a Mermaid `C4` diagram string.
+ * SoftwareSystems → C4System, Containers → C4Container,
+ * Components → C4Component, Relationships → Rel edges.
+ */
+export function renderMermaid(workspace: C4Workspace): string {
+  const lines: string[] = ["```mermaid", "C4"];
+
+  for (const sys of workspace.softwareSystems) {
+    lines.push(`  System(${JSON.stringify(sys.id)}, ${JSON.stringify(sys.name)})`);
+    for (const con of sys.containers ?? []) {
+      lines.push(
+        `  Container(${JSON.stringify(con.id)}, ${JSON.stringify(con.name)}, ${JSON.stringify(con.technology ?? "")}, ${JSON.stringify(sys.id)})`,
+      );
+      for (const comp of con.components ?? []) {
+        lines.push(
+          `  Component(${JSON.stringify(comp.id)}, ${JSON.stringify(comp.name)}, ${JSON.stringify(comp.technology ?? "")}, ${JSON.stringify(con.id)})`,
+        );
+      }
+    }
+  }
+
+  for (const rel of workspace.relationships) {
+    lines.push(
+      `  Rel(${JSON.stringify(rel.sourceId)}, ${JSON.stringify(rel.destinationId)}, ${JSON.stringify(rel.description ?? "")})`,
+    );
+  }
+
+  lines.push("```");
+  return lines.join("\n");
+}
+
+/**
+ * Renders a C4 workspace as a PlantUML component diagram string.
+ */
+export function renderPlantUml(workspace: C4Workspace): string {
+  const lines: string[] = ["@startuml", "!include <C4/C4_Context>", ""];
+
+  for (const sys of workspace.softwareSystems) {
+    lines.push(`Container(${sys.id}, "${sys.name}", "${sys.description ?? ""}")`);
+    for (const con of sys.containers ?? []) {
+      lines.push(
+        `  Container(${con.id}, "${con.name}", "${con.technology ?? ""}", "${con.description ?? ""}")`,
+      );
+      for (const comp of con.components ?? []) {
+        lines.push(
+          `    Component(${comp.id}, "${comp.name}", "${comp.technology ?? ""}", "${comp.description ?? ""}")`,
+        );
+      }
+    }
+  }
+
+  for (const rel of workspace.relationships) {
+    lines.push(`Rel(${rel.sourceId}, ${rel.destinationId}, "${rel.description ?? ""}")`);
+  }
+
+  lines.push("", "@enduml");
+  return lines.join("\n");
+}
+
+/**
+ * Writes a diagram string (Mermaid or PlantUML) to disk via `CodebaseFs`.
+ */
+export async function writeDiagram(content: string, path: string, fs: CodebaseFs): Promise<void> {
+  await fs.writeFile(path, new TextEncoder().encode(content));
+}
+
+// ----------------------------------------------------------------
+// Template packs — bundled generator sets for common stacks
+// ----------------------------------------------------------------
+
+/**
+ * A named bundle of generator registrations. Packs register their
+ * generators on a `Diesel` instance — agents use them to get sane
+ * defaults without manually registering generators.
+ */
+export interface TemplatePack {
+  name: string;
+  register(diesel: Diesel): void;
+}
+
+/** Minimal demo pack: stub generators for a React + Node stack. */
+export function createReactNodePack(): TemplatePack {
+  return {
+    name: "react-node-starter",
+    register(diesel) {
+      diesel.registerGenerator("Component:React", async (ctx) => {
+        const path = `src/components/${ctx.node.id}.tsx`;
+        return {
+          filesWritten: [path],
+          filesDeleted: [],
+        };
+      });
+
+      diesel.registerGenerator("Container:node", async (ctx) => {
+        const path = `src/${ctx.node.id}/index.ts`;
+        return {
+          filesWritten: [path],
+          filesDeleted: [],
+        };
+      });
+    },
+  };
+}
+
+// ----------------------------------------------------------------
 // DSL registration conveniences
 // ----------------------------------------------------------------
 
@@ -625,6 +898,12 @@ export interface Diesel {
   unlinkIfExists(fs: CodebaseFs, path: string): Promise<void>;
   /** Verifies a generator is pure by running it twice. */
   assertGeneratorIsPure(fs: CodebaseFs, gen: Generator, ctx: GeneratorContext): Promise<void>;
+  /** Structured drift report: file-level hash checks + cfour model diff. */
+  reportDrift(fs: CodebaseFs, manifest: GenerationManifest): Promise<DriftReport>;
+  /** Renders the workspace as a Mermaid C4 diagram string. */
+  renderMermaid(workspace: C4Workspace): string;
+  /** Renders the workspace as a PlantUML component diagram string. */
+  renderPlantUml(workspace: C4Workspace): string;
 }
 
 /**
@@ -647,6 +926,9 @@ export function createDiesel(cfour: BaseCfour): Diesel {
     hashFile,
     unlinkIfExists,
     assertGeneratorIsPure,
+    reportDrift: (fs, manifest) => reportDrift(cfour, fs, manifest),
+    renderMermaid,
+    renderPlantUml,
   };
 }
 
