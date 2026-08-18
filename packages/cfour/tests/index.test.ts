@@ -3173,4 +3173,61 @@ describe("C4 Model - cfour package", () => {
       ).toEqual(["feat", "sys1"]);
     });
   });
+
+  describe("deleteWorkspace", () => {
+    beforeEach(() => {
+      BaseCfour.reset();
+    });
+
+    test("removes the workspace, its own lineage, claims and proposals without events", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "del-main");
+      BaseCfour.addSoftwareSystem({ id: "sys2", name: "S2" }, "del-main");
+      BaseCfour.branchWorkspace("del-main", "del-feature");
+      BaseCfour.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice", "del-main");
+      BaseCfour.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob", "del-main");
+      BaseCfour.proposeRelationship(
+        { id: "r1", kind: "Relationship", sourceId: "sys1", destinationId: "sys2" },
+        "alice",
+        "del-main",
+      );
+
+      const events: CfourChangeEvent[] = [];
+      const unsub = BaseCfour.subscribe((e) => events.push(e));
+      BaseCfour.deleteWorkspace("del-main");
+      unsub();
+
+      expect(BaseCfour.getWorkspaceNames()).not.toContain("del-main");
+      expect(BaseCfour.getClaims("del-main")).toEqual([]);
+      expect(BaseCfour.getRelationshipProposals("del-main")).toEqual([]);
+      expect(events).toHaveLength(0);
+    });
+
+    test("an unrelated workspace is untouched and a fresh workspace is lazily recreated", () => {
+      BaseCfour.addSoftwareSystem({ id: "s1", name: "S1" }, "keep");
+      BaseCfour.addSoftwareSystem({ id: "gone", name: "Gone" }, "doomed");
+      BaseCfour.deleteWorkspace("doomed");
+
+      expect(BaseCfour.getWorkspaceNames().sort()).toEqual(["default", "keep"]);
+      expect(BaseCfour.getWorkspace("keep").softwareSystems.map((s) => s.id)).toEqual(["s1"]);
+      expect(BaseCfour.getWorkspace("doomed").softwareSystems).toEqual([]);
+    });
+
+    test("deleting a branch parent leaves the derived branch workspace and lineage intact", () => {
+      BaseCfour.addSoftwareSystem({ id: "sys1", name: "S1" }, "parent-ws");
+      BaseCfour.branchWorkspace("parent-ws", "child-branch");
+      BaseCfour.addSoftwareSystem({ id: "feat", name: "F" }, "child-branch");
+
+      BaseCfour.deleteWorkspace("parent-ws");
+
+      // The host refuses to delete a branch parent (v1); cfour leaves the
+      // derived branch's content and lineage alone so that guard is the only
+      // gate.
+      expect(BaseCfour.getWorkspaceNames().sort()).toEqual(["child-branch", "default"]);
+      expect(BaseCfour.getBranchBase("child-branch")).toBeDefined();
+      expect(BaseCfour.getWorkspace("child-branch").softwareSystems.map((s) => s.id)).toEqual([
+        "sys1",
+        "feat",
+      ]);
+    });
+  });
 });

@@ -5,9 +5,13 @@ import {
   type C4Node,
   type C4Relationship,
   type C4RelationshipProposal,
+  type C4View,
   type CfourChangeEvent,
+  type CfourEventQuery,
+  type CfourOperation,
   type NodeRow,
   type RelationshipRow,
+  type SelectionQuery,
   nodeToRow,
   relationshipToRow,
 } from "@nowarelabs/cfour";
@@ -67,10 +71,37 @@ CREATE TABLE IF NOT EXISTS relationship_proposals (
 CREATE TABLE IF NOT EXISTS proposal_pending_approvals (
   proposal_id TEXT NOT NULL, editor_id TEXT NOT NULL, PRIMARY KEY (proposal_id, editor_id)
 );
+CREATE TABLE IF NOT EXISTS views (
+  workspace_name TEXT NOT NULL, view_id TEXT NOT NULL, kind TEXT NOT NULL,
+  title TEXT, description TEXT, scope_id TEXT, data TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (workspace_name, view_id)
+);
+CREATE TABLE IF NOT EXISTS events (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_name TEXT NOT NULL,
+  op TEXT NOT NULL,
+  element_id TEXT,
+  element_kind TEXT,
+  payload TEXT NOT NULL,
+  timestamp INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_events_ws_op_ts ON events (workspace_name, op, timestamp);
 `;
 
 const ALARM_INTERVAL_MS = 60_000;
 const DEFAULT_WORKSPACE = "default";
+
+const setReplacer = (_key: string, value: unknown) => (value instanceof Set ? [...value] : value);
+
+/** Per-socket subscription state for the WS live stream. A socket that never
+ * subscribed keeps the legacy all-workspaces stream; an explicit unsubscribe
+ * turns delivery off entirely. */
+interface SocketSub {
+  workspaceName: string | null; // null = all workspaces
+  active: boolean;
+  editorId?: string;
+}
 
 /**
  * A Durable Object that runs one `BaseCfour` instance per project, persisting
@@ -86,6 +117,9 @@ export class WorkspaceDO extends DurableObject<Env> {
   private readonly cfour = new BaseCfour();
   private readonly hydrated = new Set<string>();
   private readonly _workspaceLocks = new Map<string, Promise<unknown>>();
+  // Per-workspace max event-log rows; null = pruning off (default).
+  private _eventLogMax: number | null = null;
+  private readonly _socketSubs = new Map<WebSocket, SocketSub>();
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -138,10 +172,11 @@ export class WorkspaceDO extends DurableObject<Env> {
       meta.description ?? undefined,
     );
 
-    // Claims, proposals and branch lineage survive restarts too; they are not
-    // part of the node/relationship rows importRows installs.
+    // Claims, proposals, views and branch lineage survive restarts too; they
+    // are not part of the node/relationship rows importRows installs.
     this.restoreClaims(workspaceName);
     this.restoreProposals(workspaceName);
+    this.restoreViews(workspaceName);
     this.restoreBranchBases(workspaceName);
   }
 
@@ -231,6 +266,20 @@ export class WorkspaceDO extends DurableObject<Env> {
     }
   }
 
+  private restoreViews(workspaceName: string) {
+    const rows = [
+      ...this.ctx.storage.sql.exec<{ data: string }>(
+        `SELECT data FROM views WHERE workspace_name = ?`,
+        workspaceName,
+      ),
+    ];
+    if (!rows.length) return;
+    this.cfour.restoreViews(
+      rows.map((row) => JSON.parse(row.data) as C4View),
+      workspaceName,
+    );
+  }
+
   // ── Incremental persistence, driven by BaseCfour's own events ───────
   // No hand-rolled diffing: BaseCfour already tells us exactly what changed
   // via the same event shape subscribe() has always used.
@@ -238,6 +287,10 @@ export class WorkspaceDO extends DurableObject<Env> {
   private persist(event: CfourChangeEvent) {
     const sql = this.ctx.storage.sql;
     const ws = event.workspaceName;
+
+    // Append every change event to the durable log before the workspace rows
+    // are touched — the log is the audit/replay source, so nothing may slip.
+    this.appendEvent(event);
 
     switch (event.op) {
       case "add":
@@ -249,6 +302,8 @@ export class WorkspaceDO extends DurableObject<Env> {
             relationshipToRow(event.after as unknown as C4Relationship, ws),
             true,
           );
+        } else if (event.elementKind === "View") {
+          this.insertViewRow(event.after as C4View, ws);
         } else {
           this.insertNodeRow(nodeToRow(event.after as C4Node, ws), true);
         }
@@ -293,14 +348,10 @@ export class WorkspaceDO extends DurableObject<Env> {
 
       case "reset": {
         // Reset wipes everything the workspace owns: nodes, relationships,
-        // claims, proposals and branch lineage.
+        // claims, proposals, views and branch lineage.
         sql.exec(`DELETE FROM nodes WHERE workspace_name = ?`, ws);
         sql.exec(`DELETE FROM relationships WHERE workspace_name = ?`, ws);
         sql.exec(`DELETE FROM claims WHERE workspace_name = ?`, ws);
-        // `claims` was just wiped for this workspace; drop the junction rows
-        // orphaned by that delete. Keyed by claim_id — comparing element ids
-        // against claim UUIDs would (wrongly) match nothing and delete every
-        // junction row in the whole DO, including other workspaces' claims.
         // `claims` was just wiped for this workspace; drop the junction rows
         // orphaned by that delete. Keyed by claim_id — comparing element ids
         // against claim UUIDs would (wrongly) match nothing and delete every
@@ -311,6 +362,7 @@ export class WorkspaceDO extends DurableObject<Env> {
         sql.exec(
           `DELETE FROM proposal_pending_approvals WHERE proposal_id NOT IN (SELECT id FROM relationship_proposals)`,
         );
+        sql.exec(`DELETE FROM views WHERE workspace_name = ?`, ws);
         sql.exec(`DELETE FROM branch_base WHERE branch_name = ? OR parent_name = ?`, ws, ws);
         this.upsertWorkspaceMeta(ws);
         break;
@@ -511,6 +563,122 @@ export class WorkspaceDO extends DurableObject<Env> {
     );
   }
 
+  private insertViewRow(view: C4View, workspaceName: string) {
+    this.ctx.storage.sql.exec(
+      `INSERT INTO views (workspace_name, view_id, kind, title, description, scope_id, data, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(workspace_name, view_id) DO UPDATE SET
+         kind=excluded.kind, title=excluded.title, description=excluded.description,
+         scope_id=excluded.scope_id, data=excluded.data, updated_at=excluded.updated_at`,
+      workspaceName,
+      view.id,
+      view.kind,
+      view.title ?? null,
+      view.description ?? null,
+      view.scopeId ?? null,
+      JSON.stringify(view),
+      Date.now(),
+    );
+  }
+
+  private appendEvent(event: CfourChangeEvent) {
+    this.ctx.storage.sql.exec(
+      `INSERT INTO events (workspace_name, op, element_id, element_kind, payload, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      event.workspaceName,
+      event.op,
+      event.elementId ?? null,
+      event.elementKind ?? null,
+      JSON.stringify(event, setReplacer),
+      event.timestamp ?? Date.now(),
+    );
+    if (this._eventLogMax != null) this.pruneEvents();
+  }
+
+  private pruneEvents() {
+    if (this._eventLogMax == null) return;
+    // Keep the newest N rows (by seq), dropping the oldest.
+    this.ctx.storage.sql.exec(
+      `DELETE FROM events WHERE seq NOT IN (SELECT seq FROM events ORDER BY seq DESC LIMIT ?)`,
+      this._eventLogMax,
+    );
+  }
+
+  private deserializeEvent(row: { payload: string }): CfourChangeEvent {
+    const event = JSON.parse(row.payload) as CfourChangeEvent;
+    const payload = event.payload as Record<string, unknown> | undefined;
+    if (payload && "pendingApprovals" in payload) {
+      // C4RelationshipProposal — pendingApprovals round-trips as an array.
+      (payload as unknown as C4RelationshipProposal).pendingApprovals = new Set(
+        payload.pendingApprovals as string[],
+      );
+    } else if (payload && "elementIds" in payload) {
+      // C4Claim — elementIds/relationshipIds round-trip as arrays.
+      const claim = payload as unknown as C4Claim;
+      claim.elementIds = new Set(payload.elementIds as string[]);
+      claim.relationshipIds = new Set(payload.relationshipIds as string[]);
+    }
+    return event;
+  }
+
+  private queryEventsSync(filter: CfourEventQuery): CfourChangeEvent[] {
+    const clauses: string[] = [];
+    const args: (string | number)[] = [];
+    if (filter.workspaceName !== undefined) {
+      clauses.push("workspace_name = ?");
+      args.push(filter.workspaceName);
+    }
+    if (filter.op !== undefined) {
+      clauses.push("op = ?");
+      args.push(filter.op);
+    }
+    if (filter.elementId !== undefined) {
+      clauses.push("element_id = ?");
+      args.push(filter.elementId);
+    }
+    if (filter.elementKind !== undefined) {
+      clauses.push("element_kind = ?");
+      args.push(filter.elementKind);
+    }
+    if (filter.since !== undefined) {
+      clauses.push("timestamp >= ?");
+      args.push(filter.since);
+    }
+    if (filter.until !== undefined) {
+      clauses.push("timestamp <= ?");
+      args.push(filter.until);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const limit = filter.limit ?? 100;
+    const offset = filter.offset ?? 0;
+    const rows = [
+      ...this.ctx.storage.sql.exec<{ payload: string }>(
+        `SELECT payload FROM events ${where} ORDER BY seq ASC LIMIT ? OFFSET ?`,
+        ...args,
+        limit,
+        offset,
+      ),
+    ];
+    return rows.map((row) => this.deserializeEvent(row));
+  }
+
+  private deleteWorkspaceRows(name: string) {
+    const sql = this.ctx.storage.sql;
+    sql.exec(`DELETE FROM workspaces WHERE workspace_name = ?`, name);
+    sql.exec(`DELETE FROM nodes WHERE workspace_name = ?`, name);
+    sql.exec(`DELETE FROM relationships WHERE workspace_name = ?`, name);
+    sql.exec(`DELETE FROM claims WHERE workspace_name = ?`, name);
+    sql.exec(`DELETE FROM claim_elements WHERE claim_id NOT IN (SELECT id FROM claims)`);
+    sql.exec(`DELETE FROM claim_relationships WHERE claim_id NOT IN (SELECT id FROM claims)`);
+    sql.exec(`DELETE FROM relationship_proposals WHERE workspace_name = ?`, name);
+    sql.exec(
+      `DELETE FROM proposal_pending_approvals WHERE proposal_id NOT IN (SELECT id FROM relationship_proposals)`,
+    );
+    sql.exec(`DELETE FROM views WHERE workspace_name = ?`, name);
+    sql.exec(`DELETE FROM events WHERE workspace_name = ?`, name);
+    sql.exec(`DELETE FROM branch_base WHERE branch_name = ? OR parent_name = ?`, name, name);
+  }
+
   // ── Per-workspace serialization ──────────────────────────────────────
   // RPCs into the same workspace are serialized (each waits for the previous
   // one's chain), while RPCs into different workspaces never wait on each
@@ -687,6 +855,10 @@ export class WorkspaceDO extends DurableObject<Env> {
     this.cfour.setClaimTtl(ttlMs);
   }
 
+  async setProposalTtl(ttlMs: number) {
+    this.cfour.setProposalTtl(ttlMs);
+  }
+
   async getClaims(workspaceName = DEFAULT_WORKSPACE) {
     this.hydrate(workspaceName);
     return this.cfour.getClaims(workspaceName);
@@ -765,39 +937,301 @@ export class WorkspaceDO extends DurableObject<Env> {
     return this.cfour.getWorkspaceNames();
   }
 
+  // ── Views (3.1) ─────────────────────────────────────────────────────
+  // View builders generate from the live workspace; saveView/updateViewPosition
+  // mutate and persist through the ordinary event path.
+
+  async getSystemContextView(systemId: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getSystemContextView(systemId, workspaceName);
+  }
+
+  async getContainerView(systemId: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getContainerView(systemId, workspaceName);
+  }
+
+  async getComponentView(containerId: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getComponentView(containerId, workspaceName);
+  }
+
+  async getCodeView(componentId: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getCodeView(componentId, workspaceName);
+  }
+
+  async getTeamView(teamName: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getTeamView(teamName, workspaceName);
+  }
+
+  async getFlowView(tag: string, title?: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getFlowView(tag, title, workspaceName);
+  }
+
+  async getFlowCatalog(tag: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getFlowCatalog(tag, workspaceName);
+  }
+
+  async getLegend(view: C4View, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getLegend(view, workspaceName);
+  }
+
+  async saveView(view: C4View, workspaceName = DEFAULT_WORKSPACE) {
+    return this.mutate(workspaceName, () => this.cfour.saveView(view, workspaceName));
+  }
+
+  async updateViewPosition(
+    viewId: string,
+    elementId: string,
+    x: number,
+    y: number,
+    workspaceName = DEFAULT_WORKSPACE,
+  ) {
+    return this.mutate(workspaceName, () =>
+      this.cfour.updateViewPosition(viewId, elementId, x, y, workspaceName),
+    );
+  }
+
+  // ── Durable event log (3.2) ─────────────────────────────────────────
+
+  async queryEvents(filter: CfourEventQuery = {}) {
+    return this.queryEventsSync(filter);
+  }
+
+  /** Caps the durable event log to the newest `rows` events; 0 turns pruning off. */
+  async setEventLogMax(rows: number) {
+    this._eventLogMax = rows > 0 ? rows : null;
+    this.pruneEvents();
+  }
+
+  // ── Durable listing (3.3) ───────────────────────────────────────────
+
+  async listWorkspaces() {
+    return [
+      ...this.ctx.storage.sql.exec<{
+        workspace_name: string;
+        title: string;
+        description: string | null;
+        created_at: number;
+        updated_at: number;
+      }>(
+        `SELECT workspace_name, title, description, created_at, updated_at
+           FROM workspaces ORDER BY workspace_name`,
+      ),
+    ].map((row) => ({
+      name: row.workspace_name,
+      title: row.title,
+      description: row.description ?? undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async listBranches() {
+    return [
+      ...this.ctx.storage.sql.exec<{
+        branch_name: string;
+        parent_name: string;
+        created_at: number;
+      }>(`SELECT branch_name, parent_name, created_at FROM branch_base ORDER BY branch_name`),
+    ].map((row) => ({
+      branch: row.branch_name,
+      parent: row.parent_name,
+      createdAt: row.created_at,
+    }));
+  }
+
+  // ── Delete (3.4) ────────────────────────────────────────────────────
+  // v1 policy: a workspace that is still a branch parent cannot be deleted;
+  // deleteBranch only accepts leaf branches. Deleting removes every row the
+  // workspace owns (nodes, relationships, claims + junctions, proposals +
+  // approvals, views, events, branch lineage) and clears it from memory, then
+  // broadcasts a synthesized `{ op: "delete" }` event.
+
+  async deleteWorkspace(name: string) {
+    return this.runForWorkspace(name, async () => {
+      await this.prepareWrite(name);
+      const children = [
+        ...this.ctx.storage.sql.exec(`SELECT 1 FROM branch_base WHERE parent_name = ?`, name),
+      ];
+      if (children.length) {
+        throw new Error(
+          `Cannot delete workspace "${name}": it is the parent of an existing branch.`,
+        );
+      }
+      this.deleteWorkspaceRows(name);
+      this.cfour.deleteWorkspace(name);
+      this.hydrated.delete(name);
+      this.broadcast({ op: "delete", workspaceName: name } as unknown as CfourChangeEvent);
+    });
+  }
+
+  async deleteBranch(name: string) {
+    return this.runForWorkspace(name, async () => {
+      await this.prepareWrite(name);
+      const children = [
+        ...this.ctx.storage.sql.exec(`SELECT 1 FROM branch_base WHERE parent_name = ?`, name),
+      ];
+      if (children.length) {
+        throw new Error(`Cannot delete branch "${name}": it is the parent of an existing branch.`);
+      }
+      const isBranch =
+        [...this.ctx.storage.sql.exec(`SELECT 1 FROM branch_base WHERE branch_name = ?`, name)]
+          .length > 0;
+      if (!isBranch) {
+        throw new Error(
+          `Workspace "${name}" has no recorded base revision; only branches can be deleted with deleteBranch.`,
+        );
+      }
+      this.deleteWorkspaceRows(name);
+      this.cfour.deleteWorkspace(name);
+      this.hydrated.delete(name);
+      this.broadcast({ op: "delete", workspaceName: name } as unknown as CfourChangeEvent);
+    });
+  }
+
+  // ── applyBatch (3.6) — atomic multi-op mutation (agent primitive) ───
+
+  async applyBatch(workspaceName: string, editorId: string, ops: CfourOperation[]) {
+    return this.mutate(workspaceName, () =>
+      this.cfour.applyOperations(ops, workspaceName, editorId),
+    );
+  }
+
+  // ── Thin query RPCs (3.7) ───────────────────────────────────────────
+
+  async findNodes(
+    filter: Parameters<BaseCfour["findNodes"]>[0],
+    workspaceName = DEFAULT_WORKSPACE,
+  ) {
+    this.hydrate(workspaceName);
+    return this.cfour.findNodes(filter, workspaceName);
+  }
+
+  async findRelationships(
+    filter: Parameters<BaseCfour["findRelationships"]>[0],
+    workspaceName = DEFAULT_WORKSPACE,
+  ) {
+    this.hydrate(workspaceName);
+    return this.cfour.findRelationships(filter, workspaceName);
+  }
+
+  async getSelection(query: SelectionQuery, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getSelection(query, workspaceName);
+  }
+
+  async getSubtree(rootId: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getSubtree(rootId, workspaceName);
+  }
+
+  async getAncestors(id: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getAncestors(id, workspaceName);
+  }
+
+  async getDescendants(id: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getDescendants(id, workspaceName);
+  }
+
+  async lint(view?: C4View, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.lint(view, workspaceName);
+  }
+
+  async validate(workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.validate(workspaceName);
+  }
+
+  async diff(workspaceNameA: string, workspaceNameB: string) {
+    this.hydrate(workspaceNameA);
+    this.hydrate(workspaceNameB);
+    return this.cfour.diff(workspaceNameA, workspaceNameB);
+  }
+
+  async releaseAllClaimsFor(editorId: string, workspaceName = DEFAULT_WORKSPACE) {
+    return this.mutate(workspaceName, () =>
+      this.cfour.releaseAllClaimsFor(editorId, workspaceName),
+    );
+  }
+
+  async getClaimFor(elementId: string, workspaceName = DEFAULT_WORKSPACE) {
+    this.hydrate(workspaceName);
+    return this.cfour.getClaimFor(elementId, workspaceName);
+  }
+
   // ── Live updates over hibernatable WebSockets ───────────────────────
   // ctx.acceptWebSocket() means this DO doesn't stay billed/warm while
   // connections sit idle — hibernation and wakeup are automatic.
 
+  /**
+   * Identity seam for the `fetch` entrypoint. Reads the `X-Editor-Id` header
+   * and falls back to "anonymous". Only the fetch entrypoint can see request
+   * headers, so RPC calls keep taking an explicit `editorId` — production
+   * gateways must verify the caller and mint that id. Real auth/session
+   * verification belongs to gateway/auth packages, not workspace-do.
+   */
+  protected resolveEditor(request: Request): string {
+    return request.headers.get("X-Editor-Id") ?? "anonymous";
+  }
+
   async fetch(req: Request): Promise<Response> {
+    const editorId = this.resolveEditor(req);
     if (req.headers.get("Upgrade") !== "websocket") {
       return new Response("expected a WebSocket upgrade", { status: 426 });
     }
     const pair = new WebSocketPair();
     this.ctx.acceptWebSocket(pair[1]);
+    // Tag the socket with the connecting editor's identity (informational for
+    // now — subscriptions can be filtered independently over control messages).
+    this._socketSubs.set(pair[1], { workspaceName: null, active: true, editorId });
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
 
   webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     const text = typeof message === "string" ? message : new TextDecoder().decode(message);
-    let parsed: { type?: string; claimId?: string; workspaceName?: string };
+    let parsed: { type?: string; claimId?: string; workspaceName?: string; since?: number };
     try {
       parsed = JSON.parse(text);
     } catch {
       return; // not one of our control messages — ignore
     }
+
+    if (parsed.type === "subscribe") {
+      const sub = this._socketSubs.get(ws) ?? { workspaceName: null, active: true };
+      sub.workspaceName = parsed.workspaceName ?? null;
+      sub.active = true;
+      this._socketSubs.set(ws, sub);
+      this.replySubscription(ws, parsed.workspaceName, parsed.since);
+      return;
+    }
+
+    if (parsed.type === "unsubscribe") {
+      const sub = this._socketSubs.get(ws);
+      if (sub) sub.active = false;
+      return;
+    }
+
     if (parsed.type !== "touchClaim" || !parsed.claimId) return;
     const workspaceName = parsed.workspaceName ?? DEFAULT_WORKSPACE;
     void this.touchClaim(parsed.claimId, workspaceName).catch(() => {
-      try {
-        ws.send(JSON.stringify({ type: "claimNotFound", claimId: parsed.claimId, workspaceName }));
-      } catch {
-        // socket is closing; nothing to do
-      }
+      this.send(
+        ws,
+        JSON.stringify({ type: "claimNotFound", claimId: parsed.claimId, workspaceName }),
+      );
     });
   }
 
   webSocketClose(ws: WebSocket, _code: number, _reason: string) {
+    this._socketSubs.delete(ws);
     try {
       ws.close();
     } catch {
@@ -805,16 +1239,49 @@ export class WorkspaceDO extends DurableObject<Env> {
     }
   }
 
+  /** Replies to a subscribe control message: replay (since) or snapshot. */
+  private replySubscription(
+    ws: WebSocket,
+    workspaceName: string | undefined,
+    since: number | undefined,
+  ) {
+    const target = workspaceName ?? DEFAULT_WORKSPACE;
+    if (since !== undefined) {
+      this.send(
+        ws,
+        JSON.stringify({ type: "replay", events: this.queryEventsSync({ workspaceName, since }) }),
+      );
+    } else {
+      this.hydrate(target);
+      this.send(
+        ws,
+        JSON.stringify({
+          type: "snapshot",
+          workspaceName: target,
+          workspace: this.cfour.getWorkspace(target),
+        }),
+      );
+    }
+  }
+
+  private send(ws: WebSocket, message: string) {
+    try {
+      ws.send(message);
+    } catch {
+      // connection is mid-close; hibernation manager will clean it up
+    }
+  }
+
   private broadcast(event: CfourChangeEvent) {
-    const message = JSON.stringify(event, (_key, value) =>
-      value instanceof Set ? [...value] : value,
-    );
+    const message = JSON.stringify(event, setReplacer);
     for (const socket of this.ctx.getWebSockets()) {
-      try {
-        socket.send(message);
-      } catch {
-        // connection is mid-close; hibernation manager will clean it up
-      }
+      const sub = this._socketSubs.get(socket);
+      // Never-subscribed sockets keep the legacy all-workspaces stream; an
+      // explicit unsubscribe turns delivery off; a subscribed socket receives
+      // only its chosen workspace.
+      if (sub && !sub.active) continue;
+      if (sub?.workspaceName && sub.workspaceName !== event.workspaceName) continue;
+      this.send(socket, message);
     }
   }
 
@@ -823,23 +1290,43 @@ export class WorkspaceDO extends DurableObject<Env> {
   // itself up — no external cron needed.
 
   async alarm() {
-    // Iterate the distinct workspaces that actually hold claims — NOT
-    // getWorkspaceNames(), which only knows in-memory names and would skip
-    // unhydrated workspaces after a restart.
-    const workspaceNames = [
-      ...this.ctx.storage.sql.exec<{ workspace_name: string }>(
-        `SELECT DISTINCT workspace_name FROM claims`,
-      ),
-    ].map((row) => row.workspace_name);
+    // Iterate the distinct workspaces that actually hold claims or proposals
+    // — NOT getWorkspaceNames(), which only knows in-memory names and would
+    // skip unhydrated workspaces after a restart.
+    const workspaceNames = new Set<string>();
+    for (const row of this.ctx.storage.sql.exec<{ workspace_name: string }>(
+      `SELECT DISTINCT workspace_name FROM claims`,
+    )) {
+      workspaceNames.add(row.workspace_name);
+    }
+    for (const row of this.ctx.storage.sql.exec<{ workspace_name: string }>(
+      `SELECT DISTINCT workspace_name FROM relationship_proposals`,
+    )) {
+      workspaceNames.add(row.workspace_name);
+    }
     // Await every sweep before rescheduling: an expiry queued behind an
     // in-flight write lock would otherwise be cut short if the DO is evicted
     // right after this alarm handler resolves.
     await Promise.all(
-      workspaceNames.map((workspaceName) => {
+      [...workspaceNames].map((workspaceName) => {
         this.hydrate(workspaceName);
-        return this.runForWorkspace(workspaceName, () =>
-          this.cfour.expireStaleClaims(workspaceName),
-        ).catch(() => undefined);
+        return this.runForWorkspace(workspaceName, () => {
+          this.cfour.expireStaleClaims(workspaceName);
+          // expireStaleProposals emits no events (Phase 2 decision), so the
+          // SQLite rows are cleaned up here — the event stream won't do it.
+          const expired = this.cfour.expireStaleProposals(workspaceName);
+          if (expired.length) {
+            const placeholders = expired.map(() => "?").join(",");
+            this.ctx.storage.sql.exec(
+              `DELETE FROM proposal_pending_approvals WHERE proposal_id IN (${placeholders})`,
+              ...expired,
+            );
+            this.ctx.storage.sql.exec(
+              `DELETE FROM relationship_proposals WHERE id IN (${placeholders})`,
+              ...expired,
+            );
+          }
+        }).catch(() => undefined);
       }),
     );
     await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);

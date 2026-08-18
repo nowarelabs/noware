@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vite-plus/test";
-import type { C4Relationship } from "@nowarelabs/cfour";
+import type { C4Relationship, C4View } from "@nowarelabs/cfour";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { WorkspaceDO } from "../src/index.ts";
 
@@ -699,5 +699,557 @@ describe("WorkspaceDO concurrency", () => {
     // And the ordering proves the interleave: beta started before alpha ended.
     await slowAlpha;
     expect(order).toEqual(["start:alpha", "start:beta", "end:beta", "end:alpha"]);
+  });
+});
+
+describe("WorkspaceDO views", () => {
+  test("saved views survive a restart and restore their layout positions", async () => {
+    const state1 = createState();
+    const do1 = new WorkspaceDO(state1.state as never, ENV as never);
+    await state1.whenReady();
+
+    await do1.addSoftwareSystem({ id: "sys1", name: "S1" });
+    const view = await do1.getSystemContextView("sys1");
+    view.elements.push({ elementId: "sys1", x: 42, y: 24 });
+    await do1.saveView(view);
+    await do1.updateViewPosition(view.id, "sys1", 100, 200);
+
+    const state2 = createState(state1.db);
+    const do2 = new WorkspaceDO(state2.state as never, ENV as never);
+    await state2.whenReady();
+
+    const ws = await do2.getWorkspace("default");
+    expect(ws.views).toBeDefined();
+    expect(ws.views!.map((v) => v.id)).toEqual([view.id]);
+    const restored = ws.views![0];
+    expect(restored.elements.find((ve) => ve.elementId === "sys1")).toMatchObject({
+      x: 100,
+      y: 200,
+    });
+  });
+
+  test("two views in one workspace persist and restore independently", async () => {
+    const state1 = createState();
+    const do1 = new WorkspaceDO(state1.state as never, ENV as never);
+    await state1.whenReady();
+    await do1.addSoftwareSystem({ id: "sys1", name: "S1" });
+    const v1 = await do1.getSystemContextView("sys1");
+    const v2 = await do1.getSystemContextView("sys1");
+    v1.id = "ctx-main";
+    v2.id = "ctx-alt";
+    await do1.saveView(v1);
+    await do1.saveView(v2);
+
+    const state2 = createState(state1.db);
+    const do2 = new WorkspaceDO(state2.state as never, ENV as never);
+    await state2.whenReady();
+    const views = (await do2.getWorkspace("default")).views!;
+    expect(views.map((v) => v.id).sort()).toEqual(["ctx-alt", "ctx-main"]);
+  });
+
+  test("views in one workspace do not leak into another", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" }, "default");
+    await do_.addSoftwareSystem({ id: "sys2", name: "S2" }, "other");
+    const v1 = await do_.getSystemContextView("sys1");
+    const v2 = await do_.getSystemContextView("sys2");
+    await do_.saveView(v1);
+    await do_.saveView(v2, "other");
+
+    expect((await do_.getWorkspace("default")).views).toHaveLength(1);
+    expect((await do_.getWorkspace("other")).views).toHaveLength(1);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM views")[0].n).toBe(2);
+  });
+});
+
+describe("WorkspaceDO event log", () => {
+  test("every mutation produces a durable row; queryEvents filters by op/elementId/limit", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" });
+    await do_.updateElement("sys1", { name: "Renamed" }, "default", "editor-a");
+    await do_.removeElement("sys1", "default", "editor-a");
+
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(3);
+
+    const all = await do_.queryEvents();
+    expect(all.map((e) => e.op)).toEqual(["add", "update", "remove"]);
+
+    const adds = await do_.queryEvents({ op: "add" });
+    expect(adds).toHaveLength(1);
+    expect(adds[0].elementId).toBe("sys1");
+
+    const byElement = await do_.queryEvents({ elementId: "sys1" });
+    expect(byElement).toHaveLength(3);
+
+    const limited = await do_.queryEvents({ limit: 2 });
+    expect(limited).toHaveLength(2);
+  });
+
+  test("queryEvents since filters by timestamp and rows survive a restart", async () => {
+    const state1 = createState();
+    const do1 = new WorkspaceDO(state1.state as never, ENV as never);
+    await state1.whenReady();
+    await do1.addSoftwareSystem({ id: "sys1", name: "S1" });
+    await sleep(5);
+    const t0 = Date.now();
+    await sleep(5);
+    await do1.addSoftwareSystem({ id: "sys2", name: "S2" });
+
+    const since = await do1.queryEvents({ since: t0 });
+    expect(since.map((e) => e.elementId)).toEqual(["sys2"]);
+
+    // Restart: the same rows are queryable from the table alone.
+    const state2 = createState(state1.db);
+    const do2 = new WorkspaceDO(state2.state as never, ENV as never);
+    await state2.whenReady();
+    const afterRestart = await do2.queryEvents({ op: "add", since: t0 });
+    expect(afterRestart.map((e) => e.elementId)).toEqual(["sys2"]);
+  });
+
+  test("setEventLogMax caps the table to the newest rows; 0 disables pruning", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    for (let i = 0; i < 5; i++) {
+      await do_.addSoftwareSystem({ id: `sys${i}`, name: `S${i}` });
+    }
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(5);
+
+    await do_.setEventLogMax(2);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(2);
+
+    await do_.addSoftwareSystem({ id: "sys5", name: "S5" });
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(2);
+    const events = await do_.queryEvents();
+    expect(events.map((e) => e.elementId)).toEqual(["sys4", "sys5"]);
+
+    await do_.setEventLogMax(0); // pruning off again
+    await do_.addSoftwareSystem({ id: "sys6", name: "S6" });
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(3);
+  });
+});
+
+describe("WorkspaceDO durable listing", () => {
+  test("listWorkspaces and listBranches reflect rows after a restart", async () => {
+    const state1 = createState();
+    const do1 = new WorkspaceDO(state1.state as never, ENV as never);
+    await state1.whenReady();
+    await do1.resetWorkspace("default", "Main", "main ws");
+    await do1.addSoftwareSystem({ id: "sys1", name: "S1" }, "default");
+    await do1.branchWorkspace("default", "feature");
+
+    const state2 = createState(state1.db);
+    const do2 = new WorkspaceDO(state2.state as never, ENV as never);
+    await state2.whenReady();
+
+    const workspaces = await do2.listWorkspaces();
+    expect(workspaces.map((w) => w.name).sort((a, b) => a.localeCompare(b))).toEqual([
+      "default",
+      "feature",
+    ]);
+    expect(workspaces.find((w) => w.name === "default")?.title).toBe("Main");
+
+    const branches = await do2.listBranches();
+    expect(branches).toEqual([
+      { branch: "feature", parent: "default", createdAt: expect.any(Number) },
+    ]);
+  });
+});
+
+describe("WorkspaceDO delete", () => {
+  test("deleteWorkspace removes every row and broadcasts a delete event", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" }, "victim");
+    await do_.addSoftwareSystem({ id: "sys2", name: "S2" }, "victim");
+    await do_.claim({ elementIds: ["sys1"], relationshipIds: [] }, "alice", "victim");
+    await do_.claim({ elementIds: ["sys2"], relationshipIds: [] }, "bob", "victim");
+    await do_.proposeRelationship(rel("r1", "sys1", "sys2"), "alice", "victim");
+    const view = await do_.getSystemContextView("sys1", "victim");
+    await do_.saveView(view, "victim");
+    const view2: C4View = {
+      id: "raw-view",
+      kind: "SystemContext",
+      elements: [],
+      relationships: [],
+    };
+    await do_.saveView(view2, "victim");
+
+    const upgrade = {
+      headers: { get: (name: string) => (name === "Upgrade" ? "websocket" : null) },
+      url: "https://x.test/ws",
+    };
+    await do_.fetch(upgrade as never);
+    const socket = state.sockets[0] as TestSocket;
+    socket.sent.length = 0;
+
+    await do_.deleteWorkspace("victim");
+
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM nodes")[0].n).toBe(0);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM claims")[0].n).toBe(0);
+    expect(
+      state.query<{ n: number }>("SELECT COUNT(*) AS n FROM relationship_proposals")[0].n,
+    ).toBe(0);
+    expect(
+      state.query<{ n: number }>("SELECT COUNT(*) AS n FROM proposal_pending_approvals")[0].n,
+    ).toBe(0);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM views")[0].n).toBe(0);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(0);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM workspaces")[0].n).toBe(0);
+
+    // In-memory state is cleared and a synthesized delete event was broadcast.
+    expect(await do_.getWorkspaceNames()).not.toContain("victim");
+    const lastMsg = JSON.parse(socket.sent.at(-1)!);
+    expect(lastMsg).toMatchObject({ op: "delete", workspaceName: "victim" });
+  });
+
+  test("deleteWorkspace refuses when a branch derives from it", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+    await do_.branchWorkspace("main", "feature");
+    await expect(do_.deleteWorkspace("main")).rejects.toThrow(/parent of an existing branch/);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM nodes")[0].n).toBe(2);
+  });
+
+  test("deleteBranch removes a leaf branch; refuses derived branches and non-branches", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" }, "main");
+    await do_.branchWorkspace("main", "feature");
+    await do_.branchWorkspace("feature", "feature2");
+
+    await expect(do_.deleteBranch("feature")).rejects.toThrow(/parent of an existing branch/);
+
+    await do_.addSoftwareSystem({ id: "s2", name: "S2" }, "solo");
+    await expect(do_.deleteBranch("solo")).rejects.toThrow(/no recorded base revision/);
+
+    await do_.deleteBranch("feature2");
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM branch_base")[0].n).toBe(1);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM nodes")[0].n).toBe(3);
+    expect(await do_.getWorkspaceNames()).not.toContain("feature2");
+
+    await do_.deleteBranch("feature");
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM branch_base")[0].n).toBe(0);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM nodes")[0].n).toBe(2);
+  });
+});
+
+describe("WorkspaceDO WebSocket subscription", () => {
+  const upgrade = {
+    headers: { get: (name: string) => (name === "Upgrade" ? "websocket" : null) },
+    url: "https://x.test/ws",
+  };
+
+  test("subscribe with since replies with replayed events then streams live ones", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" });
+    await sleep(5);
+    const t0 = Date.now();
+    await sleep(5);
+    await do_.addSoftwareSystem({ id: "sys2", name: "S2" });
+
+    await do_.fetch(upgrade as never);
+    const socket = state.sockets[0] as TestSocket;
+    do_.webSocketMessage(
+      socket as never,
+      JSON.stringify({ type: "subscribe", workspaceName: "default", since: t0 }),
+    );
+
+    const replay = JSON.parse(socket.sent[0]) as {
+      type: string;
+      events: Array<{ elementId: string }>;
+    };
+    expect(replay.type).toBe("replay");
+    expect(replay.events.map((e) => e.elementId)).toEqual(["sys2"]);
+
+    await do_.updateElement("sys2", { name: "S2 renamed" }, "default", "editor-a");
+    const live = JSON.parse(socket.sent.at(-1)!);
+    expect(live).toMatchObject({ op: "update", elementId: "sys2" });
+  });
+
+  test("subscribe without since replies with a snapshot then streams live events", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" });
+    await do_.addSoftwareSystem({ id: "sys2", name: "S2" });
+    await do_.fetch(upgrade as never);
+    const socket = state.sockets[0] as TestSocket;
+    do_.webSocketMessage(
+      socket as never,
+      JSON.stringify({ type: "subscribe", workspaceName: "default" }),
+    );
+
+    const snapshot = JSON.parse(socket.sent[0]) as {
+      type: string;
+      workspaceName: string;
+      workspace: { softwareSystems: Array<{ id: string }> };
+    };
+    expect(snapshot.type).toBe("snapshot");
+    expect(snapshot.workspaceName).toBe("default");
+    expect(snapshot.workspace.softwareSystems.map((s) => s.id).sort()).toEqual(["sys1", "sys2"]);
+
+    await do_.addPerson({ id: "p1", name: "P1" });
+    const live = JSON.parse(socket.sent.at(-1)!);
+    expect(live).toMatchObject({ op: "add", elementId: "p1" });
+  });
+
+  test("a socket subscribed to one workspace only receives that workspace's events", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.fetch(upgrade as never);
+    const filtered = state.sockets[0] as TestSocket;
+    do_.webSocketMessage(
+      filtered as never,
+      JSON.stringify({ type: "subscribe", workspaceName: "alpha" }),
+    );
+
+    // A never-subscribed socket keeps the default all-workspaces stream.
+    await do_.fetch(upgrade as never);
+    const defaulted = state.sockets[1] as TestSocket;
+
+    filtered.sent.length = 0;
+    defaulted.sent.length = 0;
+
+    await do_.addSoftwareSystem({ id: "a", name: "A" }, "alpha");
+    await do_.addSoftwareSystem({ id: "b", name: "B" }, "beta");
+
+    // Lazily creating "beta" also broadcasts its reset event, so the default
+    // socket sees alpha add, beta reset, beta add.
+    const alphaEvents = filtered.sent.map((m) => JSON.parse(m) as { workspaceName: string });
+    expect(alphaEvents.map((e) => e.workspaceName)).toEqual(["alpha"]);
+
+    const bothEvents = defaulted.sent.map((m) => JSON.parse(m) as { workspaceName: string });
+    expect(bothEvents.map((e) => e.workspaceName)).toEqual(["alpha", "beta", "beta"]);
+  });
+
+  test("unsubscribe stops delivery and re-subscribing restores it", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "s1", name: "S1" }, "main");
+    await do_.fetch(upgrade as never);
+    const socket = state.sockets[0] as TestSocket;
+
+    do_.webSocketMessage(socket as never, JSON.stringify({ type: "unsubscribe" }));
+    socket.sent.length = 0;
+    await do_.addSoftwareSystem({ id: "s2", name: "S2" }, "main");
+    expect(socket.sent).toHaveLength(0);
+
+    do_.webSocketMessage(
+      socket as never,
+      JSON.stringify({ type: "subscribe", workspaceName: "main" }),
+    );
+    socket.sent.length = 0;
+    await do_.addSoftwareSystem({ id: "s3", name: "S3" }, "main");
+    expect(socket.sent).toHaveLength(1);
+    expect(JSON.parse(socket.sent[0])).toMatchObject({ op: "add", elementId: "s3" });
+  });
+});
+
+describe("WorkspaceDO applyBatch", () => {
+  test("applies all ops atomically, persists them, and survives a restart", async () => {
+    const state1 = createState();
+    const do1 = new WorkspaceDO(state1.state as never, ENV as never);
+    await state1.whenReady();
+
+    await do1.applyBatch("default", "agent-1", [
+      { op: "addSoftwareSystem", args: [{ id: "sys1", name: "S1" }] },
+      { op: "addContainer", args: [{ id: "con1", name: "C1", systemId: "sys1" }] },
+      { op: "addComponent", args: [{ id: "comp1", name: "P1", containerId: "con1" }] },
+      {
+        op: "addRelationship",
+        args: [
+          {
+            id: "r1",
+            kind: "Relationship",
+            sourceId: "sys1",
+            destinationId: "comp1",
+            description: "uses",
+          },
+        ],
+      },
+    ]);
+
+    const ws1 = await do1.getWorkspace("default");
+    expect(ws1.softwareSystems[0].containers![0].components![0].id).toBe("comp1");
+    expect(ws1.relationships.map((r) => r.id)).toEqual(["r1"]);
+
+    const state2 = createState(state1.db);
+    const do2 = new WorkspaceDO(state2.state as never, ENV as never);
+    await state2.whenReady();
+    const ws2 = await do2.getWorkspace("default");
+    expect(ws2.softwareSystems[0].containers![0].components![0].id).toBe("comp1");
+    expect(ws2.relationships.map((r) => r.id)).toEqual(["r1"]);
+  });
+
+  test("a mid-batch failure rolls back everything and leaves no rows or events", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await expect(
+      do_.applyBatch("default", "agent-1", [
+        { op: "addSoftwareSystem", args: [{ id: "sys1", name: "S1" }] },
+        { op: "addContainer", args: [{ id: "con1", name: "C1", systemId: "missing" }] },
+      ]),
+    ).rejects.toThrow(/not found/i);
+
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM nodes")[0].n).toBe(0);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM events")[0].n).toBe(0);
+  });
+
+  test("claim enforcement applies per op within a batch", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" });
+    await do_.claim({ elementIds: ["sys1"], relationshipIds: [] }, "bob");
+
+    await expect(
+      do_.applyBatch("default", "alice", [
+        { op: "updateElement", args: ["sys1", { name: "hacked" }] },
+      ]),
+    ).rejects.toThrow(/claimed by editor "bob"/);
+
+    const ws = await do_.getWorkspace("default");
+    expect(ws.softwareSystems[0].name).toBe("S1");
+  });
+});
+
+describe("WorkspaceDO thin query RPCs", () => {
+  test("query RPCs round-trip over the RPC surface", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "Banking", tags: ["pci"] });
+    await do_.addContainer(
+      { id: "web", name: "Web", systemId: "sys1", technology: "React" },
+      "default",
+      "editor-a",
+    );
+    await do_.addContainer(
+      { id: "api", name: "API", systemId: "sys1", technology: "Java" },
+      "default",
+      "editor-a",
+    );
+    await do_.addComponent({ id: "auth", name: "Auth", containerId: "api" }, "default", "editor-a");
+    await do_.addRelationship(rel("r1", "web", "api"), "default", "editor-a");
+
+    const nodes = await do_.findNodes({ technology: "react" });
+    expect(nodes.map((n) => n.id)).toEqual(["web"]);
+
+    const rels = await do_.findRelationships({ sourceId: "web" });
+    expect(rels.map((r) => r.id)).toEqual(["r1"]);
+
+    const subtree = await do_.getSubtree("sys1");
+    expect(subtree.elementIds.sort()).toEqual(["api", "auth", "sys1", "web"]);
+    expect(subtree.relationshipIds).toEqual(["r1"]);
+
+    const ancestors = await do_.getAncestors("auth");
+    expect(ancestors.map((n) => n.id)).toEqual(["sys1", "api"]);
+
+    const descendants = await do_.getDescendants("sys1");
+    expect(descendants.map((n) => n.id).sort()).toEqual(["api", "auth", "web"]);
+
+    const selection = await do_.getSelection({ kind: "Container" });
+    expect(selection.elementIds.sort()).toEqual(["api", "web"]);
+  });
+
+  test("lint/validate/diff expose analysis over RPC", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "sys1", name: "S1" });
+    await do_.addRelationship(rel("r1", "sys1", "ghost"), "default", "editor-a");
+
+    const validation = await do_.validate("default");
+    expect(validation.some((e) => e.severity === "error" && /ghost/.test(e.message))).toBe(true);
+
+    const lint = await do_.lint(undefined, "default");
+    expect(lint.length).toBeGreaterThan(0);
+
+    await do_.branchWorkspace("default", "feature");
+    await do_.updateElement("sys1", { name: "F-name" }, "feature", "editor-a");
+    const d = await do_.diff("default", "feature");
+    expect(d.nodes.modified.map((m) => m.id)).toEqual(["sys1"]);
+  });
+
+  test("releaseAllClaimsFor and getClaimFor round-trip over RPC", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "s1", name: "S1" });
+    await do_.addSoftwareSystem({ id: "s2", name: "S2" });
+    await do_.claim({ elementIds: ["s1"], relationshipIds: [] }, "alice");
+    await do_.claim({ elementIds: ["s2"], relationshipIds: [] }, "alice");
+
+    const claim = await do_.getClaimFor("s1");
+    expect(claim?.editorId).toBe("alice");
+    expect(claim?.elementIds.has("s1")).toBe(true);
+
+    await do_.releaseAllClaimsFor("alice");
+    expect(await do_.getClaimFor("s1")).toBeUndefined();
+    expect(await do_.getClaims("default")).toEqual([]);
+    expect(state.query<{ n: number }>("SELECT COUNT(*) AS n FROM claims")[0].n).toBe(0);
+  });
+});
+
+describe("WorkspaceDO resolveEditor", () => {
+  test("maps the X-Editor-Id header and falls back to anonymous", async () => {
+    class ProbeDO extends WorkspaceDO {
+      editorFor(request: Request): string {
+        return this.resolveEditor(request);
+      }
+    }
+    const state = createState();
+    const do_ = new ProbeDO(state.state as never, ENV as never);
+    await state.whenReady();
+
+    const withHeader = {
+      headers: { get: (name: string) => (name === "X-Editor-Id" ? "alice" : null) },
+      url: "https://x.test/ws",
+    };
+    expect(do_.editorFor(withHeader as never)).toBe("alice");
+
+    const noHeader = { headers: { get: () => null }, url: "https://x.test/ws" };
+    expect(do_.editorFor(noHeader as never)).toBe("anonymous");
+  });
+});
+
+describe("WorkspaceDO alarm proposals", () => {
+  test("the alarm expires stale relationship proposals and cleans their rows", async () => {
+    const state = createState();
+    const do_ = new WorkspaceDO(state.state as never, ENV as never);
+    await state.whenReady();
+    await do_.addSoftwareSystem({ id: "s1", name: "S1" });
+    await do_.addSoftwareSystem({ id: "s2", name: "S2" });
+    await do_.claim({ elementIds: ["s1"], relationshipIds: [] }, "alice");
+    await do_.claim({ elementIds: ["s2"], relationshipIds: [] }, "bob");
+    await do_.setProposalTtl(2);
+    await do_.proposeRelationship(rel("r1", "s1", "s2"), "alice");
+    await sleep(5);
+
+    const alarmsBefore = state.alarmTimes.length;
+    await do_.alarm();
+
+    expect(await do_.getRelationshipProposals("default")).toEqual([]);
+    expect(
+      state.query<{ n: number }>("SELECT COUNT(*) AS n FROM relationship_proposals")[0].n,
+    ).toBe(0);
+    expect(
+      state.query<{ n: number }>("SELECT COUNT(*) AS n FROM proposal_pending_approvals")[0].n,
+    ).toBe(0);
+    expect(state.alarmTimes.length).toBe(alarmsBefore + 1);
   });
 });

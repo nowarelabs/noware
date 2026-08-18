@@ -368,6 +368,23 @@ export class BaseCfour {
     return Array.from(this._workspaces.keys());
   }
 
+  /**
+   * Removes a workspace (and its own branch-lineage row plus every claim and
+   * relationship proposal it holds) from memory. Emits no events — hosts that
+   * manage their own durability (e.g. WorkspaceDO's deleteWorkspace) delete
+   * their rows themselves and broadcast their own synthesized event. Derived
+   * branches and their lineage are left alone: the host is responsible for
+   * refusing to delete a workspace that is still a branch parent. A later
+   * getWorkspace(name) lazily recreates an empty workspace, matching the
+   * behavior for a name that was never written.
+   */
+  deleteWorkspace(name: string): void {
+    this._workspaces.delete(name);
+    this._claims.delete(name);
+    this._relationshipProposals.delete(name);
+    this._branchBase.delete(name);
+  }
+
   /** Adds a Person to the workspace. */
   addPerson(person: Omit<C4Person, "kind">, workspaceName = "default") {
     const created: C4Person = { ...person, kind: "Person" };
@@ -2044,6 +2061,12 @@ export class BaseCfour {
     ...args: Parameters<_CFourInstance["getWorkspaceNames"]>
   ): ReturnType<_CFourInstance["getWorkspaceNames"]> {
     return BaseCfour._default.getWorkspaceNames(...args);
+  }
+
+  static deleteWorkspace(
+    ...args: Parameters<_CFourInstance["deleteWorkspace"]>
+  ): ReturnType<_CFourInstance["deleteWorkspace"]> {
+    return BaseCfour._default.deleteWorkspace(...args);
   }
 
   static addPerson(
