@@ -21,7 +21,9 @@ import {
 } from "@nowarelabs/agents";
 
 // Inject a WorkspaceDoClient that talks to your workspace-do instance.
-const client = { /* ... */ };
+const client = {
+  /* ... */
+};
 
 // Run an agent task end-to-end (session, lease, heartbeat, handler, cleanup):
 await runAgent(client, queue, {
@@ -41,37 +43,37 @@ await runAgent(client, queue, {
 
 ### Session model
 
-| Export | Description |
-| --- | --- |
-| `createSession(client, opts)` | Creates a session; derives a branch name from the task and ensures the branch exists. |
-| `acquireLease(client, session, elementIds)` | Claims element ids and stores the claim id in `session.lease.claimIds`. |
-| `releaseLease(client, session)` | Releases all claims held by the session's editor. |
+| Export                                      | Description                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `createSession(client, opts)`               | Creates a session; derives a branch name from the task and ensures the branch exists. |
+| `acquireLease(client, session, elementIds)` | Claims element ids and stores the claim id in `session.lease.claimIds`.               |
+| `releaseLease(client, session)`             | Releases all claims held by the session's editor.                                     |
 
 ### Heartbeat
 
-| Export | Description |
-| --- | --- |
+| Export                                        | Description                                                                                                 |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `createHeartbeatLoop(client, claimIds, opts)` | Creates a heartbeat loop that calls `touchClaim` at the configured interval. Returns `{ start(), stop() }`. |
-| `createWallClock()` | Wall-clock using real `setTimeout`/`setInterval`. Inject a `Clock` in tests for deterministic time. |
+| `createWallClock()`                           | Wall-clock using real `setTimeout`/`setInterval`. Inject a `Clock` in tests for deterministic time.         |
 
 ### Task queue
 
-| Export | Description |
-| --- | --- |
-| `createMemoryQueue()` | In-memory `TaskQueue` for testing. Not durable. |
-| `Task` | `{ id, projectId, branch, agentId, payload, priority, deadline?, retries, maxRetries, status, failureReason? }` |
-| `TaskQueue` | `enqueue`, `dequeue`, `update`, `findByAgent` |
+| Export                | Description                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `createMemoryQueue()` | In-memory `TaskQueue` for testing. Not durable.                                                                 |
+| `Task`                | `{ id, projectId, branch, agentId, payload, priority, deadline?, retries, maxRetries, status, failureReason? }` |
+| `TaskQueue`           | `enqueue`, `dequeue`, `update`, `findByAgent`                                                                   |
 
 ### Reconcile
 
-| Export | Description |
-| --- | --- |
+| Export                                | Description                                             |
+| ------------------------------------- | ------------------------------------------------------- |
 | `reconcile(client, queue, projectId)` | Detects orphan branches (branches with no live claims). |
 
 ### Agent runner
 
-| Export | Description |
-| --- | --- |
+| Export                          | Description                                                                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `runAgent(client, queue, opts)` | Full loop: create session → acquire lease → heartbeat → handler → release claims → mark done. On error, requeues if retries remain. |
 
 ## Architecture
@@ -90,13 +92,13 @@ await runAgent(client, queue, {
 
 ## Exports
 
-| Export | From |
-| --- | --- |
+| Export                                          | From          |
+| ----------------------------------------------- | ------------- |
 | `createSession`, `acquireLease`, `releaseLease` | Session model |
-| `createHeartbeatLoop`, `createWallClock` | Heartbeat |
-| `createMemoryQueue` | Task queue |
-| `reconcile` | Reconcile |
-| `runAgent` | Agent runner |
+| `createHeartbeatLoop`, `createWallClock`        | Heartbeat     |
+| `createMemoryQueue`                             | Task queue    |
+| `reconcile`                                     | Reconcile     |
+| `runAgent`                                      | Agent runner  |
 
 ## Development
 

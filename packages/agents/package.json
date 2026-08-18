@@ -37,6 +37,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260522.1",
+    "@nowarelabs/gen-diesel": "workspace:*",
+    "@nowarelabs/merge-review": "workspace:*",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",

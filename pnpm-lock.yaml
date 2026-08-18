@@ -52,6 +52,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260522.1
         version: 4.20260522.1
+      '@nowarelabs/gen-diesel':
+        specifier: workspace:*
+        version: link:../gen-diesel
+      '@nowarelabs/merge-review':
+        specifier: workspace:*
+        version: link:../merge-review
       '@types/node':
         specifier: ^25.5.0
         version: 25.6.2
