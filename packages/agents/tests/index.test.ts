@@ -409,7 +409,7 @@ describe("Task queue", () => {
 
   test("update patches a task's fields", async () => {
     const queue = createMemoryQueue();
-    const task = await queue.enqueue({
+    await queue.enqueue({
       id: "t1",
       projectId: "p",
       branch: "b",
