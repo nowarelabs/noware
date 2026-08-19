@@ -1,4 +1,4 @@
-import { defineTool } from '@flue/runtime';
+import { defineTool } from '@nowarelabs/agents';
 import * as v from 'valibot';
 
 export const sandboxExecTool = defineTool({

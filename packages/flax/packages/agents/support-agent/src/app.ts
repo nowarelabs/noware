@@ -1,5 +1,5 @@
-import { setProvider } from '@flue/runtime';
-import { createAgentRouter } from '@flue/runtime/routing';
+import { setProvider } from '@nowarelabs/agents';
+import { createAgentRouter } from '@nowarelabs/agents';
 import { ollamaProvider } from '@nowarelabs/ollama-provider';
 import type { D1Database } from '@cloudflare/workers-types';
 import { Hono } from 'hono';

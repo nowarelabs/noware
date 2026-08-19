@@ -7,22 +7,25 @@
     "build": "vite build",
     "deploy": "vite build && wrangler deploy",
     "typecheck": "tsc --noEmit",
+    "check": "vp check",
     "cf-typegen": "wrangler types --include-runtime=false"
   },
   "dependencies": {
     "@nowarelabs/ollama-provider": "workspace:*",
-    "@flue/runtime": "^2.0.2",
-    "agents": "^0.14.5",
+    "@nowarelabs/agents": "workspace:*",
+    "agents": "^0.20.1",
     "hono": "^4.13.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.50.0",
     "@cloudflare/workers-types": "^5.20260804.1",
-    "@flue/cli": "^2.0.2",
-    "@flue/vite": "^2.0.2",
+    "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "bumpp": "^11.0.1",
     "typescript": "^7.0.2",
     "vite": "^8.2.0",
+    "vite-plus": "^0.1.14",
     "wrangler": "^4.118.0"
   }
 }

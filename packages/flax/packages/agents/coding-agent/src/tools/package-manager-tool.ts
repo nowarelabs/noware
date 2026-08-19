@@ -1,4 +1,4 @@
-import { defineTool } from '@flue/runtime';
+import { defineTool } from '@nowarelabs/agents';
 import { env } from 'cloudflare:workers';
 import * as v from 'valibot';
 

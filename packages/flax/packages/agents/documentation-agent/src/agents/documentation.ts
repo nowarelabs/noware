@@ -16,7 +16,7 @@ import {
   useSubagent,
   useTool,
   bash,
-} from '@flue/runtime';
+} from '@nowarelabs/agents';
 import * as v from 'valibot';
 import { Bash, InMemoryFs } from 'just-bash';
 

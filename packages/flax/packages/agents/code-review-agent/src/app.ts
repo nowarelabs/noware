@@ -1,4 +1,4 @@
-import { createAgentRouter } from '@flue/runtime/routing';
+import { createAgentRouter } from '@nowarelabs/agents';
 import type { D1Database } from '@cloudflare/workers-types';
 import { Hono } from 'hono';
 

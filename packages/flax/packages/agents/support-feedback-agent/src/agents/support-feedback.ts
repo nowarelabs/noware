@@ -11,10 +11,9 @@ import {
   usePersistentState,
   useResponseFinish,
   useResponseStart,
-  useSkill,
   useSubagent,
   useTool,
-} from '@flue/runtime';
+} from '@nowarelabs/agents';
 import * as v from 'valibot';
 
 import { jiraLinearTool } from '../tools/jira-linear-tool';
