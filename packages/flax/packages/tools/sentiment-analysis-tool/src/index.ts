@@ -9,12 +9,65 @@ interface AiBinding {
   run(model: string, inputs: Record<string, unknown>): Promise<any>;
 }
 
-const POSITIVE = new Set(["good", "great", "amazing", "excellent", "love", "loved", "awesome", "happy", "helpful", "fast", "easy", "clear", "works", "thank", "thanks", "perfect", "best", "like", "liked", "impressive", "intuitive", "smooth", "recommend"]);
-const NEGATIVE = new Set(["bad", "terrible", "awful", "hate", "hated", "sad", "slow", "broken", "bug", "bugs", "crash", "crashes", "confusing", "worst", "disappointing", "frustrating", "useless", "error", "fails", "failed", "not working", "waste", "poor", "horrible", "dislike"]);
+const POSITIVE = new Set([
+  "good",
+  "great",
+  "amazing",
+  "excellent",
+  "love",
+  "loved",
+  "awesome",
+  "happy",
+  "helpful",
+  "fast",
+  "easy",
+  "clear",
+  "works",
+  "thank",
+  "thanks",
+  "perfect",
+  "best",
+  "like",
+  "liked",
+  "impressive",
+  "intuitive",
+  "smooth",
+  "recommend",
+]);
+const NEGATIVE = new Set([
+  "bad",
+  "terrible",
+  "awful",
+  "hate",
+  "hated",
+  "sad",
+  "slow",
+  "broken",
+  "bug",
+  "bugs",
+  "crash",
+  "crashes",
+  "confusing",
+  "worst",
+  "disappointing",
+  "frustrating",
+  "useless",
+  "error",
+  "fails",
+  "failed",
+  "not working",
+  "waste",
+  "poor",
+  "horrible",
+  "dislike",
+]);
 const NEGATE = new Set(["not", "no", "never", "neither", "hardly", "barely", "without"]);
 
 function lexiconScore(text: string): number {
-  const words = text.toLowerCase().replace(/[^a-z0-9'\s-]/g, " ").split(/\s+/);
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z0-9'\s-]/g, " ")
+    .split(/\s+/);
   let score = 0;
   let negateNext = false;
   for (const word of words) {
@@ -63,7 +116,10 @@ export class SentimentAnalysisTool extends WorkerEntrypoint<Env> {
       try {
         const result = await ai.run("@cf/huggingface/distilbert-sst-2-int8", { text: input.text });
         const results = result?.results ?? [];
-        const best = results.reduce((a: any, b: any) => (b.score > a.score ? b : a), results[0] ?? {});
+        const best = results.reduce(
+          (a: any, b: any) => (b.score > a.score ? b : a),
+          results[0] ?? {},
+        );
         if (best?.label) {
           return { sentiment: best.label.toLowerCase(), score: Math.round(best.score * 100) / 100 };
         }
@@ -78,7 +134,10 @@ export class SentimentAnalysisTool extends WorkerEntrypoint<Env> {
   }
 
   async clusterFeedback(input: { items: string[] }): Promise<unknown> {
-    const clusters = new Map<string, { sentiment: string; score: number; averageScore: number; items: string[] }>();
+    const clusters = new Map<
+      string,
+      { sentiment: string; score: number; averageScore: number; items: string[] }
+    >();
     for (const item of input.items) {
       const topic = dominantTopic(item);
       const { sentiment, score } = await this.analyzeSentiment({ text: item });
@@ -92,7 +151,12 @@ export class SentimentAnalysisTool extends WorkerEntrypoint<Env> {
       topic,
       itemCount: cluster.items.length,
       averageScore: Math.round(cluster.score * 100) / 100,
-      sentiment: cluster.averageScore > 0.1 ? "positive" : cluster.averageScore < -0.1 ? "negative" : "neutral",
+      sentiment:
+        cluster.averageScore > 0.1
+          ? "positive"
+          : cluster.averageScore < -0.1
+            ? "negative"
+            : "neutral",
       items: cluster.items.slice(0, 20),
     }));
   }
@@ -100,9 +164,6 @@ export class SentimentAnalysisTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

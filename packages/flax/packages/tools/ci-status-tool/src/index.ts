@@ -76,7 +76,9 @@ export class CiStatusTool extends WorkerEntrypoint<Env> {
     const repo = input.repo ?? requireSecret(this.env, "GITHUB_REPO");
     const ref = input.ref ?? (await defaultBranch(this.env, repo));
     const checks = await ghFetch(this.env, `/repos/${repo}/commits/${ref}/check-runs?per_page=100`);
-    const testChecks = (checks.check_runs ?? []).filter((c: any) => /test|spec|e2e|jest|pytest|vitest/i.test(c.name));
+    const testChecks = (checks.check_runs ?? []).filter((c: any) =>
+      /test|spec|e2e|jest|pytest|vitest/i.test(c.name),
+    );
     const annotations: unknown[] = [];
     for (const c of testChecks) {
       try {
@@ -111,9 +113,6 @@ export class CiStatusTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

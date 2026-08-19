@@ -14,7 +14,8 @@ function secret(env: Env, key: string): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined;
 }
 
-const ACTION_VERBS = /\b(add|fix|update|remove|create|send|call|schedule|review|approve|build|deploy|implement|refactor|document|investigate|follow up|follow-up|reach out|test|confirm|decide|share|prepare|file|submit|report|contact|email|notify)\b/gi;
+const ACTION_VERBS =
+  /\b(add|fix|update|remove|create|send|call|schedule|review|approve|build|deploy|implement|refactor|document|investigate|follow up|follow-up|reach out|test|confirm|decide|share|prepare|file|submit|report|contact|email|notify)\b/gi;
 
 export class TranscriptionTool extends WorkerEntrypoint<Env> {
   async transcribeAudio(input: { audioUrl: string; language?: string }): Promise<{ text: string }> {
@@ -27,7 +28,8 @@ export class TranscriptionTool extends WorkerEntrypoint<Env> {
       if (input.language) inputs.language = input.language;
       const result = await ai.run("@cf/openai/whisper", inputs);
       const text = result?.text ?? result?.output?.text;
-      if (typeof text !== "string" || text.length === 0) throw new Error("transcription returned empty text");
+      if (typeof text !== "string" || text.length === 0)
+        throw new Error("transcription returned empty text");
       return { text };
     }
 
@@ -45,14 +47,20 @@ export class TranscriptionTool extends WorkerEntrypoint<Env> {
       if (!res.ok) throw new Error(`transcription API ${res.status}: ${text.slice(0, 300)}`);
       const data = JSON.parse(text || "{}");
       const transcript = data.text ?? data.transcript ?? data.result?.text;
-      if (typeof transcript !== "string" || transcript.length === 0) throw new Error("transcription API returned empty text");
+      if (typeof transcript !== "string" || transcript.length === 0)
+        throw new Error("transcription API returned empty text");
       return { text: transcript };
     }
 
-    throw new Error("no transcription provider configured (add an AI binding or TRANSCRIPTION_API_URL)");
+    throw new Error(
+      "no transcription provider configured (add an AI binding or TRANSCRIPTION_API_URL)",
+    );
   }
 
-  async summarizeCall(input: { transcript?: string; audioUrl?: string }): Promise<{ summary: string; actionItems?: string[] }> {
+  async summarizeCall(input: {
+    transcript?: string;
+    audioUrl?: string;
+  }): Promise<{ summary: string; actionItems?: string[] }> {
     let transcript = input.transcript ?? "";
     if (!transcript && input.audioUrl) {
       ({ text: transcript } = await this.transcribeAudio({ audioUrl: input.audioUrl }));
@@ -81,7 +89,10 @@ export class TranscriptionTool extends WorkerEntrypoint<Env> {
       }
     }
 
-    const sentences = transcript.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    const sentences = transcript
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     const summary = [
       `Call summary based on ${sentences.length} sentences:`,
       sentences.slice(0, 2).join(" "),
@@ -95,9 +106,6 @@ export class TranscriptionTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

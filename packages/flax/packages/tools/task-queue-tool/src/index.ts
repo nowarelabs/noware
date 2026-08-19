@@ -21,7 +21,11 @@ interface TaskRecord {
 const tasks = new Map<string, TaskRecord>();
 
 export class TaskQueueTool extends WorkerEntrypoint<Env> {
-  async enqueueTask(input: { task: string; payload?: unknown; priority?: number }): Promise<{ taskId: string }> {
+  async enqueueTask(input: {
+    task: string;
+    payload?: unknown;
+    priority?: number;
+  }): Promise<{ taskId: string }> {
     const record: TaskRecord = {
       id: `task-${crypto.randomUUID()}`,
       task: input.task,
@@ -43,7 +47,10 @@ export class TaskQueueTool extends WorkerEntrypoint<Env> {
     return rest;
   }
 
-  async assignTask(input: { taskId: string; agent?: string }): Promise<{ taskId: string; agent: string }> {
+  async assignTask(input: {
+    taskId: string;
+    agent?: string;
+  }): Promise<{ taskId: string; agent: string }> {
     const task = tasks.get(input.taskId);
     if (!task) throw new Error(`task ${input.taskId} not found`);
     task.agent = input.agent ?? "orchestrator";
@@ -61,7 +68,10 @@ export class TaskQueueTool extends WorkerEntrypoint<Env> {
       .map((t) => ({ ...t, payload: undefined }));
   }
 
-  async markDone(input: { taskId: string; result?: unknown }): Promise<{ taskId: string; status: TaskStatus }> {
+  async markDone(input: {
+    taskId: string;
+    result?: unknown;
+  }): Promise<{ taskId: string; status: TaskStatus }> {
     const task = tasks.get(input.taskId);
     if (!task) throw new Error(`task ${input.taskId} not found`);
     task.status = "done";
@@ -69,7 +79,10 @@ export class TaskQueueTool extends WorkerEntrypoint<Env> {
     return { taskId: task.id, status: task.status };
   }
 
-  async markFailed(input: { taskId: string; error?: string }): Promise<{ taskId: string; status: TaskStatus }> {
+  async markFailed(input: {
+    taskId: string;
+    error?: string;
+  }): Promise<{ taskId: string; status: TaskStatus }> {
     const task = tasks.get(input.taskId);
     if (!task) throw new Error(`task ${input.taskId} not found`);
     task.status = "failed";
@@ -80,9 +93,6 @@ export class TaskQueueTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

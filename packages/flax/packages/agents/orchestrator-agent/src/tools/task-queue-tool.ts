@@ -1,15 +1,15 @@
-import { defineTool } from '@nowarelabs/agents';
-import { env } from 'cloudflare:workers';
-import * as v from 'valibot';
+import { defineTool } from "@nowarelabs/agents";
+import { env } from "cloudflare:workers";
+import * as v from "valibot";
 
 type RpcCallable = Record<string, (input: unknown) => Promise<unknown>>;
 
 export const taskQueueTool = defineTool({
-  name: 'task_queue_tool',
+  name: "task_queue_tool",
   description:
-    'Call methods on the task-queue-tool service via its RPC binding (TASK_QUEUE_TOOL). Methods: enqueueTask, getTaskStatus, assignTask. Pass `method` (one of those names) and `args` (an object matching the tool method input). Enqueues are durable: a completed enqueue is replayed, never duplicated, after a crash.',
+    "Call methods on the task-queue-tool service via its RPC binding (TASK_QUEUE_TOOL). Methods: enqueueTask, getTaskStatus, assignTask. Pass `method` (one of those names) and `args` (an object matching the tool method input). Enqueues are durable: a completed enqueue is replayed, never duplicated, after a crash.",
   input: v.object({
-    method: v.picklist(['enqueueTask', 'getTaskStatus', 'assignTask']),
+    method: v.picklist(["enqueueTask", "getTaskStatus", "assignTask"]),
     args: v.optional(v.unknown()),
   }),
   output: v.any(),

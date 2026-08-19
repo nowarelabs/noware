@@ -37,7 +37,11 @@ interface TursoValue {
   value: unknown;
 }
 
-async function tursoPipeline(env: Env, sql: string, params?: unknown[]): Promise<{ cols: TursoColumn[]; rows: unknown[][] } | null> {
+async function tursoPipeline(
+  env: Env,
+  sql: string,
+  params?: unknown[],
+): Promise<{ cols: TursoColumn[]; rows: unknown[][] } | null> {
   const databaseUrl = secret(env, "DATABASE_URL");
   if (!databaseUrl) return null;
   const token = requireSecret(env, "DATABASE_TOKEN");
@@ -51,7 +55,16 @@ async function tursoPipeline(env: Env, sql: string, params?: unknown[]): Promise
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`libSQL API ${res.status}: ${text.slice(0, 300)}`);
-  const data = JSON.parse(text) as { results: { type: string; response: { type: string; result?: { cols: TursoColumn[]; rows: unknown[][] }; error?: { message: string } } }[] };
+  const data = JSON.parse(text) as {
+    results: {
+      type: string;
+      response: {
+        type: string;
+        result?: { cols: TursoColumn[]; rows: unknown[][] };
+        error?: { message: string };
+      };
+    }[];
+  };
   const execute = data.results?.[0]?.response;
   if (execute.error) throw new Error(`SQL error: ${execute.error.message}`);
   return execute.result ?? null;
@@ -68,9 +81,16 @@ function rowsToObjects(cols: TursoColumn[], rows: unknown[][]): unknown[] {
   });
 }
 
-async function runD1(env: Env, sql: string, params?: unknown[]): Promise<{ results: unknown[]; changes: number }> {
+async function runD1(
+  env: Env,
+  sql: string,
+  params?: unknown[],
+): Promise<{ results: unknown[]; changes: number }> {
   const db = env.DB as D1Like | undefined;
-  if (!db) throw new Error("no database configured (set DATABASE_URL + DATABASE_TOKEN or add a D1 binding)");
+  if (!db)
+    throw new Error(
+      "no database configured (set DATABASE_URL + DATABASE_TOKEN or add a D1 binding)",
+    );
   const stmt = db.prepare(sql);
   if (params && params.length > 0) {
     const bound = stmt.bind(...params);
@@ -89,16 +109,26 @@ export class DbClientTool extends WorkerEntrypoint<Env> {
   async query(input: { sql: string; params?: unknown[]; database?: string }): Promise<unknown> {
     const turso = await tursoPipeline(this.env, input.sql, input.params);
     if (turso) {
-      return { database: input.database ?? "turso", rows: rowsToObjects(turso.cols, turso.rows), rowCount: turso.rows.length };
+      return {
+        database: input.database ?? "turso",
+        rows: rowsToObjects(turso.cols, turso.rows),
+        rowCount: turso.rows.length,
+      };
     }
     if (this.env.DB) {
       const { results, changes } = await runD1(this.env, input.sql, input.params);
       return { database: input.database ?? "d1", rows: results, rowCount: results.length, changes };
     }
-    throw new Error("no database configured (set DATABASE_URL + DATABASE_TOKEN or add a D1 binding)");
+    throw new Error(
+      "no database configured (set DATABASE_URL + DATABASE_TOKEN or add a D1 binding)",
+    );
   }
 
-  async execute(input: { sql: string; params?: unknown[]; database?: string }): Promise<{ rowsAffected: number }> {
+  async execute(input: {
+    sql: string;
+    params?: unknown[];
+    database?: string;
+  }): Promise<{ rowsAffected: number }> {
     const turso = await tursoPipeline(this.env, input.sql, input.params);
     if (turso) {
       const changes = turso.cols.find((c) => c.name === "changes") ? null : 0;
@@ -115,15 +145,14 @@ export class DbClientTool extends WorkerEntrypoint<Env> {
       const { changes } = await runD1(this.env, input.sql, input.params);
       return { rowsAffected: changes };
     }
-    throw new Error("no database configured (set DATABASE_URL + DATABASE_TOKEN or add a D1 binding)");
+    throw new Error(
+      "no database configured (set DATABASE_URL + DATABASE_TOKEN or add a D1 binding)",
+    );
   }
 }
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

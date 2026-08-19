@@ -1,10 +1,10 @@
-import { setProvider } from '@nowarelabs/agents';
-import { createAgentRouter } from '@nowarelabs/agents';
-import { ollamaProvider } from '@nowarelabs/ollama-provider';
-import type { D1Database } from '@cloudflare/workers-types';
-import { Hono } from 'hono';
+import { setProvider } from "@nowarelabs/agents";
+import { createAgentRouter } from "@nowarelabs/agents";
+import { ollamaProvider } from "@nowarelabs/ollama-provider";
+import type { D1Database } from "@cloudflare/workers-types";
+import { Hono } from "hono";
 
-import { IssueTriage } from './agents/issue-triage';
+import { IssueTriage } from "./agents/issue-triage";
 
 interface FlaxEnv {
   FLAX_DB?: D1Database;
@@ -13,7 +13,7 @@ interface FlaxEnv {
 
 setProvider(ollamaProvider());
 
-const AGENT_PATH = '/agents/support';
+const AGENT_PATH = "/agents/support";
 
 let registryReady: Promise<void> | null = null;
 
@@ -36,7 +36,7 @@ function ensureRegistry(db: D1Database): Promise<void> {
 const app = new Hono();
 
 // Register every instance id we see traffic for, so dashboards can list them.
-app.use('*', async (c, next) => {
+app.use("*", async (c, next) => {
   const db = (c.env as FlaxEnv).FLAX_DB;
   const path = new URL(c.req.url).pathname;
   const match = path.match(new RegExp(`^${AGENT_PATH}/([^/]+)`));
@@ -63,12 +63,12 @@ app.get(AGENT_PATH, async (c) => {
   if (!db) return c.json({ instances: [] });
   await ensureRegistry(db);
   const { results } = await db
-    .prepare('SELECT id, created_at, last_seen_at FROM flax_instances ORDER BY last_seen_at DESC')
+    .prepare("SELECT id, created_at, last_seen_at FROM flax_instances ORDER BY last_seen_at DESC")
     .all<{ id: string; created_at: number; last_seen_at: number }>();
   return c.json({ instances: results });
 });
 
 app.route(AGENT_PATH, createAgentRouter(IssueTriage));
-app.get('/api/ping', (c: any) => c.text('pong'));
+app.get("/api/ping", (c: any) => c.text("pong"));
 
 export default app;

@@ -7,10 +7,14 @@ interface Env {
 
 const manifest = new Map<string, { name: string; version: string; scope: string }>();
 
-async function resolveVersion(name: string, version?: string): Promise<{ version: string; latest: string }> {
+async function resolveVersion(
+  name: string,
+  version?: string,
+): Promise<{ version: string; latest: string }> {
   const encoded = encodeURIComponent(name).replace(/^%40/, "@");
   const res = await fetch(`https://registry.npmjs.org/${encoded}`);
-  if (!res.ok) throw new Error(`npm registry ${res.status} for ${name}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok)
+    throw new Error(`npm registry ${res.status} for ${name}: ${(await res.text()).slice(0, 300)}`);
   const data: any = await res.json();
   const latest = data["dist-tags"]?.latest ?? "0.0.0";
   const target = version ?? latest;
@@ -18,22 +22,42 @@ async function resolveVersion(name: string, version?: string): Promise<{ version
 }
 
 export class PackageManagerTool extends WorkerEntrypoint<Env> {
-  async installDependency(input: { package: string; version?: string; scope?: string }): Promise<{ installed: string }> {
+  async installDependency(input: {
+    package: string;
+    version?: string;
+    scope?: string;
+  }): Promise<{ installed: string }> {
     const { version } = await resolveVersion(input.package, input.version);
-    manifest.set(input.package, { name: input.package, version, scope: input.scope ?? "dependencies" });
+    manifest.set(input.package, {
+      name: input.package,
+      version,
+      scope: input.scope ?? "dependencies",
+    });
     return { installed: `${input.package}@${version}` };
   }
 
-  async updateDependency(input: { package: string; version?: string; scope?: string }): Promise<{ updated: string }> {
+  async updateDependency(input: {
+    package: string;
+    version?: string;
+    scope?: string;
+  }): Promise<{ updated: string }> {
     const { version } = await resolveVersion(input.package, input.version);
-    manifest.set(input.package, { name: input.package, version, scope: input.scope ?? "dependencies" });
+    manifest.set(input.package, {
+      name: input.package,
+      version,
+      scope: input.scope ?? "dependencies",
+    });
     return { updated: `${input.package}@${version}` };
   }
 
   async auditDependencies(input: { scope?: string; fix?: boolean }): Promise<unknown> {
     const deps = [...manifest.values()].filter((d) => !input.scope || d.scope === input.scope);
     if (deps.length === 0) {
-      return { vulnerabilities: 0, advisories: [], note: "no dependencies tracked; install dependencies first" };
+      return {
+        vulnerabilities: 0,
+        advisories: [],
+        note: "no dependencies tracked; install dependencies first",
+      };
     }
 
     const bulk: Record<string, string[]> = {};
@@ -45,7 +69,11 @@ export class PackageManagerTool extends WorkerEntrypoint<Env> {
     const res = await fetch(`https://registry.npmjs.org/-/npm/v1/security/advisories/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [JSON.stringify(deps.map((d) => d.name))]: deps.map((d) => d.version.replace(/[^0-9.]/g, "")) }),
+      body: JSON.stringify({
+        [JSON.stringify(deps.map((d) => d.name))]: deps.map((d) =>
+          d.version.replace(/[^0-9.]/g, ""),
+        ),
+      }),
     }).catch(() => null);
 
     let advisories: any[] = [];
@@ -93,9 +121,6 @@ export class PackageManagerTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

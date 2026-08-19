@@ -41,7 +41,11 @@ function dayStart(iso: string): number {
 }
 
 export class AnalyticsTool extends WorkerEntrypoint<Env> {
-  async getFunnel(input: { eventSteps: string[]; startDate: string; endDate: string }): Promise<unknown> {
+  async getFunnel(input: {
+    eventSteps: string[];
+    startDate: string;
+    endDate: string;
+  }): Promise<unknown> {
     if (secret(this.env, "ANALYTICS_BASE_URL")) {
       return analyticsFetch(this.env, { type: "funnel", ...input });
     }
@@ -79,7 +83,11 @@ export class AnalyticsTool extends WorkerEntrypoint<Env> {
       const day = start + i;
       const matching = events.filter((e) => dayStart(e.timestamp) === day);
       const users = new Set(matching.map((e) => e.userId ?? e.event)).size;
-      cohort.push({ dayOffset: i, date: new Date(day * 86400000).toISOString().slice(0, 10), activeUsers: users });
+      cohort.push({
+        dayOffset: i,
+        date: new Date(day * 86400000).toISOString().slice(0, 10),
+        activeUsers: users,
+      });
     }
     return {
       startDate: input.startDate,
@@ -110,17 +118,24 @@ export class AnalyticsTool extends WorkerEntrypoint<Env> {
     };
   }
 
-  async trackEvent(input: { event: string; userId?: string; properties?: unknown; timestamp?: string }): Promise<{ received: boolean }> {
-    events.push({ event: input.event, userId: input.userId, properties: (input.properties ?? {}) as Record<string, unknown>, timestamp: input.timestamp ?? new Date().toISOString() });
+  async trackEvent(input: {
+    event: string;
+    userId?: string;
+    properties?: unknown;
+    timestamp?: string;
+  }): Promise<{ received: boolean }> {
+    events.push({
+      event: input.event,
+      userId: input.userId,
+      properties: (input.properties ?? {}) as Record<string, unknown>,
+      timestamp: input.timestamp ?? new Date().toISOString(),
+    });
     return { received: true };
   }
 }
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

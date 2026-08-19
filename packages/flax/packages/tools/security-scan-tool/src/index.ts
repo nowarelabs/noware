@@ -61,7 +61,9 @@ interface DastFinding {
 export class SecurityScanTool extends WorkerEntrypoint<Env> {
   async runSast(input: { repo: string; ref?: string }): Promise<unknown> {
     const ref = input.ref;
-    const path = `/repos/${input.repo}/code-scanning/alerts?state=open` + (ref ? `&ref=${encodeURIComponent(ref)}` : "");
+    const path =
+      `/repos/${input.repo}/code-scanning/alerts?state=open` +
+      (ref ? `&ref=${encodeURIComponent(ref)}` : "");
     const alerts = await ghFetch(this.env, path);
     const mapped = (alerts ?? []).map((a: any) => ({
       number: a.number,
@@ -98,13 +100,18 @@ export class SecurityScanTool extends WorkerEntrypoint<Env> {
     try {
       res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(15000) });
     } catch (err) {
-      throw new Error(`DAST could not reach ${url}: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `DAST could not reach ${url}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
     for (const [header, label] of Object.entries(SECURITY_HEADERS)) {
       if (!res.headers.get(header)) {
         findings.push({
-          severity: header === "strict-transport-security" || header === "content-security-policy" ? "high" : "medium",
+          severity:
+            header === "strict-transport-security" || header === "content-security-policy"
+              ? "high"
+              : "medium",
           title: `Missing security header: ${label}`,
           detail: `Response from ${url} did not include the ${header} header.`,
           recommendation: `Add "${header}" to the response headers.`,
@@ -113,25 +120,44 @@ export class SecurityScanTool extends WorkerEntrypoint<Env> {
     }
 
     const singleCookie = res.headers.get("set-cookie");
-    const setCookie = res.headers.getSetCookie ? res.headers.getSetCookie() : singleCookie ? [singleCookie] : [];
+    const setCookie = res.headers.getSetCookie
+      ? res.headers.getSetCookie()
+      : singleCookie
+        ? [singleCookie]
+        : [];
     for (const cookie of setCookie) {
       if (!/;\s*HttpOnly/i.test(cookie)) {
-        findings.push({ severity: "low", title: "Cookie without HttpOnly flag", detail: "A Set-Cookie header lacks HttpOnly.", recommendation: "Set the HttpOnly flag on session cookies." });
+        findings.push({
+          severity: "low",
+          title: "Cookie without HttpOnly flag",
+          detail: "A Set-Cookie header lacks HttpOnly.",
+          recommendation: "Set the HttpOnly flag on session cookies.",
+        });
       }
       if (!/;\s*Secure/i.test(cookie)) {
-        findings.push({ severity: "low", title: "Cookie without Secure flag", detail: "A Set-Cookie header lacks Secure.", recommendation: "Set the Secure flag on cookies." });
+        findings.push({
+          severity: "low",
+          title: "Cookie without Secure flag",
+          detail: "A Set-Cookie header lacks Secure.",
+          recommendation: "Set the Secure flag on cookies.",
+        });
       }
     }
 
     for (const probe of DAST_PROBES) {
       try {
-        const probeRes = await fetch(new URL(probe, url).toString(), { signal: AbortSignal.timeout(10000) });
+        const probeRes = await fetch(new URL(probe, url).toString(), {
+          signal: AbortSignal.timeout(10000),
+        });
         if (probeRes.ok) {
           findings.push({
             severity: probe === "/.env" || probe === "/.git/config" ? "critical" : "low",
             title: `Exposed path: ${probe}`,
             detail: `GET ${probe} returned HTTP ${probeRes.status}.`,
-            recommendation: probe === "/robots.txt" || probe === "/.well-known/security.txt" ? "None; this file is intended to be public." : "Restrict access or remove this file from the web root.",
+            recommendation:
+              probe === "/robots.txt" || probe === "/.well-known/security.txt"
+                ? "None; this file is intended to be public."
+                : "Restrict access or remove this file from the web root.",
           });
         }
       } catch {
@@ -144,13 +170,17 @@ export class SecurityScanTool extends WorkerEntrypoint<Env> {
       httpStatus: res.status,
       findings,
       findingCount: findings.length,
-      highSeverityCount: findings.filter((f) => f.severity === "high" || f.severity === "critical").length,
+      highSeverityCount: findings.filter((f) => f.severity === "high" || f.severity === "critical")
+        .length,
     };
   }
 
   async scanDependencies(input: { repo?: string; manifestPath?: string }): Promise<unknown> {
     const repo = input.repo ?? requireSecret(this.env, "GITHUB_REPO");
-    const alerts = await ghFetch(this.env, `/repos/${repo}/dependabot/alerts?state=open&per_page=100`);
+    const alerts = await ghFetch(
+      this.env,
+      `/repos/${repo}/dependabot/alerts?state=open&per_page=100`,
+    );
     const mapped = (alerts ?? []).map((a: any) => ({
       number: a.number,
       state: a.state,
@@ -178,7 +208,10 @@ export class SecurityScanTool extends WorkerEntrypoint<Env> {
   }
 
   async scanSecrets(input: { repo: string; ref?: string }): Promise<unknown> {
-    const alerts = await ghFetch(this.env, `/repos/${input.repo}/secret-scanning/alerts?state=open&per_page=100`);
+    const alerts = await ghFetch(
+      this.env,
+      `/repos/${input.repo}/secret-scanning/alerts?state=open&per_page=100`,
+    );
     const mapped = (alerts ?? []).map((a: any) => ({
       number: a.number,
       state: a.state,
@@ -198,9 +231,6 @@ export class SecurityScanTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

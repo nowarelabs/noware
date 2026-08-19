@@ -40,11 +40,23 @@ function seedTickets(env: Env): void {
 }
 
 function linearPriority(p?: string): number {
-  const map: Record<string, number> = { highest: 1, urgent: 1, high: 2, medium: 3, low: 4, lowest: 4, none: 0 };
-  return p ? map[p.toLowerCase()] ?? 3 : 3;
+  const map: Record<string, number> = {
+    highest: 1,
+    urgent: 1,
+    high: 2,
+    medium: 3,
+    low: 4,
+    lowest: 4,
+    none: 0,
+  };
+  return p ? (map[p.toLowerCase()] ?? 3) : 3;
 }
 
-async function createBacklogIssue(env: Env, projectKey: string, ticket: Ticket): Promise<{ issueKey: string }> {
+async function createBacklogIssue(
+  env: Env,
+  projectKey: string,
+  ticket: Ticket,
+): Promise<{ issueKey: string }> {
   const linearToken = secret(env, "LINEAR_API_KEY");
   const jiraBase = secret(env, "JIRA_BASE_URL");
 
@@ -57,15 +69,43 @@ async function createBacklogIssue(env: Env, projectKey: string, ticket: Ticket):
         body: JSON.stringify({ query, variables }),
       });
       const data: any = await res.json();
-      if (!res.ok || data.errors?.length) throw new Error(data.errors?.[0]?.message ?? `Linear API ${res.status}`);
+      if (!res.ok || data.errors?.length)
+        throw new Error(data.errors?.[0]?.message ?? `Linear API ${res.status}`);
       return data.data;
     };
-    const teams = await graphql(`query($key: String!){ teams(filter: { key: { eq: $key } }) { nodes { id } } }`, { key: projectKey });
+    const teams = await graphql(
+      `
+        query ($key: String!) {
+          teams(filter: { key: { eq: $key } }) {
+            nodes {
+              id
+            }
+          }
+        }
+      `,
+      { key: projectKey },
+    );
     const team = teams.teams?.nodes?.[0];
     if (!team) throw new Error(`Linear team "${projectKey}" not found`);
     const res = await graphql(
-      `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { identifier } } }`,
-      { input: { teamId: team.id, title: ticket.subject, description: ticket.description ?? "", priority: linearPriority(ticket.priority) } },
+      `
+        mutation ($input: IssueCreateInput!) {
+          issueCreate(input: $input) {
+            success
+            issue {
+              identifier
+            }
+          }
+        }
+      `,
+      {
+        input: {
+          teamId: team.id,
+          title: ticket.subject,
+          description: ticket.description ?? "",
+          priority: linearPriority(ticket.priority),
+        },
+      },
     );
     return { issueKey: res.issueCreate.issue.identifier };
   }
@@ -73,7 +113,10 @@ async function createBacklogIssue(env: Env, projectKey: string, ticket: Ticket):
   if (jiraBase) {
     const token = requireSecret(env, "JIRA_API_TOKEN");
     const email = secret(env, "JIRA_EMAIL");
-    const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
     headers.Authorization = email ? `Basic ${btoa(`${email}:${token}`)}` : `Bearer ${token}`;
     const res = await fetch(`${jiraBase.replace(/\/$/, "")}/rest/api/3/issue`, {
       method: "POST",
@@ -107,12 +150,16 @@ export class SupportTicketsTool extends WorkerEntrypoint<Env> {
       .slice(0, limit);
   }
 
-  async createBacklogItemFromTicket(input: { ticketId: string; projectKey?: string }): Promise<{ issueKey: string }> {
+  async createBacklogItemFromTicket(input: {
+    ticketId: string;
+    projectKey?: string;
+  }): Promise<{ issueKey: string }> {
     seedTickets(this.env);
     const ticket = tickets.get(input.ticketId);
     if (!ticket) throw new Error(`ticket ${input.ticketId} not found`);
     const projectKey = input.projectKey ?? secret(this.env, "DEFAULT_PROJECT_KEY");
-    if (!projectKey) throw new Error("projectKey is required and DEFAULT_PROJECT_KEY is not configured");
+    if (!projectKey)
+      throw new Error("projectKey is required and DEFAULT_PROJECT_KEY is not configured");
     const { issueKey } = await createBacklogIssue(this.env, projectKey, ticket);
     ticket.status = "converted";
     return { issueKey };
@@ -121,9 +168,6 @@ export class SupportTicketsTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

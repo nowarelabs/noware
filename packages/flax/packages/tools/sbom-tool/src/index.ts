@@ -35,7 +35,11 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
   }
 }
 
-async function readRepoFile(env: Env, repo: string, path: string): Promise<{ content: string; encoding: string } | null> {
+async function readRepoFile(
+  env: Env,
+  repo: string,
+  path: string,
+): Promise<{ content: string; encoding: string } | null> {
   try {
     const res = await ghFetch(env, `/repos/${repo}/contents/${path}`);
     if (!res || typeof res.content !== "string") return null;
@@ -61,7 +65,10 @@ async function registryLicense(pkg: string, version: string): Promise<string | n
   }
 }
 
-function spdxSbom(deps: { name: string; version: string; license?: string | null }[], root: { name: string; version: string }): unknown {
+function spdxSbom(
+  deps: { name: string; version: string; license?: string | null }[],
+  root: { name: string; version: string },
+): unknown {
   const packages = [
     {
       SPDXID: "SPDXRef-Package-0",
@@ -110,7 +117,10 @@ function spdxSbom(deps: { name: string; version: string; license?: string | null
   };
 }
 
-function cyclonedxSbom(deps: { name: string; version: string; license?: string | null }[], root: { name: string; version: string }): unknown {
+function cyclonedxSbom(
+  deps: { name: string; version: string; license?: string | null }[],
+  root: { name: string; version: string },
+): unknown {
   return {
     bomFormat: "CycloneDX",
     specVersion: "1.5",
@@ -141,7 +151,12 @@ export class SbomTool extends WorkerEntrypoint<Env> {
     const repo = input.repo ?? requireSecret(this.env, "GITHUB_REPO");
     const format = (input.format ?? "spdx").toLowerCase();
 
-    const candidates = ["package.json", "packages/package.json", "requirements.txt", "pyproject.toml"];
+    const candidates = [
+      "package.json",
+      "packages/package.json",
+      "requirements.txt",
+      "pyproject.toml",
+    ];
     let manifest: { path: string; content: string } | null = null;
     for (const path of candidates) {
       const file = await readRepoFile(this.env, repo, path);
@@ -150,7 +165,8 @@ export class SbomTool extends WorkerEntrypoint<Env> {
         break;
       }
     }
-    if (!manifest) throw new Error(`no dependency manifest found in ${repo} (tried ${candidates.join(", ")})`);
+    if (!manifest)
+      throw new Error(`no dependency manifest found in ${repo} (tried ${candidates.join(", ")})`);
 
     let deps: { name: string; version: string; license?: string | null }[] = [];
     let root = { name: repo, version: "0.0.0" };
@@ -158,10 +174,22 @@ export class SbomTool extends WorkerEntrypoint<Env> {
     if (manifest.path.endsWith("package.json")) {
       const pkg = JSON.parse(manifest.content);
       root = { name: pkg.name ?? repo, version: pkg.version ?? "0.0.0" };
-      const all = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}), ...(pkg.optionalDependencies ?? {}) };
+      const all = {
+        ...(pkg.dependencies ?? {}),
+        ...(pkg.devDependencies ?? {}),
+        ...(pkg.optionalDependencies ?? {}),
+      };
       deps = Object.entries(all).map(([name, version]) => ({ name, version: String(version) }));
-      const settled = await Promise.allSettled(deps.slice(0, 50).map((d) => registryLicense(d.name, d.version.replace(/[^0-9.]/g, ""))));
-      deps = deps.map((d, i) => ({ ...d, license: i < settled.length && settled[i].status === "fulfilled" ? (settled[i] as PromiseFulfilledResult<string | null>).value : null }));
+      const settled = await Promise.allSettled(
+        deps.slice(0, 50).map((d) => registryLicense(d.name, d.version.replace(/[^0-9.]/g, ""))),
+      );
+      deps = deps.map((d, i) => ({
+        ...d,
+        license:
+          i < settled.length && settled[i].status === "fulfilled"
+            ? (settled[i] as PromiseFulfilledResult<string | null>).value
+            : null,
+      }));
     } else {
       for (const line of manifest.content.split("\n")) {
         const t = line.trim();
@@ -183,9 +211,6 @@ export class SbomTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

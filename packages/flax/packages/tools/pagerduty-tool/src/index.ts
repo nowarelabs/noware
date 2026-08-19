@@ -47,7 +47,11 @@ async function resolveServiceId(env: Env, service?: string): Promise<string> {
 }
 
 export class PagerdutyTool extends WorkerEntrypoint<Env> {
-  async createIncident(input: { title: string; severity?: string; service?: string }): Promise<{ incidentId: string }> {
+  async createIncident(input: {
+    title: string;
+    severity?: string;
+    service?: string;
+  }): Promise<{ incidentId: string }> {
     const serviceId = await resolveServiceId(this.env, input.service);
     const urgency = input.severity === "critical" ? "high" : "low";
     const res = await pdFetch(this.env, "/incidents", {
@@ -58,7 +62,10 @@ export class PagerdutyTool extends WorkerEntrypoint<Env> {
           title: input.title,
           service: { id: serviceId, type: "service_reference" },
           urgency,
-          body: { type: "incident_body", details: `Created by flax pagerduty-tool with severity ${input.severity ?? "medium"}.` },
+          body: {
+            type: "incident_body",
+            details: `Created by flax pagerduty-tool with severity ${input.severity ?? "medium"}.`,
+          },
         },
       }),
     });
@@ -71,8 +78,13 @@ export class PagerdutyTool extends WorkerEntrypoint<Env> {
       if (isId(input.schedule)) {
         path = `/oncalls?schedule_ids[]=${input.schedule}`;
       } else {
-        const schedules = await pdFetch(this.env, `/schedules?query=${encodeURIComponent(input.schedule)}`);
-        const match = schedules.schedules?.find((s: any) => s.name.toLowerCase() === input.schedule!.toLowerCase());
+        const schedules = await pdFetch(
+          this.env,
+          `/schedules?query=${encodeURIComponent(input.schedule)}`,
+        );
+        const match = schedules.schedules?.find(
+          (s: any) => s.name.toLowerCase() === input.schedule!.toLowerCase(),
+        );
         if (!match) throw new Error(`PagerDuty schedule "${input.schedule}" not found`);
         path = `/oncalls?schedule_ids[]=${match.id}`;
       }
@@ -88,7 +100,10 @@ export class PagerdutyTool extends WorkerEntrypoint<Env> {
     }));
   }
 
-  async resolveIncident(input: { incidentId: string; resolution?: string }): Promise<{ resolved: boolean }> {
+  async resolveIncident(input: {
+    incidentId: string;
+    resolution?: string;
+  }): Promise<{ resolved: boolean }> {
     await pdFetch(this.env, `/incidents/${input.incidentId}`, {
       method: "PUT",
       body: JSON.stringify({
@@ -105,9 +120,6 @@ export class PagerdutyTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

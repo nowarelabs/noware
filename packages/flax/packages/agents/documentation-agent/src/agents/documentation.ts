@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -16,15 +16,15 @@ import {
   useSubagent,
   useTool,
   bash,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
-import { Bash, InMemoryFs } from 'just-bash';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
+import { Bash, InMemoryFs } from "just-bash";
 
-import { confluenceNotionTool } from '../tools/confluence-notion-tool';
-import { docsGeneratorTool } from '../tools/docs-generator-tool';
+import { confluenceNotionTool } from "../tools/confluence-notion-tool";
+import { docsGeneratorTool } from "../tools/docs-generator-tool";
 
 interface DocsState {
-  status: 'idle' | 'writing' | 'done';
+  status: "idle" | "writing" | "done";
   page: string;
 }
 
@@ -33,23 +33,23 @@ function DocsReviewer() {
 }
 
 export function Documentation() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'low',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Write task-oriented documentation organized by user journey: getting started, guides, reference, troubleshooting. Keep headings, cross-links, and terminology consistent. Use active voice, concrete examples, and the minimum words needed. Keep the audience explicit, prefer working examples over abstract prose, and never publish a page that has not been reviewed by the docs-reviewer subagent. Page creates and updates are durable: they are recorded and replayed, never duplicated, after a crash.',
+    "Write task-oriented documentation organized by user journey: getting started, guides, reference, troubleshooting. Keep headings, cross-links, and terminology consistent. Use active voice, concrete examples, and the minimum words needed. Keep the audience explicit, prefer working examples over abstract prose, and never publish a page that has not been reviewed by the docs-reviewer subagent. Page creates and updates are durable: they are recorded and replayed, never duplicated, after a crash.",
   );
 
-  const [docs, setDocs] = usePersistentState<DocsState>('docs', {
-    status: 'idle',
-    page: '',
+  const [docs, setDocs] = usePersistentState<DocsState>("docs", {
+    status: "idle",
+    page: "",
   });
 
-  const writeDocs = useDataWriter('docs', {
+  const writeDocs = useDataWriter("docs", {
     schema: v.object({
-      status: v.picklist(['idle', 'writing', 'done']),
+      status: v.picklist(["idle", "writing", "done"]),
       page: v.string(),
       audience: v.string(),
     }),
@@ -59,11 +59,15 @@ export function Documentation() {
   const initialData = useInitialData<{ page?: string; audience?: string }>();
 
   useAgentStart(({ log }) => {
-    const page = docs.page || initialData?.page || (delivery.kind === 'signal' ? delivery.attributes?.page : undefined) || 'untitled';
-    const audience = initialData?.audience || 'end users';
-    log.info('docs.started', { page, audience });
-    setDocs((prev) => ({ ...prev, status: 'writing', page }));
-    writeDocs({ status: 'writing', page, audience });
+    const page =
+      docs.page ||
+      initialData?.page ||
+      (delivery.kind === "signal" ? delivery.attributes?.page : undefined) ||
+      "untitled";
+    const audience = initialData?.audience || "end users";
+    log.info("docs.started", { page, audience });
+    setDocs((prev) => ({ ...prev, status: "writing", page }));
+    writeDocs({ status: "writing", page, audience });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -74,16 +78,17 @@ export function Documentation() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('docs.finished', { toolCalls: response.toolCalls.length });
-    setDocs((prev) => ({ ...prev, status: 'done' }));
-    writeDocs({ status: 'done', page: docs.page, audience: initialData?.audience || 'end users' });
+    log.info("docs.finished", { toolCalls: response.toolCalls.length });
+    setDocs((prev) => ({ ...prev, status: "done" }));
+    writeDocs({ status: "done", page: docs.page, audience: initialData?.audience || "end users" });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
   useSubagent({
-    name: 'docs-reviewer',
-    description: 'Reviews a documentation draft for clarity, examples, and information-architecture consistency before it is published.',
+    name: "docs-reviewer",
+    description:
+      "Reviews a documentation draft for clarity, examples, and information-architecture consistency before it is published.",
     agent: DocsReviewer,
   });
   useTool(confluenceNotionTool);

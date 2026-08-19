@@ -44,7 +44,7 @@ A conversation-first human interface for the Flax build system. The dashboard
     pending HITL widgets inline.
   - **Pipeline** renders the 10-stage build rail
     (`requirements → architecture → design → coding → review → qa → security →
-    devops → release → sre-docs`) with a stage log.
+devops → release → sre-docs`) with a stage log.
   - **Artifacts** lists PRs, issues, docs, diagrams and reports extracted from
     tool outputs.
 - **HITL widgets** (`src/hitl.tsx`) — reusable decision cards: `approve-reject`,
@@ -67,24 +67,24 @@ token minted from the stored App credentials (cached in D1), falling back to a
 Each agent's `wrangler.jsonc` declares `services` bindings (env binding →
 service → entrypoint). The orchestrator additionally binds to every other agent.
 
-| Agent | Tool bindings | Agent bindings |
-| --- | --- | --- |
-| product-requirements-agent | `JIRA_LINEAR_TOOL`, `CONFLUENCE_NOTION_TOOL`, `TRANSCRIPTION_TOOL`, `VECTOR_STORE_TOOL` | — |
-| business-data-analyst-agent | `WEB_SEARCH_TOOL`, `ANALYTICS_TOOL`, `DB_CLIENT_TOOL` | — |
-| solutions-architect-agent | `DIAGRAMMING_TOOL`, `CLOUD_PRICING_TOOL`, `IAC_TOOL` | — |
-| ux-ui-designer-agent | `FIGMA_TOOL`, `IMAGE_GEN_TOOL`, `ACCESSIBILITY_CHECKER_TOOL` | — |
-| coding-agent | `GITHUB_TOOL`, `PACKAGE_MANAGER_TOOL`, `LINT_LANGSERVER_TOOL`, `SANDBOX_EXEC_TOOL` | — |
-| database-data-engineer-agent | `DB_CLIENT_TOOL`, `MIGRATIONS_TOOL`, `QUERY_PROFILER_TOOL` | — |
-| code-review-agent | `GITHUB_TOOL`, `STATIC_ANALYSIS_TOOL`, `CI_STATUS_TOOL` | — |
-| qa-test-agent | `TEST_RUNNER_TOOL`, `CI_STATUS_TOOL`, `COVERAGE_TOOL` | — |
-| security-appsec-agent | `SECURITY_SCAN_TOOL`, `SBOM_TOOL`, `PENTEST_TOOL` | — |
-| devops-cicd-agent | `CICD_PIPELINE_TOOL`, `CONTAINERS_TOOL`, `IAC_TOOL` | — |
-| release-manager-agent | `FEATURE_FLAGS_TOOL`, `GITHUB_TOOL`, `CHANGELOG_TOOL` | — |
-| sre-observability-agent | `MONITORING_TOOL`, `PAGERDUTY_TOOL`, `LOG_AGGREGATION_TOOL` | — |
-| documentation-agent | `DOCS_GENERATOR_TOOL`, `CONFLUENCE_NOTION_TOOL` | — |
-| support-feedback-agent | `SUPPORT_TICKETS_TOOL`, `SENTIMENT_ANALYSIS_TOOL`, `JIRA_LINEAR_TOOL` | — |
-| support-agent | `JIRA_LINEAR_TOOL`, `SUPPORT_TICKETS_TOOL`, `SENTIMENT_ANALYSIS_TOOL`, `WEB_SEARCH_TOOL` | — |
-| orchestrator-agent | `TASK_QUEUE_TOOL`, `JIRA_LINEAR_TOOL` | `PRODUCT_REQUIREMENTS_AGENT`, `BUSINESS_DATA_ANALYST_AGENT`, `SOLUTIONS_ARCHITECT_AGENT`, `UX_UI_DESIGNER_AGENT`, `CODING_AGENT`, `DATABASE_DATA_ENGINEER_AGENT`, `CODE_REVIEW_AGENT`, `QA_TEST_AGENT`, `SECURITY_APPSEC_AGENT`, `DEVOPS_CICD_AGENT`, `RELEASE_MANAGER_AGENT`, `SRE_OBSERVABILITY_AGENT`, `DOCUMENTATION_AGENT`, `SUPPORT_FEEDBACK_AGENT`, `SUPPORT_AGENT` |
+| Agent                        | Tool bindings                                                                            | Agent bindings                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| product-requirements-agent   | `JIRA_LINEAR_TOOL`, `CONFLUENCE_NOTION_TOOL`, `TRANSCRIPTION_TOOL`, `VECTOR_STORE_TOOL`  | —                                                                                                                                                                                                                                                                                                                                                                          |
+| business-data-analyst-agent  | `WEB_SEARCH_TOOL`, `ANALYTICS_TOOL`, `DB_CLIENT_TOOL`                                    | —                                                                                                                                                                                                                                                                                                                                                                          |
+| solutions-architect-agent    | `DIAGRAMMING_TOOL`, `CLOUD_PRICING_TOOL`, `IAC_TOOL`                                     | —                                                                                                                                                                                                                                                                                                                                                                          |
+| ux-ui-designer-agent         | `FIGMA_TOOL`, `IMAGE_GEN_TOOL`, `ACCESSIBILITY_CHECKER_TOOL`                             | —                                                                                                                                                                                                                                                                                                                                                                          |
+| coding-agent                 | `GITHUB_TOOL`, `PACKAGE_MANAGER_TOOL`, `LINT_LANGSERVER_TOOL`, `SANDBOX_EXEC_TOOL`       | —                                                                                                                                                                                                                                                                                                                                                                          |
+| database-data-engineer-agent | `DB_CLIENT_TOOL`, `MIGRATIONS_TOOL`, `QUERY_PROFILER_TOOL`                               | —                                                                                                                                                                                                                                                                                                                                                                          |
+| code-review-agent            | `GITHUB_TOOL`, `STATIC_ANALYSIS_TOOL`, `CI_STATUS_TOOL`                                  | —                                                                                                                                                                                                                                                                                                                                                                          |
+| qa-test-agent                | `TEST_RUNNER_TOOL`, `CI_STATUS_TOOL`, `COVERAGE_TOOL`                                    | —                                                                                                                                                                                                                                                                                                                                                                          |
+| security-appsec-agent        | `SECURITY_SCAN_TOOL`, `SBOM_TOOL`, `PENTEST_TOOL`                                        | —                                                                                                                                                                                                                                                                                                                                                                          |
+| devops-cicd-agent            | `CICD_PIPELINE_TOOL`, `CONTAINERS_TOOL`, `IAC_TOOL`                                      | —                                                                                                                                                                                                                                                                                                                                                                          |
+| release-manager-agent        | `FEATURE_FLAGS_TOOL`, `GITHUB_TOOL`, `CHANGELOG_TOOL`                                    | —                                                                                                                                                                                                                                                                                                                                                                          |
+| sre-observability-agent      | `MONITORING_TOOL`, `PAGERDUTY_TOOL`, `LOG_AGGREGATION_TOOL`                              | —                                                                                                                                                                                                                                                                                                                                                                          |
+| documentation-agent          | `DOCS_GENERATOR_TOOL`, `CONFLUENCE_NOTION_TOOL`                                          | —                                                                                                                                                                                                                                                                                                                                                                          |
+| support-feedback-agent       | `SUPPORT_TICKETS_TOOL`, `SENTIMENT_ANALYSIS_TOOL`, `JIRA_LINEAR_TOOL`                    | —                                                                                                                                                                                                                                                                                                                                                                          |
+| support-agent                | `JIRA_LINEAR_TOOL`, `SUPPORT_TICKETS_TOOL`, `SENTIMENT_ANALYSIS_TOOL`, `WEB_SEARCH_TOOL` | —                                                                                                                                                                                                                                                                                                                                                                          |
+| orchestrator-agent           | `TASK_QUEUE_TOOL`, `JIRA_LINEAR_TOOL`                                                    | `PRODUCT_REQUIREMENTS_AGENT`, `BUSINESS_DATA_ANALYST_AGENT`, `SOLUTIONS_ARCHITECT_AGENT`, `UX_UI_DESIGNER_AGENT`, `CODING_AGENT`, `DATABASE_DATA_ENGINEER_AGENT`, `CODE_REVIEW_AGENT`, `QA_TEST_AGENT`, `SECURITY_APPSEC_AGENT`, `DEVOPS_CICD_AGENT`, `RELEASE_MANAGER_AGENT`, `SRE_OBSERVABILITY_AGENT`, `DOCUMENTATION_AGENT`, `SUPPORT_FEEDBACK_AGENT`, `SUPPORT_AGENT` |
 
 ### Shared tools
 
@@ -100,45 +100,45 @@ Every tool worker exports a `WorkerEntrypoint` subclass named `PascalCase` after
 the tool (`GithubTool`, `TestRunnerTool`, ...). Method names are stubbed per the
 registry below.
 
-| Tool | Entrypoint | Stub methods |
-| --- | --- | --- |
-| jira-linear-tool | `JiraLinearTool` | `createIssue`, `updateIssue`, `getBacklog`, `prioritizeBacklog` |
-| confluence-notion-tool | `ConfluenceNotionTool` | `createPage`, `updatePage`, `searchPages` |
-| transcription-tool | `TranscriptionTool` | `transcribeAudio`, `summarizeCall` |
-| vector-store-tool | `VectorStoreTool` | `upsert`, `query`, `delete` |
-| web-search-tool | `WebSearchTool` | `search`, `fetchPage` |
-| analytics-tool | `AnalyticsTool` | `getFunnel`, `getCohort`, `queryEvent` |
-| db-client-tool | `DbClientTool` | `query`, `execute` |
-| diagramming-tool | `DiagrammingTool` | `generateDiagram`, `exportDiagram` |
-| cloud-pricing-tool | `CloudPricingTool` | `estimateCost`, `compareInstanceTypes` |
-| iac-tool | `IacTool` | `planTerraform`, `applyTerraform`, `getState` |
-| figma-tool | `FigmaTool` | `getFile`, `createFrame`, `exportAssets` |
-| image-gen-tool | `ImageGenTool` | `generateImage` |
-| accessibility-checker-tool | `AccessibilityCheckerTool` | `auditPage`, `auditComponent` |
-| github-tool | `GithubTool` | `createPullRequest`, `getPullRequest`, `mergePullRequest`, `getIssue`, `createBranch`, `commitFiles`, `createTag`, `getDiff`, `getCiStatus` |
-| package-manager-tool | `PackageManagerTool` | `installDependency`, `updateDependency`, `auditDependencies` |
-| lint-langserver-tool | `LintLangserverTool` | `lintFile`, `formatFile`, `getDiagnostics` |
-| sandbox-exec-tool | `SandboxExecTool` | `runCommand`, `runInSandbox` |
-| migrations-tool | `MigrationsTool` | `createMigration`, `runMigration`, `rollbackMigration` |
-| query-profiler-tool | `QueryProfilerTool` | `explainQuery`, `profileQuery` |
-| static-analysis-tool | `StaticAnalysisTool` | `analyzeCode`, `getCodeSmells` |
-| ci-status-tool | `CiStatusTool` | `getBuildStatus`, `getTestResults` |
-| test-runner-tool | `TestRunnerTool` | `runUnitTests`, `runIntegrationTests`, `runE2eTests`, `generateTestData` |
-| coverage-tool | `CoverageTool` | `getCoverageReport` |
-| security-scan-tool | `SecurityScanTool` | `runSast`, `runDast`, `scanDependencies`, `scanSecrets` |
-| sbom-tool | `SbomTool` | `generateSbom` |
-| pentest-tool | `PentestTool` | `runPentestSuite` |
-| cicd-pipeline-tool | `CicdPipelineTool` | `triggerPipeline`, `getPipelineStatus`, `provisionEnvironment` |
-| containers-tool | `ContainersTool` | `buildImage`, `deployToK8s`, `getDeploymentStatus` |
-| feature-flags-tool | `FeatureFlagsTool` | `createFlag`, `toggleFlag`, `getRolloutStatus` |
-| changelog-tool | `ChangelogTool` | `generateChangelog`, `getVersionHistory` |
-| monitoring-tool | `MonitoringTool` | `getMetrics`, `getDashboard`, `createAlert` |
-| pagerduty-tool | `PagerdutyTool` | `createIncident`, `getOnCall`, `resolveIncident` |
-| log-aggregation-tool | `LogAggregationTool` | `queryLogs`, `tailLogs` |
-| docs-generator-tool | `DocsGeneratorTool` | `generateApiDocs`, `buildDocsSite` |
-| support-tickets-tool | `SupportTicketsTool` | `getTickets`, `createBacklogItemFromTicket` |
-| sentiment-analysis-tool | `SentimentAnalysisTool` | `analyzeSentiment`, `clusterFeedback` |
-| task-queue-tool | `TaskQueueTool` | `enqueueTask`, `getTaskStatus`, `assignTask` |
+| Tool                       | Entrypoint                 | Stub methods                                                                                                                                |
+| -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| jira-linear-tool           | `JiraLinearTool`           | `createIssue`, `updateIssue`, `getBacklog`, `prioritizeBacklog`                                                                             |
+| confluence-notion-tool     | `ConfluenceNotionTool`     | `createPage`, `updatePage`, `searchPages`                                                                                                   |
+| transcription-tool         | `TranscriptionTool`        | `transcribeAudio`, `summarizeCall`                                                                                                          |
+| vector-store-tool          | `VectorStoreTool`          | `upsert`, `query`, `delete`                                                                                                                 |
+| web-search-tool            | `WebSearchTool`            | `search`, `fetchPage`                                                                                                                       |
+| analytics-tool             | `AnalyticsTool`            | `getFunnel`, `getCohort`, `queryEvent`                                                                                                      |
+| db-client-tool             | `DbClientTool`             | `query`, `execute`                                                                                                                          |
+| diagramming-tool           | `DiagrammingTool`          | `generateDiagram`, `exportDiagram`                                                                                                          |
+| cloud-pricing-tool         | `CloudPricingTool`         | `estimateCost`, `compareInstanceTypes`                                                                                                      |
+| iac-tool                   | `IacTool`                  | `planTerraform`, `applyTerraform`, `getState`                                                                                               |
+| figma-tool                 | `FigmaTool`                | `getFile`, `createFrame`, `exportAssets`                                                                                                    |
+| image-gen-tool             | `ImageGenTool`             | `generateImage`                                                                                                                             |
+| accessibility-checker-tool | `AccessibilityCheckerTool` | `auditPage`, `auditComponent`                                                                                                               |
+| github-tool                | `GithubTool`               | `createPullRequest`, `getPullRequest`, `mergePullRequest`, `getIssue`, `createBranch`, `commitFiles`, `createTag`, `getDiff`, `getCiStatus` |
+| package-manager-tool       | `PackageManagerTool`       | `installDependency`, `updateDependency`, `auditDependencies`                                                                                |
+| lint-langserver-tool       | `LintLangserverTool`       | `lintFile`, `formatFile`, `getDiagnostics`                                                                                                  |
+| sandbox-exec-tool          | `SandboxExecTool`          | `runCommand`, `runInSandbox`                                                                                                                |
+| migrations-tool            | `MigrationsTool`           | `createMigration`, `runMigration`, `rollbackMigration`                                                                                      |
+| query-profiler-tool        | `QueryProfilerTool`        | `explainQuery`, `profileQuery`                                                                                                              |
+| static-analysis-tool       | `StaticAnalysisTool`       | `analyzeCode`, `getCodeSmells`                                                                                                              |
+| ci-status-tool             | `CiStatusTool`             | `getBuildStatus`, `getTestResults`                                                                                                          |
+| test-runner-tool           | `TestRunnerTool`           | `runUnitTests`, `runIntegrationTests`, `runE2eTests`, `generateTestData`                                                                    |
+| coverage-tool              | `CoverageTool`             | `getCoverageReport`                                                                                                                         |
+| security-scan-tool         | `SecurityScanTool`         | `runSast`, `runDast`, `scanDependencies`, `scanSecrets`                                                                                     |
+| sbom-tool                  | `SbomTool`                 | `generateSbom`                                                                                                                              |
+| pentest-tool               | `PentestTool`              | `runPentestSuite`                                                                                                                           |
+| cicd-pipeline-tool         | `CicdPipelineTool`         | `triggerPipeline`, `getPipelineStatus`, `provisionEnvironment`                                                                              |
+| containers-tool            | `ContainersTool`           | `buildImage`, `deployToK8s`, `getDeploymentStatus`                                                                                          |
+| feature-flags-tool         | `FeatureFlagsTool`         | `createFlag`, `toggleFlag`, `getRolloutStatus`                                                                                              |
+| changelog-tool             | `ChangelogTool`            | `generateChangelog`, `getVersionHistory`                                                                                                    |
+| monitoring-tool            | `MonitoringTool`           | `getMetrics`, `getDashboard`, `createAlert`                                                                                                 |
+| pagerduty-tool             | `PagerdutyTool`            | `createIncident`, `getOnCall`, `resolveIncident`                                                                                            |
+| log-aggregation-tool       | `LogAggregationTool`       | `queryLogs`, `tailLogs`                                                                                                                     |
+| docs-generator-tool        | `DocsGeneratorTool`        | `generateApiDocs`, `buildDocsSite`                                                                                                          |
+| support-tickets-tool       | `SupportTicketsTool`       | `getTickets`, `createBacklogItemFromTicket`                                                                                                 |
+| sentiment-analysis-tool    | `SentimentAnalysisTool`    | `analyzeSentiment`, `clusterFeedback`                                                                                                       |
+| task-queue-tool            | `TaskQueueTool`            | `enqueueTask`, `getTaskStatus`, `assignTask`                                                                                                |
 
 ## Agent structure
 

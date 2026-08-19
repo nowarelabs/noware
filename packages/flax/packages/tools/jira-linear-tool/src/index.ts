@@ -42,8 +42,17 @@ async function linearFetch(env: Env, query: string, variables: unknown): Promise
 }
 
 function linearPriority(p?: string): number {
-  const map: Record<string, number> = { highest: 1, urgent: 1, blocker: 1, high: 2, medium: 3, low: 4, lowest: 4, none: 0 };
-  return p ? map[p.toLowerCase()] ?? 3 : 3;
+  const map: Record<string, number> = {
+    highest: 1,
+    urgent: 1,
+    blocker: 1,
+    high: 2,
+    medium: 3,
+    low: 4,
+    lowest: 4,
+    none: 0,
+  };
+  return p ? (map[p.toLowerCase()] ?? 3) : 3;
 }
 
 function jiraHeaders(env: Env): Record<string, string> {
@@ -66,22 +75,63 @@ async function jiraFetch(env: Env, path: string, init: RequestInit = {}): Promis
   return text ? JSON.parse(text) : null;
 }
 
-const memoryIssues = new Map<string, { key: string; projectKey: string; summary: string; description?: string; status: string; priority?: string; labels?: string[] }>();
+const memoryIssues = new Map<
+  string,
+  {
+    key: string;
+    projectKey: string;
+    summary: string;
+    description?: string;
+    status: string;
+    priority?: string;
+    labels?: string[];
+  }
+>();
 let memoryCounter = 0;
 
-async function linearCreateIssue(env: Env, input: { projectKey: string; summary: string; description?: string; priority?: string; labels?: string[] }): Promise<{ issueKey: string }> {
-  const teams = await linearFetch(env, `query($key: String!){ teams(filter: { key: { eq: $key } }) { nodes { id key name } } }`, { key: input.projectKey });
+async function linearCreateIssue(
+  env: Env,
+  input: {
+    projectKey: string;
+    summary: string;
+    description?: string;
+    priority?: string;
+    labels?: string[];
+  },
+): Promise<{ issueKey: string }> {
+  const teams = await linearFetch(
+    env,
+    `query($key: String!){ teams(filter: { key: { eq: $key } }) { nodes { id key name } } }`,
+    { key: input.projectKey },
+  );
   const team = teams.teams?.nodes?.[0];
   if (!team) throw new Error(`Linear team "${input.projectKey}" not found`);
   const res = await linearFetch(
     env,
     `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { identifier title } } }`,
-    { input: { teamId: team.id, title: input.summary, description: input.description ?? "", priority: linearPriority(input.priority), labelIds: input.labels ?? [] } },
+    {
+      input: {
+        teamId: team.id,
+        title: input.summary,
+        description: input.description ?? "",
+        priority: linearPriority(input.priority),
+        labelIds: input.labels ?? [],
+      },
+    },
   );
   return { issueKey: res.issueCreate.issue.identifier };
 }
 
-async function jiraCreateIssue(env: Env, input: { projectKey: string; summary: string; description?: string; priority?: string; labels?: string[] }): Promise<{ issueKey: string }> {
+async function jiraCreateIssue(
+  env: Env,
+  input: {
+    projectKey: string;
+    summary: string;
+    description?: string;
+    priority?: string;
+    labels?: string[];
+  },
+): Promise<{ issueKey: string }> {
   const res = await jiraFetch(env, "/rest/api/3/issue", {
     method: "POST",
     body: JSON.stringify({
@@ -99,27 +149,65 @@ async function jiraCreateIssue(env: Env, input: { projectKey: string; summary: s
 }
 
 export class JiraLinearTool extends WorkerEntrypoint<Env> {
-  async createIssue(input: { projectKey: string; summary: string; description?: string; issueType?: string; priority?: string; labels?: string[] }): Promise<{ issueKey: string }> {
+  async createIssue(input: {
+    projectKey: string;
+    summary: string;
+    description?: string;
+    issueType?: string;
+    priority?: string;
+    labels?: string[];
+  }): Promise<{ issueKey: string }> {
     const p = provider(this.env);
     if (p === "linear") return linearCreateIssue(this.env, input);
     if (p === "jira") return jiraCreateIssue(this.env, input);
 
     const key = `${input.projectKey}-${++memoryCounter}`;
-    memoryIssues.set(key, { key, projectKey: input.projectKey, summary: input.summary, description: input.description, status: "Backlog", priority: input.priority, labels: input.labels });
+    memoryIssues.set(key, {
+      key,
+      projectKey: input.projectKey,
+      summary: input.summary,
+      description: input.description,
+      status: "Backlog",
+      priority: input.priority,
+      labels: input.labels,
+    });
     return { issueKey: key };
   }
 
-  async updateIssue(input: { issueKey: string; fields?: Record<string, unknown>; comment?: string }): Promise<{ issueKey: string }> {
+  async updateIssue(input: {
+    issueKey: string;
+    fields?: Record<string, unknown>;
+    comment?: string;
+  }): Promise<{ issueKey: string }> {
     const p = provider(this.env);
     if (p === "linear") {
-      const found = await linearFetch(this.env, `query($identifier: String!){ issue(id: $identifier) { id } }`, { identifier: input.issueKey });
+      const found = await linearFetch(
+        this.env,
+        `query($identifier: String!){ issue(id: $identifier) { id } }`,
+        { identifier: input.issueKey },
+      );
       if (!found.issue) throw new Error(`Linear issue "${input.issueKey}" not found`);
       const issue = found.issue as { id: string };
       const fields = (input.fields ?? {}) as Record<string, unknown>;
-      const update: Record<string, unknown> = { title: fields.title, description: fields.description ?? (input.comment ? (String(fields.description ?? "") + "\n\n" + input.comment) : undefined), priority: typeof fields.priority === "number" ? fields.priority : typeof fields.priority === "string" ? linearPriority(fields.priority) : undefined };
+      const update: Record<string, unknown> = {
+        title: fields.title,
+        description:
+          fields.description ??
+          (input.comment ? String(fields.description ?? "") + "\n\n" + input.comment : undefined),
+        priority:
+          typeof fields.priority === "number"
+            ? fields.priority
+            : typeof fields.priority === "string"
+              ? linearPriority(fields.priority)
+              : undefined,
+      };
       const clean = Object.fromEntries(Object.entries(update).filter(([, v]) => v !== undefined));
       if (Object.keys(clean).length) {
-        await linearFetch(this.env, `mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success } }`, { id: issue.id, input: clean });
+        await linearFetch(
+          this.env,
+          `mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success } }`,
+          { id: issue.id, input: clean },
+        );
       }
       return { issueKey: input.issueKey };
     }
@@ -128,11 +216,20 @@ export class JiraLinearTool extends WorkerEntrypoint<Env> {
       if (input.comment) {
         await jiraFetch(this.env, `/rest/api/3/issue/${input.issueKey}/comment`, {
           method: "POST",
-          body: JSON.stringify({ body: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: input.comment }] }] } }),
+          body: JSON.stringify({
+            body: {
+              type: "doc",
+              version: 1,
+              content: [{ type: "paragraph", content: [{ type: "text", text: input.comment }] }],
+            },
+          }),
         });
       }
       if (input.fields && Object.keys(input.fields).length > 0) {
-        await jiraFetch(this.env, `/rest/api/3/issue/${input.issueKey}`, { method: "PUT", body: JSON.stringify({ fields: input.fields }) });
+        await jiraFetch(this.env, `/rest/api/3/issue/${input.issueKey}`, {
+          method: "PUT",
+          body: JSON.stringify({ fields: input.fields }),
+        });
       }
       return { issueKey: input.issueKey };
     }
@@ -168,7 +265,10 @@ export class JiraLinearTool extends WorkerEntrypoint<Env> {
       const jql = input.projectKey
         ? `project = "${input.projectKey}" AND status not in (Done, Closed)`
         : `status not in (Done, Closed)`;
-      const res = await jiraFetch(this.env, `/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=${limit}&fields=summary,status,priority,labels,created`);
+      const res = await jiraFetch(
+        this.env,
+        `/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=${limit}&fields=summary,status,priority,labels,created`,
+      );
       return (res.issues ?? []).map((i: any) => ({
         issueKey: i.key,
         summary: i.fields?.summary,
@@ -185,14 +285,21 @@ export class JiraLinearTool extends WorkerEntrypoint<Env> {
       .slice(0, limit);
   }
 
-  async prioritizeBacklog(input: { issueKeys: string[]; order?: string[] }): Promise<{ issueKeys: string[] }> {
+  async prioritizeBacklog(input: {
+    issueKeys: string[];
+    order?: string[];
+  }): Promise<{ issueKeys: string[] }> {
     const order = input.order ?? input.issueKeys;
     const p = provider(this.env);
 
     if (p === "linear") {
       let sortOrder = 10000;
       for (const key of order) {
-        await linearFetch(this.env, `mutation($id: String!, $sortOrder: Float!) { issueUpdate(id: $id, input: { sortOrder: $sortOrder }) { success } }`, { id: key, sortOrder: sortOrder-- });
+        await linearFetch(
+          this.env,
+          `mutation($id: String!, $sortOrder: Float!) { issueUpdate(id: $id, input: { sortOrder: $sortOrder }) { success } }`,
+          { id: key, sortOrder: sortOrder-- },
+        );
       }
       return { issueKeys: order };
     }
@@ -215,9 +322,6 @@ export class JiraLinearTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -14,15 +14,15 @@ import {
   useSkill,
   useSubagent,
   useTool,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
 
-import { changelogTool } from '../tools/changelog-tool';
-import { featureFlagsTool } from '../tools/feature-flags-tool';
-import { githubTool } from '../tools/github-tool';
+import { changelogTool } from "../tools/changelog-tool";
+import { featureFlagsTool } from "../tools/feature-flags-tool";
+import { githubTool } from "../tools/github-tool";
 
 interface ReleaseState {
-  status: 'idle' | 'planning' | 'rolling-out' | 'done';
+  status: "idle" | "planning" | "rolling-out" | "done";
   version: string;
   phase: string;
   rolloutPercent: number;
@@ -33,25 +33,25 @@ function RiskAuditor() {
 }
 
 export function ReleaseManager() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'medium',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Every release must be reversible. Derive version bumps from commit history: breaking changes (major), features (minor), fixes (patch), and publish a clean, categorized changelog. Roll out in stages - canary, percentage ramp, region, then general availability - defining success metrics and abort criteria per stage. Assess blast radius, reversibility, and dependency impact before each release and gate on blocking issues and open incidents. Never cut a release without a risk-auditor pass first. Release side effects (changelogs, flags, tags, merges) are durable: they are recorded and replayed, never duplicated, after a crash.',
+    "Every release must be reversible. Derive version bumps from commit history: breaking changes (major), features (minor), fixes (patch), and publish a clean, categorized changelog. Roll out in stages - canary, percentage ramp, region, then general availability - defining success metrics and abort criteria per stage. Assess blast radius, reversibility, and dependency impact before each release and gate on blocking issues and open incidents. Never cut a release without a risk-auditor pass first. Release side effects (changelogs, flags, tags, merges) are durable: they are recorded and replayed, never duplicated, after a crash.",
   );
 
-  const [release, setRelease] = usePersistentState<ReleaseState>('release', {
-    status: 'idle',
-    version: '',
-    phase: '',
+  const [release, setRelease] = usePersistentState<ReleaseState>("release", {
+    status: "idle",
+    version: "",
+    phase: "",
     rolloutPercent: 0,
   });
 
-  const writeRelease = useDataWriter('release', {
+  const writeRelease = useDataWriter("release", {
     schema: v.object({
-      status: v.picklist(['idle', 'planning', 'rolling-out', 'done']),
+      status: v.picklist(["idle", "planning", "rolling-out", "done"]),
       version: v.string(),
       phase: v.string(),
       rolloutPercent: v.number(),
@@ -62,10 +62,19 @@ export function ReleaseManager() {
   const initialData = useInitialData<{ version?: string }>();
 
   useAgentStart(({ log }) => {
-    const version = release.version || initialData?.version || (delivery.kind === 'signal' ? delivery.attributes?.version : undefined) || '';
-    log.info('release.started', { version });
-    setRelease((prev) => ({ ...prev, status: 'planning', version }));
-    writeRelease({ status: 'planning', version, phase: release.phase, rolloutPercent: release.rolloutPercent });
+    const version =
+      release.version ||
+      initialData?.version ||
+      (delivery.kind === "signal" ? delivery.attributes?.version : undefined) ||
+      "";
+    log.info("release.started", { version });
+    setRelease((prev) => ({ ...prev, status: "planning", version }));
+    writeRelease({
+      status: "planning",
+      version,
+      phase: release.phase,
+      rolloutPercent: release.rolloutPercent,
+    });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -76,14 +85,20 @@ export function ReleaseManager() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('release.finished', { toolCalls: response.toolCalls.length });
-    setRelease((prev) => ({ ...prev, status: 'done' }));
-    writeRelease({ status: 'done', version: release.version, phase: release.phase, rolloutPercent: release.rolloutPercent });
+    log.info("release.finished", { toolCalls: response.toolCalls.length });
+    setRelease((prev) => ({ ...prev, status: "done" }));
+    writeRelease({
+      status: "done",
+      version: release.version,
+      phase: release.phase,
+      rolloutPercent: release.rolloutPercent,
+    });
   });
 
   useSubagent({
-    name: 'risk-auditor',
-    description: 'Assesses a planned release for regression risk, dependency exposure, and rollback readiness before it is cut.',
+    name: "risk-auditor",
+    description:
+      "Assesses a planned release for regression risk, dependency exposure, and rollback readiness before it is cut.",
     agent: RiskAuditor,
   });
   useTool(changelogTool);

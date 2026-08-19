@@ -1,23 +1,23 @@
-import { createAgentRouter } from '@nowarelabs/agents';
-import type { D1Database } from '@cloudflare/workers-types';
-import { Hono } from 'hono';
+import { createAgentRouter } from "@nowarelabs/agents";
+import type { D1Database } from "@cloudflare/workers-types";
+import { Hono } from "hono";
 
-import { Orchestrator } from './agents/orchestrator';
-import { ensureSchema, hasOpenStage, patchInstance, pendingHitlCount } from './dashboard-db';
+import { Orchestrator } from "./agents/orchestrator";
+import { ensureSchema, hasOpenStage, patchInstance, pendingHitlCount } from "./dashboard-db";
 
 interface FlaxEnv {
   FLAX_DB?: D1Database;
   [key: string]: unknown;
 }
 
-const AGENT_PATH = '/agents/orchestrator';
+const AGENT_PATH = "/agents/orchestrator";
 
 const app = new Hono();
 
 // Register every instance id we see traffic for, so dashboards can list them,
 // and keep the dashboard-facing metadata current: title/activity on ingress,
 // run status once the orchestrator's response settles.
-app.use('*', async (c, next) => {
+app.use("*", async (c, next) => {
   const db = (c.env as FlaxEnv).FLAX_DB;
   const match = c.req.url.match(/\/agents\/[^/]+\/([^/]+)/);
   if (!db || !match) {
@@ -25,7 +25,7 @@ app.use('*', async (c, next) => {
     return;
   }
   const id = match[1];
-  const isPost = c.req.method === 'POST';
+  const isPost = c.req.method === "POST";
 
   try {
     await ensureSchema(db);
@@ -35,7 +35,7 @@ app.use('*', async (c, next) => {
       const clone = c.req.raw.clone();
       try {
         const body = (await clone.json()) as { kind?: string; body?: string } | null;
-        if (body?.kind === 'user' && typeof body.body === 'string') {
+        if (body?.kind === "user" && typeof body.body === "string") {
           title = body.body.trim().slice(0, 64);
         }
       } catch {
@@ -64,8 +64,8 @@ app.use('*', async (c, next) => {
     try {
       const [pending, open] = await Promise.all([pendingHitlCount(db, id), hasOpenStage(db, id)]);
       await patchInstance(db, id, {
-        currentAgent: 'orchestrator',
-        status: pending > 0 ? 'blocked_on_human' : open ? 'running' : 'completed',
+        currentAgent: "orchestrator",
+        status: pending > 0 ? "blocked_on_human" : open ? "running" : "completed",
         lastActivityAt: Date.now(),
       });
     } catch {
@@ -88,6 +88,6 @@ app.get(AGENT_PATH, async (c) => {
 });
 
 app.route(AGENT_PATH, createAgentRouter(Orchestrator));
-app.get('/api/ping', (c: any) => c.text('pong'));
+app.get("/api/ping", (c: any) => c.text("pong"));
 
 export default app;

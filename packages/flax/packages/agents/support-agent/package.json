@@ -11,8 +11,8 @@
     "cf-typegen": "wrangler types --include-runtime=false"
   },
   "dependencies": {
-    "@nowarelabs/ollama-provider": "workspace:*",
     "@nowarelabs/agents": "workspace:*",
+    "@nowarelabs/ollama-provider": "workspace:*",
     "agents": "^0.20.1",
     "hono": "^4.13.0",
     "valibot": "^1.4.2"

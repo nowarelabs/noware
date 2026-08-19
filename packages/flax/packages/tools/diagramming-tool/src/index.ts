@@ -42,7 +42,8 @@ function fromJson(description: any): string {
   const edges = description.edges ?? [];
   const lines = [`flowchart ${direction}`];
   for (const n of nodes) {
-    if (Array.isArray(n) && n.length === 2) lines.push(`  ${n[0]}["${String(n[1]).replace(/"/g, "'")}"]`);
+    if (Array.isArray(n) && n.length === 2)
+      lines.push(`  ${n[0]}["${String(n[1]).replace(/"/g, "'")}"]`);
     else lines.push(`  ${String(n).replace(/\s+/g, "_")}["${n}"]`);
   }
   for (const e of edges) {
@@ -53,7 +54,10 @@ function fromJson(description: any): string {
 }
 
 function fromText(description: string): string {
-  const lines = description.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  const lines = description
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (/^(sequenceDiagram|erDiagram|flowchart|graph\s)/i.test(lines[0] ?? "")) {
     return lines.join("\n");
   }
@@ -74,19 +78,30 @@ function toBase64Url(value: string): string {
 }
 
 export class DiagrammingTool extends WorkerEntrypoint<Env> {
-  async generateDiagram(input: { description: string; format?: string }): Promise<{ diagramUrl: string }> {
-    const mermaid = typeof input.description === "string" ? fromText(input.description) : fromJson(input.description);
+  async generateDiagram(input: {
+    description: string;
+    format?: string;
+  }): Promise<{ diagramUrl: string }> {
+    const mermaid =
+      typeof input.description === "string"
+        ? fromText(input.description)
+        : fromJson(input.description);
     const id = `diagram-${crypto.randomUUID()}`;
     diagrams.set(id, mermaid);
     return { diagramUrl: dataUrl(mermaid) };
   }
 
-  async exportDiagram(input: { diagramId: string; format: string }): Promise<{ exportUrl: string }> {
-    const mermaid = diagrams.get(input.diagramId) ?? (input as unknown as { mermaid?: string }).mermaid;
+  async exportDiagram(input: {
+    diagramId: string;
+    format: string;
+  }): Promise<{ exportUrl: string }> {
+    const mermaid =
+      diagrams.get(input.diagramId) ?? (input as unknown as { mermaid?: string }).mermaid;
     if (!mermaid) throw new Error(`diagram ${input.diagramId} not found`);
     const format = (input.format ?? "svg").toLowerCase();
     const supported = ["svg", "png", "pdf"];
-    if (!supported.includes(format)) throw new Error(`unsupported format "${format}" (supported: ${supported.join(", ")})`);
+    if (!supported.includes(format))
+      throw new Error(`unsupported format "${format}" (supported: ${supported.join(", ")})`);
     const encoded = toBase64Url(mermaid);
     const exportUrl = `https://kroki.io/mermaid/${format}/${encoded}`;
     return { exportUrl };
@@ -95,9 +110,6 @@ export class DiagrammingTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

@@ -75,7 +75,15 @@ function parseLcov(content: string): unknown {
   let brFound = 0;
   let brHit = 0;
   const files: unknown[] = [];
-  let current: { path: string; lf: number; lh: number; fF: number; fH: number; bF: number; bH: number } | null = null;
+  let current: {
+    path: string;
+    lf: number;
+    lh: number;
+    fF: number;
+    fH: number;
+    bF: number;
+    bH: number;
+  } | null = null;
   for (const line of content.split("\n")) {
     const [key, value] = line.split(":");
     if (key === "SF") {
@@ -83,12 +91,25 @@ function parseLcov(content: string): unknown {
       files.push(current);
     } else if (current) {
       const n = Number(value);
-      if (key === "LF") { current.lf = n; totalFound += n; }
-      else if (key === "LH") { current.lh = n; totalHit += n; }
-      else if (key === "FNF") { current.fF = n; fnFound += n; }
-      else if (key === "FNH") { current.fH = n; fnHit += n; }
-      else if (key === "BRF") { current.bF = n; brFound += n; }
-      else if (key === "BRH") { current.bH = n; brHit += n; }
+      if (key === "LF") {
+        current.lf = n;
+        totalFound += n;
+      } else if (key === "LH") {
+        current.lh = n;
+        totalHit += n;
+      } else if (key === "FNF") {
+        current.fF = n;
+        fnFound += n;
+      } else if (key === "FNH") {
+        current.fH = n;
+        fnHit += n;
+      } else if (key === "BRF") {
+        current.bF = n;
+        brFound += n;
+      } else if (key === "BRH") {
+        current.bH = n;
+        brHit += n;
+      }
     }
   }
   return {
@@ -117,12 +138,17 @@ const cachedReports = new Map<string, unknown>();
 export class CoverageTool extends WorkerEntrypoint<Env> {
   async getCoverageReport(input: { repo?: string; ref?: string }): Promise<unknown> {
     const repo = input.repo ?? (this.env.GITHUB_REPO as string | undefined) ?? "NO_REPO_CONFIGURED";
-    const ref = input.ref ?? (repo === "NO_REPO_CONFIGURED" ? "main" : await defaultBranch(this.env, repo));
+    const ref =
+      input.ref ?? (repo === "NO_REPO_CONFIGURED" ? "main" : await defaultBranch(this.env, repo));
     const cacheKey = `${repo}:${ref}`;
     if (cachedReports.has(cacheKey)) return cachedReports.get(cacheKey);
 
     if (repo === "NO_REPO_CONFIGURED") {
-      return { repo, found: false, message: "GITHUB_REPO binding not configured and no repo given" };
+      return {
+        repo,
+        found: false,
+        message: "GITHUB_REPO binding not configured and no repo given",
+      };
     }
 
     const candidates = [
@@ -135,7 +161,10 @@ export class CoverageTool extends WorkerEntrypoint<Env> {
 
     for (const path of candidates) {
       try {
-        const res = await ghFetch(this.env, `/repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`);
+        const res = await ghFetch(
+          this.env,
+          `/repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`,
+        );
         if (res && typeof res.content === "string") {
           const content = decodeBase64(res.content);
           let report: unknown;
@@ -155,7 +184,12 @@ export class CoverageTool extends WorkerEntrypoint<Env> {
       }
     }
 
-    const result = { repo, ref, found: false, message: `no coverage report found in ${repo} (tried ${candidates.join(", ")})` };
+    const result = {
+      repo,
+      ref,
+      found: false,
+      message: `no coverage report found in ${repo} (tried ${candidates.join(", ")})`,
+    };
     cachedReports.set(cacheKey, result);
     return result;
   }
@@ -167,9 +201,6 @@ function decodeBase64(b64: string): string {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

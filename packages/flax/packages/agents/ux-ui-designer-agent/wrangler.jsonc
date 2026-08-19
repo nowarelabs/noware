@@ -3,48 +3,44 @@
   "name": "ux-ui-designer-agent",
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "ai": {
     "binding": "AI",
-    "remote": true
+    "remote": true,
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "FIGMA_TOOL",
       "service": "figma-tool",
-      "entrypoint": "FigmaTool"
+      "entrypoint": "FigmaTool",
     },
     {
       "binding": "IMAGE_GEN_TOOL",
       "service": "image-gen-tool",
-      "entrypoint": "ImageGenTool"
+      "entrypoint": "ImageGenTool",
     },
     {
       "binding": "ACCESSIBILITY_CHECKER_TOOL",
       "service": "accessibility-checker-tool",
-      "entrypoint": "AccessibilityCheckerTool"
-    }
+      "entrypoint": "AccessibilityCheckerTool",
+    },
   ],
   "migrations": [
     {
       "tag": "flue-class-FlueUxUiDesignerAgent",
-      "new_sqlite_classes": [
-        "FlueUxUiDesignerAgent"
-      ]
-    }
-  ]
+      "new_sqlite_classes": ["FlueUxUiDesignerAgent"],
+    },
+  ],
 }

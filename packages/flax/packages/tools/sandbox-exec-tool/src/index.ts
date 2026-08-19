@@ -16,7 +16,10 @@ function requireSecret(env: Env, key: string): string {
   return v;
 }
 
-async function sandboxRequest(env: Env, body: unknown): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+async function sandboxRequest(
+  env: Env,
+  body: unknown,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const base = requireSecret(env, "SANDBOX_API_URL").replace(/\/$/, "");
   const key = secret(env, "SANDBOX_API_KEY");
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -33,22 +36,34 @@ async function sandboxRequest(env: Env, body: unknown): Promise<{ stdout: string
 }
 
 export class SandboxExecTool extends WorkerEntrypoint<Env> {
-  async runCommand(input: { command: string; cwd?: string; env?: unknown }): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  async runCommand(input: {
+    command: string;
+    cwd?: string;
+    env?: unknown;
+  }): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     if (!secret(this.env, "SANDBOX_API_URL")) {
-      throw new Error("SANDBOX_API_URL is not configured on this worker; point it at a sandboxed exec service (e.g. E2B, Modal, or your own runner)");
+      throw new Error(
+        "SANDBOX_API_URL is not configured on this worker; point it at a sandboxed exec service (e.g. E2B, Modal, or your own runner)",
+      );
     }
     return sandboxRequest(this.env, { command: input.command, cwd: input.cwd, env: input.env });
   }
 
   async runInSandbox(input: { task: string; files?: unknown }): Promise<{ result: unknown }> {
     if (!secret(this.env, "SANDBOX_API_URL")) {
-      throw new Error("SANDBOX_API_URL is not configured on this worker; point it at a sandboxed exec service");
+      throw new Error(
+        "SANDBOX_API_URL is not configured on this worker; point it at a sandboxed exec service",
+      );
     }
     const base = requireSecret(this.env, "SANDBOX_API_URL").replace(/\/$/, "");
     const key = secret(this.env, "SANDBOX_API_KEY");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (key) headers.Authorization = `Bearer ${key}`;
-    const res = await fetch(`${base}/run`, { method: "POST", headers, body: JSON.stringify({ task: input.task, files: input.files }) });
+    const res = await fetch(`${base}/run`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ task: input.task, files: input.files }),
+    });
     const text = await res.text();
     if (!res.ok) throw new Error(`sandbox API ${res.status}: ${text.slice(0, 300)}`);
     return { result: text ? JSON.parse(text) : null };
@@ -57,9 +72,6 @@ export class SandboxExecTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

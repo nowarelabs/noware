@@ -17,7 +17,10 @@ function requireSecret(env: Env, key: string): string {
 }
 
 async function tfcFetch(env: Env, path: string, init: RequestInit = {}): Promise<any> {
-  const base = (secret(env, "TFE_BASE_URL") ?? "https://app.terraform.io/api/v2").replace(/\/$/, "");
+  const base = (secret(env, "TFE_BASE_URL") ?? "https://app.terraform.io/api/v2").replace(
+    /\/$/,
+    "",
+  );
   const res = await fetch(`${base}${path}`, {
     ...init,
     headers: {
@@ -28,7 +31,8 @@ async function tfcFetch(env: Env, path: string, init: RequestInit = {}): Promise
     },
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(`Terraform Cloud API ${res.status} on ${path}: ${text.slice(0, 300)}`);
+  if (!res.ok)
+    throw new Error(`Terraform Cloud API ${res.status} on ${path}: ${text.slice(0, 300)}`);
   return text ? JSON.parse(text) : null;
 }
 
@@ -48,7 +52,15 @@ async function applyVars(env: Env, workspaceIdValue: string, vars?: unknown): Pr
     await tfcFetch(env, `/workspaces/${workspaceIdValue}/vars`, {
       method: "POST",
       body: JSON.stringify({
-        data: { type: "vars", attributes: { key, value: String(value), category: "terraform", sensitive: /(token|secret|key|password)/i.test(key) } },
+        data: {
+          type: "vars",
+          attributes: {
+            key,
+            value: String(value),
+            category: "terraform",
+            sensitive: /(token|secret|key|password)/i.test(key),
+          },
+        },
       }),
     });
   }
@@ -72,10 +84,16 @@ function stableHash(str: string): string {
   return h.toString(36);
 }
 
-const localStacks = new Map<string, { planCount: number; applied: boolean; outputs: Record<string, string>; serial: number }>();
+const localStacks = new Map<
+  string,
+  { planCount: number; applied: boolean; outputs: Record<string, string>; serial: number }
+>();
 
 export class IacTool extends WorkerEntrypoint<Env> {
-  async planTerraform(input: { stackDir: string; vars?: unknown }): Promise<{ planSummary: unknown }> {
+  async planTerraform(input: {
+    stackDir: string;
+    vars?: unknown;
+  }): Promise<{ planSummary: unknown }> {
     const tfeToken = secret(this.env, "TFE_TOKEN");
     if (tfeToken) {
       const wsId = await workspaceId(this.env, input.stackDir);
@@ -122,7 +140,11 @@ export class IacTool extends WorkerEntrypoint<Env> {
     };
   }
 
-  async applyTerraform(input: { stackDir: string; vars?: unknown; autoApprove?: boolean }): Promise<{ outputs: unknown }> {
+  async applyTerraform(input: {
+    stackDir: string;
+    vars?: unknown;
+    autoApprove?: boolean;
+  }): Promise<{ outputs: unknown }> {
     const tfeToken = secret(this.env, "TFE_TOKEN");
     if (tfeToken) {
       const wsId = await workspaceId(this.env, input.stackDir);
@@ -132,7 +154,11 @@ export class IacTool extends WorkerEntrypoint<Env> {
         body: JSON.stringify({
           data: {
             type: "runs",
-            attributes: { "is-destroy": false, "auto-apply": input.autoApprove === true, message: `apply for ${input.stackDir}` },
+            attributes: {
+              "is-destroy": false,
+              "auto-apply": input.autoApprove === true,
+              message: `apply for ${input.stackDir}`,
+            },
             relationships: { workspace: { data: { type: "workspaces", id: wsId } } },
           },
         }),
@@ -144,7 +170,10 @@ export class IacTool extends WorkerEntrypoint<Env> {
         status = current.data.attributes.status;
         if (["planned", "errored", "canceled"].includes(status)) {
           if (status === "planned" && input.autoApprove !== true) {
-            await tfcFetch(this.env, `/runs/${runId}/actions/apply`, { method: "POST", body: "{}" });
+            await tfcFetch(this.env, `/runs/${runId}/actions/apply`, {
+              method: "POST",
+              body: "{}",
+            });
           }
         }
         if (["applied", "errored", "canceled"].includes(status)) break;
@@ -160,7 +189,9 @@ export class IacTool extends WorkerEntrypoint<Env> {
     const state = localStacks.get(key) ?? { planCount: 0, applied: false, outputs: {}, serial: 0 };
     state.applied = true;
     state.serial += 1;
-    state.outputs = Object.fromEntries(Object.entries(input.vars ?? {}).map(([k, v]) => [k, `value from apply (${String(v)})`]));
+    state.outputs = Object.fromEntries(
+      Object.entries(input.vars ?? {}).map(([k, v]) => [k, `value from apply (${String(v)})`]),
+    );
     localStacks.set(key, state);
     return { outputs: state.outputs };
   }
@@ -184,15 +215,18 @@ export class IacTool extends WorkerEntrypoint<Env> {
 
     const state = localStacks.get(input.stackDir);
     if (!state) return { stackDir: input.stackDir, serial: 0, outputs: {}, applied: false };
-    return { stackDir: input.stackDir, serial: state.serial, outputs: state.outputs, applied: state.applied, planCount: state.planCount };
+    return {
+      stackDir: input.stackDir,
+      serial: state.serial,
+      outputs: state.outputs,
+      applied: state.applied,
+      planCount: state.planCount,
+    };
   }
 }
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

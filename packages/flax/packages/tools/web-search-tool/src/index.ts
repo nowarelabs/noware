@@ -22,10 +22,17 @@ async function braveSearch(env: Env, query: string, limit: number): Promise<Sear
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", query);
   url.searchParams.set("count", String(limit));
-  const res = await fetch(url, { headers: { "X-Subscription-Token": key, Accept: "application/json" } });
-  if (!res.ok) throw new Error(`Brave Search API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const res = await fetch(url, {
+    headers: { "X-Subscription-Token": key, Accept: "application/json" },
+  });
+  if (!res.ok)
+    throw new Error(`Brave Search API ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data: any = await res.json();
-  return (data.web?.results ?? []).map((r: any) => ({ title: r.title, url: r.url, description: r.description ?? "" }));
+  return (data.web?.results ?? []).map((r: any) => ({
+    title: r.title,
+    url: r.url,
+    description: r.description ?? "",
+  }));
 }
 
 async function tavilySearch(env: Env, query: string, limit: number): Promise<SearchResult[]> {
@@ -38,7 +45,11 @@ async function tavilySearch(env: Env, query: string, limit: number): Promise<Sea
   });
   if (!res.ok) throw new Error(`Tavily API ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data: any = await res.json();
-  return (data.results ?? []).map((r: any) => ({ title: r.title, url: r.url, description: r.content ?? "" }));
+  return (data.results ?? []).map((r: any) => ({
+    title: r.title,
+    url: r.url,
+    description: r.content ?? "",
+  }));
 }
 
 async function serpSearch(env: Env, query: string, limit: number): Promise<SearchResult[]> {
@@ -52,7 +63,11 @@ async function serpSearch(env: Env, query: string, limit: number): Promise<Searc
   const res = await fetch(url);
   if (!res.ok) throw new Error(`SerpAPI ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data: any = await res.json();
-  return (data.organic_results ?? []).map((r: any) => ({ title: r.title, url: r.link, description: r.snippet ?? "" }));
+  return (data.organic_results ?? []).map((r: any) => ({
+    title: r.title,
+    url: r.link,
+    description: r.snippet ?? "",
+  }));
 }
 
 function stripHtml(html: string): string {
@@ -74,15 +89,29 @@ export class WebSearchTool extends WorkerEntrypoint<Env> {
   async search(input: { query: string; limit?: number }): Promise<unknown> {
     const limit = input.limit ?? 8;
     if (secret(this.env, "BRAVE_API_KEY")) {
-      return { provider: "brave", query: input.query, results: await braveSearch(this.env, input.query, limit) };
+      return {
+        provider: "brave",
+        query: input.query,
+        results: await braveSearch(this.env, input.query, limit),
+      };
     }
     if (secret(this.env, "TAVILY_API_KEY")) {
-      return { provider: "tavily", query: input.query, results: await tavilySearch(this.env, input.query, limit) };
+      return {
+        provider: "tavily",
+        query: input.query,
+        results: await tavilySearch(this.env, input.query, limit),
+      };
     }
     if (secret(this.env, "SERP_API_KEY")) {
-      return { provider: "serpapi", query: input.query, results: await serpSearch(this.env, input.query, limit) };
+      return {
+        provider: "serpapi",
+        query: input.query,
+        results: await serpSearch(this.env, input.query, limit),
+      };
     }
-    throw new Error("no search provider configured (set BRAVE_API_KEY, TAVILY_API_KEY, or SERP_API_KEY)");
+    throw new Error(
+      "no search provider configured (set BRAVE_API_KEY, TAVILY_API_KEY, or SERP_API_KEY)",
+    );
   }
 
   async fetchPage(input: { url: string }): Promise<{ content: string }> {
@@ -101,9 +130,6 @@ export class WebSearchTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

@@ -35,7 +35,13 @@ function seedLogs(env: Env): void {
 function timeRangeMs(timeRange?: string): number {
   if (!timeRange) return 24 * 60 * 60 * 1000;
   const m = /^(\d+)([smhdw])$/.exec(timeRange);
-  const unitMs: Record<string, number> = { s: 1000, m: 60000, h: 3600000, d: 86400000, w: 604800000 };
+  const unitMs: Record<string, number> = {
+    s: 1000,
+    m: 60000,
+    h: 3600000,
+    d: 86400000,
+    w: 604800000,
+  };
   return (m ? Number(m[1]) : 24) * (unitMs[m?.[2] ?? "h"] ?? 3600000);
 }
 
@@ -47,10 +53,14 @@ function matches(query: string, entry: LogEntry): boolean {
     const [key, value] = part.split(":");
     if (value !== undefined) {
       if (key === "level") return entry.level.toLowerCase() === value.toLowerCase();
-      if (key === "service") return entry.service?.toLowerCase().includes(value.toLowerCase()) ?? false;
+      if (key === "service")
+        return entry.service?.toLowerCase().includes(value.toLowerCase()) ?? false;
       return entry.message.toLowerCase().includes(part.toLowerCase());
     }
-      return entry.message.toLowerCase().includes(part.toLowerCase()) || (entry.service?.toLowerCase().includes(part.toLowerCase()) ?? false);
+    return (
+      entry.message.toLowerCase().includes(part.toLowerCase()) ||
+      (entry.service?.toLowerCase().includes(part.toLowerCase()) ?? false)
+    );
   });
 }
 
@@ -90,18 +100,25 @@ export class LogAggregationTool extends WorkerEntrypoint<Env> {
     };
   }
 
-  async ingest(input: { level: string; message: string; service?: string }): Promise<{ id: string }> {
+  async ingest(input: {
+    level: string;
+    message: string;
+    service?: string;
+  }): Promise<{ id: string }> {
     const id = `log-${crypto.randomUUID()}`;
-    logs.push({ id, timestamp: new Date().toISOString(), level: input.level, service: input.service, message: input.message });
+    logs.push({
+      id,
+      timestamp: new Date().toISOString(),
+      level: input.level,
+      service: input.service,
+      message: input.message,
+    });
     return { id };
   }
 }
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

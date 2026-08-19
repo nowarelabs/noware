@@ -21,7 +21,12 @@ interface D1Like {
 const journal = new Map<string, Migration>();
 
 function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "migration";
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "migration"
+  );
 }
 
 function defaultSql(name: string): string {
@@ -41,7 +46,10 @@ export class MigrationsTool extends WorkerEntrypoint<Env> {
     return { migrationId: id };
   }
 
-  async runMigration(input: { migrationId?: string; environment?: string }): Promise<{ applied: string[] }> {
+  async runMigration(input: {
+    migrationId?: string;
+    environment?: string;
+  }): Promise<{ applied: string[] }> {
     const pending = [...journal.values()]
       .filter((m) => !m.applied && (!input.migrationId || m.id === input.migrationId))
       .sort((a, b) => a.id.localeCompare(b.id));
@@ -67,7 +75,10 @@ export class MigrationsTool extends WorkerEntrypoint<Env> {
     return { applied: pending.map((m) => m.id) };
   }
 
-  async rollbackMigration(input: { migrationId: string; environment?: string }): Promise<{ rolledBack: string }> {
+  async rollbackMigration(input: {
+    migrationId: string;
+    environment?: string;
+  }): Promise<{ rolledBack: string }> {
     const migration = journal.get(input.migrationId);
     if (!migration) throw new Error(`migration ${input.migrationId} not found`);
     if (!migration.applied) {
@@ -81,9 +92,6 @@ export class MigrationsTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

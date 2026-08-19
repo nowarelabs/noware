@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -16,16 +16,16 @@ import {
   useSubagent,
   useTool,
   bash,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
-import { Bash, InMemoryFs } from 'just-bash';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
+import { Bash, InMemoryFs } from "just-bash";
 
-import { ciStatusTool } from '../tools/ci-status-tool';
-import { coverageTool } from '../tools/coverage-tool';
-import { testRunnerTool } from '../tools/test-runner-tool';
+import { ciStatusTool } from "../tools/ci-status-tool";
+import { coverageTool } from "../tools/coverage-tool";
+import { testRunnerTool } from "../tools/test-runner-tool";
 
 interface TestRunState {
-  status: 'idle' | 'designing' | 'running' | 'done';
+  status: "idle" | "designing" | "running" | "done";
   suite: string;
 }
 
@@ -34,23 +34,23 @@ function TestCaseDesigner() {
 }
 
 export function QaTest() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'medium',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Design tests that express behavior first with Given/When/Then, keeping tests independent, fast, and deterministic with one behavior per test. Cover happy paths, error paths, boundaries, equivalence classes, and state transitions. Mock at process boundaries only and stub external I/O, preferring contract tests over brittle, implementation-coupled mocks. Keep suites focused on risk. Test runs are durable: completed runs are recorded and replayed, never duplicated, after a crash.',
+    "Design tests that express behavior first with Given/When/Then, keeping tests independent, fast, and deterministic with one behavior per test. Cover happy paths, error paths, boundaries, equivalence classes, and state transitions. Mock at process boundaries only and stub external I/O, preferring contract tests over brittle, implementation-coupled mocks. Keep suites focused on risk. Test runs are durable: completed runs are recorded and replayed, never duplicated, after a crash.",
   );
 
-  const [testRun, setTestRun] = usePersistentState<TestRunState>('testrun', {
-    status: 'idle',
-    suite: '',
+  const [testRun, setTestRun] = usePersistentState<TestRunState>("testrun", {
+    status: "idle",
+    suite: "",
   });
 
-  const writeQa = useDataWriter('qa', {
+  const writeQa = useDataWriter("qa", {
     schema: v.object({
-      status: v.picklist(['idle', 'designing', 'running', 'done']),
+      status: v.picklist(["idle", "designing", "running", "done"]),
       suite: v.string(),
       passed: v.number(),
       failed: v.number(),
@@ -62,10 +62,14 @@ export function QaTest() {
   const initialData = useInitialData<{ suite?: string }>();
 
   useAgentStart(({ log }) => {
-    const suite = testRun.suite || initialData?.suite || (delivery.kind === 'signal' ? delivery.attributes?.suite : undefined) || 'unit';
-    log.info('qa.started', { suite });
-    setTestRun((prev) => ({ ...prev, status: 'designing', suite }));
-    writeQa({ status: 'designing', suite, passed: 0, failed: 0 });
+    const suite =
+      testRun.suite ||
+      initialData?.suite ||
+      (delivery.kind === "signal" ? delivery.attributes?.suite : undefined) ||
+      "unit";
+    log.info("qa.started", { suite });
+    setTestRun((prev) => ({ ...prev, status: "designing", suite }));
+    writeQa({ status: "designing", suite, passed: 0, failed: 0 });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -76,16 +80,17 @@ export function QaTest() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('qa.finished', { toolCalls: response.toolCalls.length });
-    setTestRun((prev) => ({ ...prev, status: 'done' }));
-    writeQa({ status: 'done', suite: testRun.suite, passed: 0, failed: 0 });
+    log.info("qa.finished", { toolCalls: response.toolCalls.length });
+    setTestRun((prev) => ({ ...prev, status: "done" }));
+    writeQa({ status: "done", suite: testRun.suite, passed: 0, failed: 0 });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
   useSubagent({
-    name: 'test-case-designer',
-    description: 'Produces a focused set of test cases for a behavior, covering happy path, failure path, boundaries, and transitions.',
+    name: "test-case-designer",
+    description:
+      "Produces a focused set of test cases for a behavior, covering happy path, failure path, boundaries, and transitions.",
     agent: TestCaseDesigner,
   });
   useTool(ciStatusTool);

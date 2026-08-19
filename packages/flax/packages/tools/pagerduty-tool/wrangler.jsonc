@@ -5,12 +5,10 @@
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
-  }
+      "enabled": true,
+    },
+  },
 }

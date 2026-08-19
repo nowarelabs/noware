@@ -3,53 +3,49 @@
   "name": "product-requirements-agent",
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "ai": {
     "binding": "AI",
-    "remote": true
+    "remote": true,
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "JIRA_LINEAR_TOOL",
       "service": "jira-linear-tool",
-      "entrypoint": "JiraLinearTool"
+      "entrypoint": "JiraLinearTool",
     },
     {
       "binding": "CONFLUENCE_NOTION_TOOL",
       "service": "confluence-notion-tool",
-      "entrypoint": "ConfluenceNotionTool"
+      "entrypoint": "ConfluenceNotionTool",
     },
     {
       "binding": "TRANSCRIPTION_TOOL",
       "service": "transcription-tool",
-      "entrypoint": "TranscriptionTool"
+      "entrypoint": "TranscriptionTool",
     },
     {
       "binding": "VECTOR_STORE_TOOL",
       "service": "vector-store-tool",
-      "entrypoint": "VectorStoreTool"
-    }
+      "entrypoint": "VectorStoreTool",
+    },
   ],
   "migrations": [
     {
       "tag": "flue-class-FlueProductRequirementsAgent",
-      "new_sqlite_classes": [
-        "FlueProductRequirementsAgent"
-      ]
-    }
-  ]
+      "new_sqlite_classes": ["FlueProductRequirementsAgent"],
+    },
+  ],
 }

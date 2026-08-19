@@ -36,19 +36,26 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
 }
 
 function commitType(commitMessage: string): string | null {
-  const m = /^(feat|fix|perf|refactor|revert|docs|style|chore|build|ci|test)(\([^)]*\))?:\s*(.*)$/.exec(commitMessage);
+  const m =
+    /^(feat|fix|perf|refactor|revert|docs|style|chore|build|ci|test)(\([^)]*\))?:\s*(.*)$/.exec(
+      commitMessage,
+    );
   return m ? m[1] : null;
 }
 
 function bump(version: string, type: string | null): string {
-  const [major, minor, patch] = (version.replace(/^v/, "").split(".").map(Number));
+  const [major, minor, patch] = version.replace(/^v/, "").split(".").map(Number);
   if (type === "feat") return `v${major}.${minor + 1}.0`;
   if (type === "fix" || type === "perf") return `v${major}.${minor}.${patch + 1}`;
   return `v${major}.${minor}.${patch}`;
 }
 
 export class ChangelogTool extends WorkerEntrypoint<Env> {
-  async generateChangelog(input: { repo: string; fromTag?: string; toTag?: string }): Promise<{ changelog: string }> {
+  async generateChangelog(input: {
+    repo: string;
+    fromTag?: string;
+    toTag?: string;
+  }): Promise<{ changelog: string }> {
     const tags = await ghFetch(this.env, `/repos/${input.repo}/tags?per_page=100`);
     const tagNames: string[] = (tags ?? []).map((t: any) => t.name);
     const toTag = input.toTag ?? tagNames[0];
@@ -82,7 +89,12 @@ export class ChangelogTool extends WorkerEntrypoint<Env> {
       other: "## Other",
     };
 
-    const next = bump(toTag, commits.find((c) => commitType(c.commit.message))?.commit.message ? commitType(commits.find((c) => commitType(c.commit.message))!.commit.message) : null);
+    const next = bump(
+      toTag,
+      commits.find((c) => commitType(c.commit.message))?.commit.message
+        ? commitType(commits.find((c) => commitType(c.commit.message))!.commit.message)
+        : null,
+    );
 
     const sections = [...grouped.entries()]
       .filter(([, entries]) => entries.length > 0)
@@ -109,7 +121,10 @@ export class ChangelogTool extends WorkerEntrypoint<Env> {
     const versions = [];
     for (const tag of tags ?? []) {
       try {
-        const commit = await ghFetch(this.env, `/repos/${input.repo}/git/commits/${tag.commit.sha}`);
+        const commit = await ghFetch(
+          this.env,
+          `/repos/${input.repo}/git/commits/${tag.commit.sha}`,
+        );
         versions.push({
           tag: tag.name,
           sha: tag.commit.sha,
@@ -125,9 +140,6 @@ export class ChangelogTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

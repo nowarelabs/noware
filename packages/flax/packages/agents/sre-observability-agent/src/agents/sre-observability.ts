@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -14,17 +14,17 @@ import {
   useSkill,
   useSubagent,
   useTool,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
 
-import chaosEngineering from '../skills/chaos-engineering/SKILL.md';
-import onCallRunbooks from '../skills/on-call-runbooks/SKILL.md';
-import { logAggregationTool } from '../tools/log-aggregation-tool';
-import { monitoringTool } from '../tools/monitoring-tool';
-import { pagerdutyTool } from '../tools/pagerduty-tool';
+import chaosEngineering from "../skills/chaos-engineering/SKILL.md";
+import onCallRunbooks from "../skills/on-call-runbooks/SKILL.md";
+import { logAggregationTool } from "../tools/log-aggregation-tool";
+import { monitoringTool } from "../tools/monitoring-tool";
+import { pagerdutyTool } from "../tools/pagerduty-tool";
 
 interface IncidentState {
-  status: 'idle' | 'investigating' | 'mitigating' | 'done';
+  status: "idle" | "investigating" | "mitigating" | "done";
   incident: string;
   slos: string[];
 }
@@ -34,24 +34,24 @@ function IncidentReviewer() {
 }
 
 export function SreObservability() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'low',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Turn reliability goals into measurable SLOs and SLIs that measure real user experience, with error budgets, and prefer fewer, meaningful SLOs that teams can act on. Run incidents through to resolution: acknowledge, assess severity, contain, communicate, mitigate, then post-incident review with an accurate timeline. Page on-call before the SLO burns. Incidents and alerts are durable: they are recorded and replayed, never duplicated, after a crash.',
+    "Turn reliability goals into measurable SLOs and SLIs that measure real user experience, with error budgets, and prefer fewer, meaningful SLOs that teams can act on. Run incidents through to resolution: acknowledge, assess severity, contain, communicate, mitigate, then post-incident review with an accurate timeline. Page on-call before the SLO burns. Incidents and alerts are durable: they are recorded and replayed, never duplicated, after a crash.",
   );
 
-  const [incident, setIncident] = usePersistentState<IncidentState>('incident', {
-    status: 'idle',
-    incident: '',
+  const [incident, setIncident] = usePersistentState<IncidentState>("incident", {
+    status: "idle",
+    incident: "",
     slos: [],
   });
 
-  const writeReliability = useDataWriter('reliability', {
+  const writeReliability = useDataWriter("reliability", {
     schema: v.object({
-      status: v.picklist(['idle', 'investigating', 'mitigating', 'done']),
+      status: v.picklist(["idle", "investigating", "mitigating", "done"]),
       incident: v.string(),
       sloCount: v.number(),
     }),
@@ -61,10 +61,18 @@ export function SreObservability() {
   const initialData = useInitialData<{ incident?: string }>();
 
   useAgentStart(({ log }) => {
-    const incidentId = incident.incident || initialData?.incident || (delivery.kind === 'signal' ? delivery.attributes?.incident : undefined) || 'unassigned';
-    log.info('incident.started', { incident: incidentId });
-    setIncident((prev) => ({ ...prev, status: 'investigating', incident: incidentId }));
-    writeReliability({ status: 'investigating', incident: incidentId, sloCount: incident.slos.length });
+    const incidentId =
+      incident.incident ||
+      initialData?.incident ||
+      (delivery.kind === "signal" ? delivery.attributes?.incident : undefined) ||
+      "unassigned";
+    log.info("incident.started", { incident: incidentId });
+    setIncident((prev) => ({ ...prev, status: "investigating", incident: incidentId }));
+    writeReliability({
+      status: "investigating",
+      incident: incidentId,
+      sloCount: incident.slos.length,
+    });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -75,16 +83,21 @@ export function SreObservability() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('incident.finished', { toolCalls: response.toolCalls.length });
-    setIncident((prev) => ({ ...prev, status: 'done' }));
-    writeReliability({ status: 'done', incident: incident.incident, sloCount: incident.slos.length });
+    log.info("incident.finished", { toolCalls: response.toolCalls.length });
+    setIncident((prev) => ({ ...prev, status: "done" }));
+    writeReliability({
+      status: "done",
+      incident: incident.incident,
+      sloCount: incident.slos.length,
+    });
   });
 
   useSkill(chaosEngineering);
   useSkill(onCallRunbooks);
   useSubagent({
-    name: 'incident-reviewer',
-    description: 'Reviews the timeline and mitigation of an incident for containment, runbook adherence, and follow-ups before it is closed.',
+    name: "incident-reviewer",
+    description:
+      "Reviews the timeline and mitigation of an incident for containment, runbook adherence, and follow-ups before it is closed.",
     agent: IncidentReviewer,
   });
   useTool(logAggregationTool);

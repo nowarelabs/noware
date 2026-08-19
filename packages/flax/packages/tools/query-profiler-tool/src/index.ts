@@ -20,33 +20,74 @@ function analyzeSql(sql: string): Warning[] {
   const upper = sql.toUpperCase();
 
   if (/SELECT \*/i.test(sql)) {
-    warnings.push({ severity: "medium", message: "SELECT * used", recommendation: "List explicit columns to reduce IO and allow covering indexes." });
+    warnings.push({
+      severity: "medium",
+      message: "SELECT * used",
+      recommendation: "List explicit columns to reduce IO and allow covering indexes.",
+    });
   }
   if (/LIKE\s+['"]%/.test(sql)) {
-    warnings.push({ severity: "high", message: "Leading-wildcard LIKE (e.g. LIKE '%...')", recommendation: "Leading wildcards prevent index usage; consider full-text search or trigram indexes." });
+    warnings.push({
+      severity: "high",
+      message: "Leading-wildcard LIKE (e.g. LIKE '%...')",
+      recommendation:
+        "Leading wildcards prevent index usage; consider full-text search or trigram indexes.",
+    });
   }
   if (/ORDER BY/i.test(sql) && !/LIMIT/i.test(sql)) {
-    warnings.push({ severity: "low", message: "ORDER BY without LIMIT", recommendation: "Add a LIMIT to bound work when only a top-N is needed." });
+    warnings.push({
+      severity: "low",
+      message: "ORDER BY without LIMIT",
+      recommendation: "Add a LIMIT to bound work when only a top-N is needed.",
+    });
   }
   if (/(\bFROM\b[^;]*,\s*[A-Za-z_])/.test(sql)) {
-    warnings.push({ severity: "high", message: "Possible implicit cartesian join (comma-joined tables)", recommendation: "Use explicit INNER JOIN with ON conditions." });
+    warnings.push({
+      severity: "high",
+      message: "Possible implicit cartesian join (comma-joined tables)",
+      recommendation: "Use explicit INNER JOIN with ON conditions.",
+    });
   }
-  const functionCalls = sql.match(/\b(UPPER|LOWER|LENGTH|TRIM|SUBSTR|CAST)\s*\([A-Za-z_][A-Za-z0-9_.]*\)/gi);
+  const functionCalls = sql.match(
+    /\b(UPPER|LOWER|LENGTH|TRIM|SUBSTR|CAST)\s*\([A-Za-z_][A-Za-z0-9_.]*\)/gi,
+  );
   if (functionCalls) {
-    warnings.push({ severity: "medium", message: `Function on column in predicate: ${functionCalls.join(", ")}`, recommendation: "Functions on columns prevent index seeks; store precomputed values or use expression indexes." });
+    warnings.push({
+      severity: "medium",
+      message: `Function on column in predicate: ${functionCalls.join(", ")}`,
+      recommendation:
+        "Functions on columns prevent index seeks; store precomputed values or use expression indexes.",
+    });
   }
   const subquery = upper.match(/SELECT[\s\S]*FROM\s*\(/);
   if (subquery) {
-    warnings.push({ severity: "low", message: "Subquery in FROM detected", recommendation: "Verify the subquery is not a correlated full re-scan; consider CTEs with indexes." });
+    warnings.push({
+      severity: "low",
+      message: "Subquery in FROM detected",
+      recommendation:
+        "Verify the subquery is not a correlated full re-scan; consider CTEs with indexes.",
+    });
   }
   if (/(NOT IN\s*\()/.test(upper)) {
-    warnings.push({ severity: "medium", message: "NOT IN used", recommendation: "NOT IN can behave unexpectedly with NULLs; prefer NOT EXISTS." });
+    warnings.push({
+      severity: "medium",
+      message: "NOT IN used",
+      recommendation: "NOT IN can behave unexpectedly with NULLs; prefer NOT EXISTS.",
+    });
   }
   if (!/WHERE/i.test(sql) && /^(UPDATE|DELETE)/i.test(upper)) {
-    warnings.push({ severity: "critical", message: "UPDATE/DELETE without WHERE", recommendation: "This modifies every row; add a WHERE clause." });
+    warnings.push({
+      severity: "critical",
+      message: "UPDATE/DELETE without WHERE",
+      recommendation: "This modifies every row; add a WHERE clause.",
+    });
   }
   if (/SELECT/i.test(sql) && /WHERE/i.test(sql) && !/BETWEEN|>=|<=|>|<|=/.test(sql)) {
-    warnings.push({ severity: "low", message: "WHERE clause may be non-selective", recommendation: "Verify predicates use indexed, equality-range comparisons." });
+    warnings.push({
+      severity: "low",
+      message: "WHERE clause may be non-selective",
+      recommendation: "Verify predicates use indexed, equality-range comparisons.",
+    });
   }
   return warnings;
 }
@@ -77,7 +118,10 @@ export class QueryProfilerTool extends WorkerEntrypoint<Env> {
       engine: "heuristic",
       estimatedCost: costEstimate(input.sql, warnings),
       warnings,
-      recommendation: warnings.length === 0 ? "Query looks well-formed; verify indexes cover the WHERE/ORDER BY columns." : warnings[0].recommendation,
+      recommendation:
+        warnings.length === 0
+          ? "Query looks well-formed; verify indexes cover the WHERE/ORDER BY columns."
+          : warnings[0].recommendation,
     };
   }
 
@@ -99,9 +143,6 @@ export class QueryProfilerTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

@@ -19,7 +19,11 @@ interface Flag {
 const flags = new Map<string, Flag>();
 
 export class FeatureFlagsTool extends WorkerEntrypoint<Env> {
-  async createFlag(input: { key: string; description?: string; defaultValue?: boolean }): Promise<{ flagKey: string }> {
+  async createFlag(input: {
+    key: string;
+    description?: string;
+    defaultValue?: boolean;
+  }): Promise<{ flagKey: string }> {
     if (flags.has(input.key)) throw new Error(`flag "${input.key}" already exists`);
     const defaultValue = input.defaultValue ?? false;
     flags.set(input.key, {
@@ -35,7 +39,11 @@ export class FeatureFlagsTool extends WorkerEntrypoint<Env> {
     return { flagKey: input.key };
   }
 
-  async toggleFlag(input: { flagKey: string; enabled: boolean; scope?: string }): Promise<{ flagKey: string; enabled: boolean }> {
+  async toggleFlag(input: {
+    flagKey: string;
+    enabled: boolean;
+    scope?: string;
+  }): Promise<{ flagKey: string; enabled: boolean }> {
     const flag = flags.get(input.flagKey);
     if (!flag) throw new Error(`flag "${input.flagKey}" not found; create it first`);
 
@@ -62,7 +70,8 @@ export class FeatureFlagsTool extends WorkerEntrypoint<Env> {
       defaultValue: flag.defaultValue,
       rolloutPercentage: flag.rollout,
       scopes,
-      scopeCoverage: scopes.length > 0 ? Math.round((enabledScopes / scopes.length) * 1000) / 10 : null,
+      scopeCoverage:
+        scopes.length > 0 ? Math.round((enabledScopes / scopes.length) * 1000) / 10 : null,
       createdAt: flag.createdAt,
       updatedAt: flag.updatedAt,
     };
@@ -71,9 +80,6 @@ export class FeatureFlagsTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

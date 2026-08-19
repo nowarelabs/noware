@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -13,15 +13,15 @@ import {
   useResponseStart,
   useSubagent,
   useTool,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
 
-import { jiraLinearTool } from '../tools/jira-linear-tool';
-import { sentimentAnalysisTool } from '../tools/sentiment-analysis-tool';
-import { supportTicketsTool } from '../tools/support-tickets-tool';
+import { jiraLinearTool } from "../tools/jira-linear-tool";
+import { sentimentAnalysisTool } from "../tools/sentiment-analysis-tool";
+import { supportTicketsTool } from "../tools/support-tickets-tool";
 
 interface FeedbackState {
-  status: 'idle' | 'triaging' | 'done';
+  status: "idle" | "triaging" | "done";
   ticket: string;
   patterns: string[];
 }
@@ -31,24 +31,24 @@ function PatternMatchReviewer() {
 }
 
 export function SupportFeedback() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'low',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Triage tickets quickly: classify issues by type, severity, and area, ask for missing information, and escalate urgent or security-sensitive issues immediately. Match symptoms to known root-cause patterns from past incidents and knowledge base articles, state confidence and next step, and route work to the right owner with enough context to act. Acknowledge every ticket, set expectations, and never invent facts. Ticket updates and routing are durable: they are recorded and replayed, never duplicated, after a crash.',
+    "Triage tickets quickly: classify issues by type, severity, and area, ask for missing information, and escalate urgent or security-sensitive issues immediately. Match symptoms to known root-cause patterns from past incidents and knowledge base articles, state confidence and next step, and route work to the right owner with enough context to act. Acknowledge every ticket, set expectations, and never invent facts. Ticket updates and routing are durable: they are recorded and replayed, never duplicated, after a crash.",
   );
 
-  const [feedback, setFeedback] = usePersistentState<FeedbackState>('feedback', {
-    status: 'idle',
-    ticket: '',
+  const [feedback, setFeedback] = usePersistentState<FeedbackState>("feedback", {
+    status: "idle",
+    ticket: "",
     patterns: [],
   });
 
-  const writeFeedback = useDataWriter('feedback', {
+  const writeFeedback = useDataWriter("feedback", {
     schema: v.object({
-      status: v.picklist(['idle', 'triaging', 'done']),
+      status: v.picklist(["idle", "triaging", "done"]),
       ticket: v.string(),
       patternCount: v.number(),
     }),
@@ -58,10 +58,14 @@ export function SupportFeedback() {
   const initialData = useInitialData<{ ticket?: string }>();
 
   useAgentStart(({ log }) => {
-    const ticket = feedback.ticket || initialData?.ticket || (delivery.kind === 'signal' ? delivery.attributes?.ticket : undefined) || 'unknown';
-    log.info('feedback.started', { ticket });
-    setFeedback((prev) => ({ ...prev, status: 'triaging', ticket }));
-    writeFeedback({ status: 'triaging', ticket, patternCount: feedback.patterns.length });
+    const ticket =
+      feedback.ticket ||
+      initialData?.ticket ||
+      (delivery.kind === "signal" ? delivery.attributes?.ticket : undefined) ||
+      "unknown";
+    log.info("feedback.started", { ticket });
+    setFeedback((prev) => ({ ...prev, status: "triaging", ticket }));
+    writeFeedback({ status: "triaging", ticket, patternCount: feedback.patterns.length });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -72,14 +76,19 @@ export function SupportFeedback() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('feedback.finished', { toolCalls: response.toolCalls.length });
-    setFeedback((prev) => ({ ...prev, status: 'done' }));
-    writeFeedback({ status: 'done', ticket: feedback.ticket, patternCount: feedback.patterns.length });
+    log.info("feedback.finished", { toolCalls: response.toolCalls.length });
+    setFeedback((prev) => ({ ...prev, status: "done" }));
+    writeFeedback({
+      status: "done",
+      ticket: feedback.ticket,
+      patternCount: feedback.patterns.length,
+    });
   });
 
   useSubagent({
-    name: 'pattern-match-reviewer',
-    description: 'Reviews a root-cause pattern match for evidence, owner assignment, and handoff context before a ticket is routed.',
+    name: "pattern-match-reviewer",
+    description:
+      "Reviews a root-cause pattern match for evidence, owner assignment, and handoff context before a ticket is routed.",
     agent: PatternMatchReviewer,
   });
   useTool(jiraLinearTool);

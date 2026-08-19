@@ -3,48 +3,44 @@
   "name": "qa-test-agent",
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "ai": {
     "binding": "AI",
-    "remote": true
+    "remote": true,
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "TEST_RUNNER_TOOL",
       "service": "test-runner-tool",
-      "entrypoint": "TestRunnerTool"
+      "entrypoint": "TestRunnerTool",
     },
     {
       "binding": "CI_STATUS_TOOL",
       "service": "ci-status-tool",
-      "entrypoint": "CiStatusTool"
+      "entrypoint": "CiStatusTool",
     },
     {
       "binding": "COVERAGE_TOOL",
       "service": "coverage-tool",
-      "entrypoint": "CoverageTool"
-    }
+      "entrypoint": "CoverageTool",
+    },
   ],
   "migrations": [
     {
       "tag": "flue-class-FlueQaTestAgent",
-      "new_sqlite_classes": [
-        "FlueQaTestAgent"
-      ]
-    }
-  ]
+      "new_sqlite_classes": ["FlueQaTestAgent"],
+    },
+  ],
 }

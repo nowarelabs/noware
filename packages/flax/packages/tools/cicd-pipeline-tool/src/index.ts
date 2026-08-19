@@ -43,18 +43,31 @@ async function defaultBranch(env: Env, repo: string): Promise<string> {
 const provisionedEnvironments = new Map<string, string>();
 
 export class CicdPipelineTool extends WorkerEntrypoint<Env> {
-  async triggerPipeline(input: { pipeline: string; branch?: string; vars?: unknown }): Promise<{ runId: string }> {
+  async triggerPipeline(input: {
+    pipeline: string;
+    branch?: string;
+    vars?: unknown;
+  }): Promise<{ runId: string }> {
     const repo = requireSecret(this.env, "GITHUB_REPO");
     const ref = input.branch ?? (await defaultBranch(this.env, repo));
 
-    const workflowFile = input.pipeline.includes("/") || input.pipeline.endsWith(".yml") || input.pipeline.endsWith(".yaml")
-      ? input.pipeline
-      : await (async () => {
-          const workflows = await ghFetch(this.env, `/repos/${repo}/actions/workflows?per_page=100`);
-          const match = (workflows.workflows ?? []).find((w: any) => w.name === input.pipeline || w.path === `.github/workflows/${input.pipeline}.yml`);
-          if (!match) throw new Error(`workflow "${input.pipeline}" not found in ${repo}`);
-          return match.path;
-        })();
+    const workflowFile =
+      input.pipeline.includes("/") ||
+      input.pipeline.endsWith(".yml") ||
+      input.pipeline.endsWith(".yaml")
+        ? input.pipeline
+        : await (async () => {
+            const workflows = await ghFetch(
+              this.env,
+              `/repos/${repo}/actions/workflows?per_page=100`,
+            );
+            const match = (workflows.workflows ?? []).find(
+              (w: any) =>
+                w.name === input.pipeline || w.path === `.github/workflows/${input.pipeline}.yml`,
+            );
+            if (!match) throw new Error(`workflow "${input.pipeline}" not found in ${repo}`);
+            return match.path;
+          })();
 
     await ghFetch(this.env, `/repos/${repo}/actions/workflows/${workflowFile}/dispatches`, {
       method: "POST",
@@ -62,10 +75,15 @@ export class CicdPipelineTool extends WorkerEntrypoint<Env> {
       body: JSON.stringify({ ref, inputs: input.vars ?? {} }),
     });
 
-    const runs = await ghFetch(this.env, `/repos/${repo}/actions/runs?branch=${encodeURIComponent(ref)}&event=workflow_dispatch&per_page=1`);
+    const runs = await ghFetch(
+      this.env,
+      `/repos/${repo}/actions/runs?branch=${encodeURIComponent(ref)}&event=workflow_dispatch&per_page=1`,
+    );
     const latest = runs.workflow_runs?.[0];
     if (!latest) {
-      throw new Error("workflow dispatched but run id could not be determined; check GitHub Actions");
+      throw new Error(
+        "workflow dispatched but run id could not be determined; check GitHub Actions",
+      );
     }
     return { runId: String(latest.id) };
   }
@@ -87,17 +105,28 @@ export class CicdPipelineTool extends WorkerEntrypoint<Env> {
         name: j.name,
         status: j.status,
         conclusion: j.conclusion,
-        steps: (j.steps ?? []).map((s: any) => ({ name: s.name, status: s.status, conclusion: s.conclusion })),
+        steps: (j.steps ?? []).map((s: any) => ({
+          name: s.name,
+          status: s.status,
+          conclusion: s.conclusion,
+        })),
       })),
     };
   }
 
-  async provisionEnvironment(input: { environment: string; config?: unknown }): Promise<{ environmentUrl: string }> {
+  async provisionEnvironment(input: {
+    environment: string;
+    config?: unknown;
+  }): Promise<{ environmentUrl: string }> {
     const repo = requireSecret(this.env, "GITHUB_REPO");
-    await ghFetch(this.env, `/repos/${repo}/environments/${encodeURIComponent(input.environment)}`, {
-      method: "PUT",
-      body: JSON.stringify({ wait_timer: 0 }),
-    });
+    await ghFetch(
+      this.env,
+      `/repos/${repo}/environments/${encodeURIComponent(input.environment)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ wait_timer: 0 }),
+      },
+    );
     const url = `https://github.com/${repo}/environments/${encodeURIComponent(input.environment)}`;
     provisionedEnvironments.set(input.environment, url);
     return { environmentUrl: url };
@@ -106,9 +135,6 @@ export class CicdPipelineTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

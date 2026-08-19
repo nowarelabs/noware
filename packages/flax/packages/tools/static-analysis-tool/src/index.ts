@@ -86,21 +86,74 @@ function heuristicScan(filename: string, content: string): HeuristicFinding[] {
   for (const pattern of SECRET_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
       if (pattern.re.test(lines[i])) {
-        findings.push({ severity: "critical", rule: "secret-detection", message: `Potential ${pattern.name} committed`, line: i + 1 });
+        findings.push({
+          severity: "critical",
+          rule: "secret-detection",
+          message: `Potential ${pattern.name} committed`,
+          line: i + 1,
+        });
       }
     }
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (/console\.(log|debug)\(/.test(line)) findings.push({ severity: "info", rule: "debug-logging", message: "Debug logging left in production code", line: i + 1 });
-    if (/TODO|FIXME|HACK/.test(line)) findings.push({ severity: "warning", rule: "todo", message: "Unresolved TODO/FIXME", line: i + 1 });
-    if (/\beval\s*\(/.test(line)) findings.push({ severity: "error", rule: "eval-usage", message: "Avoid eval() - code injection risk", line: i + 1 });
-    if (/innerHTML\s*=/.test(line)) findings.push({ severity: "warning", rule: "dangerous-dom", message: "Setting innerHTML can lead to XSS", line: i + 1 });
-    if (/\b==\s*[^=]/.test(line) && !/===/.test(line)) findings.push({ severity: "info", rule: "loose-equality", message: "Use === instead of ==", line: i + 1 });
-    if (/\bvar\s+/.test(line)) findings.push({ severity: "info", rule: "var-declaration", message: "Prefer const/let over var", line: i + 1 });
-    if (/child_process|exec\(|spawn\(/.test(line)) findings.push({ severity: "warning", rule: "command-execution", message: "Shell command execution detected", line: i + 1 });
-    if (ext === "py" && /^import os$/.test(line.trim())) findings.push({ severity: "info", rule: "python-os", message: "Using os module (validate path usage)", line: i + 1 });
+    if (/console\.(log|debug)\(/.test(line))
+      findings.push({
+        severity: "info",
+        rule: "debug-logging",
+        message: "Debug logging left in production code",
+        line: i + 1,
+      });
+    if (/TODO|FIXME|HACK/.test(line))
+      findings.push({
+        severity: "warning",
+        rule: "todo",
+        message: "Unresolved TODO/FIXME",
+        line: i + 1,
+      });
+    if (/\beval\s*\(/.test(line))
+      findings.push({
+        severity: "error",
+        rule: "eval-usage",
+        message: "Avoid eval() - code injection risk",
+        line: i + 1,
+      });
+    if (/innerHTML\s*=/.test(line))
+      findings.push({
+        severity: "warning",
+        rule: "dangerous-dom",
+        message: "Setting innerHTML can lead to XSS",
+        line: i + 1,
+      });
+    if (/\b==\s*[^=]/.test(line) && !/===/.test(line))
+      findings.push({
+        severity: "info",
+        rule: "loose-equality",
+        message: "Use === instead of ==",
+        line: i + 1,
+      });
+    if (/\bvar\s+/.test(line))
+      findings.push({
+        severity: "info",
+        rule: "var-declaration",
+        message: "Prefer const/let over var",
+        line: i + 1,
+      });
+    if (/child_process|exec\(|spawn\(/.test(line))
+      findings.push({
+        severity: "warning",
+        rule: "command-execution",
+        message: "Shell command execution detected",
+        line: i + 1,
+      });
+    if (ext === "py" && /^import os$/.test(line.trim()))
+      findings.push({
+        severity: "info",
+        rule: "python-os",
+        message: "Using os module (validate path usage)",
+        line: i + 1,
+      });
   }
   return findings;
 }
@@ -113,10 +166,17 @@ export class StaticAnalysisTool extends WorkerEntrypoint<Env> {
     if (sonarUrl && secret(this.env, "SONARQUBE_TOKEN")) {
       const project = secret(this.env, "SONARQUBE_PROJECT") ?? (input.repo ?? "").replace("/", "_");
       const [issues, measures] = await Promise.all([
-        sonarFetch(this.env, `/api/issues/search?componentKeys=${encodeURIComponent(project)}&resolved=false&ps=100`),
-        sonarFetch(this.env, `/api/measures/component?component=${encodeURIComponent(project)}&metricKeys=bugs,vulnerabilities,code_smells,duplicated_lines_density,coverage,sqale_rating,alert_status`),
+        sonarFetch(
+          this.env,
+          `/api/issues/search?componentKeys=${encodeURIComponent(project)}&resolved=false&ps=100`,
+        ),
+        sonarFetch(
+          this.env,
+          `/api/measures/component?component=${encodeURIComponent(project)}&metricKeys=bugs,vulnerabilities,code_smells,duplicated_lines_density,coverage,sqale_rating,alert_status`,
+        ),
       ]);
-      const metric = (key: string) => measures.component?.measures?.find((m: any) => m.metric === key)?.value ?? null;
+      const metric = (key: string) =>
+        measures.component?.measures?.find((m: any) => m.metric === key)?.value ?? null;
       return {
         engine: "sonarqube",
         project,
@@ -143,7 +203,11 @@ export class StaticAnalysisTool extends WorkerEntrypoint<Env> {
     }
 
     if (githubToken && input.repo) {
-      return { engine: "github-code-scanning", repo: input.repo, findings: await githubCodeScanning(this.env, input.repo) };
+      return {
+        engine: "github-code-scanning",
+        repo: input.repo,
+        findings: await githubCodeScanning(this.env, input.repo),
+      };
     }
 
     if (input.path && githubToken && input.repo) {
@@ -153,14 +217,19 @@ export class StaticAnalysisTool extends WorkerEntrypoint<Env> {
       return { engine: "builtin-heuristics", file: input.path, findings };
     }
 
-    throw new Error("static analysis requires SonarQube (SONARQUBE_URL + SONARQUBE_TOKEN) or GITHUB_TOKEN + repo");
+    throw new Error(
+      "static analysis requires SonarQube (SONARQUBE_URL + SONARQUBE_TOKEN) or GITHUB_TOKEN + repo",
+    );
   }
 
   async getCodeSmells(input: { repo?: string; path?: string }): Promise<unknown> {
     const sonarUrl = secret(this.env, "SONARQUBE_URL");
     if (sonarUrl && secret(this.env, "SONARQUBE_TOKEN")) {
       const project = secret(this.env, "SONARQUBE_PROJECT") ?? (input.repo ?? "").replace("/", "_");
-      const issues = await sonarFetch(this.env, `/api/issues/search?componentKeys=${encodeURIComponent(project)}&types=CODE_SMELL&resolved=false&ps=100`);
+      const issues = await sonarFetch(
+        this.env,
+        `/api/issues/search?componentKeys=${encodeURIComponent(project)}&types=CODE_SMELL&resolved=false&ps=100`,
+      );
       return {
         engine: "sonarqube",
         codeSmellCount: issues.total ?? 0,
@@ -177,8 +246,15 @@ export class StaticAnalysisTool extends WorkerEntrypoint<Env> {
     if (input.path && secret(this.env, "GITHUB_TOKEN") && input.repo) {
       const res = await ghFetch(this.env, `/repos/${input.repo}/contents/${input.path}`);
       const content = typeof res.content === "string" ? atob(res.content) : "";
-      const findings = heuristicScan(input.path, content).filter((f) => f.severity === "info" || f.severity === "warning");
-      return { engine: "builtin-heuristics", file: input.path, codeSmellCount: findings.length, codeSmells: findings };
+      const findings = heuristicScan(input.path, content).filter(
+        (f) => f.severity === "info" || f.severity === "warning",
+      );
+      return {
+        engine: "builtin-heuristics",
+        file: input.path,
+        codeSmellCount: findings.length,
+        codeSmells: findings,
+      };
     }
 
     throw new Error("getCodeSmells requires SonarQube credentials or GITHUB_TOKEN + repo + path");
@@ -187,9 +263,6 @@ export class StaticAnalysisTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

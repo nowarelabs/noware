@@ -1,15 +1,15 @@
-import { createAgentRouter } from '@nowarelabs/agents';
-import type { D1Database } from '@cloudflare/workers-types';
-import { Hono } from 'hono';
+import { createAgentRouter } from "@nowarelabs/agents";
+import type { D1Database } from "@cloudflare/workers-types";
+import { Hono } from "hono";
 
-import { BusinessDataAnalyst } from './agents/business-data-analyst';
+import { BusinessDataAnalyst } from "./agents/business-data-analyst";
 
 interface FlaxEnv {
   FLAX_DB?: D1Database;
   [key: string]: unknown;
 }
 
-const AGENT_PATH = '/agents/business-data-analyst';
+const AGENT_PATH = "/agents/business-data-analyst";
 
 let registryReady: Promise<void> | null = null;
 
@@ -32,7 +32,7 @@ function ensureRegistry(db: D1Database): Promise<void> {
 const app = new Hono();
 
 // Register every instance id we see traffic for, so dashboards can list them.
-app.use('*', async (c, next) => {
+app.use("*", async (c, next) => {
   const db = (c.env as FlaxEnv).FLAX_DB;
   const path = new URL(c.req.url).pathname;
   const match = path.match(/^\/agents\/[^/]+\/([^/]+)/);
@@ -59,12 +59,12 @@ app.get(AGENT_PATH, async (c) => {
   if (!db) return c.json({ instances: [] });
   await ensureRegistry(db);
   const { results } = await db
-    .prepare('SELECT id, created_at, last_seen_at FROM flax_instances ORDER BY last_seen_at DESC')
+    .prepare("SELECT id, created_at, last_seen_at FROM flax_instances ORDER BY last_seen_at DESC")
     .all<{ id: string; created_at: number; last_seen_at: number }>();
   return c.json({ instances: results });
 });
 
 app.route(AGENT_PATH, createAgentRouter(BusinessDataAnalyst));
-app.get('/api/ping', (c: any) => c.text('pong'));
+app.get("/api/ping", (c: any) => c.text("pong"));
 
 export default app;

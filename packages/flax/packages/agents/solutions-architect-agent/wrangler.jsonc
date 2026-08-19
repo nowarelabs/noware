@@ -3,48 +3,44 @@
   "name": "solutions-architect-agent",
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "ai": {
     "binding": "AI",
-    "remote": true
+    "remote": true,
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "DIAGRAMMING_TOOL",
       "service": "diagramming-tool",
-      "entrypoint": "DiagrammingTool"
+      "entrypoint": "DiagrammingTool",
     },
     {
       "binding": "CLOUD_PRICING_TOOL",
       "service": "cloud-pricing-tool",
-      "entrypoint": "CloudPricingTool"
+      "entrypoint": "CloudPricingTool",
     },
     {
       "binding": "IAC_TOOL",
       "service": "iac-tool",
-      "entrypoint": "IacTool"
-    }
+      "entrypoint": "IacTool",
+    },
   ],
   "migrations": [
     {
       "tag": "flue-class-FlueSolutionsArchitectAgent",
-      "new_sqlite_classes": [
-        "FlueSolutionsArchitectAgent"
-      ]
-    }
-  ]
+      "new_sqlite_classes": ["FlueSolutionsArchitectAgent"],
+    },
+  ],
 }

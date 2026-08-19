@@ -36,7 +36,12 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
   }
 }
 
-async function readRepoFile(env: Env, repo: string, path: string, ref?: string): Promise<string | null> {
+async function readRepoFile(
+  env: Env,
+  repo: string,
+  path: string,
+  ref?: string,
+): Promise<string | null> {
   const suffix = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   try {
     const res = await ghFetch(env, `/repos/${repo}/contents/${path}${suffix}`);
@@ -70,18 +75,25 @@ const METHOD_RE = /^(get|post|put|patch|delete|head|options)$/i;
 
 function specFromJson(spec: any): SpecDoc {
   const info = spec.info ?? {};
-  const paths: PathDoc[] = Object.entries((spec.paths ?? {}) as Record<string, any>).map(([path, ops]) => ({
-    path,
-    operations: Object.entries((ops ?? {}) as Record<string, any>)
-      .filter(([method]) => METHOD_RE.test(method))
-      .map(([method, op]) => ({
-        method: method.toUpperCase(),
-        summary: op.summary,
-        operationId: op.operationId,
-        description: op.description,
-      })),
-  }));
-  return { title: info.title ?? "API", version: String(info.version ?? "unknown"), description: info.description, paths };
+  const paths: PathDoc[] = Object.entries((spec.paths ?? {}) as Record<string, any>).map(
+    ([path, ops]) => ({
+      path,
+      operations: Object.entries((ops ?? {}) as Record<string, any>)
+        .filter(([method]) => METHOD_RE.test(method))
+        .map(([method, op]) => ({
+          method: method.toUpperCase(),
+          summary: op.summary,
+          operationId: op.operationId,
+          description: op.description,
+        })),
+    }),
+  );
+  return {
+    title: info.title ?? "API",
+    version: String(info.version ?? "unknown"),
+    description: info.description,
+    paths,
+  };
 }
 
 function specFromYaml(text: string): SpecDoc {
@@ -150,10 +162,7 @@ function specToMarkdown(spec: SpecDoc): string {
 }
 
 function markdownToHtml(markdown: string, title: string): string {
-  const escaped = markdown
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  const escaped = markdown.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const body = escaped
     .split(/\r?\n/)
     .map((line) => {
@@ -180,7 +189,16 @@ function dataUrl(mime: string, content: string): string {
 async function fetchSpec(env: Env, repo: string, specPath?: string): Promise<string> {
   const candidates = specPath
     ? [specPath]
-    : ["openapi.json", "openapi.yaml", "openapi.yml", "swagger.json", "swagger.yaml", "api/openapi.json", "api/openapi.yaml", "docs/openapi.yaml"];
+    : [
+        "openapi.json",
+        "openapi.yaml",
+        "openapi.yml",
+        "swagger.json",
+        "swagger.yaml",
+        "api/openapi.json",
+        "api/openapi.yaml",
+        "docs/openapi.yaml",
+      ];
   for (const path of candidates) {
     const content = await readRepoFile(env, repo, path);
     if (content) return content;
@@ -189,10 +207,17 @@ async function fetchSpec(env: Env, repo: string, specPath?: string): Promise<str
 }
 
 export class DocsGeneratorTool extends WorkerEntrypoint<Env> {
-  async generateApiDocs(input: { repo?: string; specPath?: string; format?: string }): Promise<{ docsUrl: string }> {
+  async generateApiDocs(input: {
+    repo?: string;
+    specPath?: string;
+    format?: string;
+  }): Promise<{ docsUrl: string }> {
     const repo = input.repo ?? requireSecret(this.env, "GITHUB_REPO");
     const content = await fetchSpec(this.env, repo, input.specPath);
-    const spec = detectSpecFormat(content) === "json" ? specFromJson(JSON.parse(content)) : specFromYaml(content);
+    const spec =
+      detectSpecFormat(content) === "json"
+        ? specFromJson(JSON.parse(content))
+        : specFromYaml(content);
     const markdown = specToMarkdown(spec);
     const format = (input.format ?? "markdown").toLowerCase();
 
@@ -214,7 +239,10 @@ export class DocsGeneratorTool extends WorkerEntrypoint<Env> {
     let specSection = "";
     try {
       const content = await fetchSpec(this.env, repo);
-      const spec = detectSpecFormat(content) === "json" ? specFromJson(JSON.parse(content)) : specFromYaml(content);
+      const spec =
+        detectSpecFormat(content) === "json"
+          ? specFromJson(JSON.parse(content))
+          : specFromYaml(content);
       specSection = `\n\n# API Reference\n\n${specToMarkdown(spec)}`;
     } catch {
       specSection = "";
@@ -227,9 +255,6 @@ export class DocsGeneratorTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

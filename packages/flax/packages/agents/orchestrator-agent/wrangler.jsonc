@@ -3,103 +3,99 @@
   "name": "orchestrator-agent",
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "ai": {
     "binding": "AI",
-    "remote": true
+    "remote": true,
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "TASK_QUEUE_TOOL",
       "service": "task-queue-tool",
-      "entrypoint": "TaskQueueTool"
+      "entrypoint": "TaskQueueTool",
     },
     {
       "binding": "JIRA_LINEAR_TOOL",
       "service": "jira-linear-tool",
-      "entrypoint": "JiraLinearTool"
+      "entrypoint": "JiraLinearTool",
     },
     {
       "binding": "PRODUCT_REQUIREMENTS_AGENT",
-      "service": "product-requirements-agent"
+      "service": "product-requirements-agent",
     },
     {
       "binding": "BUSINESS_DATA_ANALYST_AGENT",
-      "service": "business-data-analyst-agent"
+      "service": "business-data-analyst-agent",
     },
     {
       "binding": "SOLUTIONS_ARCHITECT_AGENT",
-      "service": "solutions-architect-agent"
+      "service": "solutions-architect-agent",
     },
     {
       "binding": "UX_UI_DESIGNER_AGENT",
-      "service": "ux-ui-designer-agent"
+      "service": "ux-ui-designer-agent",
     },
     {
       "binding": "CODING_AGENT",
-      "service": "coding-agent"
+      "service": "coding-agent",
     },
     {
       "binding": "DATABASE_DATA_ENGINEER_AGENT",
-      "service": "database-data-engineer-agent"
+      "service": "database-data-engineer-agent",
     },
     {
       "binding": "CODE_REVIEW_AGENT",
-      "service": "code-review-agent"
+      "service": "code-review-agent",
     },
     {
       "binding": "QA_TEST_AGENT",
-      "service": "qa-test-agent"
+      "service": "qa-test-agent",
     },
     {
       "binding": "SECURITY_APPSEC_AGENT",
-      "service": "security-appsec-agent"
+      "service": "security-appsec-agent",
     },
     {
       "binding": "DEVOPS_CICD_AGENT",
-      "service": "devops-cicd-agent"
+      "service": "devops-cicd-agent",
     },
     {
       "binding": "RELEASE_MANAGER_AGENT",
-      "service": "release-manager-agent"
+      "service": "release-manager-agent",
     },
     {
       "binding": "SRE_OBSERVABILITY_AGENT",
-      "service": "sre-observability-agent"
+      "service": "sre-observability-agent",
     },
     {
       "binding": "DOCUMENTATION_AGENT",
-      "service": "documentation-agent"
+      "service": "documentation-agent",
     },
     {
       "binding": "SUPPORT_FEEDBACK_AGENT",
-      "service": "support-feedback-agent"
+      "service": "support-feedback-agent",
     },
     {
       "binding": "SUPPORT_AGENT",
-      "service": "support-agent"
-    }
+      "service": "support-agent",
+    },
   ],
   "migrations": [
     {
       "tag": "flue-class-FlueOrchestratorAgent",
-      "new_sqlite_classes": [
-        "FlueOrchestratorAgent"
-      ]
-    }
-  ]
+      "new_sqlite_classes": ["FlueOrchestratorAgent"],
+    },
+  ],
 }

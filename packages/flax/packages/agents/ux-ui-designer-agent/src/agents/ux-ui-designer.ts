@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -14,15 +14,15 @@ import {
   useSkill,
   useSubagent,
   useTool,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
 
-import { accessibilityCheckerTool } from '../tools/accessibility-checker-tool';
-import { figmaTool } from '../tools/figma-tool';
-import { imageGenTool } from '../tools/image-gen-tool';
+import { accessibilityCheckerTool } from "../tools/accessibility-checker-tool";
+import { figmaTool } from "../tools/figma-tool";
+import { imageGenTool } from "../tools/image-gen-tool";
 
 interface DesignState {
-  status: 'idle' | 'designing' | 'done';
+  status: "idle" | "designing" | "done";
   flow: string;
   variants: string[];
 }
@@ -32,24 +32,24 @@ function AccessibilityReviewer() {
 }
 
 export function UxUiDesigner() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'low',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Design task flows that match user mental models and minimize cognitive load, using progressive disclosure, clear affordances, and immediate feedback for every action. Stay consistent with the design system: design tokens, spacing, typography scale, component states, and variants. Apply WCAG 2.2 AA: contrast ratios, keyboard operability, visible focus, ARIA semantics, and non-text alternatives, verified with an automated check and manual review. Treat accessibility and clarity as requirements, not polish. Run every design past the accessibility-reviewer subagent before it ships. Designs are durable: they are recorded and replayed, never duplicated, after a crash.',
+    "Design task flows that match user mental models and minimize cognitive load, using progressive disclosure, clear affordances, and immediate feedback for every action. Stay consistent with the design system: design tokens, spacing, typography scale, component states, and variants. Apply WCAG 2.2 AA: contrast ratios, keyboard operability, visible focus, ARIA semantics, and non-text alternatives, verified with an automated check and manual review. Treat accessibility and clarity as requirements, not polish. Run every design past the accessibility-reviewer subagent before it ships. Designs are durable: they are recorded and replayed, never duplicated, after a crash.",
   );
 
-  const [design, setDesign] = usePersistentState<DesignState>('design', {
-    status: 'idle',
-    flow: '',
+  const [design, setDesign] = usePersistentState<DesignState>("design", {
+    status: "idle",
+    flow: "",
     variants: [],
   });
 
-  const writeDesign = useDataWriter('design', {
+  const writeDesign = useDataWriter("design", {
     schema: v.object({
-      status: v.picklist(['idle', 'designing', 'done']),
+      status: v.picklist(["idle", "designing", "done"]),
       flow: v.string(),
       variantCount: v.number(),
     }),
@@ -59,10 +59,14 @@ export function UxUiDesigner() {
   const initialData = useInitialData<{ flow?: string }>();
 
   useAgentStart(({ log }) => {
-    const flow = design.flow || initialData?.flow || (delivery.kind === 'signal' ? delivery.attributes?.flow : undefined) || 'untitled';
-    log.info('design.started', { flow });
-    setDesign((prev) => ({ ...prev, status: 'designing', flow }));
-    writeDesign({ status: 'designing', flow, variantCount: design.variants.length });
+    const flow =
+      design.flow ||
+      initialData?.flow ||
+      (delivery.kind === "signal" ? delivery.attributes?.flow : undefined) ||
+      "untitled";
+    log.info("design.started", { flow });
+    setDesign((prev) => ({ ...prev, status: "designing", flow }));
+    writeDesign({ status: "designing", flow, variantCount: design.variants.length });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -73,14 +77,15 @@ export function UxUiDesigner() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('design.finished', { toolCalls: response.toolCalls.length });
-    setDesign((prev) => ({ ...prev, status: 'done' }));
-    writeDesign({ status: 'done', flow: design.flow, variantCount: design.variants.length });
+    log.info("design.finished", { toolCalls: response.toolCalls.length });
+    setDesign((prev) => ({ ...prev, status: "done" }));
+    writeDesign({ status: "done", flow: design.flow, variantCount: design.variants.length });
   });
 
   useSubagent({
-    name: 'accessibility-reviewer',
-    description: 'Reviews a UI design for WCAG AA violations (contrast, keyboard, focus, labels, errors) before it ships.',
+    name: "accessibility-reviewer",
+    description:
+      "Reviews a UI design for WCAG AA violations (contrast, keyboard, focus, labels, errors) before it ships.",
     agent: AccessibilityReviewer,
   });
   useTool(accessibilityCheckerTool);

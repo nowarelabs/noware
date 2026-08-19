@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -16,17 +16,17 @@ import {
   useSubagent,
   useTool,
   bash,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
-import { Bash, InMemoryFs } from 'just-bash';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
+import { Bash, InMemoryFs } from "just-bash";
 
-import cohortFunnelAnalysis from '../skills/cohort-funnel-analysis/SKILL.md';
-import { analyticsTool } from '../tools/analytics-tool';
-import { dbClientTool } from '../tools/db-client-tool';
-import { webSearchTool } from '../tools/web-search-tool';
+import cohortFunnelAnalysis from "../skills/cohort-funnel-analysis/SKILL.md";
+import { analyticsTool } from "../tools/analytics-tool";
+import { dbClientTool } from "../tools/db-client-tool";
+import { webSearchTool } from "../tools/web-search-tool";
 
 interface AnalysisState {
-  status: 'idle' | 'querying' | 'analyzing' | 'done';
+  status: "idle" | "querying" | "analyzing" | "done";
   question: string;
   findings: string[];
 }
@@ -36,24 +36,24 @@ function SqlReviewer() {
 }
 
 export function BusinessDataAnalyst() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'low',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Only report numbers you actually retrieved with a tool - never estimate from memory. Write queries with explicit column lists, correct join conditions, aggregations, and window functions, and prefer set-based logic over N+1 patterns. Describe distributions, central tendency, and variance, apply the correct hypothesis test, and interpret confidence intervals. Flag confounders and small sample sizes, state sample size and explicit confidence for every finding, and tie each number back to the decision it informs. Delegate complex queries to the sql-reviewer subagent before running them.',
+    "Only report numbers you actually retrieved with a tool - never estimate from memory. Write queries with explicit column lists, correct join conditions, aggregations, and window functions, and prefer set-based logic over N+1 patterns. Describe distributions, central tendency, and variance, apply the correct hypothesis test, and interpret confidence intervals. Flag confounders and small sample sizes, state sample size and explicit confidence for every finding, and tie each number back to the decision it informs. Delegate complex queries to the sql-reviewer subagent before running them.",
   );
 
-  const [analysis, setAnalysis] = usePersistentState<AnalysisState>('analysis', {
-    status: 'idle',
-    question: '',
+  const [analysis, setAnalysis] = usePersistentState<AnalysisState>("analysis", {
+    status: "idle",
+    question: "",
     findings: [],
   });
 
-  const writeAnalysis = useDataWriter('analysis', {
+  const writeAnalysis = useDataWriter("analysis", {
     schema: v.object({
-      status: v.picklist(['idle', 'querying', 'analyzing', 'done']),
+      status: v.picklist(["idle", "querying", "analyzing", "done"]),
       question: v.string(),
       findings: v.array(v.string()),
     }),
@@ -64,9 +64,9 @@ export function BusinessDataAnalyst() {
 
   useAgentStart(({ log }) => {
     const question = analysis.question || initialData?.question || delivery.body;
-    log.info('analysis.started', { question });
-    setAnalysis((prev) => ({ ...prev, status: 'querying', question }));
-    writeAnalysis({ status: 'querying', question, findings: analysis.findings });
+    log.info("analysis.started", { question });
+    setAnalysis((prev) => ({ ...prev, status: "querying", question }));
+    writeAnalysis({ status: "querying", question, findings: analysis.findings });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -77,17 +77,18 @@ export function BusinessDataAnalyst() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('analysis.finished', { toolCalls: response.toolCalls.length });
-    setAnalysis((prev) => ({ ...prev, status: 'done' }));
-    writeAnalysis({ status: 'done', question: analysis.question, findings: analysis.findings });
+    log.info("analysis.finished", { toolCalls: response.toolCalls.length });
+    setAnalysis((prev) => ({ ...prev, status: "done" }));
+    writeAnalysis({ status: "done", question: analysis.question, findings: analysis.findings });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
   useSkill(cohortFunnelAnalysis);
   useSubagent({
-    name: 'sql-reviewer',
-    description: 'Reviews a SQL query for correctness, performance, and safety before it is executed. Use before running a complex or destructive query.',
+    name: "sql-reviewer",
+    description:
+      "Reviews a SQL query for correctness, performance, and safety before it is executed. Use before running a complex or destructive query.",
     agent: SqlReviewer,
   });
   useTool(analyticsTool);

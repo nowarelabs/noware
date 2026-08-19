@@ -52,15 +52,26 @@ interface TestRun {
   tests: TestCase[];
 }
 
-function simulateRun(level: string, scope: string, suite: string, repo: string | undefined): TestRun {
+function simulateRun(
+  level: string,
+  scope: string,
+  suite: string,
+  repo: string | undefined,
+): TestRun {
   const rand = seed(stableSeed(level, suite, repo));
   const count = 5 + Math.floor(rand() * 12);
   const passRate = 0.7 + rand() * 0.3;
   const tests: TestCase[] = [];
   for (let i = 0; i < count; i++) {
     const roll = rand();
-    const status: TestCase["status"] = roll > passRate ? "failed" : roll > 0.97 ? "skipped" : "passed";
-    tests.push({ name: `${suite} test ${i + 1}`, suite, status, durationMs: Math.round(rand() * 400 + 5) });
+    const status: TestCase["status"] =
+      roll > passRate ? "failed" : roll > 0.97 ? "skipped" : "passed";
+    tests.push({
+      name: `${suite} test ${i + 1}`,
+      suite,
+      status,
+      durationMs: Math.round(rand() * 400 + 5),
+    });
   }
   const durationMs = tests.reduce((n, t) => n + t.durationMs, 0);
   return {
@@ -91,7 +102,13 @@ export class TestRunnerTool extends WorkerEntrypoint<Env> {
     const suites = defaultSuites(level, scope);
     const runs = suites.map((suite) => simulateRun(level, scope ?? "", suite, repo));
     const totals = runs.reduce(
-      (acc, r) => ({ total: acc.total + r.total, passed: acc.passed + r.passed, failed: acc.failed + r.failed, skipped: acc.skipped + r.skipped, durationMs: acc.durationMs + r.durationMs }),
+      (acc, r) => ({
+        total: acc.total + r.total,
+        passed: acc.passed + r.passed,
+        failed: acc.failed + r.failed,
+        skipped: acc.skipped + r.skipped,
+        durationMs: acc.durationMs + r.durationMs,
+      }),
       { total: 0, passed: 0, failed: 0, skipped: 0, durationMs: 0 },
     );
     return {
@@ -106,7 +123,10 @@ export class TestRunnerTool extends WorkerEntrypoint<Env> {
     };
   }
 
-  async generateTestData(input: { schema?: unknown; count?: number }): Promise<{ records: unknown[] }> {
+  async generateTestData(input: {
+    schema?: unknown;
+    count?: number;
+  }): Promise<{ records: unknown[] }> {
     const schema = (input.schema ?? {}) as Record<string, unknown>;
     const count = Math.min(Math.max(input.count ?? 10, 1), 1000);
     const rand = seed(stableSeed(JSON.stringify(schema), String(count)));
@@ -143,7 +163,9 @@ export class TestRunnerTool extends WorkerEntrypoint<Env> {
       case "uuid":
         return crypto.randomUUID();
       case "date":
-        return new Date(Date.now() - Math.floor(rand() * 365 * 86400000)).toISOString().slice(0, 10);
+        return new Date(Date.now() - Math.floor(rand() * 365 * 86400000))
+          .toISOString()
+          .slice(0, 10);
       case "datetime":
       case "timestamp":
         return new Date(Date.now() - Math.floor(rand() * 365 * 86400000)).toISOString();
@@ -169,9 +191,6 @@ export class TestRunnerTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

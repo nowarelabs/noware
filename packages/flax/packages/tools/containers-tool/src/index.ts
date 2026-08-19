@@ -66,7 +66,11 @@ function imageRef(repo: string, tag: string, sha: string): string {
 }
 
 export class ContainersTool extends WorkerEntrypoint<Env> {
-  async buildImage(input: { repo?: string; dockerfile?: string; tag?: string }): Promise<{ image: string }> {
+  async buildImage(input: {
+    repo?: string;
+    dockerfile?: string;
+    tag?: string;
+  }): Promise<{ image: string }> {
     const buildUrl = optionalSecret(this.env, "CONTAINER_BUILD_URL");
     const repo = input.repo ?? requireSecret(this.env, "GITHUB_REPO");
     const tag = input.tag ?? "latest";
@@ -80,17 +84,33 @@ export class ContainersTool extends WorkerEntrypoint<Env> {
       const text = await res.text();
       if (!res.ok) throw new Error(`container build failed (${res.status}): ${text.slice(0, 300)}`);
       const data = JSON.parse(text || "{}");
-      return { image: data.image ?? data.imageRef ?? `${buildUrl.replace(/^https?:\/\//, "")}/library/${repo}:${tag}` };
+      return {
+        image:
+          data.image ??
+          data.imageRef ??
+          `${buildUrl.replace(/^https?:\/\//, "")}/library/${repo}:${tag}`,
+      };
     }
 
-    const head = await ghFetch(this.env, `/repos/${repo}/git/ref/heads/main`).catch(() => ghFetch(this.env, `/repos/${repo}/git/ref/heads/master`));
+    const head = await ghFetch(this.env, `/repos/${repo}/git/ref/heads/main`).catch(() =>
+      ghFetch(this.env, `/repos/${repo}/git/ref/heads/master`),
+    );
     const image = imageRef(repo, tag, head?.object?.sha ?? "latest");
     return { image };
   }
 
-  async deployToK8s(input: { image: string; namespace?: string; manifest?: unknown }): Promise<{ deployment: string }> {
+  async deployToK8s(input: {
+    image: string;
+    namespace?: string;
+    manifest?: unknown;
+  }): Promise<{ deployment: string }> {
     const namespace = input.namespace ?? optionalSecret(this.env, "K8S_NAMESPACE") ?? "default";
-    const name = input.image.split("/").pop()!.split(":")[0].replace(/[^a-z0-9-]/gi, "-").toLowerCase();
+    const name = input.image
+      .split("/")
+      .pop()!
+      .split(":")[0]
+      .replace(/[^a-z0-9-]/gi, "-")
+      .toLowerCase();
 
     const k8sBase = optionalSecret(this.env, "K8S_BASE_URL");
     if (k8sBase && this.env.K8S_TOKEN) {
@@ -113,7 +133,11 @@ export class ContainersTool extends WorkerEntrypoint<Env> {
       });
     }
 
-    deployments.set(name, { image: input.image, status: "deployed", updatedAt: new Date().toISOString() });
+    deployments.set(name, {
+      image: input.image,
+      status: "deployed",
+      updatedAt: new Date().toISOString(),
+    });
     return { deployment: name };
   }
 
@@ -121,7 +145,10 @@ export class ContainersTool extends WorkerEntrypoint<Env> {
     const k8sBase = optionalSecret(this.env, "K8S_BASE_URL");
     if (k8sBase && this.env.K8S_TOKEN) {
       const namespace = input.namespace ?? optionalSecret(this.env, "K8S_NAMESPACE") ?? "default";
-      const dep = await k8sFetch(this.env, `/apis/apps/v1/namespaces/${namespace}/deployments/${input.deployment}`);
+      const dep = await k8sFetch(
+        this.env,
+        `/apis/apps/v1/namespaces/${namespace}/deployments/${input.deployment}`,
+      );
       const conditions = dep.status?.conditions ?? [];
       return {
         deployment: input.deployment,
@@ -129,22 +156,29 @@ export class ContainersTool extends WorkerEntrypoint<Env> {
         replicas: dep.status?.replicas ?? 0,
         availableReplicas: dep.status?.availableReplicas ?? 0,
         readyReplicas: dep.status?.readyReplicas ?? 0,
-        conditions: conditions.map((c: any) => ({ type: c.type, status: c.status, reason: c.reason, message: c.message })),
+        conditions: conditions.map((c: any) => ({
+          type: c.type,
+          status: c.status,
+          reason: c.reason,
+          message: c.message,
+        })),
         updatedAt: dep.metadata?.creationTimestamp ?? null,
       };
     }
 
     const local = deployments.get(input.deployment);
     if (!local) throw new Error(`deployment "${input.deployment}" not found`);
-    return { deployment: input.deployment, image: local.image, status: local.status, updatedAt: local.updatedAt };
+    return {
+      deployment: input.deployment,
+      image: local.image,
+      status: local.status,
+      updatedAt: local.updatedAt,
+    };
   }
 }
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

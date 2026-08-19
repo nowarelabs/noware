@@ -3,48 +3,44 @@
   "name": "release-manager-agent",
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "ai": {
     "binding": "AI",
-    "remote": true
+    "remote": true,
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "FEATURE_FLAGS_TOOL",
       "service": "feature-flags-tool",
-      "entrypoint": "FeatureFlagsTool"
+      "entrypoint": "FeatureFlagsTool",
     },
     {
       "binding": "GITHUB_TOOL",
       "service": "github-tool",
-      "entrypoint": "GithubTool"
+      "entrypoint": "GithubTool",
     },
     {
       "binding": "CHANGELOG_TOOL",
       "service": "changelog-tool",
-      "entrypoint": "ChangelogTool"
-    }
+      "entrypoint": "ChangelogTool",
+    },
   ],
   "migrations": [
     {
       "tag": "flue-class-FlueReleaseManagerAgent",
-      "new_sqlite_classes": [
-        "FlueReleaseManagerAgent"
-      ]
-    }
-  ]
+      "new_sqlite_classes": ["FlueReleaseManagerAgent"],
+    },
+  ],
 }

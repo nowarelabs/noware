@@ -2,6 +2,8 @@
   "name": "@nowarelabs/db-client-tool",
   "private": true,
   "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run",
@@ -9,8 +11,6 @@
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types --include-runtime=false"
   },
-  "main": "src/index.ts",
-  "types": "src/index.ts",
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260804.1",
     "typescript": "^7.0.2",

@@ -58,7 +58,9 @@ function confluenceHeaders(env: Env): Record<string, string> {
   const base = { "Content-Type": "application/json", Accept: "application/json" };
   if (email && token) return { ...base, Authorization: `Basic ${btoa(`${email}:${token}`)}` };
   if (token) return { ...base, Authorization: `Bearer ${token}` };
-  throw new Error("CONFLUENCE_API_TOKEN (or CONFLUENCE_TOKEN) binding is not configured on this worker");
+  throw new Error(
+    "CONFLUENCE_API_TOKEN (or CONFLUENCE_TOKEN) binding is not configured on this worker",
+  );
 }
 
 async function confluenceFetch(env: Env, path: string, init: RequestInit = {}): Promise<any> {
@@ -79,18 +81,28 @@ async function confluenceSpaceId(env: Env, key: string): Promise<string> {
   return space.id;
 }
 
-const memoryPages = new Map<string, { id: string; space: string; title: string; body?: string; parentId?: string }>();
+const memoryPages = new Map<
+  string,
+  { id: string; space: string; title: string; body?: string; parentId?: string }
+>();
 let memoryCounter = 0;
 
 export class ConfluenceNotionTool extends WorkerEntrypoint<Env> {
-  async createPage(input: { space: string; title: string; body?: string; parentId?: string }): Promise<{ pageId: string }> {
+  async createPage(input: {
+    space: string;
+    title: string;
+    body?: string;
+    parentId?: string;
+  }): Promise<{ pageId: string }> {
     const p = provider(this.env);
 
     if (p === "notion") {
       const res = await notionFetch(this.env, "/pages", {
         method: "POST",
         body: JSON.stringify({
-          parent: input.parentId ? { type: "page_id", page_id: input.parentId } : { type: "workspace" },
+          parent: input.parentId
+            ? { type: "page_id", page_id: input.parentId }
+            : { type: "workspace" },
           properties: { title: { title: [{ text: { content: input.title } }] } },
           children: bodyToBlocks(input.body),
         }),
@@ -113,18 +125,30 @@ export class ConfluenceNotionTool extends WorkerEntrypoint<Env> {
     }
 
     const id = `page-${++memoryCounter}`;
-    memoryPages.set(id, { id, space: input.space, title: input.title, body: input.body, parentId: input.parentId });
+    memoryPages.set(id, {
+      id,
+      space: input.space,
+      title: input.title,
+      body: input.body,
+      parentId: input.parentId,
+    });
     return { pageId: id };
   }
 
-  async updatePage(input: { pageId: string; title?: string; body?: string }): Promise<{ pageId: string }> {
+  async updatePage(input: {
+    pageId: string;
+    title?: string;
+    body?: string;
+  }): Promise<{ pageId: string }> {
     const p = provider(this.env);
 
     if (p === "notion") {
       if (input.title) {
         await notionFetch(this.env, `/pages/${input.pageId}`, {
           method: "PATCH",
-          body: JSON.stringify({ properties: { title: { title: [{ text: { content: input.title } }] } } }),
+          body: JSON.stringify({
+            properties: { title: { title: [{ text: { content: input.title } }] } },
+          }),
         });
       }
       if (input.body) {
@@ -165,7 +189,11 @@ export class ConfluenceNotionTool extends WorkerEntrypoint<Env> {
     if (p === "notion") {
       const res = await notionFetch(this.env, "/search", {
         method: "POST",
-        body: JSON.stringify({ query: input.query, filter: { value: "page", property: "object" }, page_size: limit }),
+        body: JSON.stringify({
+          query: input.query,
+          filter: { value: "page", property: "object" },
+          page_size: limit,
+        }),
       });
       return (res.results ?? []).map((r: any) => ({
         pageId: r.id,
@@ -175,8 +203,13 @@ export class ConfluenceNotionTool extends WorkerEntrypoint<Env> {
     }
 
     if (p === "confluence") {
-      const cql = `text ~ "${input.query.replace(/"/g, '\\"')}"` + (input.space ? ` AND space = "${input.space}"` : "");
-      const res = await confluenceFetch(this.env, `/search?cql=${encodeURIComponent(cql)}&limit=${limit}`);
+      const cql =
+        `text ~ "${input.query.replace(/"/g, '\\"')}"` +
+        (input.space ? ` AND space = "${input.space}"` : "");
+      const res = await confluenceFetch(
+        this.env,
+        `/search?cql=${encodeURIComponent(cql)}&limit=${limit}`,
+      );
       return (res.results ?? []).map((r: any) => ({
         pageId: r.id,
         title: r.title,
@@ -185,7 +218,11 @@ export class ConfluenceNotionTool extends WorkerEntrypoint<Env> {
     }
 
     return [...memoryPages.values()]
-      .filter((page) => (!input.space || page.space === input.space) && page.title.toLowerCase().includes(input.query.toLowerCase()))
+      .filter(
+        (page) =>
+          (!input.space || page.space === input.space) &&
+          page.title.toLowerCase().includes(input.query.toLowerCase()),
+      )
       .slice(0, limit)
       .map((page) => ({ pageId: page.id, title: page.title }));
   }
@@ -193,9 +230,6 @@ export class ConfluenceNotionTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

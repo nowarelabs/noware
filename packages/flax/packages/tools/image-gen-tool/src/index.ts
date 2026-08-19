@@ -21,7 +21,11 @@ function parseSize(size?: string): { width: number; height: number } {
 }
 
 export class ImageGenTool extends WorkerEntrypoint<Env> {
-  async generateImage(input: { prompt: string; size?: string; negativePrompt?: string }): Promise<{ imageUrl: string }> {
+  async generateImage(input: {
+    prompt: string;
+    size?: string;
+    negativePrompt?: string;
+  }): Promise<{ imageUrl: string }> {
     const ai = this.env.AI as AiBinding | undefined;
     const { width, height } = parseSize(input.size);
 
@@ -52,7 +56,12 @@ export class ImageGenTool extends WorkerEntrypoint<Env> {
       const res = await fetch(apiUrl, {
         method: "POST",
         headers,
-        body: JSON.stringify({ prompt: input.prompt, negative_prompt: input.negativePrompt, width, height }),
+        body: JSON.stringify({
+          prompt: input.prompt,
+          negative_prompt: input.negativePrompt,
+          width,
+          height,
+        }),
       });
       const text = await res.text();
       if (!res.ok) throw new Error(`image generation API ${res.status}: ${text.slice(0, 300)}`);
@@ -62,7 +71,9 @@ export class ImageGenTool extends WorkerEntrypoint<Env> {
       return { imageUrl };
     }
 
-    throw new Error("no image generation provider configured (add an AI binding or IMAGE_GEN_API_URL)");
+    throw new Error(
+      "no image generation provider configured (add an AI binding or IMAGE_GEN_API_URL)",
+    );
   }
 }
 
@@ -78,9 +89,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

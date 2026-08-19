@@ -60,7 +60,11 @@ function matchesFilter(metadata: unknown, filter: unknown): boolean {
 }
 
 export class VectorStoreTool extends WorkerEntrypoint<Env> {
-  async upsert(input: { namespace: string; vectors: unknown[]; metadata?: unknown }): Promise<{ count: number }> {
+  async upsert(input: {
+    namespace: string;
+    vectors: unknown[];
+    metadata?: unknown;
+  }): Promise<{ count: number }> {
     const ai = this.env.AI as AiBinding | undefined;
     const items = (input.vectors as VectorInput[]) ?? [];
     const ns = store(input.namespace);
@@ -69,13 +73,19 @@ export class VectorStoreTool extends WorkerEntrypoint<Env> {
       const id = item.id ?? `vec-${crypto.randomUUID()}`;
       let vector = item.vector ?? item.values;
       if (!vector && item.text) vector = await embed(ai, item.text);
-      if (!Array.isArray(vector)) throw new Error(`vector #${id} has no vector and no text to embed`);
+      if (!Array.isArray(vector))
+        throw new Error(`vector #${id} has no vector and no text to embed`);
       ns.set(id, { id, vector, metadata: item.metadata ?? input.metadata });
     }
     return { count: items.length };
   }
 
-  async query(input: { namespace: string; vector: number[]; topK?: number; filter?: unknown }): Promise<unknown> {
+  async query(input: {
+    namespace: string;
+    vector: number[];
+    topK?: number;
+    filter?: unknown;
+  }): Promise<unknown> {
     const ai = this.env.AI as AiBinding | undefined;
     const ns = store(input.namespace);
     const topK = input.topK ?? 10;
@@ -87,7 +97,11 @@ export class VectorStoreTool extends WorkerEntrypoint<Env> {
 
     const scored = [...ns.values()]
       .filter((item) => matchesFilter(item.metadata, input.filter))
-      .map((item) => ({ id: item.id, score: cosine(queryVector, item.vector), metadata: item.metadata }))
+      .map((item) => ({
+        id: item.id,
+        score: cosine(queryVector, item.vector),
+        metadata: item.metadata,
+      }))
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
 
@@ -111,9 +125,6 @@ export class VectorStoreTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

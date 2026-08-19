@@ -38,14 +38,21 @@ function stableHash(str: string): string {
 export class FigmaTool extends WorkerEntrypoint<Env> {
   async getFile(input: { fileKey: string; nodeId?: string }): Promise<unknown> {
     if (input.nodeId) {
-      const res = await figmaFetch(this.env, `/files/${input.fileKey}/nodes?ids=${encodeURIComponent(input.nodeId)}`);
+      const res = await figmaFetch(
+        this.env,
+        `/files/${input.fileKey}/nodes?ids=${encodeURIComponent(input.nodeId)}`,
+      );
       const nodes = res.nodes ?? {};
       return { fileKey: input.fileKey, nodeId: input.nodeId, node: nodes[input.nodeId] ?? null };
     }
     return figmaFetch(this.env, `/files/${input.fileKey}`);
   }
 
-  async createFrame(input: { fileKey: string; page: string; frame: unknown }): Promise<{ frameId: string }> {
+  async createFrame(input: {
+    fileKey: string;
+    page: string;
+    frame: unknown;
+  }): Promise<{ frameId: string }> {
     const pluginId = secret(this.env, "FIGMA_PLUGIN_ID");
     const frameId = `frame-${stableHash(`${input.fileKey}:${input.page}:${JSON.stringify(input.frame)}`)}`;
 
@@ -67,22 +74,29 @@ export class FigmaTool extends WorkerEntrypoint<Env> {
     return { frameId };
   }
 
-  async exportAssets(input: { fileKey: string; nodeIds: string[]; format?: string }): Promise<{ assetUrls: string[] }> {
+  async exportAssets(input: {
+    fileKey: string;
+    nodeIds: string[];
+    format?: string;
+  }): Promise<{ assetUrls: string[] }> {
     const format = input.format ?? "png";
     const ids = input.nodeIds.join(",");
-    const res = await figmaFetch(this.env, `/images/${input.fileKey}?ids=${encodeURIComponent(ids)}&format=${format}`);
+    const res = await figmaFetch(
+      this.env,
+      `/images/${input.fileKey}?ids=${encodeURIComponent(ids)}&format=${format}`,
+    );
     const images = res.images ?? {};
-    const assetUrls = input.nodeIds.map((id) => images[id] ?? null).filter((u): u is string => typeof u === "string");
-    if (assetUrls.length === 0) throw new Error("Figma returned no export URLs (are the nodeIds valid render targets?)");
+    const assetUrls = input.nodeIds
+      .map((id) => images[id] ?? null)
+      .filter((u): u is string => typeof u === "string");
+    if (assetUrls.length === 0)
+      throw new Error("Figma returned no export URLs (are the nodeIds valid render targets?)");
     return { assetUrls };
   }
 }
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

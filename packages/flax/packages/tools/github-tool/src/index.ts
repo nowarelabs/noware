@@ -41,7 +41,13 @@ function toRefPath(ref: string): string {
 }
 
 export class GithubTool extends WorkerEntrypoint<Env> {
-  async createPullRequest(input: { repo: string; branch: string; title: string; body: string; base?: string }): Promise<{ prUrl: string }> {
+  async createPullRequest(input: {
+    repo: string;
+    branch: string;
+    title: string;
+    body: string;
+    base?: string;
+  }): Promise<{ prUrl: string }> {
     const pr = await ghFetch(this.env, `/repos/${input.repo}/pulls`, {
       method: "POST",
       body: JSON.stringify({
@@ -58,7 +64,11 @@ export class GithubTool extends WorkerEntrypoint<Env> {
     return ghFetch(this.env, `/repos/${input.repo}/pulls/${input.prNumber}`);
   }
 
-  async mergePullRequest(input: { repo: string; prNumber: number; method?: string }): Promise<{ merged: boolean }> {
+  async mergePullRequest(input: {
+    repo: string;
+    prNumber: number;
+    method?: string;
+  }): Promise<{ merged: boolean }> {
     const res = await ghFetch(this.env, `/repos/${input.repo}/pulls/${input.prNumber}/merge`, {
       method: "PUT",
       body: JSON.stringify({ merge_method: input.method ?? "squash" }),
@@ -70,7 +80,11 @@ export class GithubTool extends WorkerEntrypoint<Env> {
     return ghFetch(this.env, `/repos/${input.repo}/issues/${input.issueNumber}`);
   }
 
-  async createBranch(input: { repo: string; branch: string; fromRef?: string }): Promise<{ ref: string }> {
+  async createBranch(input: {
+    repo: string;
+    branch: string;
+    fromRef?: string;
+  }): Promise<{ ref: string }> {
     const base = input.fromRef ?? (await defaultBranch(this.env, input.repo));
     const refInfo = await ghFetch(this.env, `/repos/${input.repo}/git/ref/${toRefPath(base)}`);
     await ghFetch(this.env, `/repos/${input.repo}/git/refs`, {
@@ -80,7 +94,12 @@ export class GithubTool extends WorkerEntrypoint<Env> {
     return { ref: `refs/heads/${input.branch}` };
   }
 
-  async commitFiles(input: { repo: string; branch: string; files: unknown[]; message: string }): Promise<{ sha: string }> {
+  async commitFiles(input: {
+    repo: string;
+    branch: string;
+    files: unknown[];
+    message: string;
+  }): Promise<{ sha: string }> {
     const files = input.files as { path: string; content: string; encoding?: string }[];
     if (files.length === 0) throw new Error("no files provided");
     const headRef = await ghFetch(this.env, `/repos/${input.repo}/git/ref/heads/${input.branch}`);
@@ -118,7 +137,12 @@ export class GithubTool extends WorkerEntrypoint<Env> {
     const refInfo = await ghFetch(this.env, `/repos/${input.repo}/git/ref/${toRefPath(base)}`);
     const tagObj = await ghFetch(this.env, `/repos/${input.repo}/git/tags`, {
       method: "POST",
-      body: JSON.stringify({ tag: input.tag, message: input.tag, object: refInfo.object.sha, type: "commit" }),
+      body: JSON.stringify({
+        tag: input.tag,
+        message: input.tag,
+        object: refInfo.object.sha,
+        type: "commit",
+      }),
     });
     await ghFetch(this.env, `/repos/${input.repo}/git/refs`, {
       method: "POST",
@@ -135,7 +159,10 @@ export class GithubTool extends WorkerEntrypoint<Env> {
     const ref = input.ref ?? (await defaultBranch(this.env, input.repo));
     const [checkRuns, runs] = await Promise.all([
       ghFetch(this.env, `/repos/${input.repo}/commits/${ref}/check-runs`),
-      ghFetch(this.env, `/repos/${input.repo}/actions/runs?branch=${encodeURIComponent(ref)}&per_page=10`),
+      ghFetch(
+        this.env,
+        `/repos/${input.repo}/actions/runs?branch=${encodeURIComponent(ref)}&per_page=10`,
+      ),
     ]);
     return {
       ref,
@@ -159,9 +186,6 @@ export class GithubTool extends WorkerEntrypoint<Env> {
 
 export default {
   async fetch(): Promise<Response> {
-    return new Response(
-      "This worker is only callable via RPC service binding.",
-      { status: 400 },
-    );
+    return new Response("This worker is only callable via RPC service binding.", { status: 400 });
   },
 };

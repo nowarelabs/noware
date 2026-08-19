@@ -1,41 +1,41 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 
 /** Rail stage an agent contributes to (mirrors dashboard-api's stageForAgent). */
 export const STAGE_MAP: Record<string, string> = {
-  'product-requirements': 'requirements',
-  'business-data-analyst': 'requirements',
-  'solutions-architect': 'architecture',
-  'ux-ui-designer': 'design',
-  coding: 'coding',
-  'database-data-engineer': 'coding',
-  'code-review': 'review',
-  'qa-test': 'qa',
-  'security-appsec': 'security',
-  'devops-cicd': 'devops',
-  'release-manager': 'release',
-  'sre-observability': 'sre-docs',
-  documentation: 'sre-docs',
-  'support-feedback': 'sre-docs',
-  support: 'requirements',
+  "product-requirements": "requirements",
+  "business-data-analyst": "requirements",
+  "solutions-architect": "architecture",
+  "ux-ui-designer": "design",
+  coding: "coding",
+  "database-data-engineer": "coding",
+  "code-review": "review",
+  "qa-test": "qa",
+  "security-appsec": "security",
+  "devops-cicd": "devops",
+  "release-manager": "release",
+  "sre-observability": "sre-docs",
+  documentation: "sre-docs",
+  "support-feedback": "sre-docs",
+  support: "requirements",
 };
 
 export const RAIL_STAGES = [
-  'requirements',
-  'architecture',
-  'design',
-  'coding',
-  'review',
-  'qa',
-  'security',
-  'devops',
-  'release',
-  'sre-docs',
+  "requirements",
+  "architecture",
+  "design",
+  "coding",
+  "review",
+  "qa",
+  "security",
+  "devops",
+  "release",
+  "sre-docs",
 ] as const;
 
 export type RailStage = (typeof RAIL_STAGES)[number];
 
 export function stageForAgent(agent: string): RailStage {
-  return (STAGE_MAP[agent] as RailStage | undefined) ?? 'requirements';
+  return (STAGE_MAP[agent] as RailStage | undefined) ?? "requirements";
 }
 
 let schemaReady: Promise<void> | null = null;
@@ -57,15 +57,15 @@ export function ensureSchema(db: D1Database): Promise<void> {
         )
         .run();
 
-      const columns = await db.prepare('PRAGMA table_info(flax_instances)').all<{ name: string }>();
+      const columns = await db.prepare("PRAGMA table_info(flax_instances)").all<{ name: string }>();
       const existing = new Set(columns.results?.map((c) => c.name) ?? []);
       const addColumn = [
-        ['title', 'TEXT'],
-        ['origin', "TEXT NOT NULL DEFAULT 'orchestrator'"],
-        ['current_stage', 'TEXT'],
-        ['current_agent', 'TEXT'],
-        ['status', "TEXT NOT NULL DEFAULT 'running'"],
-        ['last_activity_at', 'INTEGER'],
+        ["title", "TEXT"],
+        ["origin", "TEXT NOT NULL DEFAULT 'orchestrator'"],
+        ["current_stage", "TEXT"],
+        ["current_agent", "TEXT"],
+        ["status", "TEXT NOT NULL DEFAULT 'running'"],
+        ["last_activity_at", "INTEGER"],
       ] as const;
       for (const [name, def] of addColumn) {
         if (!existing.has(name)) {
@@ -87,7 +87,11 @@ export function ensureSchema(db: D1Database): Promise<void> {
           )`,
         )
         .run();
-      await db.prepare('CREATE INDEX IF NOT EXISTS idx_flax_stages_conversation ON flax_stages(conversation_id, entered_at)').run();
+      await db
+        .prepare(
+          "CREATE INDEX IF NOT EXISTS idx_flax_stages_conversation ON flax_stages(conversation_id, entered_at)",
+        )
+        .run();
 
       await db
         .prepare(
@@ -105,7 +109,11 @@ export function ensureSchema(db: D1Database): Promise<void> {
           )`,
         )
         .run();
-      await db.prepare('CREATE INDEX IF NOT EXISTS idx_flax_hitl_conversation ON flax_hitl(conversation_id, status)').run();
+      await db
+        .prepare(
+          "CREATE INDEX IF NOT EXISTS idx_flax_hitl_conversation ON flax_hitl(conversation_id, status)",
+        )
+        .run();
     })();
   }
   return schemaReady;
@@ -120,25 +128,58 @@ export interface InstancePatch {
   lastActivityAt?: number;
 }
 
-export async function patchInstance(db: D1Database, id: string, patch: InstancePatch): Promise<void> {
+export async function patchInstance(
+  db: D1Database,
+  id: string,
+  patch: InstancePatch,
+): Promise<void> {
   const sets: string[] = [];
   const values: (string | number | null)[] = [];
-  if (patch.title !== undefined) { sets.push('title = ?'); values.push(patch.title); }
-  if (patch.origin !== undefined) { sets.push('origin = ?'); values.push(patch.origin); }
-  if (patch.currentStage !== undefined) { sets.push('current_stage = ?'); values.push(patch.currentStage); }
-  if (patch.currentAgent !== undefined) { sets.push('current_agent = ?'); values.push(patch.currentAgent); }
-  if (patch.status !== undefined) { sets.push('status = ?'); values.push(patch.status); }
-  if (patch.lastActivityAt !== undefined) { sets.push('last_activity_at = ?'); values.push(patch.lastActivityAt); }
+  if (patch.title !== undefined) {
+    sets.push("title = ?");
+    values.push(patch.title);
+  }
+  if (patch.origin !== undefined) {
+    sets.push("origin = ?");
+    values.push(patch.origin);
+  }
+  if (patch.currentStage !== undefined) {
+    sets.push("current_stage = ?");
+    values.push(patch.currentStage);
+  }
+  if (patch.currentAgent !== undefined) {
+    sets.push("current_agent = ?");
+    values.push(patch.currentAgent);
+  }
+  if (patch.status !== undefined) {
+    sets.push("status = ?");
+    values.push(patch.status);
+  }
+  if (patch.lastActivityAt !== undefined) {
+    sets.push("last_activity_at = ?");
+    values.push(patch.lastActivityAt);
+  }
   if (sets.length === 0) return;
   values.push(id);
-  await db.prepare(`UPDATE flax_instances SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
+  await db
+    .prepare(`UPDATE flax_instances SET ${sets.join(", ")} WHERE id = ?`)
+    .bind(...values)
+    .run();
 }
 
 /** Record a stage entry, closing whatever stage was open before it. */
-export async function openStage(db: D1Database, conversationId: string, stage: string, agent: string, detail?: string): Promise<void> {
+export async function openStage(
+  db: D1Database,
+  conversationId: string,
+  stage: string,
+  agent: string,
+  detail?: string,
+): Promise<void> {
   const now = Date.now();
   const previous = await db
-    .prepare('SELECT stage FROM flax_stages WHERE conversation_id = ? ORDER BY entered_at DESC, id DESC LIMIT 1')
+    .prepare(
+      "SELECT stage FROM flax_stages WHERE conversation_id = ? ORDER BY entered_at DESC, id DESC LIMIT 1",
+    )
     .bind(conversationId)
     .first<{ stage: string }>();
 
@@ -151,12 +192,12 @@ export async function openStage(db: D1Database, conversationId: string, stage: s
     .run();
 
   const reentered = await db
-    .prepare('SELECT COUNT(*) AS n FROM flax_stages WHERE conversation_id = ? AND stage = ?')
+    .prepare("SELECT COUNT(*) AS n FROM flax_stages WHERE conversation_id = ? AND stage = ?")
     .bind(conversationId, stage)
     .first<{ n: number }>();
 
   const returned = previous && previous.stage !== stage;
-  const entryDetail = returned || (reentered?.n ?? 0) > 0 ? '↩ returned' : detail ?? null;
+  const entryDetail = returned || (reentered?.n ?? 0) > 0 ? "↩ returned" : (detail ?? null);
   await db
     .prepare(
       `INSERT INTO flax_stages (conversation_id, stage, agent, entered_at, exited_at, outcome, detail)
@@ -166,7 +207,12 @@ export async function openStage(db: D1Database, conversationId: string, stage: s
     .run();
 }
 
-export async function closeOpenStage(db: D1Database, conversationId: string, outcome = 'completed', detail?: string): Promise<void> {
+export async function closeOpenStage(
+  db: D1Database,
+  conversationId: string,
+  outcome = "completed",
+  detail?: string,
+): Promise<void> {
   const now = Date.now();
   await db
     .prepare(
@@ -193,22 +239,31 @@ export async function insertHitl(db: D1Database, hitl: HitlRecord): Promise<void
        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
        ON CONFLICT(id) DO NOTHING`,
     )
-    .bind(hitl.id, hitl.conversation_id, hitl.type, hitl.title, hitl.summary ?? null,
-      hitl.payload !== undefined ? JSON.stringify(hitl.payload) : null, Date.now())
+    .bind(
+      hitl.id,
+      hitl.conversation_id,
+      hitl.type,
+      hitl.title,
+      hitl.summary ?? null,
+      hitl.payload !== undefined ? JSON.stringify(hitl.payload) : null,
+      Date.now(),
+    )
     .run();
 }
 
 export async function pendingHitlCount(db: D1Database, conversationId: string): Promise<number> {
   const row = await db
-    .prepare('SELECT COUNT(*) AS n FROM flax_hitl WHERE conversation_id = ? AND status = ?')
-    .bind(conversationId, 'pending')
+    .prepare("SELECT COUNT(*) AS n FROM flax_hitl WHERE conversation_id = ? AND status = ?")
+    .bind(conversationId, "pending")
     .first<{ n: number }>();
   return row?.n ?? 0;
 }
 
 export async function hasOpenStage(db: D1Database, conversationId: string): Promise<boolean> {
   const row = await db
-    .prepare('SELECT COUNT(*) AS n FROM flax_stages WHERE conversation_id = ? AND exited_at IS NULL')
+    .prepare(
+      "SELECT COUNT(*) AS n FROM flax_stages WHERE conversation_id = ? AND exited_at IS NULL",
+    )
     .bind(conversationId)
     .first<{ n: number }>();
   return (row?.n ?? 0) > 0;

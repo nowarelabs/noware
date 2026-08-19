@@ -1,4 +1,4 @@
-'use agent';
+"use agent";
 
 import {
   useAgentFinish,
@@ -14,17 +14,17 @@ import {
   useSkill,
   useSubagent,
   useTool,
-} from '@nowarelabs/agents';
-import * as v from 'valibot';
+} from "@nowarelabs/agents";
+import * as v from "valibot";
 
-import domainModeling from '../skills/domain-modeling/SKILL.md';
-import { confluenceNotionTool } from '../tools/confluence-notion-tool';
-import { jiraLinearTool } from '../tools/jira-linear-tool';
-import { transcriptionTool } from '../tools/transcription-tool';
-import { vectorStoreTool } from '../tools/vector-store-tool';
+import domainModeling from "../skills/domain-modeling/SKILL.md";
+import { confluenceNotionTool } from "../tools/confluence-notion-tool";
+import { jiraLinearTool } from "../tools/jira-linear-tool";
+import { transcriptionTool } from "../tools/transcription-tool";
+import { vectorStoreTool } from "../tools/vector-store-tool";
 
 interface RequirementsState {
-  status: 'idle' | 'eliciting' | 'done';
+  status: "idle" | "eliciting" | "done";
   goal: string;
   stories: string[];
   decisions: string[];
@@ -35,25 +35,25 @@ function RequirementsValidator() {
 }
 
 export function ProductRequirements() {
-  useModel('cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct', {
-    thinkingLevel: 'medium',
+  useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
+    thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
   });
 
   useInstruction(
-    'Elicit complete, unambiguous requirements and ask one clarifying question at a time. Probe for implicit needs behind stated requests, ask who, what, why, when, and where, separate requirements from proposed solutions, and capture acceptance criteria for every behavior. Model the problem domain before proposing a solution, and capture every decision you make so it survives into the backlog and knowledge base. Score each item with RICE (Reach, Impact, Confidence, Effort), bucket it with MoSCoW (Must, Should, Could, Wont), and always state the score and the bucket. Evaluate each user story against INVEST and rewrite any story that fails a criterion, noting what changed. Run stories through the requirements-validator subagent before writing them up.',
+    "Elicit complete, unambiguous requirements and ask one clarifying question at a time. Probe for implicit needs behind stated requests, ask who, what, why, when, and where, separate requirements from proposed solutions, and capture acceptance criteria for every behavior. Model the problem domain before proposing a solution, and capture every decision you make so it survives into the backlog and knowledge base. Score each item with RICE (Reach, Impact, Confidence, Effort), bucket it with MoSCoW (Must, Should, Could, Wont), and always state the score and the bucket. Evaluate each user story against INVEST and rewrite any story that fails a criterion, noting what changed. Run stories through the requirements-validator subagent before writing them up.",
   );
 
-  const [requirements, setRequirements] = usePersistentState<RequirementsState>('requirements', {
-    status: 'idle',
-    goal: '',
+  const [requirements, setRequirements] = usePersistentState<RequirementsState>("requirements", {
+    status: "idle",
+    goal: "",
     stories: [],
     decisions: [],
   });
 
-  const writeRequirements = useDataWriter('requirements', {
+  const writeRequirements = useDataWriter("requirements", {
     schema: v.object({
-      status: v.picklist(['idle', 'eliciting', 'done']),
+      status: v.picklist(["idle", "eliciting", "done"]),
       goal: v.string(),
       storyCount: v.number(),
       decisionCount: v.number(),
@@ -65,9 +65,14 @@ export function ProductRequirements() {
 
   useAgentStart(({ log }) => {
     const goal = requirements.goal || initialData?.goal || delivery.body;
-    log.info('requirements.started', { goal });
-    setRequirements((prev) => ({ ...prev, status: 'eliciting', goal }));
-    writeRequirements({ status: 'eliciting', goal, storyCount: requirements.stories.length, decisionCount: requirements.decisions.length });
+    log.info("requirements.started", { goal });
+    setRequirements((prev) => ({ ...prev, status: "eliciting", goal }));
+    writeRequirements({
+      status: "eliciting",
+      goal,
+      storyCount: requirements.stories.length,
+      decisionCount: requirements.decisions.length,
+    });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
@@ -78,15 +83,21 @@ export function ProductRequirements() {
   }));
 
   useAgentFinish(({ log, response }) => {
-    log.info('requirements.finished', { toolCalls: response.toolCalls.length });
-    setRequirements((prev) => ({ ...prev, status: 'done' }));
-    writeRequirements({ status: 'done', goal: requirements.goal, storyCount: requirements.stories.length, decisionCount: requirements.decisions.length });
+    log.info("requirements.finished", { toolCalls: response.toolCalls.length });
+    setRequirements((prev) => ({ ...prev, status: "done" }));
+    writeRequirements({
+      status: "done",
+      goal: requirements.goal,
+      storyCount: requirements.stories.length,
+      decisionCount: requirements.decisions.length,
+    });
   });
 
   useSkill(domainModeling);
   useSubagent({
-    name: 'requirements-validator',
-    description: 'Validates user stories against INVEST and flags ambiguity or missing acceptance criteria before they are finalized.',
+    name: "requirements-validator",
+    description:
+      "Validates user stories against INVEST and flags ambiguity or missing acceptance criteria before they are finalized.",
     agent: RequirementsValidator,
   });
   useTool(confluenceNotionTool);
