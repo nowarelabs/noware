@@ -1,0 +1,21 @@
+{
+  "name": "@nowarelabs/dashboard-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types --include-runtime=false",
+    "build:spa": "pnpm --filter @nowarelabs/dashboard build && rm -rf static && mkdir -p static && cp -r ../dashboard/dist/. static/"
+  },
+  "dependencies": {
+    "hono": "^4.13.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.118.0"
+  }
+}

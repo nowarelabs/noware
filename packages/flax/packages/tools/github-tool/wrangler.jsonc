@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "github-tool",
+  "dev": { "port": 8815, "inspector_port": 18815 },
+  "account_id": "7aa58cc890267c2dda88943807e3daac",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "FLAX_DB",
+      "database_name": "support-agent-db",
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
+    }
+  ],
+  "observability": {
+    "traces": {
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,89 @@
+@host = http://localhost:11434
+@model = qwen2.5-coder:7b
+
+# Raw /api/generate completions (no chat template applied by us — Ollama applies the model's template).
+# stream:false -> a single JSON document with the response + timing stats (prompt_eval / eval / total duration).
+#
+# Streaming variant (curl): the same body with "stream": true returns NDJSON lines of
+# {"response":"<chunk>"}. httpyac does not render SSE/NDJSON streams nicely, so use curl:
+#   curl -N http://localhost:11434/api/generate -d '{"model":"qwen2.5-coder:7b","prompt":"say hi","stream":true}'
+
+### @name generate_basic
+# Single-shot completion with timing stats in the response
+POST {{host}}/api/generate
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "prompt": "Write a one-line JavaScript function that adds two numbers. Reply with code only.",
+  "stream": false,
+  "options": {
+    "temperature": 0.2,
+    "num_predict": 128
+  }
+}
+
+### @name generate_raw
+# Pure raw completion, low-level: observe the exact model output (no markdown fences, no preamble)
+POST {{host}}/api/generate
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "prompt": "function fibonacci(n) {\n  // return the nth fibonacci number\n",
+  "stream": false,
+  "raw": true,
+  "options": {
+    "temperature": 0
+  }
+}
+
+### @name generate_json_mode
+# Force a JSON object output via format:"json"
+POST {{host}}/api/generate
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "prompt": "List 3 JavaScript array methods, each with a one-line description.",
+  "format": "json",
+  "stream": false,
+  "options": {
+    "temperature": 0
+  }
+}
+
+### @name generate_fim_insert
+# Fill-in-the-middle (capability: "insert"). qwen2.5-coder completes the middle between prompt and suffix.
+POST {{host}}/api/generate
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "prompt": "function add(a, b) {\n",
+  "suffix": "\n}\n",
+  "stream": false,
+  "options": {
+    "temperature": 0,
+    "stop": ["<|fim_end|>"]
+  }
+}
+
+### @name generate_tuned_options
+# Sampling controls: num_ctx window, temperature, top_p, penalty. keep_alive holds the model in RAM.
+POST {{host}}/api/generate
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "prompt": "Explain what a Durable Object is in 2 sentences.",
+  "stream": false,
+  "keep_alive": "5m",
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 8192,
+    "num_predict": 256,
+    "repeat_penalty": 1.1
+  }
+}

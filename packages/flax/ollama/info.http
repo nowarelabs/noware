@@ -1,0 +1,25 @@
+@host = http://localhost:11434
+@model = qwen2.5-coder:7b
+
+# Server info + model registry. Cheap calls to confirm the server is up.
+
+### @name version
+# Ollama server version
+GET {{host}}/api/version
+
+### @name tags
+# Installed models (digest, size, context window, capabilities)
+GET {{host}}/api/tags
+
+### @name ps
+# Models currently loaded into memory + VRAM usage
+GET {{host}}/api/ps
+
+### @name show
+# Model details: family, template, parameters, capabilities (completion | tools | insert)
+POST {{host}}/api/show
+Content-Type: application/json
+
+{
+  "model": "{{model}}"
+}

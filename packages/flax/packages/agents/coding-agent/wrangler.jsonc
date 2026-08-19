@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "coding-agent",
+  "account_id": "7aa58cc890267c2dda88943807e3daac",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "traces": {
+      "enabled": true
+    }
+  },
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
+  "d1_databases": [
+    {
+      "binding": "FLAX_DB",
+      "database_name": "support-agent-db",
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
+    }
+  ],
+  "services": [
+    {
+      "binding": "GITHUB_TOOL",
+      "service": "github-tool",
+      "entrypoint": "GithubTool"
+    },
+    {
+      "binding": "PACKAGE_MANAGER_TOOL",
+      "service": "package-manager-tool",
+      "entrypoint": "PackageManagerTool"
+    },
+    {
+      "binding": "LINT_LANGSERVER_TOOL",
+      "service": "lint-langserver-tool",
+      "entrypoint": "LintLangserverTool"
+    },
+    {
+      "binding": "SANDBOX_EXEC_TOOL",
+      "service": "sandbox-exec-tool",
+      "entrypoint": "SandboxExecTool"
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "flue-class-FlueCodingAgent",
+      "new_sqlite_classes": [
+        "FlueCodingAgent"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "flax-dashboard-api",
+  "dev": { "port": 8787, "inspector_port": 18787 },
+  "account_id": "7aa58cc890267c2dda88943807e3daac",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "traces": {
+      "enabled": true
+    }
+  },
+  "assets": {
+    "directory": "./static",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "FLAX_DB",
+      "database_name": "support-agent-db",
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
+    }
+  ],
+  "services": [
+    {
+      "binding": "ORCHESTRATOR_AGENT",
+      "service": "orchestrator-agent"
+    },
+    {
+      "binding": "CODING_AGENT",
+      "service": "coding-agent"
+    },
+    {
+      "binding": "CODE_REVIEW_AGENT",
+      "service": "code-review-agent"
+    },
+    {
+      "binding": "QA_TEST_AGENT",
+      "service": "qa-test-agent"
+    },
+    {
+      "binding": "SECURITY_APPSEC_AGENT",
+      "service": "security-appsec-agent"
+    },
+    {
+      "binding": "SOLUTIONS_ARCHITECT_AGENT",
+      "service": "solutions-architect-agent"
+    },
+    {
+      "binding": "DOCUMENTATION_AGENT",
+      "service": "documentation-agent"
+    },
+    {
+      "binding": "RELEASE_MANAGER_AGENT",
+      "service": "release-manager-agent"
+    },
+    {
+      "binding": "GITHUB_TOOL",
+      "service": "github-tool",
+      "entrypoint": "GithubTool"
+    },
+    {
+      "binding": "JIRA_LINEAR_TOOL",
+      "service": "jira-linear-tool",
+      "entrypoint": "JiraLinearTool"
+    }
+  ]
+}

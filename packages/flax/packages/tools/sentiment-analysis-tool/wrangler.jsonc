@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sentiment-analysis-tool",
+  "dev": { "port": 8830, "inspector_port": 18830 },
+  "account_id": "7aa58cc890267c2dda88943807e3daac",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "traces": {
+      "enabled": true
+    }
+  },
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  }
+}

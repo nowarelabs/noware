@@ -1,0 +1,398 @@
+// Flax dev cluster — launch every dashboard, agent and tool with zellij.
+//
+//   Usage:
+//     zellij --layout .zellij/dev.kdl
+//
+//   Port conventions (each package pins its own port so this layout just
+//   runs `pnpm dev` with no arguments):
+//     dashboard-api  8787   (wrangler dev, --port 8787 in its dev script)
+//     dashboard SPA  5173   (vite dev, server.port in vite.config.ts)
+//     orchestrator   5199   (vite dev, server.port in vite.config.ts)
+//     agents         5201-5215 (vite dev, server.port per vite.config.ts)
+//     tools          8801-8837 (wrangler dev, dev.port per wrangler.jsonc)
+//
+//   Switching tabs (default keybindings):
+//     Ctrl-t            enter tab mode
+//     h/k or j/l        previous/next tab (arrows work too)
+//     1..9              jump straight to a tab
+//     Ctrl-t            leave tab mode
+//   (In normal mode you can also click the tab names in the tab-bar.)
+//
+//   Notes:
+//   - The global cwd below is absolute on purpose: relative pane cwds are
+//     composed pane -> tab -> global cwd, so this layout works no matter where
+//     zellij is launched from. Update it if the repo moves.
+//   - The tab-bar and status-bar are injected into every tab through
+//     default_tab_template (the `children` placeholder). Zellij does not show
+//     a tab bar for tab-based layouts unless you add it explicitly.
+//   - Local `services` bindings between separate dev processes (e.g. the
+//     orchestrator dispatching to coding-agent) only resolve when the
+//     referenced worker is reachable at that name; point the orchestrator at
+//     the correct agent origin/port or use remote bindings. These panes stream
+//     the live logs of every process.
+
+layout {
+    cwd "/Users/vanceworks/Code/flax"
+
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="tab-bar"
+        }
+        children
+        pane size=1 borderless=true {
+            plugin location="status-bar"
+        }
+    }
+
+    tab name="dashboard" focus=true {
+        pane {
+            command "sh"
+            args "-c" "sleep 0 && exec pnpm dev"
+            cwd "packages/agents/orchestrator-agent"
+            name "orchestrator"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 2 && exec pnpm dev"
+            cwd "packages/dashboard-api"
+            name "dashboard-api"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 4 && exec pnpm dev"
+            cwd "packages/dashboard"
+            name "spa"
+        }
+    }
+
+    tab name="agents-1" {
+        pane {
+            command "sh"
+            args "-c" "sleep 6 && exec pnpm dev"
+            cwd "packages/agents/coding-agent"
+            name "coding"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 8 && exec pnpm dev"
+            cwd "packages/agents/code-review-agent"
+            name "code-review"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 10 && exec pnpm dev"
+            cwd "packages/agents/qa-test-agent"
+            name "qa-test"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 12 && exec pnpm dev"
+            cwd "packages/agents/security-appsec-agent"
+            name "security-appsec"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 14 && exec pnpm dev"
+            cwd "packages/agents/solutions-architect-agent"
+            name "solutions-architect"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 16 && exec pnpm dev"
+            cwd "packages/agents/product-requirements-agent"
+            name "product-requirements"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 18 && exec pnpm dev"
+            cwd "packages/agents/documentation-agent"
+            name "documentation"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 20 && exec pnpm dev"
+            cwd "packages/agents/release-manager-agent"
+            name "release-manager"
+        }
+    }
+
+    tab name="agents-2" {
+        pane {
+            command "sh"
+            args "-c" "sleep 22 && exec pnpm dev"
+            cwd "packages/agents/business-data-analyst-agent"
+            name "data-analyst"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 24 && exec pnpm dev"
+            cwd "packages/agents/ux-ui-designer-agent"
+            name "ux-ui-designer"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 26 && exec pnpm dev"
+            cwd "packages/agents/database-data-engineer-agent"
+            name "data-engineer"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 28 && exec pnpm dev"
+            cwd "packages/agents/devops-cicd-agent"
+            name "devops-cicd"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 30 && exec pnpm dev"
+            cwd "packages/agents/sre-observability-agent"
+            name "sre-observability"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 32 && exec pnpm dev"
+            cwd "packages/agents/support-feedback-agent"
+            name "support-feedback"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 34 && exec pnpm dev"
+            cwd "packages/agents/support-agent"
+            name "support"
+        }
+    }
+
+    tab name="tools-1" {
+        pane {
+            command "sh"
+            args "-c" "sleep 36 && exec pnpm dev"
+            cwd "packages/tools/accessibility-checker-tool"
+            name "accessibility-checker"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 38 && exec pnpm dev"
+            cwd "packages/tools/analytics-tool"
+            name "analytics"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 40 && exec pnpm dev"
+            cwd "packages/tools/changelog-tool"
+            name "changelog"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 42 && exec pnpm dev"
+            cwd "packages/tools/ci-status-tool"
+            name "ci-status"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 44 && exec pnpm dev"
+            cwd "packages/tools/cicd-pipeline-tool"
+            name "cicd-pipeline"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 46 && exec pnpm dev"
+            cwd "packages/tools/cloud-pricing-tool"
+            name "cloud-pricing"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 48 && exec pnpm dev"
+            cwd "packages/tools/confluence-notion-tool"
+            name "confluence-notion"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 50 && exec pnpm dev"
+            cwd "packages/tools/containers-tool"
+            name "containers"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 52 && exec pnpm dev"
+            cwd "packages/tools/coverage-tool"
+            name "coverage"
+        }
+    }
+
+    tab name="tools-2" {
+        pane {
+            command "sh"
+            args "-c" "sleep 54 && exec pnpm dev"
+            cwd "packages/tools/db-client-tool"
+            name "db-client"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 56 && exec pnpm dev"
+            cwd "packages/tools/diagramming-tool"
+            name "diagramming"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 58 && exec pnpm dev"
+            cwd "packages/tools/docs-generator-tool"
+            name "docs-generator"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 60 && exec pnpm dev"
+            cwd "packages/tools/feature-flags-tool"
+            name "feature-flags"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 62 && exec pnpm dev"
+            cwd "packages/tools/figma-tool"
+            name "figma"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 64 && exec pnpm dev"
+            cwd "packages/tools/github-tool"
+            name "github"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 66 && exec pnpm dev"
+            cwd "packages/tools/iac-tool"
+            name "iac"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 68 && exec pnpm dev"
+            cwd "packages/tools/image-gen-tool"
+            name "image-gen"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 70 && exec pnpm dev"
+            cwd "packages/tools/jira-linear-tool"
+            name "jira-linear"
+        }
+    }
+
+    tab name="tools-3" {
+        pane {
+            command "sh"
+            args "-c" "sleep 72 && exec pnpm dev"
+            cwd "packages/tools/lint-langserver-tool"
+            name "lint-langserver"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 74 && exec pnpm dev"
+            cwd "packages/tools/log-aggregation-tool"
+            name "log-aggregation"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 76 && exec pnpm dev"
+            cwd "packages/tools/migrations-tool"
+            name "migrations"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 78 && exec pnpm dev"
+            cwd "packages/tools/monitoring-tool"
+            name "monitoring"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 80 && exec pnpm dev"
+            cwd "packages/tools/package-manager-tool"
+            name "package-manager"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 82 && exec pnpm dev"
+            cwd "packages/tools/pagerduty-tool"
+            name "pagerduty"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 84 && exec pnpm dev"
+            cwd "packages/tools/pentest-tool"
+            name "pentest"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 86 && exec pnpm dev"
+            cwd "packages/tools/query-profiler-tool"
+            name "query-profiler"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 88 && exec pnpm dev"
+            cwd "packages/tools/sandbox-exec-tool"
+            name "sandbox-exec"
+        }
+    }
+
+    tab name="tools-4" {
+        pane {
+            command "sh"
+            args "-c" "sleep 90 && exec pnpm dev"
+            cwd "packages/tools/sbom-tool"
+            name "sbom"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 92 && exec pnpm dev"
+            cwd "packages/tools/security-scan-tool"
+            name "security-scan"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 94 && exec pnpm dev"
+            cwd "packages/tools/sentiment-analysis-tool"
+            name "sentiment-analysis"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 96 && exec pnpm dev"
+            cwd "packages/tools/static-analysis-tool"
+            name "static-analysis"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 98 && exec pnpm dev"
+            cwd "packages/tools/support-tickets-tool"
+            name "support-tickets"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 100 && exec pnpm dev"
+            cwd "packages/tools/task-queue-tool"
+            name "task-queue"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 102 && exec pnpm dev"
+            cwd "packages/tools/test-runner-tool"
+            name "test-runner"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 104 && exec pnpm dev"
+            cwd "packages/tools/transcription-tool"
+            name "transcription"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 106 && exec pnpm dev"
+            cwd "packages/tools/vector-store-tool"
+            name "vector-store"
+        }
+        pane {
+            command "sh"
+            args "-c" "sleep 108 && exec pnpm dev"
+            cwd "packages/tools/web-search-tool"
+            name "web-search"
+        }
+    }
+
+}

@@ -1,0 +1,16 @@
+{
+  "name": "flax",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/agents/*",
+    "packages/tools/*"
+  ],
+  "scripts": {
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "dev": "pnpm --filter @nowarelabs/orchestrator-agent dev",
+    "deploy:tools": "pnpm -r --filter \"./packages/tools/*\" deploy",
+    "deploy:agents": "pnpm -r --filter \"./packages/agents/*\" deploy",
+    "deploy": "pnpm deploy:tools && pnpm deploy:agents"
+  }
+}

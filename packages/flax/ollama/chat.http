@@ -1,0 +1,167 @@
+@host = http://localhost:11434
+@model = qwen2.5-coder:7b
+
+# Chat-style calls (/api/chat) with message roles and tool calling.
+# This mirrors how Flue agents talk to the model: system + user messages, tool definitions,
+# and a final content reply.
+#
+# Streaming variant (curl): "stream": true returns NDJSON lines of {"message":{"content":"<chunk>"}}:
+#   curl -N http://localhost:11434/api/chat -d '{"model":"qwen2.5-coder:7b","messages":[{"role":"user","content":"say hi"}],"stream":true}'
+
+### @name chat_basic
+# Single user turn
+POST {{host}}/api/chat
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is 2+2? Answer with a single number."
+    }
+  ],
+  "stream": false,
+  "options": {
+    "temperature": 0
+  }
+}
+
+### @name chat_multi_turn
+# System prompt + multi-turn context (important for agent loops)
+POST {{host}}/api/chat
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a concise coding assistant. Answer in at most 2 sentences."
+    },
+    {
+      "role": "user",
+      "content": "What is a Cloudflare Worker?"
+    },
+    {
+      "role": "assistant",
+      "content": "A serverless JavaScript runtime that runs on Cloudflare's edge network."
+    },
+    {
+      "role": "user",
+      "content": "What language do I write them in?"
+    }
+  ],
+  "stream": false,
+  "options": {
+    "temperature": 0
+  }
+}
+
+### @name chat_tools
+# Function calling. qwen2.5-coder:7b returns the tool call as JSON in `message.content`
+# (it does not emit the native Ollama tool_calls field for this model), so parse the JSON
+# and feed the tool result back as a user message in the next turn.
+POST {{host}}/api/chat
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the weather in Paris? Use your get_weather tool."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get the current weather for a city",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": ["city"]
+        }
+      }
+    }
+  ],
+  "stream": false,
+  "options": {
+    "temperature": 0
+  }
+}
+
+### @name chat_tool_result_loop
+# Manually complete the tool loop: feed the tool result back and get the final answer.
+POST {{host}}/api/chat
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You answer the user's question using the tool result provided in the user message."
+    },
+    {
+      "role": "user",
+      "content": "What is the weather in Paris?"
+    },
+    {
+      "role": "assistant",
+      "content": "{\"name\": \"get_weather\", \"arguments\": {\"city\": \"Paris\"}}"
+    },
+    {
+      "role": "user",
+      "content": "{\"temperature\": 18, \"condition\": \"partly cloudy\"}"
+    }
+  ],
+  "stream": false,
+  "options": {
+    "temperature": 0
+  }
+}
+
+### @name chat_structured_output
+# Enforce a JSON schema for the reply (Ollama JSON Schema grammar). Great for agent metadata.
+POST {{host}}/api/chat
+Content-Type: application/json
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Summarize this repo's tech stack in one JSON object: Cloudflare Workers, pnpm monorepo, Hono, React 19."
+    }
+  ],
+  "format": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      },
+      "apis": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": ["name", "version", "apis"]
+  },
+  "stream": false,
+  "options": {
+    "temperature": 0
+  }
+}

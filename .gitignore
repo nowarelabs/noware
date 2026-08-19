@@ -146,3 +146,7 @@ node_modules
 dist/*
 .nomo/
 .turbo/*
+
+# Flax-specific
+.dev.vars*
+packages/flax/packages/dashboard-api/static

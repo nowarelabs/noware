@@ -1,0 +1,19 @@
+{
+  "name": "@nowarelabs/github-tool",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types --include-runtime=false"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.118.0"
+  }
+}
