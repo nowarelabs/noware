@@ -33,7 +33,8 @@
   "dependencies": {
     "@nowarelabs/cfour": "workspace:*",
     "@nowarelabs/shared": "workspace:*",
-    "@nowarelabs/telemetry": "workspace:*"
+    "@nowarelabs/telemetry": "workspace:*",
+    "hono": "^4.13.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260522.1",
@@ -41,6 +42,7 @@
     "@nowarelabs/merge-review": "workspace:*",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "agents": "^0.20.1",
     "bumpp": "^11.0.1",
     "typescript": "^6.0.2",
     "vite-plus": "^0.1.14"

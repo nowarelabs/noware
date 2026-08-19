@@ -5,68 +5,66 @@
   "account_id": "7aa58cc890267c2dda88943807e3daac",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "assets": {
     "directory": "./static",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
   },
   "d1_databases": [
     {
       "binding": "FLAX_DB",
       "database_name": "support-agent-db",
-      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4"
-    }
+      "database_id": "687705ad-bbd5-4e62-84fc-1f9e6b58e9b4",
+    },
   ],
   "services": [
     {
       "binding": "ORCHESTRATOR_AGENT",
-      "service": "orchestrator-agent"
+      "service": "orchestrator-agent",
     },
     {
       "binding": "CODING_AGENT",
-      "service": "coding-agent"
+      "service": "coding-agent",
     },
     {
       "binding": "CODE_REVIEW_AGENT",
-      "service": "code-review-agent"
+      "service": "code-review-agent",
     },
     {
       "binding": "QA_TEST_AGENT",
-      "service": "qa-test-agent"
+      "service": "qa-test-agent",
     },
     {
       "binding": "SECURITY_APPSEC_AGENT",
-      "service": "security-appsec-agent"
+      "service": "security-appsec-agent",
     },
     {
       "binding": "SOLUTIONS_ARCHITECT_AGENT",
-      "service": "solutions-architect-agent"
+      "service": "solutions-architect-agent",
     },
     {
       "binding": "DOCUMENTATION_AGENT",
-      "service": "documentation-agent"
+      "service": "documentation-agent",
     },
     {
       "binding": "RELEASE_MANAGER_AGENT",
-      "service": "release-manager-agent"
+      "service": "release-manager-agent",
     },
     {
       "binding": "GITHUB_TOOL",
       "service": "github-tool",
-      "entrypoint": "GithubTool"
+      "entrypoint": "GithubTool",
     },
     {
       "binding": "JIRA_LINEAR_TOOL",
       "service": "jira-linear-tool",
-      "entrypoint": "JiraLinearTool"
-    }
-  ]
+      "entrypoint": "JiraLinearTool",
+    },
+  ],
 }

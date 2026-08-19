@@ -1,40 +1,48 @@
-import { Badge, Button, InputGroup } from '@cloudflare/kumo';
-import { CheckCircle, ShieldCheck, UserFocus, WarningOctagon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { Badge, Button, InputGroup } from "@cloudflare/kumo";
+import { CheckCircle, ShieldCheck, UserFocus, WarningOctagon } from "@phosphor-icons/react";
+import { useState } from "react";
 
-import { resolveHitl } from './api';
-import type { HitlField, HitlOption, HitlPayload, HitlRow, HitlType } from './types';
-import { HITL_TYPE_LABELS } from './types';
+import { resolveHitl } from "./api";
+import type { HitlField, HitlOption, HitlPayload, HitlRow, HitlType } from "./types";
+import { HITL_TYPE_LABELS } from "./types";
 
 function parsePayload(payload: string | null): HitlPayload {
   if (!payload) return {};
   try {
     const parsed = JSON.parse(payload);
-    return parsed && typeof parsed === 'object' ? (parsed as HitlPayload) : {};
+    return parsed && typeof parsed === "object" ? (parsed as HitlPayload) : {};
   } catch {
     return {};
   }
 }
 
-function severityVariant(severity?: string): 'success' | 'warning' | 'error' | 'secondary' {
-  if (severity === 'critical') return 'error';
-  if (severity === 'warning') return 'warning';
-  if (severity === 'info') return 'success';
-  return 'secondary';
+function severityVariant(severity?: string): "success" | "warning" | "error" | "secondary" {
+  if (severity === "critical") return "error";
+  if (severity === "warning") return "warning";
+  if (severity === "info") return "success";
+  return "secondary";
 }
 
 function typeIcon(type: HitlType) {
   switch (type) {
-    case 'pr-review':
+    case "pr-review":
       return <ShieldCheck size={16} weight="duotone" />;
-    case 'alert':
+    case "alert":
       return <WarningOctagon size={16} weight="duotone" />;
     default:
       return <UserFocus size={16} weight="duotone" />;
   }
 }
 
-export function HitlWidget({ hitl, onResolved, disabled }: { hitl: HitlRow; onResolved: (id: string) => void; disabled?: boolean }) {
+export function HitlWidget({
+  hitl,
+  onResolved,
+  disabled,
+}: {
+  hitl: HitlRow;
+  onResolved: (id: string) => void;
+  disabled?: boolean;
+}) {
   const payload = parsePayload(hitl.payload);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,20 +61,26 @@ export function HitlWidget({ hitl, onResolved, disabled }: { hitl: HitlRow; onRe
   };
 
   return (
-    <div className="cf-hitl" data-severity={payload.severity ?? 'info'} data-status={hitl.status}>
+    <div className="cf-hitl" data-severity={payload.severity ?? "info"} data-status={hitl.status}>
       <div className="head">
         <span className="icon">{typeIcon(hitl.type)}</span>
         <div className="titles">
           <div className="title">{hitl.title}</div>
           <div className="sub">
-            <Badge variant={hitl.status === 'pending' ? 'warning' : 'success'}>{hitl.status}</Badge>
+            <Badge variant={hitl.status === "pending" ? "warning" : "success"}>{hitl.status}</Badge>
             <span className="type">{HITL_TYPE_LABELS[hitl.type] ?? hitl.type}</span>
-            {payload.severity ? <Badge variant={severityVariant(payload.severity)}>{payload.severity}</Badge> : null}
+            {payload.severity ? (
+              <Badge variant={severityVariant(payload.severity)}>{payload.severity}</Badge>
+            ) : null}
             {payload.prRef ? <span className="mono pr">{payload.prRef}</span> : null}
           </div>
         </div>
         <span style={{ flex: 1 }} />
-        {hitl.status === 'pending' ? <span className="pending-pulse" /> : <CheckCircle size={15} className="done-check" />}
+        {hitl.status === "pending" ? (
+          <span className="pending-pulse" />
+        ) : (
+          <CheckCircle size={15} className="done-check" />
+        )}
       </div>
 
       {hitl.summary ? <div className="summary">{hitl.summary}</div> : null}
@@ -77,13 +91,8 @@ export function HitlWidget({ hitl, onResolved, disabled }: { hitl: HitlRow; onRe
         </div>
       ) : null}
 
-      {hitl.status === 'pending' && !disabled ? (
-        <WidgetBody
-          type={hitl.type}
-          payload={payload}
-          busy={busy}
-          onResolve={resolve}
-        />
+      {hitl.status === "pending" && !disabled ? (
+        <WidgetBody type={hitl.type} payload={payload} busy={busy} onResolve={resolve} />
       ) : null}
 
       {error ? <div className="err">{error}</div> : null}
@@ -103,36 +112,65 @@ function WidgetBody({
   onResolve: (resolution: Record<string, unknown>, note?: string) => Promise<void>;
 }) {
   switch (type) {
-    case 'approve-reject':
+    case "approve-reject":
       return (
         <div className="actions">
-          <Button variant="primary" size="sm" disabled={busy} onClick={() => void onResolve({ approved: true })}>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy}
+            onClick={() => void onResolve({ approved: true })}
+          >
             Approve
           </Button>
-          <Button variant="destructive" size="sm" disabled={busy} onClick={() => void onResolve({ approved: false })}>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={busy}
+            onClick={() => void onResolve({ approved: false })}
+          >
             Reject
           </Button>
         </div>
       );
-    case 'pr-review':
+    case "pr-review":
       return (
         <div className="actions column">
-          <Button variant="primary" size="sm" disabled={busy} onClick={() => void onResolve({ approved: true, action: 'merge' }, 'approved, merge requested')}>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              void onResolve({ approved: true, action: "merge" }, "approved, merge requested")
+            }
+          >
             Approve &amp; merge
           </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void onResolve({ approved: false, action: 'changes' }, 'changes requested')}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              void onResolve({ approved: false, action: "changes" }, "changes requested")
+            }
+          >
             Request changes
           </Button>
         </div>
       );
-    case 'choose-option':
+    case "choose-option":
       return <ChooseOption options={payload.options ?? []} busy={busy} onResolve={onResolve} />;
-    case 'structured-form':
+    case "structured-form":
       return <StructuredForm fields={payload.fields ?? []} busy={busy} onResolve={onResolve} />;
-    case 'alert':
+    case "alert":
       return (
         <div className="actions">
-          <Button variant="primary" size="sm" disabled={busy} onClick={() => void onResolve({ acknowledged: true })}>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy}
+            onClick={() => void onResolve({ acknowledged: true })}
+          >
             Acknowledge
           </Button>
         </div>
@@ -159,7 +197,7 @@ function ChooseOption({
           className="cf-hitl-input"
           placeholder="Type your answer…"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
               void onResolve({ value: (e.target as HTMLInputElement).value.trim() });
             }
           }}
@@ -180,7 +218,12 @@ function ChooseOption({
       )}
       {options.length > 0 ? (
         <div className="actions">
-          <Button variant="primary" size="sm" disabled={busy || !value} onClick={() => value && void onResolve({ value })}>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy || !value}
+            onClick={() => value && void onResolve({ value })}
+          >
             Confirm
           </Button>
         </div>
@@ -199,7 +242,9 @@ function StructuredForm({
   onResolve: (resolution: Record<string, unknown>, note?: string) => Promise<void>;
 }) {
   const [values, setValues] = useState<Record<string, string | boolean>>({});
-  const missing = fields.some((f) => f.required && (values[f.name] === undefined || values[f.name] === ''));
+  const missing = fields.some(
+    (f) => f.required && (values[f.name] === undefined || values[f.name] === ""),
+  );
   return (
     <div className="form">
       {fields.map((field) => (
@@ -208,26 +253,28 @@ function StructuredForm({
             {field.label}
             {field.required ? <span className="req"> *</span> : null}
           </span>
-          {field.type === 'textarea' ? (
+          {field.type === "textarea" ? (
             <textarea
               className="cf-hitl-input"
               rows={3}
               placeholder={field.placeholder}
-              value={(values[field.name] as string) ?? ''}
+              value={(values[field.name] as string) ?? ""}
               onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
             />
-          ) : field.type === 'select' ? (
+          ) : field.type === "select" ? (
             <select
               className="cf-hitl-input"
-              value={(values[field.name] as string) ?? ''}
+              value={(values[field.name] as string) ?? ""}
               onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
             >
               <option value="">Select…</option>
               {(field.options ?? []).map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
-          ) : field.type === 'toggle' ? (
+          ) : field.type === "toggle" ? (
             <input
               type="checkbox"
               checked={Boolean(values[field.name])}
@@ -237,7 +284,7 @@ function StructuredForm({
             <InputGroup>
               <InputGroup.Input
                 placeholder={field.placeholder}
-                value={(values[field.name] as string) ?? ''}
+                value={(values[field.name] as string) ?? ""}
                 onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
               />
             </InputGroup>
@@ -245,7 +292,12 @@ function StructuredForm({
         </label>
       ))}
       <div className="actions">
-        <Button variant="primary" size="sm" disabled={busy || missing} onClick={() => void onResolve(values)}>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={busy || missing}
+          onClick={() => void onResolve(values)}
+        >
           Submit
         </Button>
       </div>

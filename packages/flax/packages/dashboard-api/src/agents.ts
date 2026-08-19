@@ -1,6 +1,6 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 
-import { AGENT_SEED, type AgentRow } from './schema';
+import { AGENT_SEED, type AgentRow } from "./schema";
 
 /**
  * Agents whose conversation streams the dashboard-api can read back directly
@@ -8,14 +8,14 @@ import { AGENT_SEED, type AgentRow } from './schema';
  * outputs (PRs, docs, diagrams, reports) from each dispatched agent's thread.
  */
 const AGENT_SERVICES: Record<string, keyof Env> = {
-  orchestrator: 'ORCHESTRATOR_AGENT',
-  coding: 'CODING_AGENT',
-  'code-review': 'CODE_REVIEW_AGENT',
-  'qa-test': 'QA_TEST_AGENT',
-  'security-appsec': 'SECURITY_APPSEC_AGENT',
-  'solutions-architect': 'SOLUTIONS_ARCHITECT_AGENT',
-  documentation: 'DOCUMENTATION_AGENT',
-  'release-manager': 'RELEASE_MANAGER_AGENT',
+  orchestrator: "ORCHESTRATOR_AGENT",
+  coding: "CODING_AGENT",
+  "code-review": "CODE_REVIEW_AGENT",
+  "qa-test": "QA_TEST_AGENT",
+  "security-appsec": "SECURITY_APPSEC_AGENT",
+  "solutions-architect": "SOLUTIONS_ARCHITECT_AGENT",
+  documentation: "DOCUMENTATION_AGENT",
+  "release-manager": "RELEASE_MANAGER_AGENT",
 };
 
 export function agentService(env: Env, name: string): Fetcher | null {
@@ -61,7 +61,9 @@ export async function fetchAgentConversation(
   if (!service) return null;
   try {
     const res = await service.fetch(
-      new Request(`http://internal/agents/${agent}/${encodeURIComponent(conversationId)}?view=history`),
+      new Request(
+        `http://internal/agents/${agent}/${encodeURIComponent(conversationId)}?view=history`,
+      ),
     );
     if (!res.ok) return null;
     return (await res.json()) as FlueConversationJson;
@@ -72,7 +74,7 @@ export async function fetchAgentConversation(
 
 export async function listRoster(db: D1Database): Promise<AgentRow[]> {
   const { results } = await db
-    .prepare('SELECT * FROM flax_agents ORDER BY updated_at DESC NULLS LAST, name ASC')
+    .prepare("SELECT * FROM flax_agents ORDER BY updated_at DESC NULLS LAST, name ASC")
     .all<AgentRow>();
   // Prefer stable pipeline order for the strip: orchestrator first, then rail order.
   const ordered = AGENT_SEED.map((seed) => {
@@ -82,7 +84,7 @@ export async function listRoster(db: D1Database): Promise<AgentRow[]> {
         name: seed.name,
         label: seed.label,
         stage: seed.stage,
-        status: 'idle',
+        status: "idle",
         last_seen_at: null,
         last_error: null,
         updated_at: null,

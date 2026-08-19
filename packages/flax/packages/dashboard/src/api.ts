@@ -11,10 +11,10 @@ import type {
   ArtifactRow,
   StreamControl,
   StreamItem,
-} from './types';
+} from "./types";
 
 export const AGENT_BASE: string =
-  (import.meta.env.VITE_AGENT_BASE as string | undefined) ?? '/agents/orchestrator';
+  (import.meta.env.VITE_AGENT_BASE as string | undefined) ?? "/agents/orchestrator";
 
 export class ApiError extends Error {
   constructor(
@@ -42,8 +42,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 function postJson<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    method: "POST",
+    headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }
@@ -51,16 +51,21 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
 // ---------------------------------------------------------------- conversations
 
 export async function listConversations(): Promise<ConversationSummary[]> {
-  const body = await request<{ conversations: ConversationSummary[] }>('/api/conversations');
+  const body = await request<{ conversations: ConversationSummary[] }>("/api/conversations");
   return body.conversations ?? [];
 }
 
-export async function createConversation(message: string, opts?: { title?: string; origin?: string }): Promise<{ id: string; title: string; origin: string; admission: unknown }> {
-  return postJson('/api/conversations', { message, ...opts });
+export async function createConversation(
+  message: string,
+  opts?: { title?: string; origin?: string },
+): Promise<{ id: string; title: string; origin: string; admission: unknown }> {
+  return postJson("/api/conversations", { message, ...opts });
 }
 
 export async function fetchConversationDetail(id: string): Promise<ConversationDetail> {
-  const body = await request<{ conversation: ConversationDetail }>(`/api/conversations/${encodeURIComponent(id)}`);
+  const body = await request<{ conversation: ConversationDetail }>(
+    `/api/conversations/${encodeURIComponent(id)}`,
+  );
   return body.conversation;
 }
 
@@ -69,19 +74,25 @@ export async function scanConversation(id: string): Promise<ScanResult> {
 }
 
 export async function listStages(id: string): Promise<StageRow[]> {
-  const body = await request<{ stages: StageRow[] }>(`/api/conversations/${encodeURIComponent(id)}/stages`);
+  const body = await request<{ stages: StageRow[] }>(
+    `/api/conversations/${encodeURIComponent(id)}/stages`,
+  );
   return body.stages ?? [];
 }
 
 export async function listArtifacts(id: string): Promise<ArtifactRow[]> {
-  const body = await request<{ artifacts: ArtifactRow[] }>(`/api/conversations/${encodeURIComponent(id)}/artifacts`);
+  const body = await request<{ artifacts: ArtifactRow[] }>(
+    `/api/conversations/${encodeURIComponent(id)}/artifacts`,
+  );
   return body.artifacts ?? [];
 }
 
 // ---------------------------------------------------------------- HITL
 
 export async function listHitl(id: string): Promise<HitlRow[]> {
-  const body = await request<{ hitl: HitlRow[] }>(`/api/conversations/${encodeURIComponent(id)}/hitl`);
+  const body = await request<{ hitl: HitlRow[] }>(
+    `/api/conversations/${encodeURIComponent(id)}/hitl`,
+  );
   return body.hitl ?? [];
 }
 
@@ -96,12 +107,12 @@ export async function resolveHitl(
 // ---------------------------------------------------------------- roster + GitHub
 
 export async function listAgents(): Promise<AgentRow[]> {
-  const body = await request<{ agents: AgentRow[] }>('/api/agents');
+  const body = await request<{ agents: AgentRow[] }>("/api/agents");
   return body.agents ?? [];
 }
 
 export async function githubStatus(): Promise<GithubStatus> {
-  return request<GithubStatus>('/api/github/status');
+  return request<GithubStatus>("/api/github/status");
 }
 
 export async function configureGithubApp(input: {
@@ -111,11 +122,11 @@ export async function configureGithubApp(input: {
   clientSecret?: string;
   privateKey: string;
 }): Promise<GithubStatus> {
-  return postJson('/api/github/app/configure', input);
+  return postJson("/api/github/app/configure", input);
 }
 
 export async function completeGithubInstall(installationId: string): Promise<GithubStatus> {
-  return postJson('/api/github/install/complete', { installationId });
+  return postJson("/api/github/install/complete", { installationId });
 }
 
 // ---------------------------------------------------------------- Flue agent client (chat)
@@ -135,9 +146,9 @@ export interface Admission {
 
 export async function submitMessage(id: string, body: string): Promise<Admission> {
   const res = await fetch(`${AGENT_BASE}/${encodeURIComponent(id)}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ kind: 'user', body }),
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: "user", body }),
   });
   if (!res.ok) throw new ApiError(res.status, await readError(res));
   return (await res.json()) as Admission;
@@ -172,11 +183,11 @@ export async function streamUpdates(
   const url = `${AGENT_BASE}/${encodeURIComponent(id)}?view=updates&offset=${encodeURIComponent(offset)}&live=sse`;
   const controller = new AbortController();
   const onParentAbort = () => controller.abort();
-  signal.addEventListener('abort', onParentAbort, { once: true });
+  signal.addEventListener("abort", onParentAbort, { once: true });
 
   let connectTimer: ReturnType<typeof setTimeout> | undefined;
   if (!signal.aborted) {
-    connectTimer = setTimeout(() => controller.abort(new Error('Connection timeout')), 15_000);
+    connectTimer = setTimeout(() => controller.abort(new Error("Connection timeout")), 15_000);
   }
 
   try {
@@ -189,19 +200,20 @@ export async function streamUpdates(
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    let buffer = "";
 
     const onAbortCancelReader = () => {
       void reader.cancel().catch(() => {});
     };
-    signal.addEventListener('abort', onAbortCancelReader, { once: true });
+    signal.addEventListener("abort", onAbortCancelReader, { once: true });
 
     const handleFrame = (frame: string) => {
-      let event = 'message';
-      let data = '';
-      for (const line of frame.split('\n')) {
-        if (line.startsWith('event:')) event = line.slice(6).trim();
-        else if (line.startsWith('data:')) data += `${data ? '\n' : ''}${line.slice(5).replace(/^ /, '')}`;
+      let event = "message";
+      let data = "";
+      for (const line of frame.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:"))
+          data += `${data ? "\n" : ""}${line.slice(5).replace(/^ /, "")}`;
       }
       if (!data) return;
       let parsed: unknown;
@@ -210,8 +222,8 @@ export async function streamUpdates(
       } catch {
         return;
       }
-      if (event === 'data' && Array.isArray(parsed)) onItems(parsed as StreamItem[]);
-      else if (event === 'control') onControl(parsed as StreamControl);
+      if (event === "data" && Array.isArray(parsed)) onItems(parsed as StreamItem[]);
+      else if (event === "control") onControl(parsed as StreamControl);
     };
 
     try {
@@ -221,7 +233,7 @@ export async function streamUpdates(
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         let sep: number;
-        while ((sep = buffer.indexOf('\n\n')) !== -1) {
+        while ((sep = buffer.indexOf("\n\n")) !== -1) {
           const frame = buffer.slice(0, sep);
           buffer = buffer.slice(sep + 2);
           if (frame.trim()) handleFrame(frame);
@@ -229,11 +241,11 @@ export async function streamUpdates(
       }
       if (buffer.trim()) handleFrame(buffer);
     } finally {
-      signal.removeEventListener('abort', onAbortCancelReader);
+      signal.removeEventListener("abort", onAbortCancelReader);
       void reader.cancel().catch(() => {});
     }
   } finally {
     if (connectTimer) clearTimeout(connectTimer);
-    signal.removeEventListener('abort', onParentAbort);
+    signal.removeEventListener("abort", onParentAbort);
   }
 }

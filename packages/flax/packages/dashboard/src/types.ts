@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------- Flue stream types
 
-export type PartState = 'done' | string;
+export type PartState = "done" | string;
 
 export interface Part {
   type: string;
@@ -18,7 +18,7 @@ export interface DataPartState {
 
 export interface ConversationMessage {
   id: string;
-  role: 'user' | 'assistant' | string;
+  role: "user" | "assistant" | string;
   purpose?: string;
   display?: string;
   submissionId?: string;
@@ -28,7 +28,7 @@ export interface ConversationMessage {
 
 export interface Settlement {
   submissionId: string;
-  outcome: 'completed' | 'failed' | 'deferred' | string;
+  outcome: "completed" | "failed" | "deferred" | string;
   error?: { message?: string; type?: string; [k: string]: unknown } | null;
   answeredBySubmissionId?: string;
 }
@@ -53,21 +53,21 @@ export interface StreamControl {
 }
 
 export type StreamItem =
-  | { type: 'stream-checkpoint'; incarnation: string }
+  | { type: "stream-checkpoint"; incarnation: string }
   | {
-      type: 'conversation-reset';
+      type: "conversation-reset";
       conversationId: string;
       snapshot: Conversation;
       position: StreamPosition;
     }
   | {
-      type: 'message-appended';
+      type: "message-appended";
       conversationId: string;
       message: ConversationMessage;
       position: StreamPosition;
     }
   | {
-      type: 'message-started';
+      type: "message-started";
       conversationId: string;
       messageId: string;
       submissionId: string;
@@ -76,7 +76,7 @@ export type StreamItem =
       position: StreamPosition;
     }
   | {
-      type: 'message-delta';
+      type: "message-delta";
       conversationId: string;
       messageId: string;
       kind: string;
@@ -84,15 +84,15 @@ export type StreamItem =
       position: StreamPosition;
     }
   | {
-      type: 'message-completed';
+      type: "message-completed";
       conversationId: string;
       messageId: string;
       timestamp: string;
       position: StreamPosition;
     }
-  | { type: 'message-metadata'; conversationId: string; messageId: string; [k: string]: unknown }
+  | { type: "message-metadata"; conversationId: string; messageId: string; [k: string]: unknown }
   | {
-      type: 'submission-settled';
+      type: "submission-settled";
       conversationId: string;
       submissionId: string;
       outcome: string;
@@ -100,51 +100,63 @@ export type StreamItem =
       timestamp: string;
       position: StreamPosition;
     }
-  | { type: 'data-part'; conversationId: string; messageId?: string; name: string; data: unknown };
+  | { type: "data-part"; conversationId: string; messageId?: string; name: string; data: unknown };
 
 // ---------------------------------------------------------------- dashboard API types
 
-export type ConversationStatus = 'running' | 'blocked_on_human' | 'completed' | 'failed';
-export type Origin = 'orchestrator' | 'support';
-export type HitlType = 'approve-reject' | 'choose-option' | 'pr-review' | 'structured-form' | 'alert';
-export type HitlStatus = 'pending' | 'resolved' | 'cancelled';
-export type ArtifactType = 'pr' | 'issue' | 'doc' | 'diagram' | 'test_report' | 'security_report' | 'other';
-export type AgentStatus = 'idle' | 'active' | 'error';
+export type ConversationStatus = "running" | "blocked_on_human" | "completed" | "failed";
+export type Origin = "orchestrator" | "support";
+export type HitlType =
+  | "approve-reject"
+  | "choose-option"
+  | "pr-review"
+  | "structured-form"
+  | "alert";
+export type HitlStatus = "pending" | "resolved" | "cancelled";
+export type ArtifactType =
+  | "pr"
+  | "issue"
+  | "doc"
+  | "diagram"
+  | "test_report"
+  | "security_report"
+  | "other";
+export type AgentStatus = "idle" | "active" | "error";
 
 export const STAGES = [
-  'requirements',
-  'architecture',
-  'design',
-  'coding',
-  'review',
-  'qa',
-  'security',
-  'devops',
-  'release',
-  'sre-docs',
+  "requirements",
+  "architecture",
+  "design",
+  "coding",
+  "review",
+  "qa",
+  "security",
+  "devops",
+  "release",
+  "sre-docs",
 ] as const;
 
 export type StageId = (typeof STAGES)[number];
 
 export const STAGE_LABELS: Record<string, string> = {
-  requirements: 'Requirements',
-  architecture: 'Architecture',
-  design: 'Design',
-  coding: 'Coding',
-  review: 'Review',
-  qa: 'QA',
-  security: 'Security',
-  devops: 'DevOps',
-  release: 'Release',
-  'sre-docs': 'SRE / Docs',
+  requirements: "Requirements",
+  architecture: "Architecture",
+  design: "Design",
+  coding: "Coding",
+  review: "Review",
+  qa: "QA",
+  security: "Security",
+  devops: "DevOps",
+  release: "Release",
+  "sre-docs": "SRE / Docs",
 };
 
 export const HITL_TYPE_LABELS: Record<string, string> = {
-  'approve-reject': 'Approval',
-  'choose-option': 'Choose an option',
-  'pr-review': 'PR review',
-  'structured-form': 'Form',
-  alert: 'Alert',
+  "approve-reject": "Approval",
+  "choose-option": "Choose an option",
+  "pr-review": "PR review",
+  "structured-form": "Form",
+  alert: "Alert",
 };
 
 export interface ConversationSummary {
@@ -240,7 +252,7 @@ export interface HitlOption {
 export interface HitlField {
   name: string;
   label: string;
-  type?: 'text' | 'textarea' | 'select' | 'toggle';
+  type?: "text" | "textarea" | "select" | "toggle";
   required?: boolean;
   options?: HitlOption[];
   placeholder?: string;
@@ -250,7 +262,7 @@ export interface HitlPayload {
   options?: HitlOption[];
   fields?: HitlField[];
   prRef?: string;
-  severity?: 'info' | 'warning' | 'critical';
+  severity?: "info" | "warning" | "critical";
 }
 
 export interface GithubStatus {

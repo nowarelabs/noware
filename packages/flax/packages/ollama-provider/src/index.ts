@@ -4,12 +4,12 @@ import {
   type AssistantMessageEvent,
   type AssistantMessageEventStream,
   type ToolCall,
-} from '@earendil-works/pi-ai';
-import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy';
+} from "@earendil-works/pi-ai";
+import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 
-export const OLLAMA_PROVIDER_ID = 'ollama';
-export const OLLAMA_BASE_URL = 'http://localhost:11434/v1';
-export const OLLAMA_MODEL = 'qwen2.5-coder:7b';
+export const OLLAMA_PROVIDER_ID = "ollama";
+export const OLLAMA_BASE_URL = "http://localhost:11434/v1";
+export const OLLAMA_MODEL = "qwen2.5-coder:7b";
 
 /** Longest plausible tool-call JSON before we give up and treat it as prose. */
 const MAX_TOOL_BUFFER = 2048;
@@ -29,49 +29,68 @@ interface ParsedToolCall {
  */
 function parseToolCallText(text: string): ParsedToolCall | null {
   const trimmed = text.trim();
-  if (!trimmed.startsWith('{')) return null;
+  if (!trimmed.startsWith("{")) return null;
   let value: unknown;
   try {
     value = JSON.parse(trimmed);
   } catch {
     return null;
   }
-  if (typeof value !== 'object' || value === null) return null;
+  if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
   const name = record.name;
   const args = (record.arguments ?? record.parameters) as unknown;
-  if (typeof name !== 'string' || name.length === 0) return null;
-  if (typeof args !== 'object' || args === null || Array.isArray(args)) return null;
+  if (typeof name !== "string" || name.length === 0) return null;
+  if (typeof args !== "object" || args === null || Array.isArray(args)) return null;
   return { name, arguments: args as Record<string, unknown> };
 }
 
-function buildToolMessage(done: AssistantMessage, call: ParsedToolCall, id: string): AssistantMessage {
-  const block: ToolCall = { type: 'toolCall', id, name: call.name, arguments: call.arguments };
-  return { ...done, content: [block], stopReason: 'toolUse' };
+function buildToolMessage(
+  done: AssistantMessage,
+  call: ParsedToolCall,
+  id: string,
+): AssistantMessage {
+  const block: ToolCall = { type: "toolCall", id, name: call.name, arguments: call.arguments };
+  return { ...done, content: [block], stopReason: "toolUse" };
 }
 
 function toolCallId(): string {
   return `call_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function* emitToolCallSequence(message: AssistantMessage, call: ParsedToolCall): Generator<AssistantMessageEvent> {
-  yield { type: 'toolcall_start', contentIndex: 0, partial: message };
-  yield { type: 'toolcall_delta', contentIndex: 0, delta: JSON.stringify(call.arguments), partial: message };
-  yield { type: 'toolcall_end', contentIndex: 0, toolCall: message.content[0] as ToolCall, partial: message };
-  yield { type: 'done', reason: 'toolUse', message };
+function* emitToolCallSequence(
+  message: AssistantMessage,
+  call: ParsedToolCall,
+): Generator<AssistantMessageEvent> {
+  yield { type: "toolcall_start", contentIndex: 0, partial: message };
+  yield {
+    type: "toolcall_delta",
+    contentIndex: 0,
+    delta: JSON.stringify(call.arguments),
+    partial: message,
+  };
+  yield {
+    type: "toolcall_end",
+    contentIndex: 0,
+    toolCall: message.content[0] as ToolCall,
+    partial: message,
+  };
+  yield { type: "done", reason: "toolUse", message };
 }
 
-async function* transformOllamaTools(stream: AssistantMessageEventStream): AsyncGenerator<AssistantMessageEvent> {
+async function* transformOllamaTools(
+  stream: AssistantMessageEventStream,
+): AsyncGenerator<AssistantMessageEvent> {
   const inner = stream[Symbol.asyncIterator]();
   const pending: AssistantMessageEvent[] = [];
   let held: AssistantMessageEvent[] = [];
-  let buffer = '';
+  let buffer = "";
   let holding = false;
 
   const flushHeld = (): void => {
     for (const ev of held) pending.push(ev);
     held = [];
-    buffer = '';
+    buffer = "";
     holding = false;
   };
 
@@ -87,17 +106,17 @@ async function* transformOllamaTools(stream: AssistantMessageEventStream): Async
     }
     const ev = result.value;
     switch (ev.type) {
-      case 'start':
+      case "start":
         yield ev;
         break;
-      case 'text_start':
+      case "text_start":
         held.push(ev);
         break;
-      case 'text_delta': {
+      case "text_delta": {
         if (!holding) {
           held.push(ev);
           buffer += ev.delta;
-          holding = buffer.trimStart().startsWith('{');
+          holding = buffer.trimStart().startsWith("{");
           if (!holding) {
             flushHeld();
             pending.push(ev);
@@ -114,10 +133,10 @@ async function* transformOllamaTools(stream: AssistantMessageEventStream): Async
         }
         break;
       }
-      case 'text_end':
+      case "text_end":
         held.push(ev);
         break;
-      case 'done': {
+      case "done": {
         if (holding) {
           const call = parseToolCallText(buffer);
           if (call) {
@@ -129,7 +148,7 @@ async function* transformOllamaTools(stream: AssistantMessageEventStream): Async
         yield ev;
         return;
       }
-      case 'error': {
+      case "error": {
         if (holding) flushHeld();
         yield ev;
         return;
@@ -144,9 +163,9 @@ async function* transformOllamaTools(stream: AssistantMessageEventStream): Async
 
 function textFromMessage(message: AssistantMessage): string {
   return message.content
-    .filter((block) => block.type === 'text')
+    .filter((block) => block.type === "text")
     .map((block) => (block as { text: string }).text)
-    .join('');
+    .join("");
 }
 
 function withOllamaToolAdapter(stream: AssistantMessageEventStream): AssistantMessageEventStream {
@@ -165,7 +184,7 @@ function withOllamaToolAdapter(stream: AssistantMessageEventStream): AssistantMe
  * Pi provider for a local Ollama server. Register it in the agent's `app.ts`:
  *
  * ```ts
- * import { setProvider } from '@flue/runtime';
+ * import { setProvider } from '@nowarelabs/agents';
  * import { ollamaProvider, OLLAMA_MODEL } from '@nowarelabs/ollama-provider';
  *
  * setProvider(ollamaProvider());
@@ -178,26 +197,26 @@ function withOllamaToolAdapter(stream: AssistantMessageEventStream): AssistantMe
 export function ollamaProvider() {
   return createProvider({
     id: OLLAMA_PROVIDER_ID,
-    name: 'Ollama (local)',
+    name: "Ollama (local)",
     // Keyless local server. Flue's documented Ollama recipe resolves to
     // `{ auth: {} }`, but pi-ai 0.83.0 then throws "No API key for provider:
     // ollama" (getClientApiKey), so we supply a placeholder key that Ollama
     // ignores. Use envApiKeyAuth('...', ['MY_KEY']) for a real key.
     auth: {
       apiKey: {
-        name: 'Ollama local (keyless)',
-        resolve: async () => ({ auth: { apiKey: 'ollama' }, source: 'local Ollama' }),
+        name: "Ollama local (keyless)",
+        resolve: async () => ({ auth: { apiKey: "ollama" }, source: "local Ollama" }),
       },
     },
     models: [
       {
         id: OLLAMA_MODEL,
-        name: 'qwen2.5 Coder 7B',
-        api: 'openai-completions',
+        name: "qwen2.5 Coder 7B",
+        api: "openai-completions",
         provider: OLLAMA_PROVIDER_ID,
         baseUrl: OLLAMA_BASE_URL,
         reasoning: false,
-        input: ['text'],
+        input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 32768,
         maxTokens: 32768,
@@ -205,14 +224,16 @@ export function ollamaProvider() {
           supportsStore: false,
           supportsDeveloperRole: false,
           supportsReasoningEffort: false,
-          maxTokensField: 'max_tokens',
+          maxTokensField: "max_tokens",
           supportsStrictMode: false,
         },
       },
     ],
     api: {
-      stream: (model, context, options) => withOllamaToolAdapter(openAICompletionsApi().stream(model, context, options)),
-      streamSimple: (model, context, options) => withOllamaToolAdapter(openAICompletionsApi().streamSimple(model, context, options)),
+      stream: (model, context, options) =>
+        withOllamaToolAdapter(openAICompletionsApi().stream(model, context, options)),
+      streamSimple: (model, context, options) =>
+        withOllamaToolAdapter(openAICompletionsApi().streamSimple(model, context, options)),
     },
   });
 }

@@ -1,42 +1,54 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 
 /** Rail stages in pipeline order. */
 export const STAGES = [
-  'requirements',
-  'architecture',
-  'design',
-  'coding',
-  'review',
-  'qa',
-  'security',
-  'devops',
-  'release',
-  'sre-docs',
+  "requirements",
+  "architecture",
+  "design",
+  "coding",
+  "review",
+  "qa",
+  "security",
+  "devops",
+  "release",
+  "sre-docs",
 ] as const;
 
 export type StageId = (typeof STAGES)[number];
 
 export const STAGE_LABELS: Record<StageId, string> = {
-  requirements: 'Requirements',
-  architecture: 'Architecture',
-  design: 'Design',
-  coding: 'Coding',
-  review: 'Review',
-  qa: 'QA',
-  security: 'Security',
-  devops: 'DevOps',
-  release: 'Release',
-  'sre-docs': 'SRE / Docs',
+  requirements: "Requirements",
+  architecture: "Architecture",
+  design: "Design",
+  coding: "Coding",
+  review: "Review",
+  qa: "QA",
+  security: "Security",
+  devops: "DevOps",
+  release: "Release",
+  "sre-docs": "SRE / Docs",
 };
 
 export const STAGE_ORDER = STAGES;
 
-export type ConversationStatus = 'running' | 'blocked_on_human' | 'completed' | 'failed';
-export type Origin = 'orchestrator' | 'support';
-export type HitlType = 'approve-reject' | 'choose-option' | 'pr-review' | 'structured-form' | 'alert';
-export type HitlStatus = 'pending' | 'resolved' | 'cancelled';
-export type ArtifactType = 'pr' | 'issue' | 'doc' | 'diagram' | 'test_report' | 'security_report' | 'other';
-export type AgentStatus = 'idle' | 'active' | 'error';
+export type ConversationStatus = "running" | "blocked_on_human" | "completed" | "failed";
+export type Origin = "orchestrator" | "support";
+export type HitlType =
+  | "approve-reject"
+  | "choose-option"
+  | "pr-review"
+  | "structured-form"
+  | "alert";
+export type HitlStatus = "pending" | "resolved" | "cancelled";
+export type ArtifactType =
+  | "pr"
+  | "issue"
+  | "doc"
+  | "diagram"
+  | "test_report"
+  | "security_report"
+  | "other";
+export type AgentStatus = "idle" | "active" | "error";
 
 export interface InstanceRow {
   id: string;
@@ -149,7 +161,11 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       )`,
     )
     .run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS idx_flax_stages_conversation ON flax_stages(conversation_id, entered_at)').run();
+  await db
+    .prepare(
+      "CREATE INDEX IF NOT EXISTS idx_flax_stages_conversation ON flax_stages(conversation_id, entered_at)",
+    )
+    .run();
 
   await db
     .prepare(
@@ -167,7 +183,11 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       )`,
     )
     .run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS idx_flax_hitl_conversation ON flax_hitl(conversation_id, status)').run();
+  await db
+    .prepare(
+      "CREATE INDEX IF NOT EXISTS idx_flax_hitl_conversation ON flax_hitl(conversation_id, status)",
+    )
+    .run();
 
   await db
     .prepare(
@@ -183,7 +203,11 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       )`,
     )
     .run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS idx_flax_artifacts_conversation ON flax_artifacts(conversation_id, created_at)').run();
+  await db
+    .prepare(
+      "CREATE INDEX IF NOT EXISTS idx_flax_artifacts_conversation ON flax_artifacts(conversation_id, created_at)",
+    )
+    .run();
 
   await db
     .prepare(
@@ -235,15 +259,15 @@ export async function ensureSchema(db: D1Database): Promise<void> {
     )
     .run();
 
-  const columns = await db.prepare('PRAGMA table_info(flax_instances)').all<{ name: string }>();
+  const columns = await db.prepare("PRAGMA table_info(flax_instances)").all<{ name: string }>();
   const existing = new Set(columns.results?.map((c) => c.name) ?? []);
   const addColumn = [
-    ['title', 'TEXT'],
-    ['origin', 'TEXT NOT NULL DEFAULT \'orchestrator\''],
-    ['current_stage', 'TEXT'],
-    ['current_agent', 'TEXT'],
-    ['status', 'TEXT NOT NULL DEFAULT \'running\''],
-    ['last_activity_at', 'INTEGER'],
+    ["title", "TEXT"],
+    ["origin", "TEXT NOT NULL DEFAULT 'orchestrator'"],
+    ["current_stage", "TEXT"],
+    ["current_agent", "TEXT"],
+    ["status", "TEXT NOT NULL DEFAULT 'running'"],
+    ["last_activity_at", "INTEGER"],
   ] as const;
   for (const [name, def] of addColumn) {
     if (!existing.has(name)) {
@@ -251,9 +275,11 @@ export async function ensureSchema(db: D1Database): Promise<void> {
     }
   }
 
-  const seeded = await db.prepare('SELECT COUNT(*) AS n FROM flax_agents').first<{ n: number }>();
+  const seeded = await db.prepare("SELECT COUNT(*) AS n FROM flax_agents").first<{ n: number }>();
   if ((seeded?.n ?? 0) === 0) {
-    const stmt = db.prepare('INSERT OR IGNORE INTO flax_agents (name, label, stage, status) VALUES (?, ?, ?, \'idle\')');
+    const stmt = db.prepare(
+      "INSERT OR IGNORE INTO flax_agents (name, label, stage, status) VALUES (?, ?, ?, 'idle')",
+    );
     for (const a of AGENT_SEED) {
       await stmt.bind(a.name, a.label, a.stage).run();
     }
@@ -267,27 +293,27 @@ export interface AgentSeed {
 }
 
 export const AGENT_SEED: AgentSeed[] = [
-  { name: 'orchestrator', label: 'Orchestrator', stage: null },
-  { name: 'product-requirements', label: 'Product Requirements', stage: 'requirements' },
-  { name: 'business-data-analyst', label: 'Data Analyst', stage: 'requirements' },
-  { name: 'solutions-architect', label: 'Solutions Architect', stage: 'architecture' },
-  { name: 'ux-ui-designer', label: 'UX/UI Designer', stage: 'design' },
-  { name: 'coding', label: 'Coding', stage: 'coding' },
-  { name: 'database-data-engineer', label: 'Data Engineer', stage: 'coding' },
-  { name: 'code-review', label: 'Code Review', stage: 'review' },
-  { name: 'qa-test', label: 'QA', stage: 'qa' },
-  { name: 'security-appsec', label: 'Security', stage: 'security' },
-  { name: 'devops-cicd', label: 'DevOps', stage: 'devops' },
-  { name: 'release-manager', label: 'Release Manager', stage: 'release' },
-  { name: 'sre-observability', label: 'SRE', stage: 'sre-docs' },
-  { name: 'documentation', label: 'Documentation', stage: 'sre-docs' },
-  { name: 'support-feedback', label: 'Feedback', stage: 'sre-docs' },
-  { name: 'support', label: 'Support', stage: 'requirements' },
+  { name: "orchestrator", label: "Orchestrator", stage: null },
+  { name: "product-requirements", label: "Product Requirements", stage: "requirements" },
+  { name: "business-data-analyst", label: "Data Analyst", stage: "requirements" },
+  { name: "solutions-architect", label: "Solutions Architect", stage: "architecture" },
+  { name: "ux-ui-designer", label: "UX/UI Designer", stage: "design" },
+  { name: "coding", label: "Coding", stage: "coding" },
+  { name: "database-data-engineer", label: "Data Engineer", stage: "coding" },
+  { name: "code-review", label: "Code Review", stage: "review" },
+  { name: "qa-test", label: "QA", stage: "qa" },
+  { name: "security-appsec", label: "Security", stage: "security" },
+  { name: "devops-cicd", label: "DevOps", stage: "devops" },
+  { name: "release-manager", label: "Release Manager", stage: "release" },
+  { name: "sre-observability", label: "SRE", stage: "sre-docs" },
+  { name: "documentation", label: "Documentation", stage: "sre-docs" },
+  { name: "support-feedback", label: "Feedback", stage: "sre-docs" },
+  { name: "support", label: "Support", stage: "requirements" },
 ];
 
 /** Map an agent name to the pipeline stage it contributes to. */
 export function stageForAgent(agent: string): StageId {
-  return AGENT_SEED.find((a) => a.name === agent)?.stage ?? 'requirements';
+  return AGENT_SEED.find((a) => a.name === agent)?.stage ?? "requirements";
 }
 
 export function stageLabel(stage: string): string {

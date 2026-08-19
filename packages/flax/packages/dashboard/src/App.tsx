@@ -1,21 +1,21 @@
-import { Badge, Loader, Switch } from '@cloudflare/kumo';
-import { GithubLogo } from '@phosphor-icons/react';
-import { useCallback, useEffect, useState } from 'react';
+import { Badge, Loader, Switch } from "@cloudflare/kumo";
+import { GithubLogo } from "@phosphor-icons/react";
+import { useCallback, useEffect, useState } from "react";
 
-import { githubStatus } from './api';
-import { Conversation } from './Conversation';
-import { Inbox } from './Inbox';
-import { navigate, useRoute } from './router';
-import { Setup } from './Setup';
-import type { GithubStatus } from './types';
+import { githubStatus } from "./api";
+import { Conversation } from "./Conversation";
+import { Inbox } from "./Inbox";
+import { navigate, useRoute } from "./router";
+import { Setup } from "./Setup";
+import type { GithubStatus } from "./types";
 
-const THEME_KEY = 'flax.dashboard.dark';
+const THEME_KEY = "flax.dashboard.dark";
 
 export function App() {
   const route = useRoute();
   const [dark, setDark] = useState(() => {
     try {
-      return localStorage.getItem(THEME_KEY) === '1';
+      return localStorage.getItem(THEME_KEY) === "1";
     } catch {
       return false;
     }
@@ -24,9 +24,9 @@ export function App() {
   const [githubError, setGithubError] = useState<string | null>(null);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-mode', dark ? 'dark' : 'light');
+    document.documentElement.setAttribute("data-mode", dark ? "dark" : "light");
     try {
-      localStorage.setItem(THEME_KEY, dark ? '1' : '0');
+      localStorage.setItem(THEME_KEY, dark ? "1" : "0");
     } catch {
       /* ignore */
     }
@@ -46,26 +46,51 @@ export function App() {
   }, [loadGithub]);
 
   const needsSetup = github !== null && !github.configured;
-  const onInbox = route.path === '/' || route.path === '';
+  const onInbox = route.path === "/" || route.path === "";
 
   // Route: setup screen, conversation detail, else inbox (setup-gated).
   let screen: React.ReactNode;
-  if (route.path === '/setup') {
-    screen = <Setup onReady={() => { loadGithub(); navigate('/'); }} />;
-  } else if (route.path.startsWith('/conversations/') && route.params.id) {
-    screen = <Conversation id={route.params.id} onBack={() => navigate('/')} />;
+  if (route.path === "/setup") {
+    screen = (
+      <Setup
+        onReady={() => {
+          loadGithub();
+          navigate("/");
+        }}
+      />
+    );
+  } else if (route.path.startsWith("/conversations/") && route.params.id) {
+    screen = <Conversation id={route.params.id} onBack={() => navigate("/")} />;
   } else if (needsSetup) {
-    screen = <Setup onReady={() => { loadGithub(); navigate('/'); }} />;
+    screen = (
+      <Setup
+        onReady={() => {
+          loadGithub();
+          navigate("/");
+        }}
+      />
+    );
   } else if (githubError) {
-    screen = <Setup onReady={() => { loadGithub(); navigate('/'); }} />;
+    screen = (
+      <Setup
+        onReady={() => {
+          loadGithub();
+          navigate("/");
+        }}
+      />
+    );
   } else {
     screen = <Inbox onNavigate={(id) => navigate(`/conversations/${id}`)} />;
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <header className="cf-topbar">
-        <img src="/logo-icon.png" alt="Nowarelabs" style={{ height: 30, width: 'auto', flex: 'none' }} />
+        <img
+          src="/logo-icon.png"
+          alt="Nowarelabs"
+          style={{ height: 30, width: "auto", flex: "none" }}
+        />
         <span className="divider" />
         <div className="product">
           <span className="name">Flax</span>
@@ -77,41 +102,54 @@ export function App() {
           ) : (
             <button
               className="github-link"
-              onClick={() => navigate('/setup')}
-              title={github.configured ? `Connected: ${github.installation?.org ?? ''}` : 'Connect GitHub'}
+              onClick={() => navigate("/setup")}
+              title={
+                github.configured
+                  ? `Connected: ${github.installation?.org ?? ""}`
+                  : "Connect GitHub"
+              }
             >
               <GithubLogo size={14} />
               {github.configured ? (
-                <Badge variant="success">{github.installation?.org ?? 'connected'}</Badge>
+                <Badge variant="success">{github.installation?.org ?? "connected"}</Badge>
               ) : (
                 <Badge variant="warning">connect</Badge>
               )}
             </button>
           )}
-          <Switch
-            checked={dark}
-            onCheckedChange={setDark}
-            label="Dark"
-            controlFirst={false}
-          />
+          <Switch checked={dark} onCheckedChange={setDark} label="Dark" controlFirst={false} />
         </div>
       </header>
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
-        <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--color-kumo-canvas)' }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+        <main
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            background: "var(--color-kumo-canvas)",
+          }}
+        >
           {screen}
         </main>
       </div>
 
       <div className="cf-footer">
-        <img src="/logo.png" alt="Nowarelabs" style={{ height: 10, width: 'auto', flex: 'none' }} />
+        <img src="/logo.png" alt="Nowarelabs" style={{ height: 10, width: "auto", flex: "none" }} />
         <span>Flax Dashboard</span>
-        <span className="mono" style={{ fontSize: '0.7rem' }}>orchestrator · 15 agents · Cloudflare Workers</span>
+        <span className="mono" style={{ fontSize: "0.7rem" }}>
+          orchestrator · 15 agents · Cloudflare Workers
+        </span>
         <div className="right">
           {github?.configured ? (
-            <span className="mono" style={{ fontSize: '0.7rem' }}>{github.app?.slug ?? 'github app'}</span>
+            <span className="mono" style={{ fontSize: "0.7rem" }}>
+              {github.app?.slug ?? "github app"}
+            </span>
           ) : null}
-          <span className="mono" style={{ fontSize: '0.7rem' }}>@cloudflare/meta llama-4-scout · D1</span>
+          <span className="mono" style={{ fontSize: "0.7rem" }}>
+            @cloudflare/meta llama-4-scout · D1
+          </span>
         </div>
       </div>
     </div>

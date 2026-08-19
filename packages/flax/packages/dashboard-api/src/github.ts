@@ -1,17 +1,17 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 
-import type { GithubAppRow, GithubInstallRow } from './schema';
+import type { GithubAppRow, GithubInstallRow } from "./schema";
 
-const GITHUB_API = 'https://api.github.com';
+const GITHUB_API = "https://api.github.com";
 
 function base64url(bytes: Uint8Array): string {
-  let bin = '';
+  let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function base64urlDecode(str: string): Uint8Array {
-  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  const b64 = str.replace(/-/g, "+").replace(/_/g, "/");
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -20,33 +20,33 @@ function base64urlDecode(str: string): Uint8Array {
 
 function pemToBytes(pem: string): ArrayBuffer {
   const body = pem
-    .replace(/-----BEGIN [^-]+-----/g, '')
-    .replace(/-----END [^-]+-----/g, '')
-    .replace(/\s+/g, '');
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
   return base64urlDecode(body).buffer as ArrayBuffer;
 }
 
 async function importPemPrivateKey(pem: string): Promise<CryptoKey> {
   const bytes = pemToBytes(pem);
   return crypto.subtle.importKey(
-    'pkcs8',
+    "pkcs8",
     bytes,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ['sign'],
+    ["sign"],
   );
 }
 
 /** Sign a GitHub App JWT (RS256) with the app's private key. */
 export async function signAppJwt(appId: string, privateKeyPem: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const header = base64url(new TextEncoder().encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const header = base64url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
   const payload = base64url(
     new TextEncoder().encode(JSON.stringify({ iat: now - 60, exp: now + 540, iss: appId })),
   );
   const key = await importPemPrivateKey(privateKeyPem);
   const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
+    "RSASSA-PKCS1-v1_5",
     key,
     new TextEncoder().encode(`${header}.${payload}`),
   );
@@ -56,9 +56,9 @@ export async function signAppJwt(appId: string, privateKeyPem: string): Promise<
 /** The manifest this dashboard can install as a GitHub App (create from a button on the setup screen). */
 export function appManifest(baseUrl: string): Record<string, unknown> {
   return {
-    name: 'Flax Build Agents',
+    name: "Flax Build Agents",
     description:
-      'Flax multi-agent SDLC runner. Opens pull requests, comments on issues, and merges approved PRs on your behalf.',
+      "Flax multi-agent SDLC runner. Opens pull requests, comments on issues, and merges approved PRs on your behalf.",
     url: baseUrl,
     hook_url: `${baseUrl}/api/github/webhook`,
     redirect_url: `${baseUrl}/api/github/app-manifest-callback`,
@@ -66,14 +66,14 @@ export function appManifest(baseUrl: string): Record<string, unknown> {
     setup_url: `${baseUrl}/api/github/install/callback`,
     public: true,
     default_permissions: {
-      contents: 'write',
-      issues: 'write',
-      pull_requests: 'write',
-      metadata: 'read',
-      checks: 'read',
-      statuses: 'read',
+      contents: "write",
+      issues: "write",
+      pull_requests: "write",
+      metadata: "read",
+      checks: "read",
+      statuses: "read",
     },
-    default_events: ['push', 'pull_request', 'issue_comment', 'check_run'],
+    default_events: ["push", "pull_request", "issue_comment", "check_run"],
     request_oauth_on_install: false,
   };
 }
@@ -82,9 +82,9 @@ async function githubFetch(path: string, init: RequestInit = {}): Promise<unknow
   const res = await fetch(`${GITHUB_API}${path}`, {
     ...init,
     headers: {
-      'User-Agent': 'flax-dashboard',
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
+      "User-Agent": "flax-dashboard",
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
       ...((init.headers as Record<string, string>) ?? {}),
     },
   });
@@ -110,7 +110,7 @@ export async function convertManifestCode(code: string): Promise<{
   webhook_secret: string;
 }> {
   const data = (await githubFetch(`/app-manifests/${encodeURIComponent(code)}/conversions`, {
-    method: 'POST',
+    method: "POST",
   })) as {
     id: number;
     slug: string;
@@ -123,19 +123,20 @@ export async function convertManifestCode(code: string): Promise<{
 }
 
 async function getAppRow(db: D1Database): Promise<GithubAppRow | null> {
-  const row = await db
-    .prepare('SELECT * FROM flax_github_app WHERE id = 1')
-    .first<GithubAppRow>();
+  const row = await db.prepare("SELECT * FROM flax_github_app WHERE id = 1").first<GithubAppRow>();
   return row ?? null;
 }
 
-export async function saveAppRow(db: D1Database, app: {
-  app_id: string;
-  slug: string;
-  client_id: string;
-  client_secret: string;
-  private_key: string;
-}): Promise<void> {
+export async function saveAppRow(
+  db: D1Database,
+  app: {
+    app_id: string;
+    slug: string;
+    client_id: string;
+    client_secret: string;
+    private_key: string;
+  },
+): Promise<void> {
   await db
     .prepare(
       `INSERT INTO flax_github_app (id, app_id, slug, client_id, client_secret, private_key, created_at)
@@ -152,7 +153,9 @@ export async function saveAppRow(db: D1Database, app: {
 }
 
 async function getInstallRow(db: D1Database): Promise<GithubInstallRow | null> {
-  const row = await db.prepare('SELECT * FROM flax_github_install ORDER BY installed_at DESC LIMIT 1').first<GithubInstallRow>();
+  const row = await db
+    .prepare("SELECT * FROM flax_github_install ORDER BY installed_at DESC LIMIT 1")
+    .first<GithubInstallRow>();
   return row ?? null;
 }
 
@@ -179,14 +182,14 @@ export async function resolveInstallation(
   installationId: string,
 ): Promise<{ org: string; account_type: string }> {
   const app = await getAppRow(db);
-  if (!app) throw new Error('GitHub App is not configured — run the setup flow first.');
+  if (!app) throw new Error("GitHub App is not configured — run the setup flow first.");
   const jwt = await signAppJwt(app.app_id, app.private_key);
   const data = (await githubFetch(`/app/installations/${installationId}`, {
     headers: { Authorization: `Bearer ${jwt}` },
   })) as { account?: { login?: string; type?: string } };
   const org = data.account?.login;
   if (!org) throw new Error(`Installation ${installationId} has no account`);
-  return { org, account_type: data.account?.type ?? 'User' };
+  return { org, account_type: data.account?.type ?? "User" };
 }
 
 export interface InstallStatus {
@@ -200,14 +203,24 @@ export async function getInstallStatus(db: D1Database): Promise<InstallStatus> {
   const app = await getAppRow(db);
   const install = await getInstallRow(db);
   if (!app || !install) {
-    return { configured: Boolean(app && install), app: app ? { slug: app.slug, appId: app.app_id, clientId: app.client_id } : null, installation: null, bindingLive: false };
+    return {
+      configured: Boolean(app && install),
+      app: app ? { slug: app.slug, appId: app.app_id, clientId: app.client_id } : null,
+      installation: null,
+      bindingLive: false,
+    };
   }
   const token = await installationToken(db, install.installation_id);
   let bindingLive = false;
   if (token) {
     try {
       const res = await fetch(`${GITHUB_API}/installation/repositories`, {
-        headers: { 'User-Agent': 'flax-dashboard', Authorization: `Bearer ${token.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+        headers: {
+          "User-Agent": "flax-dashboard",
+          Authorization: `Bearer ${token.token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
       });
       bindingLive = res.ok;
     } catch {
@@ -217,7 +230,11 @@ export async function getInstallStatus(db: D1Database): Promise<InstallStatus> {
   return {
     configured: true,
     app: { slug: app.slug, appId: app.app_id, clientId: app.client_id },
-    installation: { installationId: install.installation_id, org: install.org, accountType: install.account_type },
+    installation: {
+      installationId: install.installation_id,
+      org: install.org,
+      accountType: install.account_type,
+    },
     bindingLive,
   };
 }
@@ -237,7 +254,7 @@ export async function installationToken(
   if (!/^\d+$/.test(installationId)) return null;
 
   const cached = await db
-    .prepare('SELECT * FROM flax_github_token WHERE installation_id = ?')
+    .prepare("SELECT * FROM flax_github_token WHERE installation_id = ?")
     .bind(installationId)
     .first<{ token: string; expires_at: number }>();
   const now = Date.now();
@@ -247,7 +264,7 @@ export async function installationToken(
 
   const jwt = await signAppJwt(app.app_id, app.private_key);
   const data = (await githubFetch(`/app/installations/${installationId}/access_tokens`, {
-    method: 'POST',
+    method: "POST",
     headers: { Authorization: `Bearer ${jwt}` },
   })) as { token: string; expires_at: string };
   const expiresAt = new Date(data.expires_at).getTime();
@@ -269,9 +286,9 @@ export async function ghFetch(
   init: RequestInit = {},
 ): Promise<unknown> {
   const install = await getInstallRow(db);
-  if (!install) throw new Error('No GitHub installation configured');
+  if (!install) throw new Error("No GitHub installation configured");
   const token = await installationToken(db, install.installation_id);
-  if (!token) throw new Error('Unable to mint a GitHub installation token');
+  if (!token) throw new Error("Unable to mint a GitHub installation token");
   return githubFetch(path, {
     ...init,
     headers: {

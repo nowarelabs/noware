@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export interface Route {
   path: string;
@@ -7,20 +7,20 @@ export interface Route {
 }
 
 function parseHash(hash: string): Route {
-  const raw = hash.replace(/^#/, '');
-  const pathPart = raw.split('?')[0] ?? '';
-  const queryPart = raw.split('?')[1] ?? '';
-  const segments = pathPart.split('/').filter(Boolean);
+  const raw = hash.replace(/^#/, "");
+  const pathPart = raw.split("?")[0] ?? "";
+  const queryPart = raw.split("?")[1] ?? "";
+  const segments = pathPart.split("/").filter(Boolean);
   const params: Record<string, string> = {};
 
-  if (segments[0] === 'conversations' && segments[1]) {
+  if (segments[0] === "conversations" && segments[1]) {
     params.id = segments[1];
   }
 
   return {
-    path: `/${segments.join('/')}`,
+    path: `/${segments.join("/")}`,
     params,
-    query: new URLSearchParams(queryPart ?? ''),
+    query: new URLSearchParams(queryPart ?? ""),
   };
 }
 
@@ -33,8 +33,8 @@ export function useRoute(): Route {
 
   useEffect(() => {
     const onChange = () => setRoute(read());
-    window.addEventListener('hashchange', onChange);
-    return () => window.removeEventListener('hashchange', onChange);
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
   }, []);
 
   return route;

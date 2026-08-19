@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vite dev",
+    "preview": "vite preview",
+    "check": "vp check"
   },
   "dependencies": {
     "@cloudflare/kumo": "^2.9.1",
@@ -16,10 +17,14 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "@vitejs/plugin-react": "^6.0.5",
-    "typescript": "^7.0.2",
-    "vite": "^8.2.0"
+    "bumpp": "^11.0.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.2.0",
+    "vite-plus": "^0.1.14"
   }
 }
