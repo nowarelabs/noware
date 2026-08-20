@@ -768,6 +768,9 @@ importers:
       '@nowarelabs/entrypoints':
         specifier: workspace:*
         version: link:../../../../entrypoints
+      '@nowarelabs/models':
+        specifier: workspace:*
+        version: link:../../../../models
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)

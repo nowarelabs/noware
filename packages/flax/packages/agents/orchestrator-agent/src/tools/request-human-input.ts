@@ -2,7 +2,8 @@ import { defineTool } from "@nowarelabs/agents";
 import { env } from "cloudflare:workers";
 import * as v from "valibot";
 
-import { ensureSchema, insertHitl, patchInstance } from "../dashboard-db";
+import { FlaxHitlModel } from "../models/flax-hitl.model.js";
+import { FlaxInstanceModel } from "../models/flax-instance.model.js";
 
 /** Deterministic, content-addressed HITL id (matches dashboard-api's scan). */
 async function hitlIdFor(conversationId: string, type: string, title: string): Promise<string> {
@@ -62,8 +63,8 @@ export const requestHumanInputTool = defineTool({
     const db = (env as unknown as { FLAX_DB?: D1Database }).FLAX_DB;
     if (db) {
       try {
-        await ensureSchema(db);
-        await insertHitl(db, {
+        const hitlModel = new FlaxHitlModel({ db, table: "flax_hitl" });
+        await hitlModel.insertHitl({
           id,
           conversation_id: data.conversationId,
           type: data.type,
@@ -71,7 +72,8 @@ export const requestHumanInputTool = defineTool({
           summary: data.summary,
           payload: data.payload,
         });
-        await patchInstance(db, data.conversationId, {
+        const instanceModel = new FlaxInstanceModel({ db, table: "flax_instances" });
+        await instanceModel.patchFields(data.conversationId, {
           currentAgent: "orchestrator",
           status: "blocked_on_human",
           lastActivityAt: Date.now(),

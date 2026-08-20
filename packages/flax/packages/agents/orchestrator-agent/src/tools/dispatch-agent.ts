@@ -2,7 +2,9 @@ import { defineTool } from "@nowarelabs/agents";
 import { env } from "cloudflare:workers";
 import * as v from "valibot";
 
-import { ensureSchema, openStage, patchInstance, stageForAgent } from "../dashboard-db";
+import { stageForAgent } from "../dashboard-db";
+import { FlaxInstanceModel } from "../models/flax-instance.model.js";
+import { FlaxStageModel } from "../models/flax-stage.model.js";
 
 const AGENTS = {
   "product-requirements": "PRODUCT_REQUIREMENTS_AGENT",
@@ -98,9 +100,10 @@ export const dispatchAgentTool = defineTool({
     if (db && response.ok) {
       const stage = data.stage ?? stageForAgent(data.agent);
       try {
-        await ensureSchema(db);
-        await openStage(db, data.conversationId, stage, data.agent, data.task.slice(0, 200));
-        await patchInstance(db, data.conversationId, {
+        const stageModel = new FlaxStageModel({ db, table: "flax_stages" });
+        await stageModel.openStage(data.conversationId, stage, data.agent, data.task.slice(0, 200));
+        const instanceModel = new FlaxInstanceModel({ db, table: "flax_instances" });
+        await instanceModel.patchFields(data.conversationId, {
           currentStage: stage,
           currentAgent: data.agent,
           status: "running",
