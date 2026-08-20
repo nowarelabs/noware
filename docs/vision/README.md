@@ -8,7 +8,15 @@ crash-safe leases, and codegen flows out of it.
 Read order: `01-motivation.md` → `02-package-conventions.md` → per-package specs
 (`03`-`07`) → `08-ordered-work.md` (the implementation plan future sessions follow).
 
-## Index
+## Projects
+
+| Directory                            | What it is                                                       | Status                   |
+| ------------------------------------ | ---------------------------------------------------------------- | ------------------------ |
+| `01-project-gen-diesel/`             | cfour extraction, workspace-do, agents, merge-review, gen-diesel | ✅ Complete (Phases 1-7) |
+| `02-project-orchestrator-migration/` | Migrate orchestrator to full @nowarelabs stack                   | 📋 Planned               |
+| `03-project-entropy-gate/`           | Validation layer between agents (anti-hallucination)             | 📋 Planned               |
+
+## Index (01-project-gen-diesel)
 
 | File                        | What it is                                                                                                 |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
