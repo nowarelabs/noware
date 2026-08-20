@@ -342,3 +342,273 @@ export function fromNodeIncomingMessage(
     body: method !== "GET" && method !== "HEAD" ? (body ?? null) : null,
   }) as RequestLike;
 }
+
+// ----------------------------------------------------------------
+// Stigmergic Agent Architecture Types
+// ----------------------------------------------------------------
+
+export type OrchestratorLevel = "root" | "ss" | "container" | "component";
+
+export interface OrchestratorState {
+  id: string;
+  level: OrchestratorLevel;
+  elementId: string;
+  parentId?: string;
+  childOrchestratorIds: string[];
+  currentModel: Record<string, unknown>;
+  lastPheromoneCheck: number;
+  diffsProcessed: CfourDiff[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CfourDiff {
+  id: string;
+  level: "ss" | "container" | "component" | "code";
+  elementId: string;
+  changeType: "description" | "pattern" | "relationship" | "structure" | "add" | "remove";
+  oldValue: unknown;
+  newValue: unknown;
+  timestamp: number;
+  sourceOrchestratorId: string;
+}
+
+export type AtomType = "function" | "method" | "statement";
+export type AtomStatus = "idle" | "working" | "review" | "merged" | "conflict";
+
+export interface AtomState {
+  id: string;
+  cfourElementId: string;
+  atomType: AtomType;
+  content: string;
+  language: string;
+  filePath: string;
+  parentComponentId: string;
+  relationships: string[];
+  assignedPattern: string;
+  status: AtomStatus;
+  agentDoId: string;
+  versions: AtomVersion[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface AtomVersion {
+  id: string;
+  content: string;
+  agentDoId: string;
+  timestamp: number;
+  pheromoneEvents: string[];
+  cfourValidation: CfourValidationResult;
+  patternCompliance: PatternComplianceResult;
+}
+
+export interface CfourValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export interface PatternComplianceResult {
+  compliant: boolean;
+  violations: string[];
+}
+
+export type AgentStatus = "idle" | "reading" | "working" | "leaving-cue" | "waiting";
+
+export interface AgentState {
+  id: string;
+  atomDoId: string;
+  agentType: string;
+  cfourContract: Record<string, unknown>;
+  assignedPattern: string;
+  neighborAtomIds: string[];
+  status: AgentStatus;
+  lastPheromoneCheck: number;
+  actions: AgentAction[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface AgentAction {
+  id: string;
+  type: "read-atom" | "read-neighbor" | "write-atom" | "leave-cue" | "read-pheromone";
+  atomDoId?: string;
+  timestamp: number;
+  result: "success" | "failure" | "skipped";
+  details?: string;
+}
+
+export type PheromoneEventType =
+  | "atom-needs-work"
+  | "atom-ready"
+  | "atom-conflict"
+  | "atom-merged"
+  | "atom-deleted"
+  | "pattern-changed"
+  | "description-changed"
+  | "relationship-changed";
+
+export interface PheromoneEvent {
+  id: string;
+  type: PheromoneEventType;
+  elementId: string;
+  level: "ss" | "container" | "component" | "code";
+  agentDoId?: string;
+  timestamp: number;
+  cfourDiff?: CfourDiff;
+  metadata?: Record<string, unknown>;
+  consumedBy: string[];
+}
+
+export type ClaimStatus = "active" | "released" | "expired" | "stolen";
+
+export interface ClaimState {
+  id: string;
+  atomId: string;
+  agentDoId: string;
+  status: ClaimStatus;
+  acquiredAt: number;
+  expiresAt: number;
+  releasedAt?: number;
+  acquisitions: ClaimAcquisition[];
+}
+
+export interface ClaimAcquisition {
+  agentDoId: string;
+  acquiredAt: number;
+  releasedAt?: number;
+  reason?: string;
+}
+
+export type BranchStatus = "active" | "merged" | "abandoned";
+
+export interface BranchState {
+  id: string;
+  atomId: string;
+  agentDoId: string;
+  content: string;
+  baseVersionId: string;
+  status: BranchStatus;
+  createdAt: number;
+  updatedAt: number;
+  versions: BranchVersion[];
+}
+
+export interface BranchVersion {
+  id: string;
+  content: string;
+  agentDoId: string;
+  timestamp: number;
+  cfourValidation: CfourValidationResult;
+  patternCompliance: PatternComplianceResult;
+}
+
+export type MergeStatus = "pending" | "auto" | "manual" | "conflict" | "merged" | "rejected";
+
+export interface MergeState {
+  id: string;
+  atomId: string;
+  sourceBranchId: string;
+  targetBranchId?: string;
+  status: MergeStatus;
+  createdAt: number;
+  mergedAt?: number;
+  conflicts?: MergeConflict[];
+  resolution?: MergeResolution;
+}
+
+export interface MergeConflict {
+  id: string;
+  section: string;
+  sourceValue: string;
+  targetValue: string;
+  agentDoId?: string;
+}
+
+export interface MergeResolution {
+  strategy: "auto" | "manual" | "gate";
+  resolvedBy: string;
+  resolvedAt: number;
+  details: string;
+}
+
+// Architectural patterns
+export type ArchitecturalPattern = "mvc" | "clean" | "ddd" | "event-driven" | "onion";
+
+// Coding patterns (Refactoring Guru)
+export type CodingPattern =
+  | "factory"
+  | "abstract-factory"
+  | "builder"
+  | "prototype"
+  | "singleton"
+  | "adapter"
+  | "bridge"
+  | "composite"
+  | "decorator"
+  | "facade"
+  | "proxy"
+  | "chain-of-responsibility"
+  | "command"
+  | "iterator"
+  | "mediator"
+  | "observer"
+  | "strategy";
+
+export interface Bid {
+  systemId: string;
+  entityId: string;
+  value: number;
+  conditions: BidCondition[];
+}
+
+export interface BidCondition {
+  component: string;
+  field: string;
+  operator: "==" | "!=" | "<" | ">" | "<=" | ">=";
+  value: unknown;
+}
+
+export interface Capability {
+  component: string;
+  access:
+    | "read"
+    | "write"
+    | "execute"
+    | "read+write"
+    | "read+execute"
+    | "write+execute"
+    | "read+write+execute";
+}
+
+export interface SystemDefinition {
+  name: string;
+  description: string;
+  capabilities: Capability[];
+  bids: Array<{ conditions: BidCondition[]; value: number }>;
+}
+
+export interface Invariant {
+  id: string;
+  expression: string;
+  description: string;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ComponentDefinition {
+  name: string;
+  schema: Record<string, unknown>;
+  version: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ComponentInstance {
+  entityId: string;
+  componentName: string;
+  data: unknown;
+  createdAt: number;
+  updatedAt: number;
+}

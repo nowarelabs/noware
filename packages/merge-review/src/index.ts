@@ -22,6 +22,7 @@ import type {
   C4View,
 } from "@nowarelabs/cfour";
 import type { DriftReport, CodebaseFs, GenerationManifest } from "@nowarelabs/gen-diesel";
+import type { MergeState, MergeConflict, MergeResolution } from "@nowarelabs/shared";
 
 // ----------------------------------------------------------------
 // Injected client (tests fake this)
@@ -478,4 +479,73 @@ export async function rejectReview(
   await store.update(reviewId, { status: "rejected" });
 
   return { pass: false, reason: `Rejected by ${editorId}: ${reason}` };
+}
+
+// ----------------------------------------------------------------
+// Stigmergic: AtomMergeResolver
+// ----------------------------------------------------------------
+
+export interface AtomMergeResolverConfig {
+  id: string;
+  atomId: string;
+  sourceBranchId: string;
+  targetBranchId?: string;
+}
+
+export class AtomMergeResolver {
+  state: MergeState;
+
+  constructor(config: AtomMergeResolverConfig) {
+    this.state = {
+      id: config.id,
+      atomId: config.atomId,
+      sourceBranchId: config.sourceBranchId,
+      targetBranchId: config.targetBranchId,
+      status: "pending",
+      createdAt: Date.now(),
+    };
+  }
+
+  autoMerge(sourceContent: string, targetContent: string): boolean {
+    if (sourceContent === targetContent) {
+      this.state.status = "merged";
+      this.state.mergedAt = Date.now();
+      return true;
+    }
+    this.state.conflicts = [{
+      id: `conflict-${Date.now()}`,
+      section: "full",
+      sourceValue: sourceContent,
+      targetValue: targetContent,
+    }];
+    this.state.status = "conflict";
+    return false;
+  }
+
+  manualMerge(resolution: MergeResolution): void {
+    this.state.resolution = resolution;
+    this.state.status = "merged";
+    this.state.mergedAt = Date.now();
+    this.state.conflicts = [];
+  }
+
+  gateMerge(passed: boolean, reason?: string): boolean {
+    if (passed) {
+      this.state.status = "merged";
+      this.state.mergedAt = Date.now();
+      return true;
+    }
+    this.state.status = "rejected";
+    return false;
+  }
+
+  reject(reason: string): void {
+    this.state.status = "rejected";
+    this.state.resolution = {
+      strategy: "manual",
+      resolvedBy: "system",
+      resolvedAt: Date.now(),
+      details: reason,
+    };
+  }
 }

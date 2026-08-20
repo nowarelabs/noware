@@ -4020,3 +4020,167 @@ export function buildFlowView(workspace: C4Workspace, tag: string, title?: strin
     relationships: Array.from(relationshipIds).map((id) => ({ relationshipId: id })),
   };
 }
+
+// ----------------------------------------------------------------
+// Stigmergic: ClaimDO
+// ----------------------------------------------------------------
+
+export interface ClaimDOConfig {
+  id: string;
+  atomId: string;
+  agentDoId: string;
+  ttlMs?: number;
+}
+
+export class ClaimDO {
+  private claim: {
+    id: string;
+    atomId: string;
+    agentDoId: string;
+    status: "active" | "released" | "expired" | "stolen";
+    acquiredAt: number;
+    expiresAt: number;
+    releasedAt?: number;
+    acquisitions: Array<{ agentDoId: string; acquiredAt: number; releasedAt?: number; reason?: string }>;
+  };
+
+  constructor(config: ClaimDOConfig) {
+    const now = Date.now();
+    this.claim = {
+      id: config.id,
+      atomId: config.atomId,
+      agentDoId: config.agentDoId,
+      status: "active",
+      acquiredAt: now,
+      expiresAt: now + (config.ttlMs ?? 300_000),
+      acquisitions: [{ agentDoId: config.agentDoId, acquiredAt: now }],
+    };
+  }
+
+  acquire(agentDoId: string, ttlMs?: number): boolean {
+    if (this.claim.status === "active" && this.claim.agentDoId !== agentDoId) {
+      return false;
+    }
+    const now = Date.now();
+    this.claim.agentDoId = agentDoId;
+    this.claim.status = "active";
+    this.claim.acquiredAt = now;
+    this.claim.expiresAt = now + (ttlMs ?? 300_000);
+    this.claim.releasedAt = undefined;
+    this.claim.acquisitions.push({ agentDoId, acquiredAt: now });
+    return true;
+  }
+
+  release(agentDoId: string): boolean {
+    if (this.claim.agentDoId !== agentDoId) return false;
+    if (this.claim.status !== "active") return false;
+    this.claim.status = "released";
+    this.claim.releasedAt = Date.now();
+    const last = this.claim.acquisitions[this.claim.acquisitions.length - 1];
+    if (last) last.releasedAt = Date.now();
+    return true;
+  }
+
+  steal(agentDoId: string): boolean {
+    if (!this.isActive()) return false;
+    this.claim.status = "stolen";
+    this.claim.releasedAt = Date.now();
+    const last = this.claim.acquisitions[this.claim.acquisitions.length - 1];
+    if (last) {
+      last.releasedAt = Date.now();
+      last.reason = "stolen";
+    }
+    return this.acquire(agentDoId);
+  }
+
+  isActive(): boolean {
+    if (this.claim.status !== "active") return false;
+    if (Date.now() > this.claim.expiresAt) {
+      this.claim.status = "expired";
+      return false;
+    }
+    return true;
+  }
+
+  extend(ttlMs: number): boolean {
+    if (!this.isActive()) return false;
+    this.claim.expiresAt = Date.now() + ttlMs;
+    return true;
+  }
+
+  get state() {
+    return { ...this.claim };
+  }
+}
+
+// ----------------------------------------------------------------
+// Stigmergic: BranchDO
+// ----------------------------------------------------------------
+
+export interface BranchDOConfig {
+  id: string;
+  atomId: string;
+  agentDoId: string;
+  content: string;
+  baseVersionId: string;
+}
+
+export class BranchDO {
+  private branch: {
+    id: string;
+    atomId: string;
+    agentDoId: string;
+    content: string;
+    baseVersionId: string;
+    status: "active" | "merged" | "abandoned";
+    createdAt: number;
+    updatedAt: number;
+    versions: Array<{ id: string; content: string; agentDoId: string; timestamp: number }>;
+  };
+
+  constructor(config: BranchDOConfig) {
+    const now = Date.now();
+    this.branch = {
+      id: config.id,
+      atomId: config.atomId,
+      agentDoId: config.agentDoId,
+      content: config.content,
+      baseVersionId: config.baseVersionId,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+      versions: [{ id: `bv-${now}`, content: config.content, agentDoId: config.agentDoId, timestamp: now }],
+    };
+  }
+
+  update(content: string, agentDoId: string): void {
+    if (this.branch.status !== "active") throw new Error("branch not active");
+    const now = Date.now();
+    this.branch.content = content;
+    this.branch.updatedAt = now;
+    this.branch.versions.push({ id: `bv-${now}`, content, agentDoId, timestamp: now });
+  }
+
+  merge(): { content: string; versions: typeof this.branch.versions } {
+    if (this.branch.status !== "active") throw new Error("branch not active");
+    this.branch.status = "merged";
+    return { content: this.branch.content, versions: [...this.branch.versions] };
+  }
+
+  abandon(): void {
+    this.branch.status = "abandoned";
+  }
+
+  getConflicts(otherContent: string): Array<{ section: string; source: string; target: string }> {
+    if (this.branch.content === otherContent) return [];
+    return [{ section: "full", source: this.branch.content, target: otherContent }];
+  }
+
+  get state() {
+    return { ...this.branch };
+  }
+
+  get isActive(): boolean {
+    return this.branch.status === "active";
+  }
+}

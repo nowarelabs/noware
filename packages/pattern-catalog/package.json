@@ -1,0 +1,22 @@
+{
+  "name": "@nowarelabs/pattern-catalog",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./types": "./dist/index.d.mts"
+  },
+  "scripts": {
+    "check": "vp check",
+    "test": "vp test",
+    "build": "vp pack"
+  },
+  "dependencies": {
+    "@nowarelabs/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vite-plus": "^0.1.14"
+  }
+}

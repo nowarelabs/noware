@@ -18,6 +18,9 @@ import type {
   AfterHookFunction,
   AroundHookFunction,
   RegisteredHook,
+  PheromoneEvent,
+  PheromoneEventType,
+  CfourDiff,
 } from "@nowarelabs/shared";
 import { Logger } from "@nowarelabs/telemetry";
 
@@ -64,5 +67,73 @@ export class BaseEvent<
     protected ctx: Ctx,
   ) {
     this.logger = new Logger(request, env, ctx as any, { service: this.constructor.name });
+  }
+}
+
+// ----------------------------------------------------------------
+// Stigmergic: PheromoneSignalEmitter
+// ----------------------------------------------------------------
+
+export class PheromoneSignalEmitter {
+  private events: PheromoneEvent[] = [];
+
+  emit(event: Omit<PheromoneEvent, "id" | "timestamp" | "consumedBy">): PheromoneEvent {
+    const e: PheromoneEvent = {
+      id: `ph-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      consumedBy: [],
+      ...event,
+    };
+    this.events.push(e);
+    return e;
+  }
+
+  poll(agentDoId: string, lastCheck: number): PheromoneEvent[] {
+    return this.events.filter(
+      (e) => e.timestamp > lastCheck && !e.consumedBy.includes(agentDoId),
+    );
+  }
+
+  consume(eventId: string, agentDoId: string): boolean {
+    const event = this.events.find((e) => e.id === eventId);
+    if (!event) return false;
+    if (!event.consumedBy.includes(agentDoId)) {
+      event.consumedBy.push(agentDoId);
+    }
+    return true;
+  }
+
+  emitOnWrite(atomDoId: string, agentDoId: string, elementId: string): PheromoneEvent {
+    return this.emit({
+      type: "atom-ready",
+      elementId,
+      level: "code",
+      agentDoId,
+    });
+  }
+
+  emitCfourDiff(diff: CfourDiff, sourceOrchestratorId: string): PheromoneEvent {
+    const typeMap: Record<string, PheromoneEventType> = {
+      description: "description-changed",
+      pattern: "pattern-changed",
+      relationship: "relationship-changed",
+      structure: "description-changed",
+      add: "atom-needs-work",
+      remove: "atom-deleted",
+    };
+    return this.emit({
+      type: typeMap[diff.changeType] ?? "description-changed",
+      elementId: diff.elementId,
+      level: diff.level,
+      cfourDiff: diff,
+    });
+  }
+
+  get allEvents(): PheromoneEvent[] {
+    return [...this.events];
+  }
+
+  get unconsumedCount(): number {
+    return this.events.filter((e) => e.consumedBy.length === 0).length;
   }
 }
