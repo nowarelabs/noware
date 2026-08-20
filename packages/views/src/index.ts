@@ -18,7 +18,11 @@ export namespace JSX {
     [elemName: string]: any;
   }
 
-  export interface Element extends String {}
+  export interface Element {
+    readonly [Symbol.toStringTag]: "Element";
+    toString(): string;
+    valueOf(): string;
+  }
 
   export interface ElementChildrenAttribute {
     children: {};

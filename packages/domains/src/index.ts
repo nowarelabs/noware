@@ -19,8 +19,8 @@ import type {
 
 export class BaseDomain<
   Ctx extends DomainContext = DomainContext,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
+  _Env extends EnvLike = EnvLike,
+  _Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];

@@ -1,5 +1,3 @@
-import type { ContextLike } from "./shared.ts";
-
 export type { Body, RequestLike, EnvLike, ContextLike } from "./shared.ts";
 export { createContext, createContextWith } from "./shared.ts";
 

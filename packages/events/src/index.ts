@@ -28,8 +28,8 @@ export class EventEmitter {
     protected ctx: EventContext,
   ) {}
 
-  on(event: string, handler: unknown): void {}
-  emit(event: string, data: unknown): void {}
+  on(_event: string, _handler: unknown): void {}
+  emit(_event: string, _data: unknown): void {}
 }
 
 export class BaseEvent<

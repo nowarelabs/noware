@@ -1883,7 +1883,7 @@ describe("GraphTraversal", () => {
 
   test("empty result from CTE returns empty array", async () => {
     const mockDb = {
-      prepare: (sql: string) => ({
+      prepare: (_sql: string) => ({
         bind: () => ({
           all: async () => ({ results: [] }),
         }),
@@ -2088,7 +2088,7 @@ describe("Security hardening", () => {
     test("prepare path uses bound params (no interpolation)", async () => {
       const boundParams: any[] = [];
       const mockDb = {
-        prepare: (sql: string) => ({
+        prepare: (_sql: string) => ({
           bind: (...params: any[]) => {
             boundParams.push(...params);
             return {

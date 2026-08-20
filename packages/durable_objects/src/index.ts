@@ -30,7 +30,7 @@ export type DurableObjectState = {
     get<T>(key: string): Promise<T | undefined>;
     put(key: string, value: unknown): Promise<void>;
     delete(key: string): Promise<boolean>;
-    list<T>(options?: {
+    list(_options?: {
       prefix?: string;
       limit?: number;
     }): Promise<{ keys: Array<{ name: string }> }>;
@@ -39,8 +39,8 @@ export type DurableObjectState = {
 
 export class BaseDurableObject<
   Ctx extends DurableObjectContext = DurableObjectContext,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
+  _Env extends EnvLike = EnvLike,
+  _Request extends RequestLike = RequestLike,
 > {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];

@@ -1,5 +1,4 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ContextLike } from "../src/index.ts";
 import {
   createContext,
   createContextWith,

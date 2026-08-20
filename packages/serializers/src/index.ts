@@ -35,9 +35,9 @@ export class Serializer {
 
 export class BaseSerializer<
   Ctx extends SerializerContext = SerializerContext,
-  Env extends EnvLike = EnvLike,
-  Request extends RequestLike = RequestLike,
-  Model = unknown,
+  _Env extends EnvLike = EnvLike,
+  _Request extends RequestLike = RequestLike,
+  _Model = unknown,
 > {
   static beforeHooks: RegisteredHook[] = [];
   static afterHooks: RegisteredHook[] = [];
