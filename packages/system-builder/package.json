@@ -1,0 +1,22 @@
+{
+  "name": "@nowarelabs/system-builder",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "check": "vp check",
+    "test": "vp test",
+    "build": "vp pack"
+  },
+  "dependencies": {
+    "@nowarelabs/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20200804.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vite-plus": "^0.1.14"
+  }
+}

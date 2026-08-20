@@ -612,3 +612,170 @@ export interface ComponentInstance {
   createdAt: number;
   updatedAt: number;
 }
+
+// ----------------------------------------------------------------
+// Company Builder Types
+// ----------------------------------------------------------------
+
+export interface CompanyDescription {
+  name: string;
+  industry: string;
+  description: string;
+  departments: DepartmentDescription[];
+}
+
+export interface DepartmentDescription {
+  name: string;
+  description: string;
+  teams: TeamDescription[];
+}
+
+export interface TeamDescription {
+  name: string;
+  description: string;
+  roles: RoleDescription[];
+}
+
+export interface RoleDescription {
+  name: string;
+  description: string;
+  capabilities: string[];
+}
+
+export type DatabaseColumnType = "TEXT" | "INTEGER" | "REAL" | "BLOB" | "BOOLEAN";
+
+export interface ColumnSpec {
+  name: string;
+  type: DatabaseColumnType;
+  nullable?: boolean;
+  primaryKey?: boolean;
+  defaultValue?: unknown;
+}
+
+export interface IndexSpec {
+  name: string;
+  columns: string[];
+  unique?: boolean;
+}
+
+export interface TableSpec {
+  name: string;
+  columns: ColumnSpec[];
+  indexes: IndexSpec[];
+}
+
+export interface MigrationSpec {
+  version: number;
+  sql: string;
+  timestamp: number;
+}
+
+export interface DatabaseSpec {
+  name: string;
+  tables: TableSpec[];
+  migrations: MigrationSpec[];
+}
+
+export interface BindingSpec {
+  name: string;
+  type: "D1" | "KV" | "R2" | "DO" | "SERVICE";
+  resource: string;
+}
+
+export interface AuthSpec {
+  type: "api-key" | "jwt" | "oauth" | "mtls";
+  config: Record<string, unknown>;
+}
+
+export interface IntegrationSpec {
+  type: "webhook" | "api" | "queue" | "cron";
+  endpoint: string;
+  method?: string;
+  auth?: AuthSpec;
+}
+
+export interface SystemSpec {
+  id: string;
+  name: string;
+  type: "worker" | "d1" | "kv" | "r2" | "do";
+  cfourElementId: string;
+  parentContainerId: string;
+  config: Record<string, unknown>;
+  database?: DatabaseSpec;
+  bindings: BindingSpec[];
+  integrations: IntegrationSpec[];
+}
+
+export type SystemStatus =
+  | "provisioning"
+  | "building"
+  | "deploying"
+  | "deployed"
+  | "healthy"
+  | "degraded"
+  | "failed"
+  | "rolled-back";
+
+export interface CompanyResult {
+  cfourModelId: string;
+  orchestratorId: string;
+  systems: SystemBuildResult[];
+  status: "building" | "deployed" | "failed";
+}
+
+export interface SystemBuildResult {
+  systemId: string;
+  workerUrl: string;
+  databaseId: string;
+  status: SystemStatus;
+}
+
+export interface HealthCheck {
+  systemId: string;
+  endpoint: string;
+  intervalMs: number;
+  timeoutMs: number;
+  expectedStatus: number;
+}
+
+export interface AlertRule {
+  id: string;
+  condition: string;
+  action: "notify" | "restart" | "scale" | "rollback";
+  cooldown: number;
+}
+
+export interface SystemTemplate {
+  name: string;
+  description: string;
+  database: DatabaseSpec;
+  bindings: BindingSpec[];
+  integrations: IntegrationSpec[];
+  auth: AuthSpec;
+  monitoring: HealthCheck[];
+  codeTemplate: string;
+}
+
+export interface KVSpec {
+  name: string;
+  namespaceId?: string;
+}
+
+export interface R2Spec {
+  name: string;
+  bucketName?: string;
+}
+
+export interface DOSpec {
+  name: string;
+  className: string;
+  migrations?: MigrationSpec[];
+}
+
+export interface DeploymentStatus {
+  workerName: string;
+  version: string;
+  status: string;
+  url: string;
+  deployedAt: number;
+}

@@ -22,7 +22,7 @@ integrations. Not an LLM wrapper. A real, operational system built from a though
 | `02-project-orchestrator-migration/` | Migrate orchestrator to full @nowarelabs stack                   | ✅ Complete              |
 | `03-project-entropy-gate/`           | Validation layer between agents (anti-hallucination)             | ✅ Complete              |
 | `04-project-stigmergic-agents/`      | Stigmergic architecture: atom DOs, agent DOs, pheromone signals  | ✅ Complete              |
-| `05-project-company-builder/`        | North star: describe company → system builds everything          | 🌟 Vision                |
+| `05-project-company-builder/`        | North star: describe company → system builds everything          | ✅ Complete              |
 
 ## Index (01-project-gen-diesel)
 

@@ -1,0 +1,25 @@
+{
+  "name": "@nowarelabs/company-builder",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./types": "./dist/index.d.mts"
+  },
+  "scripts": {
+    "check": "vp check",
+    "test": "vp test",
+    "build": "vp pack"
+  },
+  "dependencies": {
+    "@nowarelabs/shared": "workspace:*",
+    "@nowarelabs/system-builder": "workspace:*",
+    "@nowarelabs/company-parser": "workspace:*",
+    "@nowarelabs/durable-objects": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20200804.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vite-plus": "^0.1.14"
+  }
+}

@@ -362,3 +362,161 @@ export class AgentDO {
     return this.state.actions[this.state.actions.length - 1];
   }
 }
+
+// ----------------------------------------------------------------
+// Company Builder: SystemDO
+// ----------------------------------------------------------------
+
+export type SystemLifecycleStatus =
+  | "provisioning"
+  | "building"
+  | "deploying"
+  | "deployed"
+  | "healthy"
+  | "degraded"
+  | "failed"
+  | "rolled-back";
+
+export interface SystemDOState {
+  id: string;
+  name: string;
+  status: SystemLifecycleStatus;
+  workerUrl: string;
+  databaseId: string;
+  healthChecks: Array<{ endpoint: string; lastCheck: number; lastStatus: number }>;
+  errorLog: Array<{ message: string; timestamp: number }>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export class SystemDO {
+  state: SystemDOState;
+
+  constructor(id: string, name: string) {
+    const now = Date.now();
+    this.state = {
+      id,
+      name,
+      status: "provisioning",
+      workerUrl: "",
+      databaseId: "",
+      healthChecks: [],
+      errorLog: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  transition(newStatus: SystemLifecycleStatus): boolean {
+    const validTransitions: Record<SystemLifecycleStatus, SystemLifecycleStatus[]> = {
+      provisioning: ["building", "failed"],
+      building: ["deploying", "failed"],
+      deploying: ["deployed", "failed"],
+      deployed: ["healthy", "degraded", "failed"],
+      healthy: ["degraded", "failed", "deployed"],
+      degraded: ["healthy", "failed", "rolled-back"],
+      failed: ["provisioning", "rolled-back"],
+      "rolled-back": ["provisioning"],
+    };
+    if (!validTransitions[this.state.status]?.includes(newStatus)) return false;
+    this.state.status = newStatus;
+    this.state.updatedAt = Date.now();
+    return true;
+  }
+
+  recordError(message: string): void {
+    this.state.errorLog.push({ message, timestamp: Date.now() });
+    this.state.updatedAt = Date.now();
+  }
+
+  updateHealth(endpoint: string, status: number): void {
+    const existing = this.state.healthChecks.find((h) => h.endpoint === endpoint);
+    if (existing) {
+      existing.lastCheck = Date.now();
+      existing.lastStatus = status;
+    } else {
+      this.state.healthChecks.push({ endpoint, lastCheck: Date.now(), lastStatus: status });
+    }
+    this.state.updatedAt = Date.now();
+  }
+
+  setErrorDetails(url: string, databaseId: string): void {
+    this.state.workerUrl = url;
+    this.state.databaseId = databaseId;
+    this.state.updatedAt = Date.now();
+  }
+
+  get isHealthy(): boolean {
+    return this.state.status === "healthy" || this.state.status === "deployed";
+  }
+
+  get errorCount(): number {
+    return this.state.errorLog.length;
+  }
+}
+
+// ----------------------------------------------------------------
+// Company Builder: DeploymentDO
+// ----------------------------------------------------------------
+
+export interface DeploymentDOVersion {
+  version: string;
+  code: string;
+  deployedAt: number;
+  deployedBy: string;
+  status: "active" | "rolled-back" | "archived";
+}
+
+export class DeploymentDO {
+  private versions: DeploymentDOVersion[] = [];
+  private activeVersion: string = "";
+
+  constructor(private workerName: string) {}
+
+  deploy(version: string, code: string, deployedBy: string): DeploymentDOVersion {
+    // Deactivate current active version
+    const current = this.versions.find((v) => v.status === "active");
+    if (current) current.status = "archived";
+
+    const entry: DeploymentDOVersion = {
+      version,
+      code,
+      deployedAt: Date.now(),
+      deployedBy,
+      status: "active",
+    };
+    this.versions.push(entry);
+    this.activeVersion = version;
+    return entry;
+  }
+
+  rollback(toVersion?: string): DeploymentDOVersion | null {
+    const target = toVersion
+      ? this.versions.find((v) => v.version === toVersion)
+      : this.versions[this.versions.length - 2];
+    if (!target) return null;
+
+    const current = this.versions.find((v) => v.status === "active");
+    if (current) current.status = "rolled-back";
+
+    target.status = "active";
+    this.activeVersion = target.version;
+    return target;
+  }
+
+  getVersion(version: string): DeploymentDOVersion | undefined {
+    return this.versions.find((v) => v.version === version);
+  }
+
+  getActiveVersion(): DeploymentDOVersion | undefined {
+    return this.versions.find((v) => v.status === "active");
+  }
+
+  getHistory(): DeploymentDOVersion[] {
+    return [...this.versions];
+  }
+
+  get versionCount(): number {
+    return this.versions.length;
+  }
+}

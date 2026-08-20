@@ -264,6 +264,53 @@ importers:
         specifier: ^0.1.14
         version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
 
+  packages/company-builder:
+    dependencies:
+      '@nowarelabs/company-parser':
+        specifier: workspace:*
+        version: link:../company-parser
+      '@nowarelabs/durable-objects':
+        specifier: workspace:*
+        version: link:../durable_objects
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@nowarelabs/system-builder':
+        specifier: workspace:*
+        version: link:../system-builder
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^5.20200804.1
+        version: 5.20260818.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.0
+        version: 8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
+  packages/company-parser:
+    dependencies:
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^5.20200804.1
+        version: 5.20260818.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.0
+        version: 8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
   packages/contexts:
     devDependencies:
       '@typescript/native-preview':
@@ -2417,6 +2464,25 @@ importers:
       vite-plus:
         specifier: ^0.1.14
         version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
+  packages/system-builder:
+    dependencies:
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^5.20200804.1
+        version: 5.20260818.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.0
+        version: 8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
 
   packages/telemetry:
     dependencies:
