@@ -8,6 +8,12 @@ crash-safe leases, and codegen flows out of it.
 Read order: `01-motivation.md` → `02-package-conventions.md` → per-package specs
 (`03`-`07`) → `08-ordered-work.md` (the implementation plan future sessions follow).
 
+## North Star
+
+**`05-project-company-builder/`** — One person describes a company. The system builds
+everything. Each "employee" is a full system: API endpoint + DB + business logic +
+integrations. Not an LLM wrapper. A real, operational system built from a thought.
+
 ## Projects
 
 | Directory                            | What it is                                                       | Status                   |
@@ -15,6 +21,8 @@ Read order: `01-motivation.md` → `02-package-conventions.md` → per-package s
 | `01-project-gen-diesel/`             | cfour extraction, workspace-do, agents, merge-review, gen-diesel | ✅ Complete (Phases 1-7) |
 | `02-project-orchestrator-migration/` | Migrate orchestrator to full @nowarelabs stack                   | 📋 Planned               |
 | `03-project-entropy-gate/`           | Validation layer between agents (anti-hallucination)             | 📋 Planned               |
+| `04-project-stigmergic-agents/`      | Stigmergic architecture: atom DOs, agent DOs, pheromone signals  | 📋 Planned               |
+| `05-project-company-builder/`        | North star: describe company → system builds everything          | 🌟 Vision                |
 
 ## Index (01-project-gen-diesel)
 
@@ -44,3 +52,19 @@ Read order: `01-motivation.md` → `02-package-conventions.md` → per-package s
    core. Node-only adapters live behind subpath exports (e.g. `@nowarelabs/gen-diesel/node`).
 6. **No regressions.** Every behavior covered today (139 cfour + 18 workspace-do tests) stays
    covered — tests move with their code, never get deleted.
+
+## Philosophical concepts → Implementation gap
+
+These concepts are described in the motivation docs but not yet in the implementation plans:
+
+| Concept                         | Described in                                    | Needs                                       |
+| ------------------------------- | ----------------------------------------------- | ------------------------------------------- |
+| Artifact storage                | 04-project/01-motivation.md (Principle 7)       | Separate storage entity for code artifacts  |
+| Crash recovery                  | 04-project/01-motivation.md (Principle 7)       | Agent DO restart mechanism                  |
+| System-wide consistency         | 04-project/01-motivation.md (Principle 6)       | Cross-atom consistency checking             |
+| Cascade completion verification | 04-project/01-motivation.md (Principle 2)       | Verification that signal reached all levels |
+| Concurrency control             | 04-project/01-motivation.md (Why simpler)       | Scheduling, resource limits                 |
+| Scaling mechanism               | 04-project/01-motivation.md (Why more powerful) | Auto-scaling, load distribution             |
+| Company → cfour model           | 05-project/01-motivation.md                     | Natural language parser                     |
+| Employee = full system          | 05-project/01-motivation.md                     | System builder (Layer 2)                    |
+| Self-healing                    | 05-project/01-motivation.md                     | Automatic recovery mechanisms               |
