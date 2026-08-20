@@ -1,37 +1,35 @@
 import { HttpEntrypoint } from "@nowarelabs/entrypoints";
 import { createAgentRouter, type AgentRoute } from "@nowarelabs/agents";
-import type { D1Database } from "@cloudflare/workers-types";
 
 import agentDef from "./agents/orchestrator";
-import { ensureSchema } from "./dashboard-db";
-import { FlaxInstanceModel } from "./models/flax-instance.model.js";
-
-interface FlaxEnv {
-  FLAX_DB?: D1Database;
-  [key: string]: unknown;
-}
+import { OrchestratorController } from "./controllers/orchestrator.controller.js";
 
 const AGENT_PATH = "/agents/orchestrator";
 
 const routes: AgentRoute[] = [
-  // List instances (with extended dashboard metadata)
   {
     method: "GET",
     pattern: AGENT_PATH,
     handler: async (request, env) => {
-      const db = (env as FlaxEnv).FLAX_DB;
-      if (!db) return Response.json({ instances: [] });
-      await ensureSchema(db);
-      const model = new FlaxInstanceModel({ db, table: "flax_instances" });
-      const instances = await model.listRecent();
-      return Response.json({ instances });
+      const controller = new OrchestratorController(
+        request as any,
+        env as any,
+        { params: {} } as any,
+      );
+      return controller.run("listInstances");
     },
   },
-  // Ping
   {
     method: "GET",
     pattern: "/api/ping",
-    handler: () => new Response("pong"),
+    handler: async (request, env) => {
+      const controller = new OrchestratorController(
+        request as any,
+        env as any,
+        { params: {} } as any,
+      );
+      return controller.run("ping");
+    },
   },
 ];
 

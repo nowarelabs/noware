@@ -1,8 +1,8 @@
 import { defineTool } from "@nowarelabs/agents";
 import { env } from "cloudflare:workers";
 import * as v from "valibot";
-
-type RpcCallable = Record<string, (input: unknown) => Promise<unknown>>;
+import type { ITaskQueuePort, TaskQueueInput, TaskQueueOutput } from "@nowarelabs/agent-ports";
+import type { UseCaseResult } from "@nowarelabs/shared";
 
 const inputSchema = v.object({
   method: v.picklist(["enqueueTask", "getTaskStatus", "assignTask"]),
@@ -10,6 +10,24 @@ const inputSchema = v.object({
 });
 
 const outputSchema = v.any();
+
+type RpcCallable = Record<string, (input: unknown) => Promise<unknown>>;
+
+class LocalTaskQueueGateway implements ITaskQueuePort {
+  async execute(input: TaskQueueInput): Promise<UseCaseResult<TaskQueueOutput>> {
+    try {
+      const rpc = (env as unknown as { TASK_QUEUE_TOOL: RpcCallable }).TASK_QUEUE_TOOL;
+      const result = await rpc[input.method](input.args);
+      return { success: true, data: result as TaskQueueOutput, status: "delivered" };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err : new Error(String(err)),
+        status: "abandoned",
+      };
+    }
+  }
+}
 
 export const taskQueueTool = defineTool({
   name: "task_queue_tool",
@@ -19,8 +37,13 @@ export const taskQueueTool = defineTool({
   output: { parse: (raw: unknown) => v.parse(outputSchema, raw) },
   durable: true,
   async run({ data, step }) {
-    const rpc = (env as unknown as { TASK_QUEUE_TOOL: RpcCallable }).TASK_QUEUE_TOOL;
+    const port = new LocalTaskQueueGateway();
     const runName = `task_queue.${data.method}:${JSON.stringify(data.args ?? {})}`;
-    return { output: await step!.do(runName, () => rpc[data.method](data.args)) };
+    const result = await step!.do(runName, () => port.execute(data as TaskQueueInput));
+
+    if (result.success) {
+      return { output: result.data };
+    }
+    throw result.error;
   },
 });

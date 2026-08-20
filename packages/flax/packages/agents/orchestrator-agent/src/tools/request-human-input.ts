@@ -1,6 +1,8 @@
 import { defineTool } from "@nowarelabs/agents";
 import { env } from "cloudflare:workers";
 import * as v from "valibot";
+import type { IHitlPort, HitlInput, HitlOutput } from "@nowarelabs/agent-ports";
+import type { UseCaseResult } from "@nowarelabs/shared";
 
 import { FlaxHitlModel } from "../models/flax-hitl.model.js";
 import { FlaxInstanceModel } from "../models/flax-instance.model.js";
@@ -51,6 +53,45 @@ const outputSchema = v.object({
   status: v.picklist(["blocked_on_human"]),
 });
 
+class LocalHitlGateway implements IHitlPort {
+  async execute(input: HitlInput): Promise<UseCaseResult<HitlOutput>> {
+    try {
+      const db = (env as unknown as { FLAX_DB?: D1Database }).FLAX_DB;
+      if (!db) return { success: true, data: {}, status: "delivered" };
+
+      const hitlModel = new FlaxHitlModel({ db, table: "flax_hitl" });
+
+      if (input.method === "create") {
+        await hitlModel.insertHitl({
+          id: input.hitlId ?? `hitl-${Date.now()}`,
+          conversation_id: input.conversationId ?? "",
+          type: "resolve",
+          title: input.question ?? "",
+        });
+        return { success: true, data: { hitlId: input.hitlId }, status: "delivered" };
+      }
+
+      if (input.method === "resolve") {
+        await hitlModel.resolveHitl(input.hitlId ?? "", input.answer ?? "");
+        return { success: true, data: { resolved: true }, status: "delivered" };
+      }
+
+      if (input.method === "pendingCount") {
+        const count = await hitlModel.pendingCount(input.conversationId ?? "");
+        return { success: true, data: { count }, status: "delivered" };
+      }
+
+      return { success: true, data: {}, status: "delivered" };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err : new Error(String(err)),
+        status: "abandoned",
+      };
+    }
+  }
+}
+
 export const requestHumanInputTool = defineTool({
   name: "request_human_input",
   description:
@@ -59,6 +100,14 @@ export const requestHumanInputTool = defineTool({
   output: { parse: (raw: unknown) => v.parse(outputSchema, raw) },
   async run({ data, log }) {
     const id = await hitlIdFor(data.conversationId, data.type, data.title);
+    const port = new LocalHitlGateway();
+
+    await port.execute({
+      method: "create",
+      conversationId: data.conversationId,
+      hitlId: id,
+      question: data.title,
+    } as HitlInput);
 
     const db = (env as unknown as { FLAX_DB?: D1Database }).FLAX_DB;
     if (db) {

@@ -1,10 +1,19 @@
 import { defineTool } from "@nowarelabs/agents";
 import { env } from "cloudflare:workers";
 import * as v from "valibot";
+import type {
+  IDispatchAgentPort,
+  DispatchAgentInput,
+  DispatchAgentOutput,
+} from "@nowarelabs/agent-ports";
+import type { UseCaseResult } from "@nowarelabs/shared";
+import { createEntropyGate, defaultConfig } from "@nowarelabs/entropy-gate";
 
 import { stageForAgent } from "../dashboard-db";
 import { FlaxInstanceModel } from "../models/flax-instance.model.js";
 import { FlaxStageModel } from "../models/flax-stage.model.js";
+
+const entropyGate = createEntropyGate(defaultConfig);
 
 const AGENTS = {
   "product-requirements": "PRODUCT_REQUIREMENTS_AGENT",
@@ -70,6 +79,40 @@ const outputSchema = v.object({
   stage: v.optional(v.string()),
 });
 
+class LocalDispatchAgentGateway implements IDispatchAgentPort {
+  async execute(input: DispatchAgentInput): Promise<UseCaseResult<DispatchAgentOutput>> {
+    try {
+      const binding = (env as unknown as Record<string, Fetcher>)[
+        AGENTS[input.agent as keyof typeof AGENTS]
+      ];
+      const response = await binding.fetch(
+        new Request(`http://localhost/agents/${input.agent}/${input.conversationId}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            kind: "signal",
+            type: "orchestrator.task",
+            body: input.task,
+            attributes: {
+              ...input.attributes,
+              dispatchedBy: "orchestrator",
+              stage: input.stage ?? stageForAgent(input.agent),
+            },
+          }),
+        }),
+      );
+      const receipt = (await response.json()) as DispatchAgentOutput;
+      return { success: true, data: receipt, status: "delivered" };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err : new Error(String(err)),
+        status: "abandoned",
+      };
+    }
+  }
+}
+
 export const dispatchAgentTool = defineTool({
   name: "dispatch_agent",
   description:
@@ -77,51 +120,73 @@ export const dispatchAgentTool = defineTool({
   input: { parse: (raw: unknown) => v.parse(inputSchema, raw) },
   output: { parse: (raw: unknown) => v.parse(outputSchema, raw) },
   async run({ data, log }) {
-    const binding = (env as unknown as Record<string, Fetcher>)[AGENTS[data.agent]];
-    const response = await binding.fetch(
-      new Request(`http://localhost/agents/${data.agent}/${data.conversationId}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          kind: "signal",
-          type: "orchestrator.task",
-          body: data.task,
-          attributes: {
-            ...data.attributes,
-            dispatchedBy: "orchestrator",
-            stage: data.stage ?? stageForAgent(data.agent),
-          },
-        }),
-      }),
+    const gateDecision = await entropyGate.evaluate(
+      {
+        agent: data.agent,
+        task: data.task,
+        stage: data.stage,
+        attributes: data.attributes,
+        conversationId: data.conversationId,
+      },
+      { sourceAgent: "orchestrator", targetAgent: data.agent },
     );
-    const receipt = (await response.json()) as unknown;
 
-    const db = (env as unknown as { FLAX_DB?: D1Database }).FLAX_DB;
-    if (db && response.ok) {
-      const stage = data.stage ?? stageForAgent(data.agent);
-      try {
-        const stageModel = new FlaxStageModel({ db, table: "flax_stages" });
-        await stageModel.openStage(data.conversationId, stage, data.agent, data.task.slice(0, 200));
-        const instanceModel = new FlaxInstanceModel({ db, table: "flax_instances" });
-        await instanceModel.patchFields(data.conversationId, {
-          currentStage: stage,
-          currentAgent: data.agent,
-          status: "running",
-          lastActivityAt: Date.now(),
-        });
-      } catch {
-        // pipeline telemetry is best-effort; never fail the dispatch on it
-      }
+    if (!gateDecision.allowed) {
+      const failedGate = gateDecision.gates.find((g) => !g.pass);
+      log.info("dispatch.rejected", {
+        agent: data.agent,
+        conversationId: data.conversationId,
+        gate: failedGate?.gate,
+        reason: failedGate?.reason,
+      });
+      return { stage: data.stage ?? stageForAgent(data.agent) };
     }
 
-    log.info("dispatch.admitted", {
+    const port = new LocalDispatchAgentGateway();
+    const result = await port.execute(data as DispatchAgentInput);
+
+    if (result.success) {
+      const receipt = result.data;
+      const db = (env as unknown as { FLAX_DB?: D1Database }).FLAX_DB;
+      if (db) {
+        const stage = data.stage ?? stageForAgent(data.agent);
+        try {
+          const stageModel = new FlaxStageModel({ db, table: "flax_stages" });
+          await stageModel.openStage(
+            data.conversationId,
+            stage,
+            data.agent,
+            data.task.slice(0, 200),
+          );
+          const instanceModel = new FlaxInstanceModel({ db, table: "flax_instances" });
+          await instanceModel.patchFields(data.conversationId, {
+            currentStage: stage,
+            currentAgent: data.agent,
+            status: "running",
+            lastActivityAt: Date.now(),
+          });
+        } catch {
+          // pipeline telemetry is best-effort; never fail the dispatch on it
+        }
+      }
+
+      log.info("dispatch.admitted", {
+        agent: data.agent,
+        conversationId: data.conversationId,
+        status: 200,
+      });
+      return {
+        streamUrl: receipt.streamUrl,
+        offset: receipt.offset,
+        submissionId: receipt.submissionId,
+        stage: data.stage ?? stageForAgent(data.agent),
+      };
+    }
+
+    log.info("dispatch.failed", {
       agent: data.agent,
       conversationId: data.conversationId,
-      status: response.status,
     });
-    return {
-      ...(receipt as { streamUrl?: string; offset?: number; submissionId?: string }),
-      stage: data.stage ?? stageForAgent(data.agent),
-    };
+    return { stage: data.stage ?? stageForAgent(data.agent) };
   },
 });

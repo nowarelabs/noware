@@ -407,6 +407,28 @@ importers:
         specifier: ^0.1.14
         version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
 
+  packages/entropy-gate:
+    dependencies:
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260522.1
+        version: 4.20260522.1
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      bumpp:
+        specifier: ^11.0.1
+        version: 11.1.0
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
   packages/entrypoints:
     dependencies:
       '@nowarelabs/shared':
@@ -762,15 +784,36 @@ importers:
 
   packages/flax/packages/agents/orchestrator-agent:
     dependencies:
+      '@nowarelabs/agent-gateways':
+        specifier: workspace:*
+        version: link:../../../../agent-gateways
+      '@nowarelabs/agent-ports':
+        specifier: workspace:*
+        version: link:../../../../agent-ports
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/controllers':
+        specifier: workspace:*
+        version: link:../../../../controllers
+      '@nowarelabs/entropy-gate':
+        specifier: workspace:*
+        version: link:../../../../entropy-gate
       '@nowarelabs/entrypoints':
         specifier: workspace:*
         version: link:../../../../entrypoints
+      '@nowarelabs/features':
+        specifier: workspace:*
+        version: link:../../../../features
+      '@nowarelabs/gateways':
+        specifier: workspace:*
+        version: link:../../../../gateways
       '@nowarelabs/models':
         specifier: workspace:*
         version: link:../../../../models
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../../../../shared
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)

@@ -12,9 +12,16 @@
     "cf-typegen": "wrangler types --include-runtime=false"
   },
   "dependencies": {
+    "@nowarelabs/agent-gateways": "workspace:*",
+    "@nowarelabs/agent-ports": "workspace:*",
     "@nowarelabs/agents": "workspace:*",
+    "@nowarelabs/controllers": "workspace:*",
+    "@nowarelabs/entropy-gate": "workspace:*",
     "@nowarelabs/entrypoints": "workspace:*",
+    "@nowarelabs/features": "workspace:*",
+    "@nowarelabs/gateways": "workspace:*",
     "@nowarelabs/models": "workspace:*",
+    "@nowarelabs/shared": "workspace:*",
     "agents": "^0.20.1",
     "valibot": "^1.4.2"
   },
