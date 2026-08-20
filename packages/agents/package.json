@@ -1,7 +1,7 @@
 {
   "name": "@nowarelabs/agents",
   "version": "0.0.1",
-  "description": "Multi-agent orchestration: sessions, leases, heartbeats, task queues, and reconciliation",
+  "description": "Agent DSL: defineAgent, hooks, tools, skills, and routing with Rails-style conventions",
   "homepage": "https://github.com/nowarelabs/noware#readme",
   "bugs": {
     "url": "https://github.com/nowarelabs/noware/issues"
@@ -31,7 +31,6 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@nowarelabs/cfour": "workspace:*",
     "@nowarelabs/contexts": "workspace:*",
     "@nowarelabs/entrypoints": "workspace:*",
     "@nowarelabs/shared": "workspace:*",
@@ -39,6 +38,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260522.1",
+    "@nowarelabs/agent-runtime": "workspace:*",
+    "@nowarelabs/cfour": "workspace:*",
     "@nowarelabs/gen-diesel": "workspace:*",
     "@nowarelabs/merge-review": "workspace:*",
     "@types/node": "^25.5.0",

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { C4Claim, C4Workspace } from "@nowarelabs/cfour";
-import type { WorkspaceDoClient, Clock } from "../src/index.ts";
+import type { WorkspaceDoClient, Clock } from "@nowarelabs/agent-runtime";
 import {
   createSession,
   acquireLease,
@@ -10,7 +10,7 @@ import {
   reconcile,
   runAgent,
   createWallClock,
-} from "../src/index.ts";
+} from "@nowarelabs/agent-runtime";
 
 // ----------------------------------------------------------------
 // Fake workspace-do client

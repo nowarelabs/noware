@@ -15,8 +15,8 @@ import type {
   C4Claim,
   C4Workspace,
 } from "@nowarelabs/cfour";
-import type { Clock } from "../src/index.ts";
-import { acquireLease, createMemoryQueue, reconcile, runAgent } from "../src/index.ts";
+import type { Clock } from "@nowarelabs/agent-runtime";
+import { acquireLease, createMemoryQueue, reconcile, runAgent } from "@nowarelabs/agent-runtime";
 import type { MergePolicy } from "@nowarelabs/merge-review";
 import {
   createReviewStore,

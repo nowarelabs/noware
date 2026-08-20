@@ -37,11 +37,99 @@ importers:
         specifier: ^0.1.14
         version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
 
-  packages/agents:
+  packages/agent-channels:
+    dependencies:
+      '@nowarelabs/gateways':
+        specifier: workspace:*
+        version: link:../gateways
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260522.1
+        version: 4.20260522.1
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
+  packages/agent-gateways:
+    dependencies:
+      '@nowarelabs/agent-ports':
+        specifier: workspace:*
+        version: link:../agent-ports
+      '@nowarelabs/gateways':
+        specifier: workspace:*
+        version: link:../gateways
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260522.1
+        version: 4.20260522.1
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
+  packages/agent-ports:
+    dependencies:
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
+  packages/agent-runtime:
     dependencies:
       '@nowarelabs/cfour':
         specifier: workspace:*
         version: link:../cfour
+      '@nowarelabs/contexts':
+        specifier: workspace:*
+        version: link:../contexts
+      '@nowarelabs/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260522.1
+        version: 4.20260522.1
+      '@nowarelabs/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260328.1
+        version: 7.0.0-dev.20260328.1
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: ^0.1.14
+        version: 0.1.20(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(typescript@6.0.3)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
+
+  packages/agents:
+    dependencies:
       '@nowarelabs/contexts':
         specifier: workspace:*
         version: link:../contexts
@@ -58,6 +146,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260522.1
         version: 4.20260522.1
+      '@nowarelabs/agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
+      '@nowarelabs/cfour':
+        specifier: workspace:*
+        version: link:../cfour
       '@nowarelabs/gen-diesel':
         specifier: workspace:*
         version: link:../gen-diesel

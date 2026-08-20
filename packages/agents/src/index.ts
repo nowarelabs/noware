@@ -1,17 +1,11 @@
 /**
- * @nowarelabs/agents — multi-agent orchestration with Rails-style conventions.
+ * @nowarelabs/agents — agent DSL with Rails-style conventions.
  *
- * This package provides:
+ * This package provides the declarative agent definition layer:
+ * hooks, tools, skills, and routing.
  *
- * 1. **Infrastructure** — crash-safe leases, heartbeats, task queues,
- *    sessions, and reconciliation. The "software factory" layer.
- *
- * 2. **Agent DSL** — Flue-inspired hooks (`useModel`, `useTool`, etc.)
- *    with Rails-style conventions (convention over configuration).
- *    Both hook pattern and class pattern are supported.
- *
- * 3. **Cloudflare integration** — adapters for Cloudflare's `agents`
- *    package, DO class generation, and service binding resolution.
+ * Infrastructure (sessions, leases, heartbeats, Cloudflare integration)
+ * lives in `@nowarelabs/agent-runtime`.
  *
  * ## Conventions (Rails-style)
  *
@@ -45,35 +39,6 @@
  * }
  * ```
  */
-
-// ----------------------------------------------------------------
-// Infrastructure (existing — crash-safe leases, heartbeats, tasks)
-// ----------------------------------------------------------------
-
-export type {
-  Clock,
-  WorkspaceDoClient,
-  AgentSession,
-  CreateSessionOpts,
-  HeartbeatLoop,
-  Task,
-  TaskStatus,
-  TaskQueue,
-  ReconcileResult,
-  RunAgentOpts,
-  AgentTaskHandler,
-} from "./infrastructure.js";
-
-export {
-  createWallClock,
-  createSession,
-  acquireLease,
-  releaseLease,
-  createHeartbeatLoop,
-  createMemoryQueue,
-  reconcile,
-  runAgent,
-} from "./infrastructure.js";
 
 // ----------------------------------------------------------------
 // Types
@@ -155,10 +120,3 @@ export { defineSkill, parseSkillMarkdown } from "./skills.js";
 
 export { createAgentRouter } from "./router.js";
 export type { AgentRouterOptions, AgentRoute } from "./router.js";
-
-// ----------------------------------------------------------------
-// Cloudflare adapters
-// ----------------------------------------------------------------
-
-export { executeTool, buildSystemPrompt, prepareForCloudflare } from "./cloudflare.js";
-export type { CloudflareAgentLike, GeneratedAgentClass } from "./cloudflare.js";

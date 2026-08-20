@@ -8,11 +8,5 @@ export default defineConfig({
     },
     exports: true,
   },
-  lint: {
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
-  },
   fmt: {},
 });
