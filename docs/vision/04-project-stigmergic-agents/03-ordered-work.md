@@ -212,7 +212,106 @@ Goal: Create the entropy gate validation layer.
    - Cfour misalignment triggers conflict
 4. `vp check` + `vp test` green.
 
-## Phase 11 — cfour adapter (extended `@nowarelabs/cfour`)
+## Phase 11 — Bidding mechanism (hybrid with pheromones)
+
+Goal: Add competitive bidding alongside pheromone signals.
+
+1. Add bidding mechanism to `@nowarelabs/agent-runtime`:
+   - `AuctionMechanism` class — selects highest bidder
+   - `submitBid(bid)` — systems submit bids based on entity state
+   - `selectWinner(entityId)` — select highest bidder
+   - `execute(winner)` — execute winning system with capability access
+2. Add bid evaluation to `@nowarelabs/durable-objects`:
+   - `evaluateBids(entityId)` — evaluate all bids for an entity
+   - `storeBid(bid)` — persist bid
+   - `getBidsForEntity(entityId)` — retrieve bids
+3. Create `tests/bidding-mechanism.test.ts`:
+   - Bid submission
+   - Condition evaluation
+   - Winner selection
+   - Execution with capabilities
+4. `vp check` + `vp test` green.
+
+## Phase 12 — Dynamic component definitions
+
+Goal: Runtime component schema definitions.
+
+1. Add component registry to `@nowarelabs/cfour`:
+   - `ComponentRegistry` class — manages component definitions
+   - `define(name, schema)` — define new component type at runtime
+   - `update(name, schema)` — update existing component type
+   - `validate(name, data)` — validate instance against schema
+2. Add component instance management to `@nowarelabs/durable-objects`:
+   - `ComponentInstance` class — typed data attached to entities
+   - `attach(entityId, componentName, data)` — attach component to entity
+   - `detach(entityId, componentName)` — remove component from entity
+   - `getComponent(entityId, componentName)` — get component data
+3. Create `tests/dynamic-components.test.ts`:
+   - Component definition creation
+   - Schema validation
+   - Component instance attachment
+   - Runtime schema evolution
+4. `vp check` + `vp test` green.
+
+## Phase 13 — General invariants
+
+Goal: System-wide constraints that must hold true.
+
+1. Add invariant system to `@nowarelabs/validators`:
+   - `InvariantChecker` class — evaluates invariant expressions
+   - `createInvariant(expression)` — create new invariant
+   - `check(invariant)` — check if invariant holds
+   - `checkAll()` — check all invariants
+2. Add invariant enforcement to `@nowarelabs/entropy-gate`:
+   - Check invariants after every write
+   - Reject writes that would violate invariants
+3. Create `tests/invariants.test.ts`:
+   - Invariant creation
+   - Invariant evaluation
+   - Invariant violation detection
+   - Invariant enforcement on writes
+4. `vp check` + `vp test` green.
+
+## Phase 14 — Capability-based security
+
+Goal: Fine-grained access control for systems.
+
+1. Add capability system to `@nowarelabs/agent-runtime`:
+   - `CapabilityEnforcer` class — enforces read/write/execute access
+   - `checkCapability(systemId, componentName, action)` — check access
+   - `enforce(systemId, componentName, action)` — enforce or throw
+2. Add capability definitions to system specifications:
+   - Each system declares `capabilities: Capability[]`
+   - Capabilities specify component + access level
+3. Create `tests/capability-security.test.ts`:
+   - Capability declaration
+   - Access checking
+   - Enforcement on actions
+   - Violation errors
+4. `vp check` + `vp test` green.
+
+## Phase 15 — Hot-swappable systems
+
+Goal: Deploy/update/remove systems without downtime.
+
+1. Add system manager to `@nowarelabs/agent-runtime`:
+   - `SystemManager` class — manages system lifecycle
+   - `deploy(definition)` — deploy new system
+   - `update(name, definition)` — update existing system
+   - `remove(name)` — remove system
+   - `hotSwap(name, definition)` — update without downtime
+2. Add system persistence to `@nowarelabs/durable-objects`:
+   - `systems` table — stores system definitions
+   - System state tracking (running, stopped, updating)
+3. Create `tests/hot-swap.test.ts`:
+   - System deployment
+   - System update
+   - System removal
+   - Hot-swap without downtime
+   - Bid migration during hot-swap
+4. `vp check` + `vp test` green.
+
+## Phase 16 — cfour adapter (extended `@nowarelabs/cfour`)
 
 Goal: Connect the stigmergic system to the cfour architecture model.
 
@@ -234,7 +333,7 @@ Goal: Connect the stigmergic system to the cfour architecture model.
    - Validation
 3. `vp check` + `vp test` green.
 
-## Phase 12 — Signal propagation integration
+## Phase 17 — Signal propagation integration
 
 Goal: Wire up the cascading signal system end-to-end.
 
@@ -250,7 +349,7 @@ Goal: Wire up the cascading signal system end-to-end.
    - Pheromone events created at each level
 3. `vp check` + `vp test` green.
 
-## Phase 13 — Integration test
+## Phase 18 — Integration test
 
 Goal: End-to-end test with full hierarchy.
 
@@ -265,6 +364,11 @@ Goal: End-to-end test with full hierarchy.
    - Claims enforce ownership (only one agent per atom)
    - Branches allow parallel experiments
    - Merges reconcile divergent work
+   - Bidding mechanism selects winners at each level
+   - Dynamic components are defined at runtime
+   - Invariants are checked after every write
+   - Capability security enforces access control
+   - Hot-swap updates systems without downtime
    - All atoms eventually reach "merged" state
 2. Full test suite green.
 3. `vp check` + `vp test` green.
@@ -280,6 +384,11 @@ Goal: End-to-end test with full hierarchy.
 - Branch DOs allow parallel experiments.
 - Merge DOs reconcile divergent work.
 - Agent DOs run core loop: read → decide → execute → leave cue.
+- Bidding mechanism selects winners at each level.
+- Dynamic component definitions work at runtime.
+- General invariants enforce system-wide constraints.
+- Capability-based security enforces access control.
+- Hot-swappable systems deploy/update without downtime.
 - Entropy gate validates schema, pattern compliance, and cfour alignment.
 - Cfour adapter connects to architecture model.
 - Signal propagation cascades from root through entire hierarchy.

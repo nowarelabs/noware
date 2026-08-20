@@ -717,6 +717,344 @@ private async execute(action: AgentAction): Promise<void> {
 }
 ```
 
+## Bidding mechanism (hybrid with pheromones)
+
+Pheromones cascade signals down the hierarchy. But within a level, systems bid on which
+entity to act on next. The highest bidder wins.
+
+```typescript
+interface Bid {
+  systemId: string; // Which system is bidding
+  entityId: string; // Which entity it wants to act on
+  value: number; // Bid value (higher = more urgent)
+  conditions: BidCondition[]; // What must be true for this bid
+}
+
+interface BidCondition {
+  component: string; // Component type to check
+  field: string; // Field within the component
+  operator: "==" | "!=" | "<" | ">" | "<=" | ">=";
+  value: unknown; // Value to compare against
+}
+
+class AuctionMechanism {
+  // Systems submit bids based on entity state
+  async submitBid(bid: Bid): Promise<void> {
+    // Validate the bid conditions against entity state
+    const entity = await this.getEntity(bid.entityId);
+    const valid = this.evaluateConditions(bid.conditions, entity);
+    if (!valid) return;
+
+    // Store the bid
+    await this.storeBid(bid);
+  }
+
+  // Select the highest bidder
+  async selectWinner(entityId: string): Promise<Bid | null> {
+    const bids = await this.getBidsForEntity(entityId);
+    if (bids.length === 0) return null;
+
+    // Highest bid wins
+    return bids.sort((a, b) => b.value - a.value)[0];
+  }
+
+  // Execute the winning system
+  async execute(winner: Bid): Promise<void> {
+    const system = await this.getSystem(winner.systemId);
+    const entity = await this.getEntity(winner.entityId);
+
+    // Execute with capability-based access
+    await system.execute(entity, this.getAccessPermissions(winner.systemId));
+  }
+}
+```
+
+### Hybrid coordination
+
+```
+1. Pheromone cascades: Root → SS → Container → Component → Code
+2. At each level, systems bid on which entity to act on
+3. Highest bidder wins the right to act
+4. Action modifies entity state
+5. Modified state triggers new pheromones
+6. Cycle repeats
+```
+
+## Dynamic component definitions (runtime schema)
+
+Components are defined at runtime with JSON schemas, not compile-time types. This means
+new component types can be added without recompiling the system.
+
+```typescript
+interface ComponentDefinition {
+  name: string; // e.g., "game::Health"
+  schema: JSONSchema; // JSON Schema for validation
+  version: number; // Schema version
+  createdAt: number;
+  updatedAt: number;
+}
+
+class ComponentRegistry {
+  // Define a new component type at runtime
+  async define(name: string, schema: JSONSchema): Promise<ComponentDefinition> {
+    // Validate the schema itself
+    this.validateSchema(schema);
+
+    // Store the definition
+    const def: ComponentDefinition = {
+      name,
+      schema,
+      version: 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    await this.storeDefinition(def);
+    return def;
+  }
+
+  // Update an existing component type
+  async update(name: string, schema: JSONSchema): Promise<ComponentDefinition> {
+    const existing = await this.getDefinition(name);
+    existing.schema = schema;
+    existing.version += 1;
+    existing.updatedAt = Date.now();
+
+    await this.storeDefinition(existing);
+    return existing;
+  }
+
+  // Validate a component instance against its schema
+  async validate(name: string, data: unknown): Promise<boolean> {
+    const def = await this.getDefinition(name);
+    return ajv.validate(def.schema, data);
+  }
+}
+```
+
+### Component instance
+
+```typescript
+interface ComponentInstance {
+  entityId: string; // Which entity this belongs to
+  componentName: string; // Component type name
+  data: unknown; // The actual data (validated against schema)
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+## General invariants (system-wide constraints)
+
+Invariants are expressions that must hold true across the system. They provide runtime
+validation of system-wide constraints, not just per-atom validation.
+
+```typescript
+interface Invariant {
+  id: string;
+  expression: string; // e.g., "sum(health.current) <= 1000"
+  description: string;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+class InvariantChecker {
+  // Check if an invariant holds
+  async check(invariant: Invariant): Promise<InvariantResult> {
+    const result = await this.evaluate(invariant.expression);
+
+    return {
+      invariantId: invariant.id,
+      pass: result,
+      timestamp: Date.now(),
+      details: result ? "Invariant holds" : "Invariant violated",
+    };
+  }
+
+  // Check all invariants
+  async checkAll(): Promise<InvariantResult[]> {
+    const invariants = await this.getAllInvariants();
+    return Promise.all(invariants.map((i) => this.check(i)));
+  }
+
+  // Evaluate an expression
+  private async evaluate(expression: string): Promise<boolean> {
+    // Parse and evaluate the expression against current state
+    // This is a simplified version — real implementation would use a proper expression parser
+    const parser = new ExpressionParser();
+    return parser.evaluate(expression, await this.getCurrentState());
+  }
+}
+```
+
+### Example invariants
+
+```typescript
+// Total health across all entities must be <= 1000
+await createInvariant("sum(entity.health.current) <= 1000");
+
+// No entity can have negative health
+await createInvariant("all(entity.health.current >= 0)");
+
+// At least one healer must exist
+await createInvariant("count(entity.healer) >= 1");
+
+// Total damage dealt must equal total damage received
+await createInvariant("sum(entity.damage.dealt) == sum(entity.damage.received)");
+```
+
+## Capability-based security (read/write/execute)
+
+Systems explicitly declare what component types they can read, write, or execute. This
+creates fine-grained access control.
+
+```typescript
+interface Capability {
+  component: string; // Component type name
+  access:
+    | "read"
+    | "write"
+    | "execute"
+    | "read+write"
+    | "read+execute"
+    | "write+execute"
+    | "read+write+execute";
+}
+
+interface SystemCapabilities {
+  systemId: string;
+  capabilities: Capability[];
+}
+
+class CapabilityEnforcer {
+  // Check if a system has the required capability
+  async checkCapability(
+    systemId: string,
+    componentName: string,
+    requiredAccess: "read" | "write" | "execute",
+  ): Promise<boolean> {
+    const caps = await this.getCapabilities(systemId);
+    const cap = caps.find((c) => c.component === componentName);
+
+    if (!cap) return false;
+
+    // Check if the required access is included
+    switch (requiredAccess) {
+      case "read":
+        return cap.access.includes("read");
+      case "write":
+        return cap.access.includes("write");
+      case "execute":
+        return cap.access.includes("execute");
+      default:
+        return false;
+    }
+  }
+
+  // Enforce capability before action
+  async enforce(
+    systemId: string,
+    componentName: string,
+    action: "read" | "write" | "execute",
+  ): Promise<void> {
+    const allowed = await this.checkCapability(systemId, componentName, action);
+    if (!allowed) {
+      throw new CapabilityViolationError(
+        `System ${systemId} not allowed to ${action} ${componentName}`,
+      );
+    }
+  }
+}
+```
+
+### System definition with capabilities
+
+```typescript
+const healingAuraSystem: SystemDefinition = {
+  name: "healing-aura",
+  description: "Heals nearby damaged entities",
+  capabilities: [
+    { component: "game::Health", access: "read" },
+    { component: "game::Position", access: "read" },
+    { component: "game::Healer", access: "read" },
+    { component: "game::Health", access: "write" }, // Can heal
+  ],
+  bids: [
+    {
+      conditions: [
+        { component: "game::Healer", field: "active", operator: "==", value: true },
+        { component: "game::Health", field: "current", operator: "<", value: 100 },
+      ],
+      value: 10,
+    },
+  ],
+};
+```
+
+## Hot-swappable systems
+
+Systems can be deployed, updated, and removed without downtime. New systems immediately
+start evaluating bids against existing entities.
+
+```typescript
+class SystemManager {
+  // Deploy a new system
+  async deploy(definition: SystemDefinition): Promise<void> {
+    // Validate the definition
+    this.validateDefinition(definition);
+
+    // Store the system
+    await this.storeSystem(definition);
+
+    // Start the system's bid evaluation loop
+    await this.startSystem(definition.name);
+
+    // The system immediately starts evaluating bids against existing entities
+  }
+
+  // Update an existing system
+  async update(name: string, definition: SystemDefinition): Promise<void> {
+    // Stop the old system
+    await this.stopSystem(name);
+
+    // Update the definition
+    await this.storeSystem(definition);
+
+    // Start the updated system
+    await this.startSystem(definition.name);
+
+    // The system resumes with new behavior
+  }
+
+  // Remove a system
+  async remove(name: string): Promise<void> {
+    // Stop the system
+    await this.stopSystem(name);
+
+    // Remove the definition
+    await this.removeSystem(name);
+
+    // The system no longer evaluates bids
+  }
+
+  // Hot-swap: update without downtime
+  async hotSwap(name: string, definition: SystemDefinition): Promise<void> {
+    // Start new system
+    await this.startSystem(definition.name + "-v2");
+
+    // Migrate active bids from old to new
+    await this.migrateBids(name, definition.name + "-v2");
+
+    // Stop old system
+    await this.stopSystem(name);
+
+    // Rename new system
+    await this.renameSystem(definition.name + "-v2", name);
+  }
+}
+```
+
 ## Signal propagation example
 
 ### Scenario: Rename Software System from "mpesa api" to "flutterwave api"

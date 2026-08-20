@@ -235,3 +235,85 @@ immediate neighbors. This is how a bee builds comb without knowing what a hexago
 | Atom DO state       | Full state + history                     | Code, cfour metadata, neighbors, timestamps, version history |
 | Pheromone triggers  | Both (auto + explicit)                   | Writes auto-signal, agents can also explicit-signal          |
 | Version history     | Keep until merge                         | Archive after merge, bounded storage                         |
+| Coordination        | Hybrid: pheromones + bidding             | Pheromones cascade, systems bid on what to act on            |
+| Component schema    | Dynamic (runtime JSON schema)            | Components defined at runtime, validated against schemas     |
+| System constraints  | General invariants                       | System-wide constraints that must hold true                  |
+| Access control      | Capability-based (read/write/execute)    | Systems declare what they can access                         |
+| System lifecycle    | Hot-swappable                            | Deploy/update systems without downtime                       |
+
+## Adopted from rescrv/stigmergy
+
+Five concepts adopted from the [rescrv/stigmergy](https://github.com/rescrv/stigmergy) project:
+
+### 1. Bidding mechanism (hybrid with pheromones)
+
+Pheromones cascade signals down the hierarchy. But within a level, systems bid on which
+entity to act on next. The highest bidder wins.
+
+```
+Pheromones: Root → SS → Container → Component → Code (cascade)
+Bidding:    System A bids 10 on Atom X
+            System B bids 15 on Atom X
+            → System B wins, acts on Atom X
+```
+
+This combines hierarchical signaling (pheromones) with competitive prioritization (bidding).
+
+### 2. Dynamic component definitions (runtime schema)
+
+Components are defined at runtime with JSON schemas, not compile-time types. This means
+new component types can be added without recompiling the system.
+
+```typescript
+// Runtime definition
+await defineComponent("game::Health", {
+  type: "object",
+  properties: {
+    current: { type: "integer", minimum: 0 },
+    maximum: { type: "integer", minimum: 1 },
+  },
+  required: ["current", "maximum"],
+});
+```
+
+### 3. General invariants (system-wide constraints)
+
+Invariants are expressions that must hold true across the system. They provide runtime
+validation of system-wide constraints, not just per-atom validation.
+
+```typescript
+// Invariant: total health across all entities must be <= 1000
+await createInvariant("sum(health.current) <= 1000");
+```
+
+### 4. Capability-based security (read/write/execute)
+
+Systems explicitly declare what component types they can read, write, or execute. This
+creates fine-grained access control.
+
+```typescript
+// System declares access requirements
+{
+  component_access: [
+    { component: "game::Health", access: "read" },
+    { component: "game::Position", access: "read+write" },
+    { component: "game::Attack", access: "execute" },
+  ],
+}
+```
+
+### 5. Hot-swappable systems
+
+Systems can be deployed, updated, and removed without downtime. New systems immediately
+start evaluating bids against existing entities.
+
+```typescript
+// Deploy new system
+await deploySystem("healing-aura", healingAuraMarkdown);
+
+// Update existing system
+await updateSystem("healing-aura", updatedMarkdown);
+
+// Remove system
+await removeSystem("healing-aura");
+```
