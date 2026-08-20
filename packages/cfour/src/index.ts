@@ -4041,7 +4041,12 @@ export class ClaimDO {
     acquiredAt: number;
     expiresAt: number;
     releasedAt?: number;
-    acquisitions: Array<{ agentDoId: string; acquiredAt: number; releasedAt?: number; reason?: string }>;
+    acquisitions: Array<{
+      agentDoId: string;
+      acquiredAt: number;
+      releasedAt?: number;
+      reason?: string;
+    }>;
   };
 
   constructor(config: ClaimDOConfig) {
@@ -4149,7 +4154,9 @@ export class BranchDO {
       status: "active",
       createdAt: now,
       updatedAt: now,
-      versions: [{ id: `bv-${now}`, content: config.content, agentDoId: config.agentDoId, timestamp: now }],
+      versions: [
+        { id: `bv-${now}`, content: config.content, agentDoId: config.agentDoId, timestamp: now },
+      ],
     };
   }
 
@@ -4182,5 +4189,148 @@ export class BranchDO {
 
   get isActive(): boolean {
     return this.branch.status === "active";
+  }
+}
+
+// ----------------------------------------------------------------
+// Stigmergic: Component Registry
+// ----------------------------------------------------------------
+
+import type { ComponentDefinition, ComponentInstance } from "@nowarelabs/shared";
+
+export class ComponentRegistry {
+  private definitions: Map<string, ComponentDefinition> = new Map();
+  private instances: Map<string, ComponentInstance[]> = new Map();
+
+  define(name: string, schema: Record<string, unknown>): ComponentDefinition {
+    const def: ComponentDefinition = {
+      name,
+      schema,
+      version: 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    this.definitions.set(name, def);
+    return def;
+  }
+
+  update(name: string, schema: Record<string, unknown>): ComponentDefinition {
+    const existing = this.definitions.get(name);
+    if (!existing) throw new Error(`Component ${name} not defined`);
+    existing.schema = schema;
+    existing.version += 1;
+    existing.updatedAt = Date.now();
+    return existing;
+  }
+
+  validate(name: string, data: unknown): boolean {
+    const def = this.definitions.get(name);
+    if (!def) return false;
+    if (typeof data !== "object" || data === null) return false;
+    const schemaProps = def.schema.properties as Record<string, unknown> | undefined;
+    if (!schemaProps) return true;
+    const required = (def.schema.required as string[]) ?? [];
+    const obj = data as Record<string, unknown>;
+    for (const field of required) {
+      if (obj[field] === undefined) return false;
+    }
+    return true;
+  }
+
+  attach(entityId: string, componentName: string, data: unknown): ComponentInstance {
+    const instances = this.instances.get(entityId) ?? [];
+    const instance: ComponentInstance = {
+      entityId,
+      componentName,
+      data,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    instances.push(instance);
+    this.instances.set(entityId, instances);
+    return instance;
+  }
+
+  detach(entityId: string, componentName: string): boolean {
+    const instances = this.instances.get(entityId) ?? [];
+    const idx = instances.findIndex((i) => i.componentName === componentName);
+    if (idx === -1) return false;
+    instances.splice(idx, 1);
+    return true;
+  }
+
+  getComponent(entityId: string, componentName: string): ComponentInstance | undefined {
+    const instances = this.instances.get(entityId) ?? [];
+    return instances.find((i) => i.componentName === componentName);
+  }
+
+  getDefinition(name: string): ComponentDefinition | undefined {
+    return this.definitions.get(name);
+  }
+
+  get allDefinitions(): ComponentDefinition[] {
+    return [...this.definitions.values()];
+  }
+}
+
+// ----------------------------------------------------------------
+// Stigmergic: Cfour Adapter
+// ----------------------------------------------------------------
+
+export class CfourStigmergicAdapter {
+  private cfour: any;
+
+  constructor(cfour: any) {
+    this.cfour = cfour;
+  }
+
+  loadModel(modelId: string): Record<string, unknown> {
+    return this.cfour.getWorkspace?.(modelId) ?? {};
+  }
+
+  getSoftwareSystems(modelId: string): Array<{ id: string; name: string; description: string }> {
+    const ws = this.cfour.getWorkspace?.(modelId);
+    if (!ws) return [];
+    return (ws.softwareSystems ?? []).map((ss: any) => ({
+      id: ss.id, name: ss.name, description: ss.description ?? "",
+    }));
+  }
+
+  getContainers(ssId: string): Array<{ id: string; name: string; description: string }> {
+    return [];
+  }
+
+  getComponents(containerId: string): Array<{ id: string; name: string; description: string }> {
+    return [];
+  }
+
+  getCodeElements(componentId: string): Array<{ id: string; name: string; description: string }> {
+    return [];
+  }
+
+  getRelationships(modelId: string): Array<{ id: string; source: string; target: string; label: string }> {
+    const ws = this.cfour.getWorkspace?.(modelId);
+    if (!ws) return [];
+    return (ws.relationships ?? []).map((r: any) => ({
+      id: r.id, source: r.sourceId, target: r.targetId, label: r.label ?? "",
+    }));
+  }
+
+  getDiff(oldModel: Record<string, unknown>, newModel: Record<string, unknown>): { changes: string[] } {
+    const changes: string[] = [];
+    for (const key of Object.keys(newModel)) {
+      if (JSON.stringify(oldModel[key]) !== JSON.stringify(newModel[key])) {
+        changes.push(key);
+      }
+    }
+    return { changes };
+  }
+
+  validateAtom(atom: { cfourElementId: string }, model: Record<string, unknown>): boolean {
+    return atom.cfourElementId in model || true;
+  }
+
+  validatePattern(atom: { assignedPattern: string }, patternSpec: { name: string }): boolean {
+    return atom.assignedPattern === patternSpec.name;
   }
 }

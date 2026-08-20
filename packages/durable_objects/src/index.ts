@@ -154,7 +154,9 @@ export class OrchestratorDO {
     }));
   }
 
-  releasePheromones(diffs: CfourDiff[]): Array<{ elementId: string; level: string; cfourDiff: CfourDiff }> {
+  releasePheromones(
+    diffs: CfourDiff[],
+  ): Array<{ elementId: string; level: string; cfourDiff: CfourDiff }> {
     return diffs.map((d) => ({
       elementId: d.elementId,
       level: d.level,
@@ -306,11 +308,16 @@ export class AgentDO {
   decide(): { action: string; target?: string; content?: string } | null {
     if (!this.atomState) return null;
 
-    if (this.atomState.status === "idle" && this.signals.some((s) => s.type === "atom-needs-work")) {
+    if (
+      this.atomState.status === "idle" &&
+      this.signals.some((s) => s.type === "atom-needs-work")
+    ) {
       return { action: "write-atom", target: this.atomState.id, content: this.atomState.content };
     }
 
-    if (this.signals.some((s) => s.type === "description-changed" || s.type === "pattern-changed")) {
+    if (
+      this.signals.some((s) => s.type === "description-changed" || s.type === "pattern-changed")
+    ) {
       return { action: "read-pheromone" };
     }
 
@@ -321,7 +328,12 @@ export class AgentDO {
     return null;
   }
 
-  recordAction(type: AgentAction["type"], atomDoId: string | undefined, result: AgentAction["result"], details?: string): AgentAction {
+  recordAction(
+    type: AgentAction["type"],
+    atomDoId: string | undefined,
+    result: AgentAction["result"],
+    details?: string,
+  ): AgentAction {
     const action: AgentAction = {
       id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type,

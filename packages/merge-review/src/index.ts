@@ -22,7 +22,7 @@ import type {
   C4View,
 } from "@nowarelabs/cfour";
 import type { DriftReport, CodebaseFs, GenerationManifest } from "@nowarelabs/gen-diesel";
-import type { MergeState, MergeConflict, MergeResolution } from "@nowarelabs/shared";
+import type { MergeState, MergeResolution } from "@nowarelabs/shared";
 
 // ----------------------------------------------------------------
 // Injected client (tests fake this)
@@ -512,12 +512,14 @@ export class AtomMergeResolver {
       this.state.mergedAt = Date.now();
       return true;
     }
-    this.state.conflicts = [{
-      id: `conflict-${Date.now()}`,
-      section: "full",
-      sourceValue: sourceContent,
-      targetValue: targetContent,
-    }];
+    this.state.conflicts = [
+      {
+        id: `conflict-${Date.now()}`,
+        section: "full",
+        sourceValue: sourceContent,
+        targetValue: targetContent,
+      },
+    ];
     this.state.status = "conflict";
     return false;
   }
@@ -529,7 +531,7 @@ export class AtomMergeResolver {
     this.state.conflicts = [];
   }
 
-  gateMerge(passed: boolean, reason?: string): boolean {
+  gateMerge(passed: boolean, _reason?: string): boolean {
     if (passed) {
       this.state.status = "merged";
       this.state.mergedAt = Date.now();

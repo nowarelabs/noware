@@ -151,6 +151,44 @@ export class EntropyGate {
       }
     }
   }
+
+  evaluateSync(input: unknown, context: GateContext): GateDecision {
+    const gates: GateResult[] = [];
+    const timestamp = Date.now();
+
+    if (this.config.schema) {
+      const result = schemaGate(input, {
+        metadata: context.metadata,
+        stageOrder: this.config.stageOrder,
+      });
+      gates.push(result);
+      if (!result.pass) {
+        this.recordFailure();
+        return { allowed: false, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+      }
+    }
+
+    if (this.config.semantic) {
+      const result = semanticGate(input, context);
+      gates.push(result);
+      if (!result.pass) {
+        this.recordFailure();
+        return { allowed: false, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+      }
+    }
+
+    if (this.config.ordering) {
+      const result = orderingGate(input, context, this.config as GateConfig);
+      gates.push(result);
+      if (!result.pass) {
+        this.recordFailure();
+        return { allowed: false, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+      }
+    }
+
+    this.failureCount = 0;
+    return { allowed: true, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+  }
 }
 
 export function createEntropyGate(config?: GateConfig): EntropyGate {

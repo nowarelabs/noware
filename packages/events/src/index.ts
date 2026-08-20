@@ -89,9 +89,7 @@ export class PheromoneSignalEmitter {
   }
 
   poll(agentDoId: string, lastCheck: number): PheromoneEvent[] {
-    return this.events.filter(
-      (e) => e.timestamp > lastCheck && !e.consumedBy.includes(agentDoId),
-    );
+    return this.events.filter((e) => e.timestamp > lastCheck && !e.consumedBy.includes(agentDoId));
   }
 
   consume(eventId: string, agentDoId: string): boolean {
@@ -112,7 +110,7 @@ export class PheromoneSignalEmitter {
     });
   }
 
-  emitCfourDiff(diff: CfourDiff, sourceOrchestratorId: string): PheromoneEvent {
+  emitCfourDiff(diff: CfourDiff, _sourceOrchestratorId: string): PheromoneEvent {
     const typeMap: Record<string, PheromoneEventType> = {
       description: "description-changed",
       pattern: "pattern-changed",
