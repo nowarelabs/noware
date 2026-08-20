@@ -53,23 +53,27 @@ const railStages = v.picklist([
   "sre-docs",
 ]);
 
+const inputSchema = v.object({
+  agent: agentNames,
+  conversationId: v.string(),
+  task: v.string(),
+  stage: v.optional(railStages),
+  attributes: v.optional(v.record(v.string(), v.string())),
+});
+
+const outputSchema = v.object({
+  streamUrl: v.optional(v.string()),
+  offset: v.optional(v.number()),
+  submissionId: v.optional(v.string()),
+  stage: v.optional(v.string()),
+});
+
 export const dispatchAgentTool = defineTool({
   name: "dispatch_agent",
   description:
     "Dispatch a task to another agent. Fire-and-forget: the agent acknowledges immediately and runs asynchronously; its reply lands in the shared conversation. Pass `stage` (the pipeline rail stage this dispatch contributes to) and `attributes` to carry structured context the target reads via useDelivery. Returns the admission receipt (streamUrl, offset, submissionId).",
-  input: v.object({
-    agent: agentNames,
-    conversationId: v.string(),
-    task: v.string(),
-    stage: v.optional(railStages),
-    attributes: v.optional(v.record(v.string(), v.string())),
-  }),
-  output: v.object({
-    streamUrl: v.optional(v.string()),
-    offset: v.optional(v.number()),
-    submissionId: v.optional(v.string()),
-    stage: v.optional(v.string()),
-  }),
+  input: { parse: (raw: unknown) => v.parse(inputSchema, raw) },
+  output: { parse: (raw: unknown) => v.parse(outputSchema, raw) },
   async run({ data, log }) {
     const binding = (env as unknown as Record<string, Fetcher>)[AGENTS[data.agent]];
     const response = await binding.fetch(
@@ -113,10 +117,8 @@ export const dispatchAgentTool = defineTool({
       status: response.status,
     });
     return {
-      output: {
-        ...(receipt as { streamUrl?: string; offset?: number; submissionId?: string }),
-        stage: data.stage ?? stageForAgent(data.agent),
-      },
+      ...(receipt as { streamUrl?: string; offset?: number; submissionId?: string }),
+      stage: data.stage ?? stageForAgent(data.agent),
     };
   },
 });

@@ -13,33 +13,33 @@ Flue’s model layer is [Pi](https://pi.dev/docs/latest/providers)’s provider 
 Exports:
 
 ```ts
-import { setProvider } from '@flue/runtime';
+import { setProvider } from "@flue/runtime";
 import {
   cloudflareBindingProvider,
   type CloudflareAIBinding,
   type CloudflareBindingProviderOptions,
-} from '@flue/runtime/cloudflare/workers-ai';
-import { type CloudflareGatewayOptions } from '@flue/runtime/cloudflare';
+} from "@flue/runtime/cloudflare/workers-ai";
+import { type CloudflareGatewayOptions } from "@flue/runtime/cloudflare";
 
 // Provider construction is Pi's API, used directly:
-import { createProvider, envApiKeyAuth } from '@earendil-works/pi-ai';
-import { anthropicProvider } from '@earendil-works/pi-ai/providers/anthropic';
+import { createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
+import { anthropicProvider } from "@earendil-works/pi-ai/providers/anthropic";
 ```
 
 ## The `providers` config
 
 ```ts
 // vite.config.ts
-flue({ providers: ['anthropic', 'openai'] });
+flue({ providers: ["anthropic", "openai"] });
 ```
 
 Selects which providers the generated server entry registers, by provider ID. Each entry maps to a `@earendil-works/pi-ai/providers/<id>` factory import in the generated entry — except `'cloudflare'`, which selects Flue’s own [Workers AI binding provider](#cloudflarebindingprovider) — so only the listed providers (their catalogs and lazily-loaded protocol implementations) ship in the build.
 
-* **Omitted: every built-in registers**, the Workers AI binding provider included on the Cloudflare target. The default preserves zero-config resolution — any `'provider/model-id'` specifier from Pi’s catalog works, with credentials from the provider’s environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …).
-* **Set: the list is exhaustive.** A specifier naming an unlisted provider fails at [model resolution](#model-resolution), and on the Cloudflare target the binding provider is registered only when the list names `'cloudflare'`. Naming `'cloudflare'` on the Node target is a config error (the binding only exists on Workers). Custom providers are unaffected — register those with [setProvider()](#setprovider).
-* **An unknown ID fails the build.** The generated import `@earendil-works/pi-ai/providers/<id>` does not resolve, and the build error names it.
-* **User registrations win.** The generated registrations skip any provider ID already registered, so a `setProvider()` in `app.ts` overrides a listed built-in regardless of module evaluation order.
-* **[flue run](https://flueframework.com/docs/cli/run/) ignores the list.** It loads only the agent module — no `app.ts`, no generated entry — and always registers the full built-in set. The narrowing is a server-build concern.
+- **Omitted: every built-in registers**, the Workers AI binding provider included on the Cloudflare target. The default preserves zero-config resolution — any `'provider/model-id'` specifier from Pi’s catalog works, with credentials from the provider’s environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …).
+- **Set: the list is exhaustive.** A specifier naming an unlisted provider fails at [model resolution](#model-resolution), and on the Cloudflare target the binding provider is registered only when the list names `'cloudflare'`. Naming `'cloudflare'` on the Node target is a config error (the binding only exists on Workers). Custom providers are unaffected — register those with [setProvider()](#setprovider).
+- **An unknown ID fails the build.** The generated import `@earendil-works/pi-ai/providers/<id>` does not resolve, and the build error names it.
+- **User registrations win.** The generated registrations skip any provider ID already registered, so a `setProvider()` in `app.ts` overrides a listed built-in regardless of module evaluation order.
+- **[flue run](https://flueframework.com/docs/cli/run/) ignores the list.** It loads only the agent module — no `app.ts`, no generated entry — and always registers the full built-in set. The narrowing is a server-build concern.
 
 The same field is accepted in `flue.config.ts`; inline plugin options win per field. See [Configuration](https://flueframework.com/docs/reference/configuration/#providers).
 
@@ -52,15 +52,17 @@ function setProvider(provider: Provider): void;
 Registers a Pi `Provider` with the runtime, keyed by `provider.id`: after `setProvider(p)` with `p.id === 'acme'`, the specifier `'acme/some-model'` resolves through it. Accepts any `Provider` — a built-in factory (`anthropicProvider()`), [createProvider(...)](https://pi.dev/docs/latest/providers#custom-providers) for custom endpoints, [cloudflareBindingProvider(...)](#cloudflarebindingprovider), or a faux provider’s `.provider` in tests.
 
 ```ts
-import { createProvider, envApiKeyAuth } from '@earendil-works/pi-ai';
-import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy';
-import { setProvider } from '@flue/runtime';
+import { createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
+import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
+import { setProvider } from "@flue/runtime";
 
 setProvider(
   createProvider({
-    id: 'ollama',
-    auth: { apiKey: { name: 'Ollama (keyless)', resolve: async () => ({ auth: {} }) } },
-    models: [/* Model objects; each carries its own baseUrl */],
+    id: "ollama",
+    auth: { apiKey: { name: "Ollama (keyless)", resolve: async () => ({ auth: {} }) } },
+    models: [
+      /* Model objects; each carries its own baseUrl */
+    ],
     api: openAICompletionsApi(),
   }),
 );
@@ -68,10 +70,10 @@ setProvider(
 
 Behavior:
 
-* **Each call replaces the ID’s previous provider.** Calls do not accumulate or merge; the latest `setProvider()` for an ID wins, including over the generated entry’s built-in registrations (which skip already-registered IDs).
-* **The registry is module-scoped and in-memory.** Call `setProvider()` at module top level, before any agent runs. On the Node.js target one process hosts all agents, so a registration in `app.ts` covers everything. On the Cloudflare target each agent conversation runs in its own Durable Object isolate; `app.ts` is evaluated in every isolate, so top-level registrations apply everywhere. [flue run](https://flueframework.com/docs/cli/run/) loads only the agent module, never `app.ts` — put the registration in the agent module when it must also apply there.
-* **Registration is declarative and deferred.** The call performs no network I/O and no credential validation; a wrong endpoint or key surfaces as a provider error on the first model request. There is no public unregister function.
-* **Credentials resolve through the provider’s own `auth`.** Built-in factories carry Pi’s environment-variable resolution (`envApiKeyAuth`); custom providers declare their own resolver — a fixed key, an env read, or a dynamic exchange. Flue adds no credential layer on top. See [Pi — Authentication](https://pi.dev/docs/latest/providers#authentication).
+- **Each call replaces the ID’s previous provider.** Calls do not accumulate or merge; the latest `setProvider()` for an ID wins, including over the generated entry’s built-in registrations (which skip already-registered IDs).
+- **The registry is module-scoped and in-memory.** Call `setProvider()` at module top level, before any agent runs. On the Node.js target one process hosts all agents, so a registration in `app.ts` covers everything. On the Cloudflare target each agent conversation runs in its own Durable Object isolate; `app.ts` is evaluated in every isolate, so top-level registrations apply everywhere. [flue run](https://flueframework.com/docs/cli/run/) loads only the agent module, never `app.ts` — put the registration in the agent module when it must also apply there.
+- **Registration is declarative and deferred.** The call performs no network I/O and no credential validation; a wrong endpoint or key surfaces as a provider error on the first model request. There is no public unregister function.
+- **Credentials resolve through the provider’s own `auth`.** Built-in factories carry Pi’s environment-variable resolution (`envApiKeyAuth`); custom providers declare their own resolver — a fixed key, an env read, or a dynamic exchange. Flue adds no credential layer on top. See [Pi — Authentication](https://pi.dev/docs/latest/providers#authentication).
 
 ## Model resolution
 
@@ -99,17 +101,17 @@ interface CloudflareBindingProviderOptions {
 
 Builds the `cloudflare` provider: Pi models dispatched through a [Workers AI binding](https://developers.cloudflare.com/workers-ai/)’s `run(modelId, payload, options)` in-process — no `baseUrl`, no `apiKey`, no HTTP endpoint. The binding and resolved gateway options are captured in the provider’s closure. Exported from its own subpath, `@flue/runtime/cloudflare/workers-ai`: importing the factory is what puts the binding dispatch code in a build, so it deliberately does not ride along with the `@flue/runtime/cloudflare` barrel.
 
-* `binding` — the captured `env.AI` reference.
-* `gateway` — [AI Gateway](https://developers.cloudflare.com/ai-gateway/) routing for every `run` call through this provider. Tri-state: omitted routes through Cloudflare’s default AI Gateway (the options object `{ id: 'default' }`, which the binding provisions on demand for the account); a [CloudflareGatewayOptions](#cloudflaregatewayoptions) object replaces the default; `false` opts out — no gateway option is passed to `run`.
-* `streamIdleTimeoutMs` — cap on how long a model stream may go without delivering a byte before the request fails as a retryable interruption, which the turn retries under the transient-error budget. Defaults to five minutes — generous, because a long-thinking model can be legitimately silent when neither keepalives nor reasoning deltas stream. `0` disables the guard.
+- `binding` — the captured `env.AI` reference.
+- `gateway` — [AI Gateway](https://developers.cloudflare.com/ai-gateway/) routing for every `run` call through this provider. Tri-state: omitted routes through Cloudflare’s default AI Gateway (the options object `{ id: 'default' }`, which the binding provisions on demand for the account); a [CloudflareGatewayOptions](#cloudflaregatewayoptions) object replaces the default; `false` opts out — no gateway option is passed to `run`.
+- `streamIdleTimeoutMs` — cap on how long a model stream may go without delivering a byte before the request fails as a retryable interruption, which the turn retries under the transient-error budget. Defaults to five minutes — generous, because a long-thinking model can be legitimately silent when neither keepalives nor reasoning deltas stream. `0` disables the guard.
 
 Behavior:
 
-* **Registration on the Cloudflare target.** When the [providers config](#the-providers-config) is omitted or names `'cloudflare'`, the generated Worker entry runs `setProvider(cloudflareBindingProvider({ binding: env.AI }))` — unless a provider with the `cloudflare` ID is already registered. `app.ts` imports are hoisted above the generated entry’s body, so a user registration always wins; this is how a project targets a named gateway, tunes caching, or opts out. A `providers` list without `'cloudflare'` emits neither the registration nor the import. See [Models — Cloudflare Workers AI](https://flueframework.com/docs/guide/models/#cloudflare-workers-ai-cloudflare-only) and the [Cloudflare target guide](https://flueframework.com/docs/guide/cloudflare-target/#workers-ai-and-ai-gateway).
-* **Metadata hydration.** The provider declares Pi’s `cloudflare-workers-ai` catalog, re-tagged onto the `cloudflare` ID, and joins in Pi’s `cloudflare-ai-gateway` catalog: a gateway entry’s bare model ID is prefixed with the vendor from its gateway URL path segment (`gpt-5.6-terra` → `openai/gpt-5.6-terra`, matching how the binding addresses it), so gateway models carry their real context window, cost, reasoning capability (`thinkingLevelMap`), input modalities, and wire-format `api`. Gateway `/compat` entries are skipped — they alias `@cf/…` IDs the Workers AI catalog already declares. Any other ID still resolves — the binding accepts arbitrary model IDs — with the zero-metadata defaults from [Model resolution](#model-resolution).
-* **Wire format.** Dispatch picks a serialization per model: the hydrated catalog’s `api` first; for IDs no catalog knows, the vendor prefix (`anthropic/…` → Anthropic Messages, `openai/…` → OpenAI Responses); and the OpenAI-compatible chat-completions shape for `@cf/…` IDs and unknown vendors. The Responses branch delegates protocol handling to pi-ai’s exported primitives, maps reasoning effort through the model’s catalog `thinkingLevelMap`, and requests encrypted reasoning content for stateless replay. A model whose catalog `api` has no binding branch produces an explicit stream error rather than a silently wrong payload. Every shape goes through `binding.run` with `returnRawResponse: true` and the resolved `gateway` option; the request body carries no `model` field — the `run()` argument names the target.
-* **Failures.** Non-OK binding responses throw `CloudflareAIBindingError` (`type: 'cloudflare_ai_binding_error'`), exported from `@flue/runtime/cloudflare`; a 413 additionally carries `meta.reason: 'request_too_large'` and triggers compaction recovery. See [Errors — CloudflareAIBindingError](https://flueframework.com/docs/reference/errors/#cloudflareaibindingerror).
-* **Node import safety.** The factory and its types are importable on Node.js (the binding shape is structural); only calling a model through it requires a real binding.
+- **Registration on the Cloudflare target.** When the [providers config](#the-providers-config) is omitted or names `'cloudflare'`, the generated Worker entry runs `setProvider(cloudflareBindingProvider({ binding: env.AI }))` — unless a provider with the `cloudflare` ID is already registered. `app.ts` imports are hoisted above the generated entry’s body, so a user registration always wins; this is how a project targets a named gateway, tunes caching, or opts out. A `providers` list without `'cloudflare'` emits neither the registration nor the import. See [Models — Cloudflare Workers AI](https://flueframework.com/docs/guide/models/#cloudflare-workers-ai-cloudflare-only) and the [Cloudflare target guide](https://flueframework.com/docs/guide/cloudflare-target/#workers-ai-and-ai-gateway).
+- **Metadata hydration.** The provider declares Pi’s `cloudflare-workers-ai` catalog, re-tagged onto the `cloudflare` ID, and joins in Pi’s `cloudflare-ai-gateway` catalog: a gateway entry’s bare model ID is prefixed with the vendor from its gateway URL path segment (`gpt-5.6-terra` → `openai/gpt-5.6-terra`, matching how the binding addresses it), so gateway models carry their real context window, cost, reasoning capability (`thinkingLevelMap`), input modalities, and wire-format `api`. Gateway `/compat` entries are skipped — they alias `@cf/…` IDs the Workers AI catalog already declares. Any other ID still resolves — the binding accepts arbitrary model IDs — with the zero-metadata defaults from [Model resolution](#model-resolution).
+- **Wire format.** Dispatch picks a serialization per model: the hydrated catalog’s `api` first; for IDs no catalog knows, the vendor prefix (`anthropic/…` → Anthropic Messages, `openai/…` → OpenAI Responses); and the OpenAI-compatible chat-completions shape for `@cf/…` IDs and unknown vendors. The Responses branch delegates protocol handling to pi-ai’s exported primitives, maps reasoning effort through the model’s catalog `thinkingLevelMap`, and requests encrypted reasoning content for stateless replay. A model whose catalog `api` has no binding branch produces an explicit stream error rather than a silently wrong payload. Every shape goes through `binding.run` with `returnRawResponse: true` and the resolved `gateway` option; the request body carries no `model` field — the `run()` argument names the target.
+- **Failures.** Non-OK binding responses throw `CloudflareAIBindingError` (`type: 'cloudflare_ai_binding_error'`), exported from `@flue/runtime/cloudflare`; a 413 additionally carries `meta.reason: 'request_too_large'` and triggers compaction recovery. See [Errors — CloudflareAIBindingError](https://flueframework.com/docs/reference/errors/#cloudflareaibindingerror).
+- **Node import safety.** The factory and its types are importable on Node.js (the binding shape is structural); only calling a model through it requires a real binding.
 
 ## `CloudflareGatewayOptions`
 
@@ -128,14 +130,14 @@ interface CloudflareGatewayOptions {
 
 AI Gateway options applied to every `binding.run(...)` call routed through a [cloudflareBindingProvider()](#cloudflarebindingprovider). The shape mirrors [Cloudflare’s Worker binding methods documentation](https://developers.cloudflare.com/ai-gateway/integrations/worker-binding-methods/), which defines each field’s provider-side semantics; every field except `requestTimeoutMs` is forwarded verbatim in the `gateway` option. Exported from `@flue/runtime/cloudflare`.
 
-* `id` — the AI Gateway ID (slug) to route through. Required whenever gateway options are specified.
-* `skipCache` — bypass the gateway cache for the request.
-* `cacheTtl` — cache TTL override, in seconds.
-* `cacheKey` — cache key override.
-* `metadata` — arbitrary metadata surfaced on the gateway log entry.
-* `collectLog` — force collecting (or not collecting) request logs.
-* `eventId` — custom event ID for log correlation.
-* `requestTimeoutMs` — gateway-enforced bound, in milliseconds, on the time to the first part of the response (not total duration — pair with [streamIdleTimeoutMs](#cloudflarebindingprovider) for mid-stream stalls). The binding has no equivalent field, so this is emitted as the `cf-aig-request-timeout` header on the request rather than forwarded in the `gateway` option.
+- `id` — the AI Gateway ID (slug) to route through. Required whenever gateway options are specified.
+- `skipCache` — bypass the gateway cache for the request.
+- `cacheTtl` — cache TTL override, in seconds.
+- `cacheKey` — cache key override.
+- `metadata` — arbitrary metadata surfaced on the gateway log entry.
+- `collectLog` — force collecting (or not collecting) request logs.
+- `eventId` — custom event ID for log correlation.
+- `requestTimeoutMs` — gateway-enforced bound, in milliseconds, on the time to the first part of the response (not total duration — pair with [streamIdleTimeoutMs](#cloudflarebindingprovider) for mid-stream stalls). The binding has no equivalent field, so this is emitted as the `cf-aig-request-timeout` header on the request rather than forwarded in the `gateway` option.
 
 ## `CloudflareAIBinding`
 
@@ -160,18 +162,18 @@ The minimal structural shape of a Workers AI binding, exported from `@flue/runti
 | amazon-bedrock            | aws.bedrock     |
 | azure-openai-responses    | azure.ai.openai |
 | google                    | gcp.gemini      |
-| google-vertex             | gcp.vertex\_ai  |
-| mistral                   | mistral\_ai     |
-| moonshotai, moonshotai-cn | moonshot\_ai    |
-| xai                       | x\_ai           |
+| google-vertex             | gcp.vertex_ai   |
+| mistral                   | mistral_ai      |
+| moonshotai, moonshotai-cn | moonshot_ai     |
+| xai                       | x_ai            |
 
 The same events always report the provider ID unmodified as `ModelRequestInfo.providerId`.
 
 ## What registration does not change
 
-* **Pi’s catalog itself.** A registration shadows one provider ID at resolution time; it never adds, removes, or edits catalog entries.
-* **Anything durable.** Registrations live in process memory for the current module scope. They are not persisted, not shared across processes or isolates, and rebuilt from module top-level code on every boot.
-* **Earlier registrations of other provider IDs.** Each call affects exactly one provider ID.
+- **Pi’s catalog itself.** A registration shadows one provider ID at resolution time; it never adds, removes, or edits catalog entries.
+- **Anything durable.** Registrations live in process memory for the current module scope. They are not persisted, not shared across processes or isolates, and rebuilt from module top-level code on every boot.
+- **Earlier registrations of other provider IDs.** Each call affects exactly one provider ID.
 
 ## Docs Navigation
 
@@ -179,24 +181,24 @@ Current page: [Provider API](https://flueframework.com/docs/reference/provider-a
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Runtime
 
-* [Configuration](https://flueframework.com/docs/reference/configuration/)
-* [Errors Reference](https://flueframework.com/docs/reference/errors/)
-* [Agent API](https://flueframework.com/docs/reference/agent-api/)
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
-* [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
-* [Provider API](https://flueframework.com/docs/reference/provider-api/)
-* [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
-* [Events Reference](https://flueframework.com/docs/reference/events/)
+- [Configuration](https://flueframework.com/docs/reference/configuration/)
+- [Errors Reference](https://flueframework.com/docs/reference/errors/)
+- [Agent API](https://flueframework.com/docs/reference/agent-api/)
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
+- [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
+- [Provider API](https://flueframework.com/docs/reference/provider-api/)
+- [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
+- [Events Reference](https://flueframework.com/docs/reference/events/)
 
 ### Advanced
 
-* [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
-* [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)
+- [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
+- [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)

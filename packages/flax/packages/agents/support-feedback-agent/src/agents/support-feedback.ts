@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -13,6 +14,7 @@ import {
   useResponseStart,
   useSubagent,
   useTool,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 
@@ -26,11 +28,7 @@ interface FeedbackState {
   patterns: string[];
 }
 
-function PatternMatchReviewer() {
-  return `You are a root-cause pattern reviewer. Given a ticket and the matched root-cause patterns, check that the match is supported by the evidence, the owner assignment makes sense, and the handoff context is complete. Return APPROVED or REVISE with the specific gap. Be terse.`;
-}
-
-export function SupportFeedback() {
+const supportFeedback = defineAgent("support-feedback", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
@@ -64,20 +62,24 @@ export function SupportFeedback() {
       (delivery.kind === "signal" ? delivery.attributes?.ticket : undefined) ||
       "unknown";
     log.info("feedback.started", { ticket });
-    setFeedback((prev) => ({ ...prev, status: "triaging", ticket }));
+    setFeedback({ ...feedback, status: "triaging", ticket });
     writeFeedback({ status: "triaging", ticket, patternCount: feedback.patterns.length });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("feedback.finished", { toolCalls: response.toolCalls.length });
-    setFeedback((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("feedback.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setFeedback({ ...feedback, status: "done" });
     writeFeedback({
       status: "done",
       ticket: feedback.ticket,
@@ -85,15 +87,16 @@ export function SupportFeedback() {
     });
   });
 
-  useSubagent({
-    name: "pattern-match-reviewer",
-    description:
-      "Reviews a root-cause pattern match for evidence, owner assignment, and handoff context before a ticket is routed.",
-    agent: PatternMatchReviewer,
-  });
+  useSubagent(
+    "pattern-match-reviewer",
+    "Reviews a root-cause pattern match for evidence, owner assignment, and handoff context before a ticket is routed.",
+    GeneralSubagent,
+  );
   useTool(jiraLinearTool);
   useTool(sentimentAnalysisTool);
   useTool(supportTicketsTool);
 
   return `You are the Support & Feedback agent. Triage tickets quickly, match symptoms to known root-cause patterns, and route work to the right owner with enough context to act. Acknowledge every ticket, set expectations, and never invent facts.`;
-}
+});
+
+export default supportFeedback;

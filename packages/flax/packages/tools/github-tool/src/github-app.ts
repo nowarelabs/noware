@@ -56,7 +56,7 @@ async function githubFetch(path: string, init: RequestInit = {}): Promise<unknow
     headers: {
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
   const text = await res.text();

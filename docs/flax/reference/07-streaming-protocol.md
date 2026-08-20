@@ -14,11 +14,11 @@ The protocol is identical on the Node.js and Cloudflare targets — both dispatc
 
 All routes are relative to wherever the router is mounted, plus the caller-chosen conversation id:
 
-* `POST /:id` — deliver one message (202 admission).
-* `GET /:id` — read the conversation: `view=history` (default) returns one materialized snapshot; `view=updates` returns incremental chunks, optionally live via long-poll or SSE.
-* `HEAD /:id` — stream metadata as headers, no body.
-* `POST /:id/abort` — abort in-flight and queued work.
-* `GET /:id/attachments/:attachmentId` — attachment byte download.
+- `POST /:id` — deliver one message (202 admission).
+- `GET /:id` — read the conversation: `view=history` (default) returns one materialized snapshot; `view=updates` returns incremental chunks, optionally live via long-poll or SSE.
+- `HEAD /:id` — stream metadata as headers, no body.
+- `POST /:id/abort` — abort in-flight and queued work.
+- `GET /:id/attachments/:attachmentId` — attachment byte download.
 
 `:id` must be a non-empty path segment; an empty or whitespace-only id is rejected with `invalid_request` (400). Any method not listed for a route is rejected with `method_not_allowed` (405) and an `Allow` header. Requests to a conversation that has never received a message return `stream_not_found` (404) on every read route — the conversation and its stream are created by the first admitted `POST`.
 
@@ -30,20 +30,20 @@ An offset is a resume token addressing a position in the conversation’s durabl
 0000000000000000_0000000000000003
 ```
 
-* The format is two 16-digit zero-padded integers joined by `_` (the Durable Streams offset format). The first component is always `0` in Flue.
-* `-1` is the sentinel for “before the first batch”: reading from `-1` replays the whole conversation.
-* Offsets address durable record _batches_, not messages. One message delivery typically produces many batches, so offsets advance faster than messages appear. A batch whose records are all internal projects to zero chunks, so an updates response can be empty while `Stream-Next-Offset` advances.
-* Treat offsets as opaque: obtain them from responses (the `offset` field of an admission or snapshot, the `Stream-Next-Offset` header, an SSE `control` event) and pass them back verbatim. Do not construct or interpret them.
-* Reads are exclusive: a read at offset `X` returns data recorded _after_ `X`.
-* An offset past the current stream head fails the read with `conversation_stream_store_failure` (500). A malformed offset (anything other than `-1` or the two-component form) is rejected with `invalid_request` (400).
+- The format is two 16-digit zero-padded integers joined by `_` (the Durable Streams offset format). The first component is always `0` in Flue.
+- `-1` is the sentinel for “before the first batch”: reading from `-1` replays the whole conversation.
+- Offsets address durable record _batches_, not messages. One message delivery typically produces many batches, so offsets advance faster than messages appear. A batch whose records are all internal projects to zero chunks, so an updates response can be empty while `Stream-Next-Offset` advances.
+- Treat offsets as opaque: obtain them from responses (the `offset` field of an admission or snapshot, the `Stream-Next-Offset` header, an SSE `control` event) and pass them back verbatim. Do not construct or interpret them.
+- Reads are exclusive: a read at offset `X` returns data recorded _after_ `X`.
+- An offset past the current stream head fails the read with `conversation_stream_store_failure` (500). A malformed offset (anything other than `-1` or the two-component form) is rejected with `invalid_request` (400).
 
 ## Coordination headers
 
 Three response headers coordinate reads across requests:
 
-* `Stream-Next-Offset` — the offset to resume from. Present on the 202 admission response, snapshot responses, non-SSE updates responses, and `HEAD`. In SSE mode the same value rides `control` events instead.
-* `Stream-Up-To-Date` — literally `true` when the response reached the durable head at the time it was produced. Absent (never `false`) when more data was already available; keep reading from `Stream-Next-Offset`. Always `true` on snapshot and `HEAD` responses.
-* `Location` — on the 202 admission response only: the conversation’s stream URL (mirrors the body’s `streamUrl`), following the Durable Streams stream-creation convention.
+- `Stream-Next-Offset` — the offset to resume from. Present on the 202 admission response, snapshot responses, non-SSE updates responses, and `HEAD`. In SSE mode the same value rides `control` events instead.
+- `Stream-Up-To-Date` — literally `true` when the response reached the durable head at the time it was produced. Absent (never `false`) when more data was already available; keep reading from `Stream-Next-Offset`. Always `true` on snapshot and `HEAD` responses.
+- `Location` — on the 202 admission response only: the conversation’s stream URL (mirrors the body’s `streamUrl`), following the Durable Streams stream-creation convention.
 
 Browsers do not expose these headers cross-origin unless your CORS middleware lists them in `Access-Control-Expose-Headers`; see [CORS](https://flueframework.com/docs/guide/routing/#cors).
 
@@ -58,9 +58,9 @@ type PromptBody = DeliveredMessage & {
 };
 
 type DeliveredMessage =
-  | { kind: 'user'; body: string; attachments?: DeliveredAttachment[] }
+  | { kind: "user"; body: string; attachments?: DeliveredAttachment[] }
   | {
-      kind: 'signal';
+      kind: "signal";
       type: string;
       body: string;
       attributes?: Record<string, string>;
@@ -68,17 +68,17 @@ type DeliveredMessage =
     };
 
 type DeliveredAttachment = {
-  type: 'image';
+  type: "image";
   data: string; // base64
   mimeType: string;
   filename?: string;
 };
 ```
 
-* `kind: 'user'` — a direct user chat turn. `attachments` accepts images only; `data` is base64 and limited to 14,680,064 characters (14 × 1024 × 1024) — longer data is rejected with `invalid_request` (400).
-* `kind: 'signal'` — a structured event delivery. `type` must be non-empty. `body` is a plain string; JSON-stringify structured payloads yourself. `tagName` must be a valid XML tag name (`^[A-Za-z_][A-Za-z0-9_.-]*$`); it is rendered unescaped as the signal’s envelope in model context, so looser values are rejected with `invalid_request` (400).
-* `initialData` — instance-creation data, consulted only when this send creates the conversation. When the agent declares an `initialData` schema, a creating send is validated against it; mismatches are rejected with `invalid_request` (400) before anything durable is admitted.
-* `uid` — send condition. A string delivers only to the incarnation with that uid: an absent instance or a mismatched uid is rejected with `agent_instance_not_found` (404). `null` creates only when no instance exists: an existing instance is rejected with `agent_instance_exists` (409), whose `details` names the existing uid. Omitted sends deliver unconditionally. Combining a string `uid` with `initialData` is a contradiction (the condition forbids creation) and is rejected with `invalid_request` (400). Failed conditions leave nothing durable behind.
+- `kind: 'user'` — a direct user chat turn. `attachments` accepts images only; `data` is base64 and limited to 14,680,064 characters (14 × 1024 × 1024) — longer data is rejected with `invalid_request` (400).
+- `kind: 'signal'` — a structured event delivery. `type` must be non-empty. `body` is a plain string; JSON-stringify structured payloads yourself. `tagName` must be a valid XML tag name (`^[A-Za-z_][A-Za-z0-9_.-]*$`); it is rendered unescaped as the signal’s envelope in model context, so looser values are rejected with `invalid_request` (400).
+- `initialData` — instance-creation data, consulted only when this send creates the conversation. When the agent declares an `initialData` schema, a creating send is validated against it; mismatches are rejected with `invalid_request` (400) before anything durable is admitted.
+- `uid` — send condition. A string delivers only to the incarnation with that uid: an absent instance or a mismatched uid is rejected with `agent_instance_not_found` (404). `null` creates only when no instance exists: an existing instance is rejected with `agent_instance_exists` (409), whose `details` names the existing uid. Omitted sends deliver unconditionally. Combining a string `uid` with `initialData` is a contradiction (the condition forbids creation) and is rejected with `invalid_request` (400). Failed conditions leave nothing durable behind.
 
 The bare-string shorthand that `dispatch(...)` accepts is not part of the wire: the body must be the object shape, or the request is rejected with `invalid_request` (400).
 
@@ -97,10 +97,10 @@ Admission is fire-and-forget: the server responds `202 Accepted` once the messag
 }
 ```
 
-* `streamUrl` — derived from the request URL with the query string removed. Mirrored as the `Location` header.
-* `offset` — the conversation’s durable head at admission, after the message itself was recorded. An updates read from this offset observes everything the agent produces in response, without replaying history or the admitted message. Mirrored as the `Stream-Next-Offset` header.
-* `submissionId` — matches the `submission-settled` chunk and the snapshot’s `settlements` entries, so a client can await this specific delivery’s outcome.
-* `uid` — the contacted instance’s uid: minted when this send created the instance, echoed when it continued one. Pass it back as the `uid` send condition to reach this same incarnation.
+- `streamUrl` — derived from the request URL with the query string removed. Mirrored as the `Location` header.
+- `offset` — the conversation’s durable head at admission, after the message itself was recorded. An updates read from this offset observes everything the agent produces in response, without replaying history or the admitted message. Mirrored as the `Stream-Next-Offset` header.
+- `submissionId` — matches the `submission-settled` chunk and the snapshot’s `settlements` entries, so a client can await this specific delivery’s outcome.
+- `uid` — the contacted instance’s uid: minted when this send created the instance, echoed when it continued one. Pass it back as the `uid` send condition to reach this same incarnation.
 
 There is no synchronous “wait for the reply” mode: any `?wait` query parameter is rejected with `invalid_request` (400). Read the outcome from the conversation stream, or use the SDK’s [wait(...)](https://flueframework.com/docs/sdk/flue-client/#wait).
 
@@ -127,64 +127,64 @@ interface FlueConversationSnapshot {
 
 interface FlueConversationSettlement {
   submissionId: string;
-  outcome: 'completed' | 'failed' | 'aborted';
+  outcome: "completed" | "failed" | "aborted";
   error?: unknown;
 }
 
 interface FlueConversationMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
-  purpose: 'user' | 'assistant' | 'dispatch' | 'advisory';
-  display: 'visible' | 'hidden' | 'diagnostic';
+  role: "user" | "assistant" | "system";
+  purpose: "user" | "assistant" | "dispatch" | "advisory";
+  display: "visible" | "hidden" | "diagnostic";
   submissionId?: string;
   turnId?: string;
   signal?: { tagName?: string; attributes?: Record<string, string> };
-  settlement?: { outcome: 'failed' | 'aborted' };
+  settlement?: { outcome: "failed" | "aborted" };
   parts: FlueConversationPart[];
   metadata?: Record<string, unknown>;
 }
 
 type FlueConversationPart =
-  | { type: 'text'; text: string; state: 'streaming' | 'done' }
-  | { type: 'reasoning'; text: string; state: 'streaming' | 'done' }
+  | { type: "text"; text: string; state: "streaming" | "done" }
+  | { type: "reasoning"; text: string; state: "streaming" | "done" }
   | { type: `data-${string}`; data: unknown }
-  | { type: 'file'; mediaType: string; id?: string; size?: number; url?: string; filename?: string }
+  | { type: "file"; mediaType: string; id?: string; size?: number; url?: string; filename?: string }
   | {
-      type: 'dynamic-tool';
+      type: "dynamic-tool";
       toolName: string;
       toolCallId: string;
-      state: 'input-available';
+      state: "input-available";
       input: unknown;
     }
   | {
-      type: 'dynamic-tool';
+      type: "dynamic-tool";
       toolName: string;
       toolCallId: string;
-      state: 'output-available';
+      state: "output-available";
       input: unknown;
       output: unknown;
       durationMs?: number;
     }
   | {
-      type: 'dynamic-tool';
+      type: "dynamic-tool";
       toolName: string;
       toolCallId: string;
-      state: 'output-error';
+      state: "output-error";
       input: unknown;
       errorText: string;
       durationMs?: number;
     };
 ```
 
-* `v` — snapshot schema version; currently `1`.
-* `offset` — the durable head through which this snapshot was reduced, including batches that project to no visible message. Resuming an updates read from it yields exactly the changes after this snapshot.
-* `messages` — the conversation transcript in order. One assistant message represents one whole response: every model step of a submission folds into the submission’s first assistant message, with parts accumulating across steps.
-* `settlements` — the terminal outcome of every settled submission on this conversation. `error` carries the caller-safe error value for `failed`/`aborted` outcomes.
-* `role`/`purpose`/`display` — `role` is the coarse render lane; `purpose` classifies semantics (`dispatch` \= delivered signals, `advisory` \= runtime advisories); `display` is the visibility hint (`visible` primary chat, `diagnostic` activity-panel material, `hidden` plumbing).
-* `signal` — present only on `system`\-role messages projected from signal deliveries; carries the delivered `tagName` and `attributes`.
-* `settlement` — present only on the terminal advisory the runtime appends when a submission settles `failed` or `aborted`; the message’s `submissionId` names the settled submission. Completed submissions get no timeline marker (the assistant reply is the marker); `settlements` remains the programmatic outcome index.
-* `metadata` — entirely agent-authored (response-metadata hooks). The runtime stamps nothing; keys like `usage` or `model` are application conventions.
-* `parts` — `text`/`reasoning` carry `state: 'streaming'` while a live response is mid-stream and `'done'` once complete. `data-<name>` parts are named client data writes, one part per write, in emit order. `file` parts reference attachments by `id`; `url` is never set by the server (the runtime does not know the public mount — the SDK resolves it client-side, and `GET /:id/attachments/:attachmentId` is the underlying route). `dynamic-tool` parts progress `input-available` → `output-available`/`output-error`; `durationMs` is the tool-handler execution time, absent on outcomes recorded before the field existed.
+- `v` — snapshot schema version; currently `1`.
+- `offset` — the durable head through which this snapshot was reduced, including batches that project to no visible message. Resuming an updates read from it yields exactly the changes after this snapshot.
+- `messages` — the conversation transcript in order. One assistant message represents one whole response: every model step of a submission folds into the submission’s first assistant message, with parts accumulating across steps.
+- `settlements` — the terminal outcome of every settled submission on this conversation. `error` carries the caller-safe error value for `failed`/`aborted` outcomes.
+- `role`/`purpose`/`display` — `role` is the coarse render lane; `purpose` classifies semantics (`dispatch` \= delivered signals, `advisory` \= runtime advisories); `display` is the visibility hint (`visible` primary chat, `diagnostic` activity-panel material, `hidden` plumbing).
+- `signal` — present only on `system`\-role messages projected from signal deliveries; carries the delivered `tagName` and `attributes`.
+- `settlement` — present only on the terminal advisory the runtime appends when a submission settles `failed` or `aborted`; the message’s `submissionId` names the settled submission. Completed submissions get no timeline marker (the assistant reply is the marker); `settlements` remains the programmatic outcome index.
+- `metadata` — entirely agent-authored (response-metadata hooks). The runtime stamps nothing; keys like `usage` or `model` are application conventions.
+- `parts` — `text`/`reasoning` carry `state: 'streaming'` while a live response is mid-stream and `'done'` once complete. `data-<name>` parts are named client data writes, one part per write, in emit order. `file` parts reference attachments by `id`; `url` is never set by the server (the runtime does not know the public mount — the SDK resolves it client-side, and `GET /:id/attachments/:attachmentId` is the underlying route). `dynamic-tool` parts progress `input-available` → `output-available`/`output-error`; `durationMs` is the tool-handler execution time, absent on outcomes recorded before the field existed.
 
 The snapshot covers exactly one conversation per agent instance: the default root conversation. Child conversations (subagent tasks and other internal sessions) are never exposed through this surface. The canonical durable record schema is likewise never exposed — snapshots and update chunks are the only read formats on the wire.
 
@@ -194,9 +194,9 @@ Returns the conversation changes after an offset, as a JSON array of [update chu
 
 Query parameters:
 
-* `offset` — required, exactly once: `-1` or a previously returned offset. Missing, repeated, or malformed values are rejected with `invalid_request` (400).
-* `live` — optional: `long-poll` or `sse`. Any other value is rejected with `invalid_request` (400). Omitted = return immediately with whatever is available.
-* `tail` — not supported on this surface; rejected with `invalid_request` (400). A stream suffix can omit message starts, compaction boundaries, and earlier deltas, so it cannot be projected safely.
+- `offset` — required, exactly once: `-1` or a previously returned offset. Missing, repeated, or malformed values are rejected with `invalid_request` (400).
+- `live` — optional: `long-poll` or `sse`. Any other value is rejected with `invalid_request` (400). Omitted = return immediately with whatever is available.
+- `tail` — not supported on this surface; rejected with `invalid_request` (400). A stream suffix can omit message starts, compaction boundaries, and earlier deltas, so it cannot be projected safely.
 
 Without `live`, the response is `200`, `Content-Type: application/json`, `Cache-Control: no-store`, with `Stream-Next-Offset` and (when the read reached the head) `Stream-Up-To-Date: true`. The body is a chunk array — empty when nothing was recorded after `offset`.
 
@@ -210,9 +210,9 @@ Serving an updates read reconstructs the conversation’s reduced state through 
 
 Identical to a plain updates read when data is available at `offset` — the response returns immediately. When nothing is available, the server holds the request until new data arrives or a 30-second window elapses, whichever is first:
 
-* New data → `200` with the chunk array, as above.
-* Timeout → `200` with an empty array `[]`, `Stream-Next-Offset` unchanged, `Stream-Up-To-Date: true`. Re-issue the request to continue waiting.
-* Client disconnect while parked → the response is discarded with status `499` and no body.
+- New data → `200` with the chunk array, as above.
+- Timeout → `200` with an empty array `[]`, `Stream-Next-Offset` unchanged, `Stream-Up-To-Date: true`. Re-issue the request to continue waiting.
+- Client disconnect while parked → the response is discarded with status `499` and no body.
 
 ### `live=sse`
 
@@ -228,9 +228,9 @@ data:{"streamNextOffset":"0000000000000000_0000000000000007","upToDate":true}
 : heartbeat
 ```
 
-* `data` events — a JSON array of chunks, one event per read cycle. Emitted only when the cycle produced chunks.
-* `control` events — stream coordination in the body, since headers cannot update mid-stream: `streamNextOffset` (string) and `upToDate` (present as `true` only when caught up). Emitted after every read cycle, including empty ones, so a caught-up stream still produces a `control` event at least every 30 seconds. Reconnect from the last `streamNextOffset` after a disconnect.
-* `: heartbeat` comment lines — every 15 seconds, keeping intermediaries from timing out the idle connection.
+- `data` events — a JSON array of chunks, one event per read cycle. Emitted only when the cycle produced chunks.
+- `control` events — stream coordination in the body, since headers cannot update mid-stream: `streamNextOffset` (string) and `upToDate` (present as `true` only when caught up). Emitted after every read cycle, including empty ones, so a caught-up stream still produces a `control` event at least every 30 seconds. Reconnect from the last `streamNextOffset` after a disconnect.
+- `: heartbeat` comment lines — every 15 seconds, keeping intermediaries from timing out the idle connection.
 
 The stream never ends server-side; it runs until the client disconnects. SSE is an at-least-once transport across reconnects — dedupe chunks by `position` (below).
 
@@ -242,10 +242,10 @@ Every chunk carries a `type`, the `conversationId`, and a `position`. `@flue/sdk
 type ConversationStreamChunk = ChunkBody & { position: { batch: number; index: number } };
 
 type ChunkBody =
-  | { type: 'conversation-reset'; conversationId: string; snapshot: FlueConversationSnapshot }
-  | { type: 'message-appended'; conversationId: string; message: FlueConversationMessage }
+  | { type: "conversation-reset"; conversationId: string; snapshot: FlueConversationSnapshot }
+  | { type: "message-appended"; conversationId: string; message: FlueConversationMessage }
   | {
-      type: 'message-started';
+      type: "message-started";
       conversationId: string;
       messageId: string;
       submissionId?: string;
@@ -254,21 +254,21 @@ type ChunkBody =
       timestamp?: string;
     }
   | {
-      type: 'message-metadata';
+      type: "message-metadata";
       conversationId: string;
       messageId: string;
       metadata: Record<string, unknown>;
     }
-  | { type: 'data-part'; conversationId: string; messageId: string; name: string; data: unknown }
+  | { type: "data-part"; conversationId: string; messageId: string; name: string; data: unknown }
   | {
-      type: 'message-delta';
+      type: "message-delta";
       conversationId: string;
       messageId: string;
-      kind: 'text' | 'reasoning';
+      kind: "text" | "reasoning";
       delta: string;
     }
   | {
-      type: 'tool-input';
+      type: "tool-input";
       conversationId: string;
       messageId: string;
       toolCallId: string;
@@ -277,7 +277,7 @@ type ChunkBody =
       timestamp?: string;
     }
   | {
-      type: 'tool-output';
+      type: "tool-output";
       conversationId: string;
       toolCallId: string;
       output: unknown;
@@ -285,35 +285,35 @@ type ChunkBody =
       timestamp?: string;
     }
   | {
-      type: 'tool-output-error';
+      type: "tool-output-error";
       conversationId: string;
       toolCallId: string;
       errorText: string;
       durationMs?: number;
       timestamp?: string;
     }
-  | { type: 'message-completed'; conversationId: string; messageId: string; timestamp?: string }
+  | { type: "message-completed"; conversationId: string; messageId: string; timestamp?: string }
   | {
-      type: 'submission-settled';
+      type: "submission-settled";
       conversationId: string;
       submissionId: string;
-      outcome: 'completed' | 'failed' | 'aborted';
+      outcome: "completed" | "failed" | "aborted";
       error?: unknown;
       timestamp?: string;
     };
 ```
 
-* `position` — a monotonic ordering token: `batch` is the durable batch ordinal the chunk was projected from, `index` its position within that batch’s projection. `{ batch, index }` is globally unique and ordered across the conversation; compare lexicographically (`batch`, then `index`) to dedupe redelivered chunks. Otherwise opaque — do not interpret the numbers.
-* `conversation-reset` — replace all accumulated state with the embedded [snapshot](#flueconversationsnapshot). Emitted when a batch contains a structural boundary (conversation creation, compaction); the reset subsumes every other chunk of its batch, so a fresh read from `offset=-1` begins with one. The embedded snapshot may already contain settlements — check `snapshot.settlements` as well as `submission-settled` chunks when awaiting an outcome.
-* `message-appended` — a complete message (user turn or system signal), in the same message format as the snapshot.
-* `message-started` — an assistant response opened. `metadata` carries agent-authored response metadata available at start. Assistant chunks are pre-coalesced: every model step of a submission addresses the submission’s first assistant `messageId`, so accumulating parts per `messageId` reproduces the snapshot’s one-message-per-response shape. A later `message-started` for an already-open `messageId` is a continuation, not a new message.
-* `message-metadata` — agent-authored metadata for an open response; merge onto the message.
-* `data-part` — one named client data write; append a `data-<name>` part.
-* `message-delta` — streamed `text` or `reasoning` content; append to the open part of that `kind`, opening one if none is open. A `kind` change or `message-completed` closes the open part.
-* `tool-input` / `tool-output` / `tool-output-error` — tool-call lifecycle, correlated by `toolCallId`. Input arrives on the assistant message; outputs update the matching `dynamic-tool` part.
-* `message-completed` — the assistant response closed; mark streaming parts `done`.
-* `submission-settled` — the terminal outcome of one submission, matching the admission response’s `submissionId`.
-* `timestamp` — capture time (ISO 8601) of the underlying durable record, present on boundary chunks (`message-started`, `tool-input`, `tool-output`, `tool-output-error`, `message-completed`, `submission-settled`). `message-delta` deliberately omits it for wire weight; interpolate between stamped boundaries.
+- `position` — a monotonic ordering token: `batch` is the durable batch ordinal the chunk was projected from, `index` its position within that batch’s projection. `{ batch, index }` is globally unique and ordered across the conversation; compare lexicographically (`batch`, then `index`) to dedupe redelivered chunks. Otherwise opaque — do not interpret the numbers.
+- `conversation-reset` — replace all accumulated state with the embedded [snapshot](#flueconversationsnapshot). Emitted when a batch contains a structural boundary (conversation creation, compaction); the reset subsumes every other chunk of its batch, so a fresh read from `offset=-1` begins with one. The embedded snapshot may already contain settlements — check `snapshot.settlements` as well as `submission-settled` chunks when awaiting an outcome.
+- `message-appended` — a complete message (user turn or system signal), in the same message format as the snapshot.
+- `message-started` — an assistant response opened. `metadata` carries agent-authored response metadata available at start. Assistant chunks are pre-coalesced: every model step of a submission addresses the submission’s first assistant `messageId`, so accumulating parts per `messageId` reproduces the snapshot’s one-message-per-response shape. A later `message-started` for an already-open `messageId` is a continuation, not a new message.
+- `message-metadata` — agent-authored metadata for an open response; merge onto the message.
+- `data-part` — one named client data write; append a `data-<name>` part.
+- `message-delta` — streamed `text` or `reasoning` content; append to the open part of that `kind`, opening one if none is open. A `kind` change or `message-completed` closes the open part.
+- `tool-input` / `tool-output` / `tool-output-error` — tool-call lifecycle, correlated by `toolCallId`. Input arrives on the assistant message; outputs update the matching `dynamic-tool` part.
+- `message-completed` — the assistant response closed; mark streaming parts `done`.
+- `submission-settled` — the terminal outcome of one submission, matching the admission response’s `submissionId`.
+- `timestamp` — capture time (ISO 8601) of the underlying durable record, present on boundary chunks (`message-started`, `tool-input`, `tool-output`, `tool-output-error`, `message-completed`, `submission-settled`). `message-delta` deliberately omits it for wire weight; interpolate between stamped boundaries.
 
 ## `HEAD /:id`
 
@@ -329,7 +329,7 @@ Aborts all durable work for the conversation: the running submission and everyth
 }
 ```
 
-* `aborted` — `true` when in-flight or queued work existed and is now being aborted; `false` when the conversation was idle. Abort records a durable intent and returns immediately — the affected submissions settle to the `aborted` outcome asynchronously. Observe the settlement via `submission-settled` chunks or the snapshot’s `settlements`.
+- `aborted` — `true` when in-flight or queued work existed and is now being aborted; `false` when the conversation was idle. Abort records a durable intent and returns immediately — the affected submissions settle to the `aborted` outcome asynchronously. Observe the settlement via `submission-settled` chunks or the snapshot’s `settlements`.
 
 Methods other than `POST` are rejected with `method_not_allowed` (405), `Allow: POST`.
 
@@ -339,11 +339,11 @@ Serves one attachment’s bytes. `:attachmentId` is the `id` of a `file` part; U
 
 Response: `200` with the raw bytes and:
 
-* `Content-Type` — the attachment’s stored MIME type.
-* `Content-Length` — the byte size.
-* `Content-Disposition: inline`.
-* `Cache-Control: private, max-age=31536000, immutable` — attachment content is digest-keyed and immutable, so clients may cache indefinitely.
-* `Content-Security-Policy: sandbox` — the MIME type is uploader-controlled, so direct navigation is neutralized as an opaque origin; `<img>`/`<a>` sub-resource loads are unaffected.
+- `Content-Type` — the attachment’s stored MIME type.
+- `Content-Length` — the byte size.
+- `Content-Disposition: inline`.
+- `Cache-Control: private, max-age=31536000, immutable` — attachment content is digest-keyed and immutable, so clients may cache indefinitely.
+- `Content-Security-Policy: sandbox` — the MIME type is uploader-controlled, so direct navigation is neutralized as an opaque origin; `<img>`/`<a>` sub-resource loads are unaffected.
 
 Methods other than `GET` are rejected with `method_not_allowed` (405), `Allow: GET`.
 
@@ -371,9 +371,9 @@ Every read and error response carries two browser security headers: `X-Content-T
 
 The protocol sets no other cross-cutting headers by design:
 
-* No `Access-Control-*` headers — CORS is application middleware; see [CORS](https://flueframework.com/docs/guide/routing/#cors), including which coordination headers to expose.
-* No authentication challenges — protecting a mount is application middleware; see [Protecting your agents](https://flueframework.com/docs/guide/routing/#protecting-your-agents).
-* No cache validators (`ETag`, `Last-Modified`) on conversation reads — offsets are the resume mechanism, and conversation responses are `no-store`.
+- No `Access-Control-*` headers — CORS is application middleware; see [CORS](https://flueframework.com/docs/guide/routing/#cors), including which coordination headers to expose.
+- No authentication challenges — protecting a mount is application middleware; see [Protecting your agents](https://flueframework.com/docs/guide/routing/#protecting-your-agents).
+- No cache validators (`ETag`, `Last-Modified`) on conversation reads — offsets are the resume mechanism, and conversation responses are `no-store`.
 
 ## Docs Navigation
 
@@ -381,24 +381,24 @@ Current page: [Streaming Protocol](https://flueframework.com/docs/reference/stre
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Runtime
 
-* [Configuration](https://flueframework.com/docs/reference/configuration/)
-* [Errors Reference](https://flueframework.com/docs/reference/errors/)
-* [Agent API](https://flueframework.com/docs/reference/agent-api/)
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
-* [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
-* [Provider API](https://flueframework.com/docs/reference/provider-api/)
-* [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
-* [Events Reference](https://flueframework.com/docs/reference/events/)
+- [Configuration](https://flueframework.com/docs/reference/configuration/)
+- [Errors Reference](https://flueframework.com/docs/reference/errors/)
+- [Agent API](https://flueframework.com/docs/reference/agent-api/)
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
+- [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
+- [Provider API](https://flueframework.com/docs/reference/provider-api/)
+- [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
+- [Events Reference](https://flueframework.com/docs/reference/events/)
 
 ### Advanced
 
-* [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
-* [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)
+- [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
+- [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)

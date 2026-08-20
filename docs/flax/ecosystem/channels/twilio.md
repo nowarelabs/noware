@@ -21,10 +21,10 @@ flue add channel twilio
 The Twilio blueprint installs `@flue/twilio`, creates a project-owned Fetch client at the source-root `twilio-client.ts`, and creates `channels/twilio.ts`. It also updates the selected agent to bind the generated reply tool to the verified conversation.
 
 ```ts
-import { createTwilioChannel } from '@flue/twilio';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { TwilioClient } from '../twilio-client.ts';
+import { createTwilioChannel } from "@flue/twilio";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { TwilioClient } from "../twilio-client.ts";
 
 export const client = new TwilioClient({
   accountSid: process.env.TWILIO_ACCOUNT_SID!,
@@ -36,16 +36,16 @@ export const channel = createTwilioChannel({
   authToken: process.env.TWILIO_AUTH_TOKEN!,
   webhookUrl: process.env.TWILIO_WEBHOOK_URL!,
   destination: {
-    type: 'address',
+    type: "address",
     address: process.env.TWILIO_PHONE_NUMBER!,
   },
   async webhook({ payload, conversation }) {
-    if (payload.OptOutType === 'STOP') return;
+    if (payload.OptOutType === "STOP") return;
     await dispatch(Assistant, {
       id: channel.instanceId(conversation),
       // Recorded once when this event creates the instance; ignored after.
       initialData:
-        conversation.type === 'messaging-service'
+        conversation.type === "messaging-service"
           ? {
               type: conversation.type,
               messagingServiceSid: conversation.messagingServiceSid,
@@ -57,8 +57,8 @@ export const channel = createTwilioChannel({
               participant: conversation.participant,
             },
       message: {
-        kind: 'signal',
-        type: 'twilio.message',
+        kind: "signal",
+        type: "twilio.message",
         body: payload.Body,
         attributes: { messageSid: payload.MessageSid, from: payload.From },
       },
@@ -74,23 +74,23 @@ The abridged example omits the generated `postMessage()` tool and the Fetch clie
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as twilio } from './channels/twilio.ts';
+import { channel as twilio } from "./channels/twilio.ts";
 
-app.route('/channels/twilio', twilio.route());
+app.route("/channels/twilio", twilio.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/twilio` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                        | Purpose                                                                                         |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| TWILIO\_ACCOUNT\_SID            | **Required** — Restricts inbound requests and identifies outbound API calls.                    |
-| TWILIO\_AUTH\_TOKEN             | **Required** — Verifies inbound signatures and authenticates API calls.                         |
-| TWILIO\_WEBHOOK\_URL            | **Required** — Supplies the exact public URL used for signature checks.                         |
-| TWILIO\_PHONE\_NUMBER           | **Required for an address-based destination** — Binds an address-based destination.             |
-| TWILIO\_MESSAGING\_SERVICE\_SID | **Required for a Messaging Service destination** — Binds a Messaging Service destination.       |
-| TWILIO\_STATUS\_CALLBACK\_URL   | **Required when status callbacks are enabled** — Supplies the exact public status callback URL. |
+| Variable                     | Purpose                                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| TWILIO_ACCOUNT_SID           | **Required** — Restricts inbound requests and identifies outbound API calls.                    |
+| TWILIO_AUTH_TOKEN            | **Required** — Verifies inbound signatures and authenticates API calls.                         |
+| TWILIO_WEBHOOK_URL           | **Required** — Supplies the exact public URL used for signature checks.                         |
+| TWILIO_PHONE_NUMBER          | **Required for an address-based destination** — Binds an address-based destination.             |
+| TWILIO_MESSAGING_SERVICE_SID | **Required for a Messaging Service destination** — Binds a Messaging Service destination.       |
+| TWILIO_STATUS_CALLBACK_URL   | **Required when status callbacks are enabled** — Supplies the exact public status callback URL. |
 
 It installs `@flue/twilio` for verified ingress and creates an editable Fetch client for outbound Programmable Messaging. The official Twilio Node helper is not the canonical path because it is Node-only; the generated REST client runs in Node and workerd with Flue’s required `nodejs_compat` configuration.
 
@@ -120,11 +120,11 @@ The package rejects signed requests for another account or destination.
 ## Channel module
 
 ```ts
-import { createTwilioChannel } from '@flue/twilio';
-import { defineTool, dispatch } from '@flue/runtime';
-import * as v from 'valibot';
-import { Assistant } from '../agents/assistant.ts';
-import { TwilioClient } from '../twilio-client.ts';
+import { createTwilioChannel } from "@flue/twilio";
+import { defineTool, dispatch } from "@flue/runtime";
+import * as v from "valibot";
+import { Assistant } from "../agents/assistant.ts";
+import { TwilioClient } from "../twilio-client.ts";
 
 export const client = new TwilioClient({
   accountSid: process.env.TWILIO_ACCOUNT_SID!,
@@ -136,23 +136,23 @@ export const channel = createTwilioChannel({
   authToken: process.env.TWILIO_AUTH_TOKEN!,
   webhookUrl: process.env.TWILIO_WEBHOOK_URL!,
   destination: {
-    type: 'address',
+    type: "address",
     address: process.env.TWILIO_PHONE_NUMBER!,
   },
 
   // Path: /channels/twilio/webhook
   async webhook({ payload, conversation }) {
-    if (payload.OptOutType === 'STOP') return;
+    if (payload.OptOutType === "STOP") return;
     const attributes: Record<string, string> = {
       messageSid: payload.MessageSid,
       from: payload.From,
     };
-    const numMedia = Number(payload.NumMedia ?? '0');
+    const numMedia = Number(payload.NumMedia ?? "0");
     if (numMedia > 0) {
       attributes.numMedia = String(numMedia);
       for (let index = 0; index < numMedia; index += 1) {
         const contentType = payload[`MediaContentType${index}`];
-        if (typeof contentType === 'string') {
+        if (typeof contentType === "string") {
           attributes[`mediaContentType${index}`] = contentType;
         }
       }
@@ -161,7 +161,7 @@ export const channel = createTwilioChannel({
       id: channel.instanceId(conversation),
       // Recorded once when this event creates the instance; ignored after.
       initialData:
-        conversation.type === 'messaging-service'
+        conversation.type === "messaging-service"
           ? {
               type: conversation.type,
               messagingServiceSid: conversation.messagingServiceSid,
@@ -173,8 +173,8 @@ export const channel = createTwilioChannel({
               participant: conversation.participant,
             },
       message: {
-        kind: 'signal',
-        type: 'twilio.message',
+        kind: "signal",
+        type: "twilio.message",
         body: payload.Body,
         attributes,
       },
@@ -184,18 +184,18 @@ export const channel = createTwilioChannel({
 
 export function postMessage(
   ref:
-    | { type: 'address'; address: string; participant: string }
-    | { type: 'messaging-service'; messagingServiceSid: string; participant: string },
+    | { type: "address"; address: string; participant: string }
+    | { type: "messaging-service"; messagingServiceSid: string; participant: string },
 ) {
   return defineTool({
-    name: 'post_twilio_message',
-    description: 'Post to the Twilio conversation bound to this agent.',
+    name: "post_twilio_message",
+    description: "Post to the Twilio conversation bound to this agent.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data: { text } }) {
       const result = await client.messages.create({
         to: ref.participant,
         body: text,
-        ...(ref.type === 'messaging-service'
+        ...(ref.type === "messaging-service"
           ? { messagingServiceSid: ref.messagingServiceSid }
           : { from: ref.address }),
       });
@@ -210,26 +210,26 @@ The blueprint creates `src/twilio-client.ts` with the Fetch client used above. `
 ## Wire the agent
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { postMessage } from '../channels/twilio.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { postMessage } from "../channels/twilio.ts";
 
-const initialData = v.variant('type', [
-  v.object({ type: v.literal('address'), address: v.string(), participant: v.string() }),
+const initialData = v.variant("type", [
+  v.object({ type: v.literal("address"), address: v.string(), participant: v.string() }),
   v.object({
-    type: v.literal('messaging-service'),
+    type: v.literal("messaging-service"),
     messagingServiceSid: v.string(),
     participant: v.string(),
   }),
 ]);
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Twilio channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Twilio channel dispatch.");
   useTool(postMessage(data));
-  return 'Reply concisely in the bound Twilio conversation.';
+  return "Reply concisely in the bound Twilio conversation.";
 }
 
 Assistant.initialData = initialData;
@@ -273,75 +273,75 @@ Current page: [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

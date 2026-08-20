@@ -21,10 +21,10 @@ flue add channel google-chat
 The blueprint installs `@flue/google-chat` and `jose`. It creates a narrow service-account Fetch client at `<source-root>/lib/google-chat-client.ts` and `<source-root>/channels/google-chat.ts` with named `channel`, project-owned `client`, and message-tool exports, then wires the tool into an agent. The primary generated path handles direct interactions; authenticated Pub/Sub push for Workspace Events is an optional section in the same channel module.
 
 ```ts
-import { createGoogleChatChannel } from '@flue/google-chat';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createGoogleChatClient } from '../lib/google-chat-client.ts';
+import { createGoogleChatChannel } from "@flue/google-chat";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createGoogleChatClient } from "../lib/google-chat-client.ts";
 
 export const client = createGoogleChatClient({
   clientEmail: process.env.GOOGLE_CHAT_CLIENT_EMAIL!,
@@ -34,11 +34,11 @@ export const client = createGoogleChatClient({
 export const channel = createGoogleChatChannel({
   interactions: {
     authentication: {
-      type: 'endpoint-url',
+      type: "endpoint-url",
       audience: process.env.GOOGLE_CHAT_APP_URL!,
     },
     async handler({ c, payload }) {
-      if (payload.type !== 'MESSAGE') return;
+      if (payload.type !== "MESSAGE") return;
       const ref = conversationFromPayload(payload);
       if (!ref) return;
 
@@ -50,9 +50,9 @@ export const channel = createGoogleChatChannel({
           ...(ref.thread === undefined ? {} : { thread: ref.thread }),
         },
         message: {
-          kind: 'signal',
+          kind: "signal",
           type: `google-chat.${payload.type}`,
-          body: payload.message?.argumentText ?? payload.message?.text ?? '',
+          body: payload.message?.argumentText ?? payload.message?.text ?? "",
           attributes: {
             // The message resource name is the deduplication key for retried deliveries.
             ...(payload.message?.name === undefined ? {} : { messageName: payload.message.name }),
@@ -78,23 +78,23 @@ An authenticated message is admitted to the agent bound to its Google Chat space
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as googleChat } from './channels/google-chat.ts';
+import { channel as googleChat } from "./channels/google-chat.ts";
 
-app.route('/channels/google-chat', googleChat.route());
+app.route("/channels/google-chat", googleChat.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/google-chat` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                               | Purpose                                                                                                                              |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| GOOGLE\_CHAT\_APP\_URL                 | **Required for interaction endpoint-URL authentication** — Exact public interaction endpoint used as the Google OIDC token audience. |
-| GOOGLE\_CHAT\_PUBSUB\_SUBSCRIPTION     | **Required for Workspace Events** — Exact projects/<project>/subscriptions/<subscription> resource required in the push body.        |
-| GOOGLE\_CHAT\_PUBSUB\_AUDIENCE         | **Required for Workspace Events** — Exact audience configured on the authenticated Pub/Sub push subscription.                        |
-| GOOGLE\_CHAT\_PUBSUB\_SERVICE\_ACCOUNT | **Required for Workspace Events** — Verifies the service-account identity in the Pub/Sub push OIDC token.                            |
-| GOOGLE\_CHAT\_CLIENT\_EMAIL            | **Required for outbound API calls** — Identifies the service account used to request a chat.bot access token.                        |
-| GOOGLE\_CHAT\_PRIVATE\_KEY             | **Required for outbound API calls** — Signs the service-account JWT assertion used for the OAuth token exchange.                     |
+| Variable                           | Purpose                                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| GOOGLE_CHAT_APP_URL                | **Required for interaction endpoint-URL authentication** — Exact public interaction endpoint used as the Google OIDC token audience. |
+| GOOGLE_CHAT_PUBSUB_SUBSCRIPTION    | **Required for Workspace Events** — Exact projects/<project>/subscriptions/<subscription> resource required in the push body.        |
+| GOOGLE_CHAT_PUBSUB_AUDIENCE        | **Required for Workspace Events** — Exact audience configured on the authenticated Pub/Sub push subscription.                        |
+| GOOGLE_CHAT_PUBSUB_SERVICE_ACCOUNT | **Required for Workspace Events** — Verifies the service-account identity in the Pub/Sub push OIDC token.                            |
+| GOOGLE_CHAT_CLIENT_EMAIL           | **Required for outbound API calls** — Identifies the service account used to request a chat.bot access token.                        |
+| GOOGLE_CHAT_PRIVATE_KEY            | **Required for outbound API calls** — Signs the service-account JWT assertion used for the OAuth token exchange.                     |
 
 The blueprint installs and configures `@flue/google-chat` for authenticated inbound requests and `jose` for a project-owned outbound Fetch client. After running the command, you will have a new `src/channels/google-chat.ts` module exporting `channel`, `client`, and an application-owned message tool.
 
@@ -122,20 +122,20 @@ Configure only the surfaces your application handles. Omitting `interactions` or
 ### Google Chat interactions
 
 ```ts
-import { createGoogleChatChannel, type GoogleChatConversationRef } from '@flue/google-chat';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
+import { createGoogleChatChannel, type GoogleChatConversationRef } from "@flue/google-chat";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
 
 export const channel = createGoogleChatChannel({
   interactions: {
     authentication: {
-      type: 'endpoint-url',
+      type: "endpoint-url",
       audience: process.env.GOOGLE_CHAT_APP_URL!,
     },
     async handler({ c, payload }) {
       switch (payload.type) {
-        case 'MESSAGE':
-        case 'APP_COMMAND': {
+        case "MESSAGE":
+        case "APP_COMMAND": {
           const ref = conversationFromPayload(payload);
           if (!ref) return c.body(null, 200);
 
@@ -147,9 +147,9 @@ export const channel = createGoogleChatChannel({
               ...(ref.thread === undefined ? {} : { thread: ref.thread }),
             },
             message: {
-              kind: 'signal',
+              kind: "signal",
               type: `google-chat.${payload.type}`,
-              body: payload.message?.argumentText ?? payload.message?.text ?? '',
+              body: payload.message?.argumentText ?? payload.message?.text ?? "",
               attributes: {
                 // The message resource name is the deduplication key for retried deliveries.
                 ...(payload.message?.name === undefined
@@ -174,12 +174,12 @@ export const channel = createGoogleChatChannel({
 function conversationFromPayload(payload: {
   space?: {
     name?: string;
-    spaceType?: GoogleChatConversationRef['spaceType'];
+    spaceType?: GoogleChatConversationRef["spaceType"];
   };
   message?: {
     space?: {
       name?: string;
-      spaceType?: GoogleChatConversationRef['spaceType'];
+      spaceType?: GoogleChatConversationRef["spaceType"];
     };
     thread?: { name?: string };
   };
@@ -244,7 +244,7 @@ Workspace Event subscriptions expire and can be suspended. Subscription lifecycl
 Outbound Google Chat operations belong to the generated project-owned Fetch client, not `@flue/google-chat`:
 
 ```ts
-import { createGoogleChatClient } from '../lib/google-chat-client.ts';
+import { createGoogleChatClient } from "../lib/google-chat-client.ts";
 
 export const client = createGoogleChatClient({
   clientEmail: process.env.GOOGLE_CHAT_CLIENT_EMAIL!,
@@ -259,14 +259,14 @@ The client signs a short-lived service-account assertion, exchanges it for a `ch
 Use the client to define an application-owned tool whose destination and credentials are bound in trusted code:
 
 ```ts
-import type { GoogleChatConversationRef } from '@flue/google-chat';
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
+import type { GoogleChatConversationRef } from "@flue/google-chat";
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
 
 export function postMessage(ref: GoogleChatConversationRef) {
   return defineTool({
-    name: 'post_google_chat_message',
-    description: 'Post a message to the Google Chat conversation bound to this agent.',
+    name: "post_google_chat_message",
+    description: "Post a message to the Google Chat conversation bound to this agent.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data: { text } }) {
       const message = await client.postMessage(ref, text);
@@ -279,10 +279,10 @@ export function postMessage(ref: GoogleChatConversationRef) {
 `initialData` is the instance’s creation data: recorded once when the event creates the instance and ignored afterward, so the channel passes it on every dispatch. Bind the tool from the agent with `useInitialData()` instead of parsing the instance id:
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { postMessage } from '../channels/google-chat.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { postMessage } from "../channels/google-chat.ts";
 
 const initialData = v.object({
   space: v.string(),
@@ -290,11 +290,11 @@ const initialData = v.object({
 });
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Google Chat channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Google Chat channel dispatch.");
   useTool(postMessage(data));
-  return 'Reply concisely in the bound Google Chat conversation.';
+  return "Reply concisely in the bound Google Chat conversation.";
 }
 
 Assistant.initialData = initialData;
@@ -316,75 +316,75 @@ Current page: [Google Chat](https://flueframework.com/docs/ecosystem/channels/go
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

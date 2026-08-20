@@ -4,15 +4,17 @@ import * as v from "valibot";
 
 type RpcCallable = Record<string, (input: unknown) => Promise<unknown>>;
 
+const inputSchema = v.object({
+  method: v.picklist(["estimateCost", "compareInstanceTypes"]),
+  args: v.optional(v.unknown()),
+});
+
 export const cloudPricingTool = defineTool({
   name: "cloud_pricing_tool",
   description:
     "Call methods on the cloud-pricing-tool service via its RPC binding (CLOUD_PRICING_TOOL). Methods: estimateCost, compareInstanceTypes. Pass `method` (one of those names) and `args` (an object matching the tool method input).",
-  input: v.object({
-    method: v.picklist(["estimateCost", "compareInstanceTypes"]),
-    args: v.optional(v.unknown()),
-  }),
-  output: v.any(),
+  input: { parse: (raw: unknown) => v.parse(inputSchema, raw) },
+  output: { parse: (raw: unknown) => raw as Record<string, unknown> },
   async run({ data, log }) {
     const rpc = (env as unknown as { CLOUD_PRICING_TOOL: RpcCallable }).CLOUD_PRICING_TOOL;
     const result = await rpc[data.method](data.args);

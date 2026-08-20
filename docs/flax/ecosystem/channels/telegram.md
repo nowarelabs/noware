@@ -21,10 +21,10 @@ flue add channel telegram
 The blueprint installs `@flue/telegram` and grammY, creates a source-root `channels/telegram.ts` module with named `channel` and project-owned `client`exports, and modifies the selected agent to bind the generated message tool.
 
 ```ts
-import { createTelegramChannel } from '@flue/telegram';
-import { dispatch } from '@flue/runtime';
-import { Api } from 'grammy';
-import { Assistant } from '../agents/assistant.ts';
+import { createTelegramChannel } from "@flue/telegram";
+import { dispatch } from "@flue/runtime";
+import { Api } from "grammy";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new Api(process.env.TELEGRAM_BOT_TOKEN!);
 
@@ -39,8 +39,8 @@ export const channel = createTelegramChannel({
       // Recorded once when this event creates the instance; ignored after.
       initialData: conversationData(conversation, incoming),
       message: {
-        kind: 'signal',
-        type: 'telegram.message',
+        kind: "signal",
+        type: "telegram.message",
         body: messageBody(incoming),
         attributes: { updateId: String(update.update_id) },
       },
@@ -56,19 +56,19 @@ The abridged example omits the generated `conversationFromMessage`, `conversatio
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as telegram } from './channels/telegram.ts';
+import { channel as telegram } from "./channels/telegram.ts";
 
-app.route('/channels/telegram', telegram.route());
+app.route("/channels/telegram", telegram.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/telegram` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                         | Purpose                                              |
-| -------------------------------- | ---------------------------------------------------- |
-| TELEGRAM\_WEBHOOK\_SECRET\_TOKEN | **Required** — Verifies inbound webhook requests.    |
-| TELEGRAM\_BOT\_TOKEN             | **Required** — Authenticates outbound Bot API calls. |
+| Variable                      | Purpose                                              |
+| ----------------------------- | ---------------------------------------------------- |
+| TELEGRAM_WEBHOOK_SECRET_TOKEN | **Required** — Verifies inbound webhook requests.    |
+| TELEGRAM_BOT_TOKEN            | **Required** — Authenticates outbound Bot API calls. |
 
 It installs `@flue/telegram` for verified ingress and grammY for project-owned Bot API access. grammY publishes a browser/Fetch build that runs in both Node and workerd with Flue’s required `nodejs_compat` configuration.
 
@@ -81,19 +81,19 @@ https://example.com/channels/telegram/webhook
 Generate an independent random webhook secret using only letters, numbers, underscores, and hyphens. Configure it with the full route:
 
 ```ts
-await client.setWebhook('https://example.com/channels/telegram/webhook', {
+await client.setWebhook("https://example.com/channels/telegram/webhook", {
   secret_token: process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN!,
   allowed_updates: [
-    'message',
-    'edited_message',
-    'channel_post',
-    'edited_channel_post',
-    'business_message',
-    'edited_business_message',
-    'guest_message',
-    'callback_query',
-    'message_reaction',
-    'message_reaction_count',
+    "message",
+    "edited_message",
+    "channel_post",
+    "edited_channel_post",
+    "business_message",
+    "edited_business_message",
+    "guest_message",
+    "callback_query",
+    "message_reaction",
+    "message_reaction_count",
   ],
 });
 ```
@@ -105,12 +105,12 @@ Webhook delivery and `getUpdates` polling are mutually exclusive. Polling is out
 ## Channel module
 
 ```ts
-import { createTelegramChannel, type TelegramConversationRef } from '@flue/telegram';
-import { defineTool, dispatch } from '@flue/runtime';
-import { Api } from 'grammy';
-import type { Message } from 'grammy/types';
-import * as v from 'valibot';
-import { Assistant } from '../agents/assistant.ts';
+import { createTelegramChannel, type TelegramConversationRef } from "@flue/telegram";
+import { defineTool, dispatch } from "@flue/runtime";
+import { Api } from "grammy";
+import type { Message } from "grammy/types";
+import * as v from "valibot";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new Api(process.env.TELEGRAM_BOT_TOKEN!);
 
@@ -127,8 +127,8 @@ export const channel = createTelegramChannel({
         // Recorded once when this event creates the instance; ignored after.
         initialData: conversationData(conversation, incoming),
         message: {
-          kind: 'signal',
-          type: 'telegram.message',
+          kind: "signal",
+          type: "telegram.message",
           body: messageBody(incoming),
           attributes: { updateId: String(update.update_id) },
         },
@@ -146,9 +146,9 @@ export const channel = createTelegramChannel({
         // Recorded once when this event creates the instance; ignored after.
         initialData: conversationData(conversation, query.message),
         message: {
-          kind: 'signal',
-          type: 'telegram.callback_query',
-          body: query.data ?? '',
+          kind: "signal",
+          type: "telegram.callback_query",
+          body: query.data ?? "",
           attributes: {
             updateId: String(update.update_id),
             fromId: String(query.from.id),
@@ -165,12 +165,12 @@ export const channel = createTelegramChannel({
 function messageBody(message: Message): string {
   if (message.text !== undefined) return message.text;
   if (message.caption !== undefined) return message.caption;
-  if (message.photo) return '[photo message]';
-  if (message.video) return '[video message]';
-  if (message.voice) return '[voice message]';
-  if (message.document) return '[document message]';
-  if (message.sticker) return '[sticker message]';
-  return '[non-text message]';
+  if (message.photo) return "[photo message]";
+  if (message.video) return "[video message]";
+  if (message.voice) return "[voice message]";
+  if (message.document) return "[document message]";
+  if (message.sticker) return "[sticker message]";
+  return "[non-text message]";
 }
 
 // Build the canonical destination identity from a native Telegram Message.
@@ -185,12 +185,12 @@ function conversationFromMessage(message: Message): TelegramConversationRef {
   };
   return message.business_connection_id
     ? {
-        type: 'business-chat',
+        type: "business-chat",
         businessConnectionId: message.business_connection_id,
         chatId: message.chat.id,
         ...topic,
       }
-    : { type: 'chat', chatId: message.chat.id, ...topic };
+    : { type: "chat", chatId: message.chat.id, ...topic };
 }
 
 // Instance-creation data: the destination ref plus small instance-constant context.
@@ -198,7 +198,7 @@ function conversationData(conversation: TelegramConversationRef, message: Messag
   return {
     type: conversation.type,
     chatId: conversation.chatId,
-    ...(conversation.type === 'business-chat'
+    ...(conversation.type === "business-chat"
       ? { businessConnectionId: conversation.businessConnectionId }
       : {}),
     ...(conversation.messageThreadId === undefined
@@ -213,12 +213,12 @@ function conversationData(conversation: TelegramConversationRef, message: Messag
 
 export function postMessage(ref: TelegramConversationRef) {
   return defineTool({
-    name: 'post_telegram_message',
-    description: 'Post to the Telegram conversation bound to this agent.',
+    name: "post_telegram_message",
+    description: "Post to the Telegram conversation bound to this agent.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data: { text } }) {
       const message = await client.sendMessage(ref.chatId, text, {
-        ...(ref.type === 'business-chat'
+        ...(ref.type === "business-chat"
           ? { business_connection_id: ref.businessConnectionId }
           : {}),
         ...(ref.messageThreadId ? { message_thread_id: ref.messageThreadId } : {}),
@@ -237,34 +237,34 @@ export function postMessage(ref: TelegramConversationRef) {
 `initialData` is the instance’s creation data: recorded once when the event creates the instance and ignored afterward, so the channel passes it on every dispatch. Bind the tool from the agent with `useInitialData()` instead of parsing the instance id:
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { postMessage } from '../channels/telegram.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { postMessage } from "../channels/telegram.ts";
 
 const chatData = v.object({
-  type: v.literal('chat'),
+  type: v.literal("chat"),
   chatId: v.number(),
   messageThreadId: v.optional(v.number()),
   directMessagesTopicId: v.optional(v.number()),
   chatTitle: v.optional(v.string()),
 });
 const businessChatData = v.object({
-  type: v.literal('business-chat'),
+  type: v.literal("business-chat"),
   businessConnectionId: v.string(),
   chatId: v.number(),
   messageThreadId: v.optional(v.number()),
   directMessagesTopicId: v.optional(v.number()),
   chatTitle: v.optional(v.string()),
 });
-const initialData = v.variant('type', [chatData, businessChatData]);
+const initialData = v.variant("type", [chatData, businessChatData]);
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Telegram channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Telegram channel dispatch.");
   useTool(postMessage(data));
-  const chatTitle = data.chatTitle ? ` ("${data.chatTitle}")` : '';
+  const chatTitle = data.chatTitle ? ` ("${data.chatTitle}")` : "";
   return `Reply concisely in the bound Telegram conversation${chatTitle}.`;
 }
 
@@ -297,75 +297,75 @@ Current page: [Telegram](https://flueframework.com/docs/ecosystem/channels/teleg
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

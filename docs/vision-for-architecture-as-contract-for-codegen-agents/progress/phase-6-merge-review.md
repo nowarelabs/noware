@@ -5,10 +5,12 @@
 Review, approval, and merge policy engine over the cfour model.
 
 ### Event consumption (7.1)
+
 - `pollEvents(client, filter, since?)` — polls `CfourChangeEvent`s from workspace-do via `queryEvents`.
 - `tailEvents(client, workspaceName)` — placeholder for WS-based real-time tailing (§7.5 follow-up).
 
 ### Gates (7.2)
+
 - `lintGate(client, workspaceName?)` — wraps cfour `lint`; fails on Elements/Relationships category issues.
 - `validateGate(client, workspaceName?)` — wraps cfour `validate`; fails on severity "error" issues.
 - `driftGate(fn, cfour, fs, manifest)` — wraps gen-diesel `reportDrift`; fails when files have drifted.
@@ -16,6 +18,7 @@ Review, approval, and merge policy engine over the cfour model.
 - `runGates(client, branch, into, opts?)` — runs all gates in order; fails fast at first failure.
 
 ### Review + approval (7.3)
+
 - `Review` interface: `{ id, projectId, branchName, targetBranch, status, comments, votes, gates, createdAt }`.
 - `ReviewStore` interface + `createReviewStore()` — in-memory implementation for testing.
 - `openReview(client, store, opts)` — runs gates, creates an open review record.
@@ -23,12 +26,14 @@ Review, approval, and merge policy engine over the cfour model.
 - `voteReview(store, reviewId, editorId, vote)` — records approve/reject; only on open reviews.
 
 ### Merge policy (7.4)
+
 - `MergePolicy` interface: `{ minApprovals, required, blockOnOpenClaims, autoMergeWhenGreen }`.
 - `evaluateMerge(review, policy)` — checks approvals, required reviewers, gates, blockers. Returns `{ pass, reason }`.
 - `tryMerge(client, store, reviewId, policy)` — evaluates policy + applies merge atomically.
 - `rejectReview(store, reviewId, editorId, reason)` — rejects and records the vote.
 
 ### MergeReviewClient interface
+
 Injected dependency — tests provide a fake; production binds to a real workspace-do DO stub.
 
 ## Test results

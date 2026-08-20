@@ -121,7 +121,7 @@ function lintSource(language: string, content: string): Diagnostic[] {
     }
   }
   if (jsLike) {
-    const open = (content.match(/[{(\[]/g) ?? []).length;
+    const open = (content.match(/[{([]/g) ?? []).length;
     const close = (content.match(/[})\]]/g) ?? []).length;
     if (open !== close)
       push("error", `Unbalanced braces/brackets (${open} open, ${close} close)`, 1, "js/balanced");

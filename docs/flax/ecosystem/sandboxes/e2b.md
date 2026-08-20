@@ -24,9 +24,9 @@ The blueprint installs `e2b` when needed and creates `sandboxes/e2b.ts` in your 
 
 ```ts
 // flue-blueprint: sandbox/e2b@1
-import { sandboxFromDriver, useModel } from '@flue/runtime';
-import type { SandboxDriver, SandboxFactory, Sandbox, FileStat } from '@flue/runtime';
-import type { Sandbox as E2BSandbox } from 'e2b';
+import { sandboxFromDriver, useModel } from "@flue/runtime";
+import type { SandboxDriver, SandboxFactory, Sandbox, FileStat } from "@flue/runtime";
+import type { Sandbox as E2BSandbox } from "e2b";
 
 class E2BSandboxDriver implements SandboxDriver {
   constructor(private sandbox: E2BSandbox) {}
@@ -41,7 +41,7 @@ class E2BSandboxDriver implements SandboxDriver {
 export function e2b(sandbox: E2BSandbox): SandboxFactory {
   return {
     async createSandbox(): Promise<Sandbox> {
-      const sandboxCwd = '/home/user';
+      const sandboxCwd = "/home/user";
       const driver = new E2BSandboxDriver(sandbox);
       return sandboxFromDriver(driver, sandboxCwd);
     },
@@ -53,9 +53,9 @@ Pass an initialized E2B `Sandbox` to `e2b(...)`, then pass the returned factory 
 
 ## Configure
 
-| Variable      | Purpose                                        |
-| ------------- | ---------------------------------------------- |
-| E2B\_API\_KEY | **Required** — Authenticates with the E2B API. |
+| Variable    | Purpose                                        |
+| ----------- | ---------------------------------------------- |
+| E2B_API_KEY | **Required** — Authenticates with the E2B API. |
 
 | Requirement                    | Purpose                                                                     |
 | ------------------------------ | --------------------------------------------------------------------------- |
@@ -66,12 +66,12 @@ Pass an initialized E2B `Sandbox` to `e2b(...)`, then pass the returned factory 
 ## Integration shape
 
 ```ts
-import { Sandbox } from 'e2b';
-import { useModel, useSandbox } from '@flue/runtime';
-import { e2b } from '../sandboxes/e2b';
+import { Sandbox } from "e2b";
+import { useModel, useSandbox } from "@flue/runtime";
+import { e2b } from "../sandboxes/e2b";
 
 export function Assistant() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox({
     // Lazy, per the SandboxFactory contract: constructing this object is
     // cheap; the expensive E2B sandbox creation happens once, inside
@@ -94,75 +94,75 @@ Current page: [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

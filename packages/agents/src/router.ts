@@ -1,15 +1,17 @@
 /**
- * Agent router — creates a Hono sub-router for mounting an agent.
+ * Agent router — creates a Workers-native router for mounting an agent.
  *
- * Convention: each agent Worker has an `app.ts` that mounts the agent
- * router at `/agents/<name>`.
+ * Convention: each agent Worker has an `app.ts` that extends `HttpEntrypoint`
+ * and uses `createAgentRouter` as its router.
  *
  * ```ts
- * import { createAgentRouter } from '@nowarelabs/agents/router';
- * import { Coding } from './agents/coding';
+ * import { HttpEntrypoint } from '@nowarelabs/entrypoints';
+ * import { createAgentRouter } from '@nowarelabs/agents';
+ * import codingAgent from './agents/coding';
  *
- * const app = new Hono();
- * app.route('/agents/coding', createAgentRouter(Coding));
+ * export default class CodingEntrypoint extends HttpEntrypoint {
+ *   router = createAgentRouter(codingAgent);
+ * }
  * ```
  */
 
@@ -17,106 +19,117 @@ import type { AgentDefinition } from "./types.js";
 import { agentMountPath } from "./agent.js";
 
 // ----------------------------------------------------------------
-// Hono types (minimal, avoid direct dependency)
-// ----------------------------------------------------------------
-
-export interface HonoRoute {
-  on: (method: string, path: string, ...handlers: unknown[]) => HonoRoute;
-  get: (path: string, ...handlers: unknown[]) => HonoRoute;
-  post: (path: string, ...handlers: unknown[]) => HonoRoute;
-  head: (path: string, ...handlers: unknown[]) => HonoRoute;
-  use: (...handlers: unknown[]) => HonoRoute;
-}
-
-export type HonoHandler = (c: {
-  req: {
-    param: (name: string) => string;
-    query: (name: string) => string | undefined;
-    json: () => Promise<unknown>;
-    url: string;
-  };
-  json: (data: unknown, status?: number) => Response;
-  text: (data: string, status?: number) => Response;
-}) => Promise<Response> | Response;
-
-// ----------------------------------------------------------------
 // Router factory
 // ----------------------------------------------------------------
 
 export interface AgentRouterOptions {
-  /** Custom middleware to apply to all routes. */
-  middleware?: unknown[];
-  /** Additional routes to add beyond the standard agent routes. */
-  extraRoutes?: (router: HonoRoute) => void;
+  /** Additional routes beyond the standard agent routes. */
+  routes?: AgentRoute[];
+}
+
+export interface AgentRoute {
+  method: string;
+  pattern: URLPattern | string;
+  handler: (
+    request: Request,
+    env: unknown,
+    ctx: unknown,
+    match: URLPatternResult | null,
+  ) => Promise<Response> | Response;
 }
 
 /**
- * Creates a Hono sub-router for an agent. The router exposes:
+ * Creates a Workers-native router for an agent. The router exposes:
  *
  * - `POST /:id` — deliver a message (fire-and-forget, returns 202)
  * - `GET /:id` — read conversation snapshot
  * - `HEAD /:id` — check conversation exists
  * - `POST /:id/abort` — abort a running turn
- * - `GET /:id/attachments/:attachmentId` — read an attachment
  *
  * The actual agent execution is handled by the Cloudflare Agent DO.
  * This router is the HTTP surface; the DO is the runtime.
+ *
+ * Returns a `RouterLike` compatible with `HttpEntrypoint` from
+ * `@nowarelabs/entrypoints`.
  */
 export function createAgentRouter(
   def: AgentDefinition,
   opts?: AgentRouterOptions,
-): (app: HonoRoute) => void {
-  return (app: HonoRoute) => {
-    // Apply middleware if provided
-    if (opts?.middleware) {
-      for (const mw of opts.middleware) {
-        app.use(mw);
+): {
+  handle(
+    request: Request,
+    env: Record<string, unknown>,
+    ctx: { waitUntil(p: Promise<unknown>): void },
+  ): Promise<Response>;
+} {
+  const mountPath = agentMountPath(def.name);
+
+  return {
+    async handle(
+      request: Request,
+      env: Record<string, unknown>,
+      ctx: { waitUntil(p: Promise<unknown>): void },
+    ): Promise<Response> {
+      const url = new URL(request.url);
+      const path = url.pathname;
+
+      // Strip the mount path prefix to get the relative path
+      const relativePath = path.startsWith(mountPath) ? path.slice(mountPath.length) || "/" : path;
+
+      // Match /:id pattern
+      const idMatch = relativePath.match(/^\/([^/]+)(\/.*)?$/);
+      if (idMatch) {
+        const id = idMatch[1];
+        const subPath = idMatch[2] || "";
+
+        // POST /:id — deliver message
+        if (request.method === "POST" && subPath === "") {
+          return Response.json(
+            {
+              ok: true,
+              agent: def.name,
+              conversationId: id,
+              streamUrl: `${mountPath}/${id}?view=updates`,
+              offset: 0,
+            },
+            { status: 202 },
+          );
+        }
+
+        // GET /:id — read conversation
+        if (request.method === "GET" && subPath === "") {
+          const view = url.searchParams.get("view");
+          if (view === "updates") {
+            return Response.json({ ok: true, agent: def.name, conversationId: id, messages: [] });
+          }
+          return Response.json({ ok: true, agent: def.name, conversationId: id });
+        }
+
+        // HEAD /:id — check conversation exists
+        if (request.method === "HEAD" && subPath === "") {
+          return new Response(null, { status: 200 });
+        }
+
+        // POST /:id/abort — abort running turn
+        if (request.method === "POST" && subPath === "/abort") {
+          return Response.json({ ok: true, agent: def.name, conversationId: id, aborted: true });
+        }
       }
-    }
 
-    // POST /:id — deliver message
-    app.post("/:id", async (c: Parameters<HonoHandler>[0]) => {
-      const id = c.req.param("id");
-
-      // In production, this routes to the DO via service binding.
-      // The DO handles the actual agent execution.
-      return c.json(
-        {
-          ok: true,
-          agent: def.name,
-          conversationId: id,
-          streamUrl: `${agentMountPath(def.name)}/${id}?view=updates`,
-          offset: 0,
-        },
-        202,
-      );
-    });
-
-    // GET /:id — read conversation
-    app.get("/:id", async (c: Parameters<HonoHandler>[0]) => {
-      const id = c.req.param("id");
-      const view = c.req.query("view");
-
-      if (view === "updates") {
-        // SSE/long-poll streaming endpoint
-        return c.json({ ok: true, agent: def.name, conversationId: id, messages: [] });
+      // Check extra routes
+      if (opts?.routes) {
+        for (const route of opts.routes) {
+          if (request.method !== route.method) continue;
+          const pattern =
+            typeof route.pattern === "string" ? new URLPattern(route.pattern) : route.pattern;
+          const match = pattern.exec({ pathname: path } as URLPatternInit);
+          if (match) {
+            return route.handler(request, env, ctx, match);
+          }
+        }
       }
 
-      return c.json({ ok: true, agent: def.name, conversationId: id });
-    });
-
-    // HEAD /:id — check conversation exists
-    app.head("/:id", (c: Parameters<HonoHandler>[0]) => {
-      return c.text("", 200);
-    });
-
-    // POST /:id/abort — abort running turn
-    app.post("/:id/abort", async (c: Parameters<HonoHandler>[0]) => {
-      const id = c.req.param("id");
-      return c.json({ ok: true, agent: def.name, conversationId: id, aborted: true });
-    });
-
-    // Extra routes
-    opts?.extraRoutes?.(app);
+      return Response.json({ ok: false, error: "Not found" }, { status: 404 });
+    },
   };
 }

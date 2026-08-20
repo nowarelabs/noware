@@ -50,20 +50,20 @@ interface AgentPromptOptions {
 }
 ```
 
-| Field       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| message     | The message to deliver.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| initialData | Instance-creation data, consulted only when this send creates the conversation: validated against the agent’s initialData schema static when the agent declares one, recorded once, and read inside the agent with useInitialData() (see [Passing data to the agent](https://flueframework.com/docs/guide/agent-hooks/#passing-data-to-the-agent)). Ignored when the send continues an existing conversation; pair with uid: null to error instead.                                                                                      |
-| uid         | Send condition. Sends are conditional requests, with the instance uid playing the ETag. Omitted: unconditional — continues the instance or creates it. A string (a previous result’s uid): continue only that incarnation. A missing instance or mismatched uid rejects with a 404 FlueApiError (agent\_instance\_not\_found) and nothing is delivered. Cannot be combined with initialData. null: create only. An existing instance rejects with a 409 FlueApiError (agent\_instance\_exists, the existing uid in body.error.meta.uid). |
-| signal      | Aborts the HTTP request. It does not abort agent work; that is [abort()](#abort).                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Field       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| message     | The message to deliver.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| initialData | Instance-creation data, consulted only when this send creates the conversation: validated against the agent’s initialData schema static when the agent declares one, recorded once, and read inside the agent with useInitialData() (see [Passing data to the agent](https://flueframework.com/docs/guide/agent-hooks/#passing-data-to-the-agent)). Ignored when the send continues an existing conversation; pair with uid: null to error instead.                                                                                 |
+| uid         | Send condition. Sends are conditional requests, with the instance uid playing the ETag. Omitted: unconditional — continues the instance or creates it. A string (a previous result’s uid): continue only that incarnation. A missing instance or mismatched uid rejects with a 404 FlueApiError (agent_instance_not_found) and nothing is delivered. Cannot be combined with initialData. null: create only. An existing instance rejects with a 409 FlueApiError (agent_instance_exists, the existing uid in body.error.meta.uid). |
+| signal      | Aborts the HTTP request. It does not abort agent work; that is [abort()](#abort).                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ### `DeliveredMessage`
 
 ```ts
 type DeliveredMessage =
-  | { kind: 'user'; body: string; attachments?: DeliveredAttachment[] }
+  | { kind: "user"; body: string; attachments?: DeliveredAttachment[] }
   | {
-      kind: 'signal';
+      kind: "signal";
       type: string;
       body: string;
       attributes?: Record<string, string>;
@@ -86,7 +86,7 @@ Signal fields:
 
 ```ts
 interface DeliveredAttachment {
-  type: 'image';
+  type: "image";
   data: string;
   mimeType: string;
   filename?: string;
@@ -146,10 +146,10 @@ const reply = await conversation.read(admission);
 
 The target is the admission `send()` resolved with, or a bare submission id. The bare form is the **re-attach** path: it follows the conversation from the stream origin, so any process holding just the id can read the reply at any later time, and a submission that already settled resolves immediately — persist the small admission object (or just its `submissionId`) and a crashed script’s replacement picks up where the lost await stopped.
 
-* Rejects with [FlueExecutionError](https://flueframework.com/docs/sdk/errors/#flueexecutionerror) when the submission settles failed or aborted, exactly as `wait()` does; the reply is fetched only after a completed settlement.
-* The reply fields are [readSubmissionReply()](#readsubmissionreply)’s projection (text, named data parts, metadata) plus the settled `submissionId`; `uid` carries over when the target admission had one.
-* `options` are [AgentWaitOptions](#agentwaitoptions) — `signal` stops the read locally (the submission keeps running; a durable stop is `abort()`), and `onEvent` streams chunks while waiting.
-* Internally this is `wait()` plus one `history()` read. Use those primitives directly when you only need the outcome, or when you already hold the materialized conversation via `observe()` — `readSubmissionReply()` applies to its state with no extra fetch.
+- Rejects with [FlueExecutionError](https://flueframework.com/docs/sdk/errors/#flueexecutionerror) when the submission settles failed or aborted, exactly as `wait()` does; the reply is fetched only after a completed settlement.
+- The reply fields are [readSubmissionReply()](#readsubmissionreply)’s projection (text, named data parts, metadata) plus the settled `submissionId`; `uid` carries over when the target admission had one.
+- `options` are [AgentWaitOptions](#agentwaitoptions) — `signal` stops the read locally (the submission keeps running; a durable stop is `abort()`), and `onEvent` streams chunks while waiting.
+- Internally this is `wait()` plus one `history()` read. Use those primitives directly when you only need the outcome, or when you already hold the materialized conversation via `observe()` — `readSubmissionReply()` applies to its state with no extra fetch.
 
 ## `wait()`
 
@@ -161,10 +161,10 @@ Awaits the admitted submission’s completion by following the conversation’s 
 
 The wait is an observer, not a driver: if the waiting process disappears, the submission still settles server-side, and the settlement is durably recorded on the conversation. Recover the outcome by calling `wait()` again with the same admission, or by reading it from `history()`/`observe()`.
 
-* Resolves `void` when the submission settles `completed`.
-* Rejects with [FlueExecutionError](https://flueframework.com/docs/sdk/errors/#flueexecutionerror) (`failure: 'failed'` or `'aborted'`) when it settles failed or aborted; the error’s `error` property carries the serialized failure detail when the server recorded one.
-* Rejects with `FlueExecutionError` (`failure: 'terminal_event_missing'`) when the stream ends without this submission’s settlement.
-* Rejects with the signal’s reason when `options.signal` aborts (a `DOMException` named `AbortError` when the abort carried no reason).
+- Resolves `void` when the submission settles `completed`.
+- Rejects with [FlueExecutionError](https://flueframework.com/docs/sdk/errors/#flueexecutionerror) (`failure: 'failed'` or `'aborted'`) when it settles failed or aborted; the error’s `error` property carries the serialized failure detail when the server recorded one.
+- Rejects with `FlueExecutionError` (`failure: 'terminal_event_missing'`) when the stream ends without this submission’s settlement.
+- Rejects with the signal’s reason when `options.signal` aborts (a `DOMException` named `AbortError` when the abort carried no reason).
 
 The agent’s reply is not returned — settlement chunks carry only the outcome, which makes `wait()` the cheaper call when the outcome is all you need. For the reply, use [read()](#read), or extract it from a snapshot yourself with [readSubmissionReply()](#readsubmissionreply).
 
@@ -248,13 +248,13 @@ A complete materialized conversation read at a durable-stream offset.
 ```ts
 interface FlueConversationMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
-  purpose: 'user' | 'assistant' | 'dispatch' | 'advisory';
-  display: 'visible' | 'hidden' | 'diagnostic';
+  role: "user" | "assistant" | "system";
+  purpose: "user" | "assistant" | "dispatch" | "advisory";
+  display: "visible" | "hidden" | "diagnostic";
   submissionId?: string;
   turnId?: string;
   signal?: { tagName?: string; attributes?: Record<string, string> };
-  settlement?: { outcome: 'failed' | 'aborted' };
+  settlement?: { outcome: "failed" | "aborted" };
   parts: FlueConversationPart[];
   metadata?: Record<string, unknown>;
 }
@@ -278,21 +278,21 @@ One message in a materialized conversation. An assistant message is one whole re
 
 ```ts
 type FlueConversationPart =
-  | { type: 'text'; text: string; state: 'streaming' | 'done' }
-  | { type: 'reasoning'; text: string; state: 'streaming' | 'done' }
+  | { type: "text"; text: string; state: "streaming" | "done" }
+  | { type: "reasoning"; text: string; state: "streaming" | "done" }
   | { type: `data-${string}`; data: unknown }
   | {
-      type: 'file';
+      type: "file";
       mediaType: string;
       id?: string;
       size?: number;
       url?: string;
       filename?: string;
     }
-  | ({ type: 'dynamic-tool'; toolName: string; toolCallId: string } & (
-      | { state: 'input-available'; input: unknown }
-      | { state: 'output-available'; input: unknown; output: unknown; durationMs?: number }
-      | { state: 'output-error'; input: unknown; errorText: string; durationMs?: number }
+  | ({ type: "dynamic-tool"; toolName: string; toolCallId: string } & (
+      | { state: "input-available"; input: unknown }
+      | { state: "output-available"; input: unknown; output: unknown; durationMs?: number }
+      | { state: "output-error"; input: unknown; errorText: string; durationMs?: number }
     ));
 ```
 
@@ -310,7 +310,7 @@ One renderable part of a message. A part only ever carries materialized content 
 ```ts
 interface FlueConversationSettlement {
   submissionId: string;
-  outcome: 'completed' | 'failed' | 'aborted';
+  outcome: "completed" | "failed" | "aborted";
   error?: unknown;
 }
 ```
@@ -320,7 +320,7 @@ Terminal outcome of one tracked agent submission within the conversation. `error
 ## `readSubmissionReply()`
 
 ```ts
-import { readSubmissionReply } from '@flue/sdk';
+import { readSubmissionReply } from "@flue/sdk";
 
 function readSubmissionReply(
   conversation: { messages: FlueConversationMessage[] },
@@ -343,9 +343,9 @@ const reply = readSubmissionReply(state, admission.submissionId);
 
 The reply is the final assistant message stamped with the given `submissionId`. A submission that joined a busy response settles under the host’s response, so when the submission produced no assistant message of its own, the conversation’s last assistant message is the coalesced reply that answered it — prefer this helper over hand-picking `messages.at(-1)`, which silently reads the wrong message on a busy conversation.
 
-* `text` — the reply’s text parts joined with blank lines; `''` when none.
-* `data` — named client data parts (`useDataWriter`) on the reply message, keyed by part name, each in emit order.
-* `metadata` — agent-authored response metadata, when present.
+- `text` — the reply’s text parts joined with blank lines; `''` when none.
+- `data` — named client data parts (`useDataWriter`) on the reply message, keyed by part name, each in emit order.
+- `metadata` — agent-authored response metadata, when present.
 
 The same projection backs the runtime’s `init().read()`, so a reply read over HTTP and one read in-process agree.
 
@@ -359,10 +359,10 @@ Observes the materialized conversation across history catch-up and live updates.
 
 On start, the observation reads one history snapshot, publishes it, then follows the conversation’s updates stream from the snapshot’s offset, reducing each chunk into the maintained [FlueConversationState](#flueconversationstate). Failure handling:
 
-* A stream failure or unexpected end publishes phase `connecting` (with the error) and retries with exponential backoff — 1 s doubling per attempt, capped at 30 s — rehydrating a fresh snapshot rather than resuming incrementally. The attempt counter resets on every applied chunk and successful hydration.
-* HTTP 400, 401, and 403 are fatal: phase `error`, no automatic retry. `refresh()` tries again.
-* A 404 on the history read publishes phase `absent` (the conversation does not exist yet). The observation does not poll for it appearing; call `refresh()` to re-check.
-* Aborting `options.signal` or calling `close()` publishes the terminal phase `closed`.
+- A stream failure or unexpected end publishes phase `connecting` (with the error) and retries with exponential backoff — 1 s doubling per attempt, capped at 30 s — rehydrating a fresh snapshot rather than resuming incrementally. The attempt counter resets on every applied chunk and successful hydration.
+- HTTP 400, 401, and 403 are fatal: phase `error`, no automatic retry. `refresh()` tries again.
+- A 404 on the history read publishes phase `absent` (the conversation does not exist yet). The observation does not poll for it appearing; call `refresh()` to re-check.
+- Aborting `options.signal` or calling `close()` publishes the terminal phase `closed`.
 
 Chunk application is safe under at-least-once redelivery: every chunk carries a monotonic position, and chunks at or below the last applied position are dropped, so a replayed batch (an SSE reconnect) never double-applies.
 
@@ -387,7 +387,7 @@ interface AgentConversationObserveOptions {
 ### `ConversationLiveMode`
 
 ```ts
-type ConversationLiveMode = 'long-poll' | 'sse';
+type ConversationLiveMode = "long-poll" | "sse";
 ```
 
 | Mode      | Description                                                    |
@@ -437,7 +437,12 @@ interface AgentConversationObservationSnapshot {
 
 ```ts
 type AgentConversationObservationPhase =
-  'loading' | 'connecting' | 'live' | 'absent' | 'error' | 'closed';
+  | "loading"
+  | "connecting"
+  | "live"
+  | "absent"
+  | "error"
+  | "closed";
 ```
 
 | Phase      | Description                                                                                       |
@@ -477,16 +482,16 @@ Current page: [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Agent SDK
 
-* [Overview](https://flueframework.com/docs/sdk/overview/)
-* [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/)
-* [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
-* [Events](https://flueframework.com/docs/sdk/events/)
-* [Errors](https://flueframework.com/docs/sdk/errors/)
+- [Overview](https://flueframework.com/docs/sdk/overview/)
+- [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/)
+- [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
+- [Events](https://flueframework.com/docs/sdk/events/)
+- [Errors](https://flueframework.com/docs/sdk/errors/)

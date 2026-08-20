@@ -21,7 +21,7 @@ async function figmaFetch(env: Env, path: string, init: RequestInit = {}): Promi
     ...init,
     headers: {
       Authorization: `Bearer ${requireSecret(env, "FIGMA_TOKEN")}`,
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
   const text = await res.text();

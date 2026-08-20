@@ -21,17 +21,17 @@ flue add channel github
 The blueprint installs `@flue/github` and the official `@octokit/rest` SDK. It creates `<source-root>/channels/github.ts` with a named `channel`, a project-owned Octokit `client`, and an issue-comment tool, then wires that tool into an agent. Adapt the subscribed events, dispatched message, and tool to the application.
 
 ```ts
-import { Octokit } from '@octokit/rest';
-import { createGitHubChannel } from '@flue/github';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
+import { Octokit } from "@octokit/rest";
+import { createGitHubChannel } from "@flue/github";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 export const channel = createGitHubChannel({
   webhookSecret: process.env.GITHUB_WEBHOOK_SECRET!,
   async webhook({ delivery }) {
-    if (delivery.name !== 'issue_comment' || delivery.payload.action !== 'created') return;
+    if (delivery.name !== "issue_comment" || delivery.payload.action !== "created") return;
     const { repository, issue, comment, sender, installation } = delivery.payload;
     const issueRef = {
       owner: repository.owner.login,
@@ -50,8 +50,8 @@ export const channel = createGitHubChannel({
         title: issue.title,
       },
       message: {
-        kind: 'signal',
-        type: 'github.issue_comment.created',
+        kind: "signal",
+        type: "github.issue_comment.created",
         body: comment.body,
         attributes: {
           deliveryId: delivery.deliveryId,
@@ -76,19 +76,19 @@ A newly created issue comment is admitted to the agent bound to that repository 
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as github } from './channels/github.ts';
+import { channel as github } from "./channels/github.ts";
 
-app.route('/channels/github', github.route());
+app.route("/channels/github", github.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/github` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                | Purpose                                              |
-| ----------------------- | ---------------------------------------------------- |
-| GITHUB\_WEBHOOK\_SECRET | **Required** — Verifies inbound deliveries.          |
-| GITHUB\_TOKEN           | **Required** — Authenticates outbound Octokit calls. |
+| Variable              | Purpose                                              |
+| --------------------- | ---------------------------------------------------- |
+| GITHUB_WEBHOOK_SECRET | **Required** — Verifies inbound deliveries.          |
+| GITHUB_TOKEN          | **Required** — Authenticates outbound Octokit calls. |
 
 It installs `@flue/github` for verified ingress and the official `@octokit/rest` SDK for outbound API calls. It creates `src/channels/github.ts` with named `channel` and `client` exports.
 
@@ -103,11 +103,11 @@ If `flue()` is mounted beneath an outer prefix, include that prefix. Set the con
 ## Channel module
 
 ```ts
-import { createGitHubChannel } from '@flue/github';
-import { defineTool, dispatch } from '@flue/runtime';
-import { Octokit } from '@octokit/rest';
-import * as v from 'valibot';
-import { Assistant } from '../agents/assistant.ts';
+import { createGitHubChannel } from "@flue/github";
+import { defineTool, dispatch } from "@flue/runtime";
+import { Octokit } from "@octokit/rest";
+import * as v from "valibot";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -121,7 +121,7 @@ export const channel = createGitHubChannel({
     // `delivery.name` is the X-GitHub-Event value and narrows `delivery.payload`
     // to the native @octokit/webhooks-types event. Filtering is application
     // policy: subscribe to the events you want in GitHub and branch here.
-    if (delivery.name === 'issue_comment' && delivery.payload.action === 'created') {
+    if (delivery.name === "issue_comment" && delivery.payload.action === "created") {
       const { repository, issue, comment, sender, installation } = delivery.payload;
       const issueRef = {
         owner: repository.owner.login,
@@ -139,8 +139,8 @@ export const channel = createGitHubChannel({
           title: issue.title,
         },
         message: {
-          kind: 'signal',
-          type: 'github.issue_comment.created',
+          kind: "signal",
+          type: "github.issue_comment.created",
           body: comment.body,
           attributes: {
             deliveryId: delivery.deliveryId,
@@ -157,7 +157,7 @@ export const channel = createGitHubChannel({
       return;
     }
 
-    if (delivery.name === 'pull_request_review_comment' && delivery.payload.action === 'created') {
+    if (delivery.name === "pull_request_review_comment" && delivery.payload.action === "created") {
       const { repository, pull_request, comment, sender, installation } = delivery.payload;
       const issueRef = {
         owner: repository.owner.login,
@@ -175,8 +175,8 @@ export const channel = createGitHubChannel({
           title: pull_request.title,
         },
         message: {
-          kind: 'signal',
-          type: 'github.pull_request_review_comment.created',
+          kind: "signal",
+          type: "github.pull_request_review_comment.created",
           body: comment.body,
           attributes: {
             deliveryId: delivery.deliveryId,
@@ -203,8 +203,8 @@ export const channel = createGitHubChannel({
 
 export function commentOnIssue(ref: { owner: string; repo: string; issueNumber: number }) {
   return defineTool({
-    name: 'comment_on_github_issue',
-    description: 'Comment on the GitHub issue or pull request bound to this agent.',
+    name: "comment_on_github_issue",
+    description: "Comment on the GitHub issue or pull request bound to this agent.",
     input: v.object({ body: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data: { body } }) {
       const result = await client.rest.issues.createComment({
@@ -224,10 +224,10 @@ Every verified non-ping delivery is forwarded with its native `@octokit/webhooks
 ## Bind the tool
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { commentOnIssue } from '../channels/github.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { commentOnIssue } from "../channels/github.ts";
 
 const initialData = v.object({
   owner: v.string(),
@@ -238,9 +238,9 @@ const initialData = v.object({
 });
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the GitHub channel dispatch.');
+  if (!data) throw new Error("This agent is created by the GitHub channel dispatch.");
   useTool(commentOnIssue(data));
   return `Review the issue and post a concise triage comment when appropriate. "${data.title}" was opened by ${data.openedBy}.`;
 }
@@ -262,75 +262,75 @@ Current page: [GitHub](https://flueframework.com/docs/ecosystem/channels/github/
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

@@ -4,15 +4,17 @@ import * as v from "valibot";
 
 type RpcCallable = Record<string, (input: unknown) => Promise<unknown>>;
 
+const inputSchema = v.object({
+  method: v.picklist(["analyzeSentiment", "clusterFeedback"]),
+  args: v.optional(v.unknown()),
+});
+
 export const sentimentAnalysisTool = defineTool({
   name: "sentiment_analysis_tool",
   description:
     "Call methods on the sentiment-analysis-tool service via its RPC binding (SENTIMENT_ANALYSIS_TOOL). Methods: analyzeSentiment, clusterFeedback. Pass `method` (one of those names) and `args` (an object matching the tool method input).",
-  input: v.object({
-    method: v.picklist(["analyzeSentiment", "clusterFeedback"]),
-    args: v.optional(v.unknown()),
-  }),
-  output: v.any(),
+  input: { parse: (raw: unknown) => v.parse(inputSchema, raw) },
+  output: { parse: (raw: unknown) => raw as Record<string, unknown> },
   async run({ data, log }) {
     const rpc = (env as unknown as { SENTIMENT_ANALYSIS_TOOL: RpcCallable })
       .SENTIMENT_ANALYSIS_TOOL;

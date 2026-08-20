@@ -9,8 +9,7 @@ import {
   RosterStrip,
   StageBadge,
 } from "./components";
-import { HitlWidget } from "./hitl";
-import { href } from "./router";
+
 import type { AgentRow, ConversationSummary } from "./types";
 
 type Filter = "all" | "running" | "needs-review" | "completed";

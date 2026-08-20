@@ -17,13 +17,13 @@ This guide covers defining custom tools and mounting them with `useTool`, the fi
 A tool definition has four parts: a `name` the model calls it by, a `description` that teaches the model when to use it, an optional `input` schema for its arguments, and a `run` function containing your code. Define it with `defineTool(...)`:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { orders } from '../shared/orders.ts';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
+import { orders } from "../shared/orders.ts";
 
 export const lookupOrder = defineTool({
-  name: 'lookup_order',
-  description: 'Look up one order by id and return its current status.',
+  name: "lookup_order",
+  description: "Look up one order by id and return its current status.",
   input: v.object({ orderId: v.string() }),
   async run({ data }) {
     const order = await orders.get(data.orderId);
@@ -35,14 +35,14 @@ export const lookupOrder = defineTool({
 Then mount it in an agent with the `useTool` hook:
 
 ```ts
-'use agent';
-import { useModel, useTool } from '@flue/runtime';
-import { lookupOrder } from '../tools/lookup-order.ts';
+"use agent";
+import { useModel, useTool } from "@flue/runtime";
+import { lookupOrder } from "../tools/lookup-order.ts";
 
 export function OrderAssistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   useTool(lookupOrder);
-  return 'Help customers check the status of their orders.';
+  return "Help customers check the status of their orders.";
 }
 ```
 
@@ -60,8 +60,8 @@ The model reads the tool’s name, description, and input schema; when it decide
 
 ```ts
 const checkInventory = defineTool({
-  name: 'check_inventory',
-  description: 'Check the stock level for one SKU.',
+  name: "check_inventory",
+  description: "Check the stock level for one SKU.",
   input: v.object({ sku: v.string() }),
   output: v.object({ inStock: v.number(), warehouse: v.string() }),
   async run({ data }) {
@@ -74,9 +74,9 @@ const checkInventory = defineTool({
 
 **The rest of the context.** Alongside `data`, every `run` receives:
 
-* `signal` — an `AbortSignal` for the call. Pass it to your own async work so a cancelled tool call stops promptly. A `run` that ignores the signal cannot wedge the agent: when the signal fires, the runtime abandons the await — the call fails with an `AbortError` saying the work may still be running, and the orphaned promise’s eventual result is discarded.
-* `log` — progress logging (`log.info(...)`, `log.warn(...)`, `log.error(...)`) for long-running tools. Lines stream into the conversation as events your application can observe; they are not part of the result and the model never sees them.
-* `toolCallId` — the id of this specific call, the same id carried on the call’s conversation events. Use it to correlate side effects with the call that raised them.
+- `signal` — an `AbortSignal` for the call. Pass it to your own async work so a cancelled tool call stops promptly. A `run` that ignores the signal cannot wedge the agent: when the signal fires, the runtime abandons the await — the call fails with an `AbortError` saying the work may still be running, and the orphaned promise’s eventual result is discarded.
+- `log` — progress logging (`log.info(...)`, `log.warn(...)`, `log.error(...)`) for long-running tools. Lines stream into the conversation as events your application can observe; they are not part of the result and the model never sees them.
+- `toolCallId` — the id of this specific call, the same id carried on the call’s conversation events. Use it to correlate side effects with the call that raised them.
 
 Optional flags on the definition extend the context further: `harness: true` adds `harness` and `durable: true` adds `step`, both covered below. The full contract lives in the [defineTool reference](https://flueframework.com/docs/reference/agent-api/#definetool).
 
@@ -103,26 +103,26 @@ A sandbox adapter can replace this set with its own — see [Sandbox-provided to
 
 An ordinary tool is a pure function of its input: data in, result out. Declare `harness: true` when a tool needs to reach back into the agent’s own runtime — its sandbox, or the model itself. The `run` function then receives `harness`, the tool’s interface to both:
 
-* `harness.sandbox` — the agent’s live environment: `readFile`, `writeFile`, `exec`, and the other [sandbox verbs](https://flueframework.com/docs/reference/agent-api/#harnesssandbox), touched directly with no conversation record. Throws when the agent declared no [sandbox](https://flueframework.com/docs/guide/sandboxes/).
-* `harness.prompt(text, options?)` — run a model operation in the harness’s own scratch conversation. Repeated calls continue it, so a later prompt sees what earlier calls established. Pass `options.result` (a Valibot schema) to require validated structured data, or `options.tools` to offer extra tools for just that operation.
+- `harness.sandbox` — the agent’s live environment: `readFile`, `writeFile`, `exec`, and the other [sandbox verbs](https://flueframework.com/docs/reference/agent-api/#harnesssandbox), touched directly with no conversation record. Throws when the agent declared no [sandbox](https://flueframework.com/docs/guide/sandboxes/).
+- `harness.prompt(text, options?)` — run a model operation in the harness’s own scratch conversation. Repeated calls continue it, so a later prompt sees what earlier calls established. Pass `options.result` (a Valibot schema) to require validated structured data, or `options.tools` to offer extra tools for just that operation.
 
 A harness tool can stage inputs, run focused model work, and validate the result behind one tool call:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
 
-const Report = v.object({ riskLevel: v.picklist(['low', 'medium', 'high']), summary: v.string() });
+const Report = v.object({ riskLevel: v.picklist(["low", "medium", "high"]), summary: v.string() });
 
 export const reviewContract = defineTool({
-  name: 'review_contract',
-  description: 'Review one supplied contract and return a structured risk report.',
+  name: "review_contract",
+  description: "Review one supplied contract and return a structured risk report.",
   input: v.object({ contract: v.string() }),
   harness: true,
   async run({ harness, data }) {
-    await harness.sandbox.writeFile('contract.md', data.contract);
+    await harness.sandbox.writeFile("contract.md", data.contract);
     const { data: report } = await harness.prompt(
-      'Review contract.md for non-standard terms and assess the risk.',
+      "Review contract.md for non-standard terms and assess the risk.",
       { result: Report },
     );
     return { output: report };
@@ -139,17 +139,17 @@ When a process crashes mid-turn, Flue recovers the conversation from its durable
 For work that must complete — a payment, a multi-step sync, a provisioning job — declare the tool `durable: true`. That opts it into a different contract: `run` receives `step`, and every side effect goes through `step.do(name, fn)`:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { billing, projects, DEFAULT_PROJECTS } from '../shared/provisioning.ts';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
+import { billing, projects, DEFAULT_PROJECTS } from "../shared/provisioning.ts";
 
 export const provisionWorkspace = defineTool({
-  name: 'provision_workspace',
-  description: 'Provision a customer workspace: create the tenant, then seed each default project.',
+  name: "provision_workspace",
+  description: "Provision a customer workspace: create the tenant, then seed each default project.",
   input: v.object({ customerId: v.string() }),
   durable: true,
   async run({ data, step }) {
-    const tenant = await step.do('create-tenant', () => billing.createTenant(data.customerId));
+    const tenant = await step.do("create-tenant", () => billing.createTenant(data.customerId));
     for (const project of DEFAULT_PROJECTS) {
       await step.do(`seed:${project.name}`, () => projects.seed(tenant.id, project));
     }
@@ -162,10 +162,10 @@ export const provisionWorkspace = defineTool({
 
 Four rules:
 
-* **Everything effectful goes in a step.** Code between steps re-executes on recovery, so keep it cheap and effect-free — derive values, branch, loop.
-* **Names identify the work.** Derive them deterministically (`seed:${project.name}`), never from randomness or timing. Reusing a name within one call throws.
-* **Values are JSON and should stay small.** Store large artifacts in the sandbox and record a pointer.
-* **Steps are exactly-once-recorded, at-least-once-executed.** A crash in the narrow window between a step finishing and its record landing re-runs that one step, so steps around external effects should be individually idempotent.
+- **Everything effectful goes in a step.** Code between steps re-executes on recovery, so keep it cheap and effect-free — derive values, branch, loop.
+- **Names identify the work.** Derive them deterministically (`seed:${project.name}`), never from randomness or timing. Reusing a name within one call throws.
+- **Values are JSON and should stay small.** Store large artifacts in the sandbox and record a pointer.
+- **Steps are exactly-once-recorded, at-least-once-executed.** A crash in the narrow window between a step finishing and its record landing re-runs that one step, so steps around external effects should be individually idempotent.
 
 Step records are operational bookkeeping: the model sees only the tool’s final result, and step progress surfaces live as the call’s log events. A thrown error is not an interruption — like any tool, a durable tool that throws settles the call as a tool error the model sees, and nothing retries automatically. Steps are scoped to one call: when the model invokes the tool again, they run fresh. The flags compose — a `durable: true, harness: true` tool receives both `step` and `harness`; wrap `harness.prompt(...)` in a step so recovery doesn’t re-prompt. See [Durability](https://flueframework.com/docs/guide/durability/#durable-tools-and-stepdo) for how this fits the wider recovery model.
 
@@ -174,30 +174,30 @@ Step records are operational bookkeeping: the model sees only the tool’s final
 The agent function re-renders before every model call, and each render declares its tool set from scratch. That makes a tool’s _presence_ just another piece of program logic: wrap `useTool` in a condition, and the tool exists only in the renders where the condition holds. Gate it on [persistent state](https://flueframework.com/docs/guide/agent-hooks/#persisted-state) and the agent can unlock its own capabilities:
 
 ```ts
-'use agent';
-import { useModel, usePersistentState, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { approvals } from '../shared/approvals.ts';
-import { publishRelease } from '../tools/publish-release.ts';
+"use agent";
+import { useModel, usePersistentState, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { approvals } from "../shared/approvals.ts";
+import { publishRelease } from "../tools/publish-release.ts";
 
 export function ReleaseManager() {
-  useModel('anthropic/claude-sonnet-4-6');
-  const [approved, setApproved] = usePersistentState('approved', false);
+  useModel("anthropic/claude-sonnet-4-6");
+  const [approved, setApproved] = usePersistentState("approved", false);
 
   useTool({
-    name: 'record_approval',
-    description: 'Record an operator approval code for this release.',
+    name: "record_approval",
+    description: "Record an operator approval code for this release.",
     input: v.object({ code: v.string() }),
     async run({ data }) {
-      if (!(await approvals.verify(data.code))) return 'Invalid approval code.';
+      if (!(await approvals.verify(data.code))) return "Invalid approval code.";
       setApproved(true);
-      return 'Approval recorded. The publish tool is now available.';
+      return "Approval recorded. The publish tool is now available.";
     },
   });
 
   if (approved) useTool(publishRelease);
 
-  return 'Prepare the release. Publishing unlocks once an operator approves.';
+  return "Prepare the release. Publishing unlocks once an operator approves.";
 }
 ```
 
@@ -214,27 +214,27 @@ A tool’s arguments are model-selected inputs, not an authorization boundary. Y
 For an agent that receives dispatched, per-customer events — a support-system webhook, a chat platform message — carry the authorized identifier your application already validated in the delivered signal’s `attributes`, and read it with `useDelivery()` rather than trusting a model-supplied value:
 
 ```ts
-'use agent';
-import { useDelivery, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { orders } from '../shared/orders.ts';
+"use agent";
+import { useDelivery, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { orders } from "../shared/orders.ts";
 
 export function CustomerOrders() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const delivery = useDelivery();
-  const customerId = delivery.kind === 'signal' ? delivery.attributes?.customerId : undefined;
+  const customerId = delivery.kind === "signal" ? delivery.attributes?.customerId : undefined;
 
   useTool({
-    name: 'lookup_customer_order',
-    description: 'Look up one order belonging to this customer.',
+    name: "lookup_customer_order",
+    description: "Look up one order belonging to this customer.",
     input: v.object({ orderId: v.string() }),
     async run({ data }) {
       const status = customerId ? await orders.getStatus(customerId, data.orderId) : undefined;
-      return status ?? 'No accessible order was found.';
+      return status ?? "No accessible order was found.";
     },
   });
 
-  return 'Help this customer check the status of their orders.';
+  return "Help this customer check the status of their orders.";
 }
 ```
 
@@ -248,11 +248,11 @@ Remote [MCP](https://modelcontextprotocol.io) servers plug into this same tool s
 
 ## Next steps
 
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — the hook model that `useTool` belongs to, including persistent state and custom hooks.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/) — the full `defineTool`, `useTool`, `ToolContext`, and harness contracts.
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — the environment that brings the built-in file and shell tools.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) — delegate focused work through the built-in `task` tool.
-* [Durability](https://flueframework.com/docs/guide/durability/) — how conversations, state, and durable tool steps are recovered.
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — the hook model that `useTool` belongs to, including persistent state and custom hooks.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/) — the full `defineTool`, `useTool`, `ToolContext`, and harness contracts.
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — the environment that brings the built-in file and shell tools.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) — delegate focused work through the built-in `task` tool.
+- [Durability](https://flueframework.com/docs/guide/durability/) — how conversations, state, and durable tool steps are recovered.
 
 ## Docs Navigation
 
@@ -260,48 +260,48 @@ Current page: [Tools](https://flueframework.com/docs/guide/tools/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

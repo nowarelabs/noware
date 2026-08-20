@@ -30,28 +30,32 @@ const field = v.object({
   placeholder: v.optional(v.string()),
 });
 
+const inputSchema = v.object({
+  conversationId: v.string(),
+  type: v.picklist(["approve-reject", "choose-option", "pr-review", "structured-form", "alert"]),
+  title: v.string(),
+  summary: v.optional(v.string()),
+  payload: v.optional(
+    v.object({
+      options: v.optional(v.array(option)),
+      fields: v.optional(v.array(field)),
+      prRef: v.optional(v.string()),
+      severity: v.optional(v.picklist(["info", "warning", "critical"])),
+    }),
+  ),
+});
+
+const outputSchema = v.object({
+  hitlId: v.string(),
+  status: v.picklist(["blocked_on_human"]),
+});
+
 export const requestHumanInputTool = defineTool({
   name: "request_human_input",
   description:
     'Pause the pipeline for a human decision. Returns a hitlId the human resolution references. The human response arrives as a user message prefixed "[HITL resolved]" and is delivered with hitlId, type, and payload so you can continue. Do NOT guess or continue past a decision the human must make - call this and stop.',
-  input: v.object({
-    conversationId: v.string(),
-    type: v.picklist(["approve-reject", "choose-option", "pr-review", "structured-form", "alert"]),
-    title: v.string(),
-    summary: v.optional(v.string()),
-    payload: v.optional(
-      v.object({
-        options: v.optional(v.array(option)),
-        fields: v.optional(v.array(field)),
-        prRef: v.optional(v.string()),
-        severity: v.optional(v.picklist(["info", "warning", "critical"])),
-      }),
-    ),
-  }),
-  output: v.object({
-    hitlId: v.string(),
-    status: v.picklist(["blocked_on_human"]),
-  }),
+  input: { parse: (raw: unknown) => v.parse(inputSchema, raw) },
+  output: { parse: (raw: unknown) => v.parse(outputSchema, raw) },
   async run({ data, log }) {
     const id = await hitlIdFor(data.conversationId, data.type, data.title);
 
@@ -82,6 +86,6 @@ export const requestHumanInputTool = defineTool({
       type: data.type,
       conversationId: data.conversationId,
     });
-    return { output: { hitlId: id, status: "blocked_on_human" as const } };
+    return { hitlId: id, status: "blocked_on_human" as const };
   },
 });

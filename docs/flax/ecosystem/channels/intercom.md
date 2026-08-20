@@ -21,17 +21,17 @@ flue add channel intercom
 The Intercom blueprint installs `@flue/intercom` and the official `intercom-client` SDK, creates a project-owned client factory at the source-root `intercom-client.ts`, and creates `channels/intercom.ts`. It also updates the selected agent to bind a conversation-retrieval tool to the verified workspace and conversation.
 
 ```ts
-import { createIntercomChannel, type IntercomConversationRef } from '@flue/intercom';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createIntercomClient } from '../intercom-client.ts';
+import { createIntercomChannel, type IntercomConversationRef } from "@flue/intercom";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createIntercomClient } from "../intercom-client.ts";
 
-export const client = createIntercomClient(process.env.INTERCOM_ACCESS_TOKEN!, { region: 'us' });
+export const client = createIntercomClient(process.env.INTERCOM_ACCESS_TOKEN!, { region: "us" });
 
 export const channel = createIntercomChannel({
   clientSecret: process.env.INTERCOM_CLIENT_SECRET!,
   async webhook({ notification }) {
-    if (notification.topic !== 'conversation.user.replied') return;
+    if (notification.topic !== "conversation.user.replied") return;
     const conversationId = conversationIdFromItem(notification.data.item);
     if (!conversationId) return;
 
@@ -47,8 +47,8 @@ export const channel = createIntercomChannel({
         conversationId: conversation.conversationId,
       },
       message: {
-        kind: 'signal',
-        type: 'intercom.conversation.user.replied',
+        kind: "signal",
+        type: "intercom.conversation.user.replied",
         // The conversation item is Intercom's own message payload; it has no
         // single flat text field, so it travels as the body verbatim.
         body: JSON.stringify(notification.data.item),
@@ -70,21 +70,21 @@ The abridged example shows one dispatched topic and omits the generated environm
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as intercom } from './channels/intercom.ts';
+import { channel as intercom } from "./channels/intercom.ts";
 
-app.route('/channels/intercom', intercom.route());
+app.route("/channels/intercom", intercom.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/intercom` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                 | Purpose                                                               |
-| ------------------------ | --------------------------------------------------------------------- |
-| INTERCOM\_CLIENT\_SECRET | **Required** — Verifies inbound notifications.                        |
-| INTERCOM\_ACCESS\_TOKEN  | **Required** — Authenticates outbound API calls.                      |
-| INTERCOM\_WORKSPACE\_ID  | **Required** — Restricts resource identity to one Intercom workspace. |
-| INTERCOM\_REGION         | **Optional** — Selects us, eu, or au; defaults to us.                 |
+| Variable               | Purpose                                                               |
+| ---------------------- | --------------------------------------------------------------------- |
+| INTERCOM_CLIENT_SECRET | **Required** — Verifies inbound notifications.                        |
+| INTERCOM_ACCESS_TOKEN  | **Required** — Authenticates outbound API calls.                      |
+| INTERCOM_WORKSPACE_ID  | **Required** — Restricts resource identity to one Intercom workspace. |
+| INTERCOM_REGION        | **Optional** — Selects us, eu, or au; defaults to us.                 |
 
 It installs `@flue/intercom` and the official `intercom-client@7.0.3`. The blueprint creates named `channel` and project-owned `client` exports.
 
@@ -103,25 +103,25 @@ import {
   createIntercomChannel,
   type IntercomConversationRef,
   type JsonValue,
-} from '@flue/intercom';
-import { defineTool, dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createIntercomClient, type IntercomRegion } from '../intercom-client.ts';
+} from "@flue/intercom";
+import { defineTool, dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createIntercomClient, type IntercomRegion } from "../intercom-client.ts";
 
-const workspaceId = requiredEnv('INTERCOM_WORKSPACE_ID');
+const workspaceId = requiredEnv("INTERCOM_WORKSPACE_ID");
 
-export const client = createIntercomClient(requiredEnv('INTERCOM_ACCESS_TOKEN'), {
+export const client = createIntercomClient(requiredEnv("INTERCOM_ACCESS_TOKEN"), {
   region: intercomRegion(),
 });
 
 export const channel = createIntercomChannel({
-  clientSecret: requiredEnv('INTERCOM_CLIENT_SECRET'),
+  clientSecret: requiredEnv("INTERCOM_CLIENT_SECRET"),
 
   // Path: /channels/intercom/webhook (HEAD, POST)
   async webhook({ notification }) {
     switch (notification.topic) {
-      case 'conversation.user.created':
-      case 'conversation.user.replied': {
+      case "conversation.user.created":
+      case "conversation.user.replied": {
         const conversationId = conversationIdFromItem(notification.data.item);
         if (!conversationId) return;
 
@@ -137,7 +137,7 @@ export const channel = createIntercomChannel({
             conversationId: conversation.conversationId,
           },
           message: {
-            kind: 'signal',
+            kind: "signal",
             type: `intercom.${notification.topic}`,
             // The conversation item is Intercom's own message payload; it has no
             // single flat text field, so it travels as the body verbatim.
@@ -159,15 +159,15 @@ export const channel = createIntercomChannel({
 
 export function retrieveConversation(ref: IntercomConversationRef) {
   if (ref.workspaceId !== workspaceId) {
-    throw new TypeError('Expected the configured Intercom workspace.');
+    throw new TypeError("Expected the configured Intercom workspace.");
   }
   return defineTool({
-    name: 'retrieve_intercom_conversation',
-    description: 'Retrieve the current Intercom conversation bound to this agent.',
+    name: "retrieve_intercom_conversation",
+    description: "Retrieve the current Intercom conversation bound to this agent.",
     async run() {
       const conversation = await client.conversations.find({
         conversation_id: ref.conversationId,
-        display_as: 'plaintext',
+        display_as: "plaintext",
       });
       return { output: conversation };
     },
@@ -175,14 +175,14 @@ export function retrieveConversation(ref: IntercomConversationRef) {
 }
 
 function conversationIdFromItem(item: JsonValue): string | undefined {
-  if (!item || typeof item !== 'object' || Array.isArray(item)) return undefined;
-  return typeof item.id === 'string' && item.id.length > 0 ? item.id : undefined;
+  if (!item || typeof item !== "object" || Array.isArray(item)) return undefined;
+  return typeof item.id === "string" && item.id.length > 0 ? item.id : undefined;
 }
 
 function intercomRegion(): IntercomRegion {
-  const value = process.env.INTERCOM_REGION || 'us';
-  if (value === 'us' || value === 'eu' || value === 'au') return value;
-  throw new Error('INTERCOM_REGION must be us, eu, or au.');
+  const value = process.env.INTERCOM_REGION || "us";
+  if (value === "us" || value === "eu" || value === "au") return value;
+  throw new Error("INTERCOM_REGION must be us, eu, or au.");
 }
 
 function requiredEnv(name: string): string {
@@ -203,9 +203,9 @@ The HMAC-verified body already carries `app_id`, so the channel does not re-chec
 Keep the REST client in project code:
 
 ```ts
-import { IntercomClient, IntercomEnvironment } from 'intercom-client';
+import { IntercomClient, IntercomEnvironment } from "intercom-client";
 
-export type IntercomRegion = 'us' | 'eu' | 'au';
+export type IntercomRegion = "us" | "eu" | "au";
 
 export interface IntercomClientOptions {
   region?: IntercomRegion;
@@ -217,11 +217,11 @@ export function createIntercomClient(
   token: string,
   options: IntercomClientOptions = {},
 ): IntercomClient {
-  if (!token) throw new TypeError('Intercom access token must be non-empty.');
+  if (!token) throw new TypeError("Intercom access token must be non-empty.");
   return new IntercomClient({
     token,
-    version: '2.14',
-    environment: environmentForRegion(options.region ?? 'us'),
+    version: "2.14",
+    environment: environmentForRegion(options.region ?? "us"),
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
     ...(options.maxRetries === undefined ? {} : { maxRetries: options.maxRetries }),
   });
@@ -231,11 +231,11 @@ function environmentForRegion(
   region: IntercomRegion,
 ): (typeof IntercomEnvironment)[keyof typeof IntercomEnvironment] {
   switch (region) {
-    case 'us':
+    case "us":
       return IntercomEnvironment.UsProduction;
-    case 'eu':
+    case "eu":
       return IntercomEnvironment.EuProduction;
-    case 'au':
+    case "au":
       return IntercomEnvironment.AuProduction;
   }
 }
@@ -248,10 +248,10 @@ Pin `version: '2.14'`. `intercom-client@7.0.3` generates its REST request and re
 ## Bind the tool
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { retrieveConversation } from '../channels/intercom.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { retrieveConversation } from "../channels/intercom.ts";
 
 const initialData = v.object({
   workspaceId: v.string(),
@@ -259,11 +259,11 @@ const initialData = v.object({
 });
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Intercom channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Intercom channel dispatch.");
   useTool(retrieveConversation(data));
-  return 'Help with the inbound Intercom conversation. Retrieve the current conversation when more context is needed.';
+  return "Help with the inbound Intercom conversation. Retrieve the current conversation when more context is needed.";
 }
 
 Assistant.initialData = initialData;
@@ -294,12 +294,12 @@ Intercom computes HMAC-SHA1 over the exact request body using the developer app 
 
 The callback receives `{ c, notification }`. The notification is Intercom’s own object, with its native field names and nesting:
 
-* `topic` and workspace-scoped `app_id`;
-* nullable `id`;
-* `created_at`, `delivery_attempts`, and `first_sent_at`;
-* provider-native JSON under `data.item`;
-* optional `self`;
-* any unmodeled top-level fields, forwarded unchanged.
+- `topic` and workspace-scoped `app_id`;
+- nullable `id`;
+- `created_at`, `delivery_attempts`, and `first_sent_at`;
+- provider-native JSON under `data.item`;
+- optional `self`;
+- any unmodeled top-level fields, forwarded unchanged.
 
 The envelope is structurally checked, but item fields remain provider-native. Deletion, ticket, conversation-part, and future topics may have different shapes. Do not assume every conversation-related topic has `data.item.id`without validating that topic’s documented payload.
 
@@ -335,75 +335,75 @@ Current page: [Intercom](https://flueframework.com/docs/ecosystem/channels/inter
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

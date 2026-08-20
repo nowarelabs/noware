@@ -21,18 +21,18 @@ flue add channel slack
 The Slack blueprint installs `@flue/slack` and Slack’s official `@slack/web-api` SDK, then creates `channels/slack.ts` in the source-root. It also updates the selected agent to bind the generated thread-reply tool to the verified Slack conversation.
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { createSlackChannel } from '@flue/slack';
-import { WebClient } from '@slack/web-api';
-import { Assistant } from '../agents/assistant.ts';
+import { dispatch } from "@flue/runtime";
+import { createSlackChannel } from "@flue/slack";
+import { WebClient } from "@slack/web-api";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new WebClient(process.env.SLACK_BOT_TOKEN);
 
 export const channel = createSlackChannel({
   signingSecret: process.env.SLACK_SIGNING_SECRET!,
   async events({ payload }) {
-    if (payload.type !== 'event_callback') return;
-    if (payload.event.type !== 'app_mention') return;
+    if (payload.type !== "event_callback") return;
+    if (payload.event.type !== "app_mention") return;
 
     const event = payload.event;
     await dispatch(Assistant, {
@@ -42,8 +42,8 @@ export const channel = createSlackChannel({
         threadTs: event.thread_ts ?? event.ts,
       }),
       message: {
-        kind: 'signal',
-        type: 'slack.app_mention',
+        kind: "signal",
+        type: "slack.app_mention",
         body: event.text,
         attributes: { eventId: payload.event_id },
       },
@@ -59,19 +59,19 @@ The abridged example omits the generated `replyInThread()` tool. The complete bl
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as slack } from './channels/slack.ts';
+import { channel as slack } from "./channels/slack.ts";
 
-app.route('/channels/slack', slack.route());
+app.route("/channels/slack", slack.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/slack` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable               | Purpose                                                    |
-| ---------------------- | ---------------------------------------------------------- |
-| SLACK\_SIGNING\_SECRET | **Required** — Verifies inbound request bytes.             |
-| SLACK\_BOT\_TOKEN      | **Required** — Authenticates outbound Slack Web API calls. |
+| Variable             | Purpose                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| SLACK_SIGNING_SECRET | **Required** — Verifies inbound request bytes.             |
+| SLACK_BOT_TOKEN      | **Required** — Authenticates outbound Slack Web API calls. |
 
 The blueprint installs and configures `@flue/slack` for inbound requests, along with Slack’s official `@slack/web-api` SDK for making outbound API calls. After running the command, you will have a new `src/channels/slack.ts` channel whose webhook routes are served wherever `app.ts` mounts `channel.route()` — conventionally `/channels/slack/*`.
 
@@ -90,19 +90,19 @@ Omitting a callback from `createSlackChannel()` omits its route. Slack URL verif
 ### Events
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { createSlackChannel } from '@flue/slack';
-import { Assistant } from '../agents/assistant.ts';
+import { dispatch } from "@flue/runtime";
+import { createSlackChannel } from "@flue/slack";
+import { Assistant } from "../agents/assistant.ts";
 
 export const channel = createSlackChannel({
   signingSecret: process.env.SLACK_SIGNING_SECRET!,
 
   // Path: /channels/slack/events
   async events({ payload }) {
-    if (payload.type !== 'event_callback') return;
+    if (payload.type !== "event_callback") return;
 
     switch (payload.event.type) {
-      case 'app_mention': {
+      case "app_mention": {
         const event = payload.event;
         const thread = {
           teamId: payload.team_id,
@@ -119,8 +119,8 @@ export const channel = createSlackChannel({
             startedAt: new Date(Number(event.ts) * 1000).toISOString(),
           },
           message: {
-            kind: 'signal',
-            type: 'slack.app_mention',
+            kind: "signal",
+            type: "slack.app_mention",
             body: event.text,
             attributes: { eventId: payload.event_id },
           },
@@ -151,13 +151,13 @@ export const channel = createSlackChannel({
   // Path: /channels/slack/interactions
   async interactions({ payload }) {
     switch (payload.type) {
-      case 'block_actions':
+      case "block_actions":
         await handleActions(payload.actions);
         return;
-      case 'view_submission':
+      case "view_submission":
         return {
-          response_action: 'errors',
-          errors: { email: 'Enter a valid email address.' },
+          response_action: "errors",
+          errors: { email: "Enter a valid email address." },
         };
       default:
         return;
@@ -166,7 +166,7 @@ export const channel = createSlackChannel({
 });
 ```
 
-Interaction payloads preserve Slack’s snake\_case wire fields. `trigger_id`, `response_url`, and view `response_urls` are short-lived capabilities. Keep them in immediate trusted request handling, not a dispatched message, model context, logs, or durable session history.
+Interaction payloads preserve Slack’s snake_case wire fields. `trigger_id`, `response_url`, and view `response_urls` are short-lived capabilities. Keep them in immediate trusted request handling, not a dispatched message, model context, logs, or durable session history.
 
 ### Commands
 
@@ -179,17 +179,17 @@ export const channel = createSlackChannel({
   // Path: /channels/slack/commands
   async commands({ c, payload }) {
     switch (payload.command) {
-      case '/triage':
+      case "/triage":
         await startTriage(payload.text);
-        return c.json({ response_type: 'ephemeral', text: 'Triage started.' });
+        return c.json({ response_type: "ephemeral", text: "Triage started." });
       default:
-        return c.json({ response_type: 'ephemeral', text: 'Unknown command.' });
+        return c.json({ response_type: "ephemeral", text: "Unknown command." });
     }
   },
 });
 ```
 
-Command payloads preserve Slack’s snake\_case wire fields. `trigger_id` and `response_url` are also short-lived capabilities and should remain in immediate trusted request handling.
+Command payloads preserve Slack’s snake_case wire fields. `trigger_id` and `response_url` are also short-lived capabilities and should remain in immediate trusted request handling.
 
 Returning nothing produces an empty `200`. Return JSON-compatible data for a JSON response, or use the Hono context for explicit status, headers, and body. Thrown errors flow through normal Hono error handling. Slack expects prompt acknowledgements, so admit durable work quickly instead of performing slow operations before returning.
 
@@ -198,7 +198,7 @@ Returning nothing produces an empty `200`. Return JSON-compatible data for a JSO
 Outbound Slack behavior belongs to the exported SDK client:
 
 ```ts
-import { WebClient } from '@slack/web-api';
+import { WebClient } from "@slack/web-api";
 
 export const client = new WebClient(process.env.SLACK_BOT_TOKEN);
 ```
@@ -208,13 +208,13 @@ export const client = new WebClient(process.env.SLACK_BOT_TOKEN);
 Use the client to define application-owned tools:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
 
 export function replyInThread(ref: { channelId: string; threadTs: string }) {
   return defineTool({
-    name: 'reply_in_slack_thread',
-    description: 'Reply in the Slack thread bound to this agent.',
+    name: "reply_in_slack_thread",
+    description: "Reply in the Slack thread bound to this agent.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data: { text } }) {
       const result = await client.chat.postMessage({
@@ -231,10 +231,10 @@ export function replyInThread(ref: { channelId: string; threadTs: string }) {
 Bind the destination in trusted code. `data` is the instance’s creation data — recorded once when the dispatch above creates the instance — so the agent reads the structured thread facts with `useInitialData()` instead of parsing them from the instance id:
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { replyInThread } from '../channels/slack.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { replyInThread } from "../channels/slack.ts";
 
 const initialData = v.object({
   channelId: v.string(),
@@ -244,11 +244,11 @@ const initialData = v.object({
 });
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Slack channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Slack channel dispatch.");
   useTool(replyInThread(data));
-  const startedBy = data.startedBy ? ` by <@${data.startedBy}>` : '';
+  const startedBy = data.startedBy ? ` by <@${data.startedBy}>` : "";
   return `Reply in the bound Slack thread when appropriate. This conversation was started${startedBy} at ${data.startedAt}.`;
 }
 
@@ -265,7 +265,7 @@ For Slack Assistant threads, use the SDK directly:
 await client.assistant.threads.setStatus({
   channel_id: channelId,
   thread_ts: threadTs,
-  status: 'is thinking...',
+  status: "is thinking...",
 });
 ```
 
@@ -283,8 +283,8 @@ const stream = client.chatStream({
   recipient_user_id: userId,
 });
 
-await stream.append({ markdown_text: 'First part' });
-await stream.append({ markdown_text: ' and the rest.' });
+await stream.append({ markdown_text: "First part" });
+await stream.append({ markdown_text: " and the rest." });
 await stream.stop();
 ```
 
@@ -304,75 +304,75 @@ Current page: [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

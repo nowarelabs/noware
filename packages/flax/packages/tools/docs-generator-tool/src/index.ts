@@ -23,7 +23,7 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       Authorization: `Bearer ${requireSecret(env, "GITHUB_TOKEN")}`,
-      ...(init.headers ?? {}),
+      ...init.headers,
     },
   });
   const text = await res.text();

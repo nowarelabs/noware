@@ -25,11 +25,11 @@ The agent must be mounted in `app.ts` for the browser to reach it, and the middl
 The hook reconstructs the conversation’s transcript from durable events, then follows new events:
 
 ```tsx
-import { useFlueAgent } from '@flue/react';
-import { useState } from 'react';
+import { useFlueAgent } from "@flue/react";
+import { useState } from "react";
 
 export function Chat({ conversationId }: { conversationId: string }) {
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const agent = useFlueAgent({
     url: `/api/agents/support-assistant/${conversationId}`,
   });
@@ -39,7 +39,7 @@ export function Chat({ conversationId }: { conversationId: string }) {
     const message = input.trim();
     if (!message) return;
 
-    setInput('');
+    setInput("");
     await agent.sendMessage(message);
   }
 
@@ -50,7 +50,7 @@ export function Chat({ conversationId }: { conversationId: string }) {
           <article key={message.id}>
             <strong>{message.role}</strong>
             {message.parts.map((part) =>
-              part.type === 'text' ? <p key={part.text}>{part.text}</p> : null,
+              part.type === "text" ? <p key={part.text}>{part.text}</p> : null,
             )}
           </article>
         ))}
@@ -82,9 +82,9 @@ To observe a conversation that may be created out-of-band after mount — by a s
 For custom headers, a bearer token, or custom `fetch` behavior, create the conversation client yourself and pass it to the hook. Memoize it — a new client instance replaces the session:
 
 ```tsx
-import { useFlueAgent } from '@flue/react';
-import { createFlueClient } from '@flue/sdk';
-import { useMemo } from 'react';
+import { useFlueAgent } from "@flue/react";
+import { createFlueClient } from "@flue/sdk";
+import { useMemo } from "react";
 
 function Chat({ conversationId, token }: { conversationId: string; token: string }) {
   const client = useMemo(
@@ -116,48 +116,48 @@ Current page: [React](https://flueframework.com/docs/guide/react/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

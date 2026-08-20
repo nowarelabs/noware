@@ -20,7 +20,7 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       Authorization: `Bearer ${requireSecret(env, "GITHUB_TOKEN")}`,
-      ...(init.headers ?? {}),
+      ...init.headers,
     },
   });
   const text = await res.text();
@@ -33,11 +33,6 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
   } catch {
     return text;
   }
-}
-
-async function defaultBranch(env: Env, repo: string): Promise<string> {
-  const info = await ghFetch(env, `/repos/${repo}`);
-  return info.default_branch ?? "main";
 }
 
 const SECURITY_HEADERS: Record<string, string> = {

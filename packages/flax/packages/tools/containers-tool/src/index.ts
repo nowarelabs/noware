@@ -25,7 +25,7 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       Authorization: `Bearer ${requireSecret(env, "GITHUB_TOKEN")}`,
-      ...(init.headers ?? {}),
+      ...init.headers,
     },
   });
   const text = await res.text();
@@ -49,7 +49,7 @@ async function k8sFetch(env: Env, path: string, init: RequestInit = {}): Promise
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
       Accept: "application/json",
-      ...(init.headers ?? {}),
+      ...init.headers,
     },
   });
   const text = await res.text();

@@ -14,8 +14,8 @@ Flue emits everything its agents do — model turns, tool calls, structured logs
 
 Flue exposes agent activity on two distinct surfaces:
 
-* The **conversation stream** is the product surface: one conversation’s durable, render-ready messages, data parts, and settlements, consumed over HTTP with [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/) `observe()` / `history()`. [Routing](https://flueframework.com/docs/guide/routing/#reading-the-conversation) covers it.
-* The **runtime event stream** is the operational surface: live activity across every agent in the process — model requests, tool executions, logs, token counts, failures — consumed in process with [observe()](https://flueframework.com/docs/reference/events/#observe) from `@flue/runtime`. That stream is this guide’s subject.
+- The **conversation stream** is the product surface: one conversation’s durable, render-ready messages, data parts, and settlements, consumed over HTTP with [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/) `observe()` / `history()`. [Routing](https://flueframework.com/docs/guide/routing/#reading-the-conversation) covers it.
+- The **runtime event stream** is the operational surface: live activity across every agent in the process — model requests, tool executions, logs, token counts, failures — consumed in process with [observe()](https://flueframework.com/docs/reference/events/#observe) from `@flue/runtime`. That stream is this guide’s subject.
 
 The two APIs share a name but not a shape: the SDK client’s `observe()` maintains one conversation’s materialized message state, while the runtime’s `observe()` delivers raw activity events. Telemetry, metering, and error reporting belong on the runtime stream. The surfaces share correlation identifiers — a conversation message’s `submissionId` matches the runtime events its submission produced.
 
@@ -24,10 +24,10 @@ The two APIs share a name but not a shape: the SDK client’s `observe()` mainta
 `observe()` from `@flue/runtime` registers a global subscriber for all agent activity in the current process. Register it once at startup, at module top level in `app.ts` (or a module `app.ts` imports):
 
 ```ts
-import { observe } from '@flue/runtime';
+import { observe } from "@flue/runtime";
 
 observe((event) => {
-  if (event.type === 'submission_settled' && event.outcome === 'failed') {
+  if (event.type === "submission_settled" && event.outcome === "failed") {
     console.error(
       `[${event.agentName}] submission ${event.submissionId} failed:`,
       event.error?.message,
@@ -40,9 +40,9 @@ The subscriber receives every event from every agent — direct prompts, dispatc
 
 Three rules for subscribers:
 
-* **Stay cheap.** Subscribers run synchronously on the event emission path. Branch on `event.type`, return immediately for activity you don’t consume, and queue substantial async work instead of blocking emission.
-* **Treat events as read-only.** Each delivery is a detached, frozen observation; a subscriber can never alter what other subscribers or the runtime see.
-* **Failures are contained.** A throwing subscriber is logged and skipped — it never halts the agent or other subscribers. Returned promises are observed for rejection but not awaited.
+- **Stay cheap.** Subscribers run synchronously on the event emission path. Branch on `event.type`, return immediately for activity you don’t consume, and queue substantial async work instead of blocking emission.
+- **Treat events as read-only.** Each delivery is a detached, frozen observation; a subscriber can never alter what other subscribers or the runtime see.
+- **Failures are contained.** A throwing subscriber is logged and skipped — it never halts the agent or other subscribers. Returned promises are observed for rejection but not awaited.
 
 The subscription is **isolate-scoped and live-only**: it sees activity emitted in the current process from the moment it registers, with no durable replay and no cross-process aggregation. On Node.js one process hosts all agents, so one registration sees everything. On [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/), each agent conversation runs in its own Durable Object isolate — a subscriber registered from `app.ts` runs in each isolate and sees that isolate’s activity only. One placement caveat, shared with `setProvider()`: [flue run](https://flueframework.com/docs/cli/run/) loads only the agent module, never `app.ts` — register in the agent module when a subscriber must also run under the CLI.
 
@@ -50,24 +50,24 @@ The subscription is **isolate-scoped and live-only**: it sees activity emitted i
 
 Every event carries the event-format version (`v: 3`), a per-context `eventIndex`, a `timestamp`, and the correlation fields that apply to it, including `agentName`, `conversationId`, `instanceId`, `submissionId`, `operationId`, `turnId`, and `taskId`. The event families:
 
-| Events                                           | Activity                                                                                         |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| agent\_start, agent\_end, idle                   | Agent loop lifecycle.                                                                            |
-| submission\_settled                              | A durable submission reached completed, failed, or aborted — the reliable terminal signal.       |
-| operation\_start, operation                      | Prompt, skill, task, shell, and compact operation boundaries, with duration and rolled-up usage. |
-| turn\_start, turn\_request, turn, turn\_messages | Model turns (see [below](#token-usage)).                                                         |
-| message\_\*, text\_delta, thinking\_\*           | Live message and reasoning progress.                                                             |
-| tool\_start, tool                                | Tool execution, correlated by toolCallId.                                                        |
-| task\_start, task                                | Subagent task delegation, with result, error state, and duration.                                |
-| compaction\_start, compaction                    | Context compaction, with message counts and usage.                                               |
-| log                                              | Structured logs written by your tools and hooks (see [below](#tool-activity-and-logs)).          |
+| Events                                        | Activity                                                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| agent_start, agent_end, idle                  | Agent loop lifecycle.                                                                            |
+| submission_settled                            | A durable submission reached completed, failed, or aborted — the reliable terminal signal.       |
+| operation_start, operation                    | Prompt, skill, task, shell, and compact operation boundaries, with duration and rolled-up usage. |
+| turn_start, turn_request, turn, turn_messages | Model turns (see [below](#token-usage)).                                                         |
+| message\_\*, text_delta, thinking\_\*         | Live message and reasoning progress.                                                             |
+| tool_start, tool                              | Tool execution, correlated by toolCallId.                                                        |
+| task_start, task                              | Subagent task delegation, with result, error state, and duration.                                |
+| compaction_start, compaction                  | Context compaction, with message counts and usage.                                               |
+| log                                           | Structured logs written by your tools and hooks (see [below](#tool-activity-and-logs)).          |
 
 Streaming deltas are live progress signals, not authoritative message state; the assistant `message_end` event carries the completed message. Nested errors do not necessarily fail the work that contains them — an agent can recover from a failed turn or tool call — so alert on `submission_settled` outcomes and read nested `isError` events as diagnostic context.
 
 Two properties of the live stream go beyond what is durably recorded:
 
-* **Live observations carry extra detail.** `observe()` delivers each event as a `FlueObservation` — the event plus live-only fields such as normalized tool arguments, effective results, and classified `errorInfo` including the throw-site stack. These exporter-oriented fields are never persisted or replayed.
-* **`turn_request` is in-process only.** It contains the full model-visible request — provider identity, settings, system prompt, messages, and tools — and is delivered to `observe()` subscribers but never persisted or served over HTTP.
+- **Live observations carry extra detail.** `observe()` delivers each event as a `FlueObservation` — the event plus live-only fields such as normalized tool arguments, effective results, and classified `errorInfo` including the throw-site stack. These exporter-oriented fields are never persisted or replayed.
+- **`turn_request` is in-process only.** It contains the full model-visible request — provider identity, settings, system prompt, messages, and tools — and is delivered to `observe()` subscribers but never persisted or served over HTTP.
 
 The [Events Reference](https://flueframework.com/docs/reference/events/) documents every event’s fields and which payloads are stable contract.
 
@@ -85,18 +85,18 @@ Each completed model call emits a `turn` event whose `request` summarizes what w
 Per-agent token metering is a single observer:
 
 ```ts
-import { observe } from '@flue/runtime';
-import { metrics } from './shared/metrics.ts';
+import { observe } from "@flue/runtime";
+import { metrics } from "./shared/metrics.ts";
 
 observe((event) => {
-  if (event.type !== 'turn' || !event.response.usage) return;
+  if (event.type !== "turn" || !event.response.usage) return;
   const { usage } = event.response;
-  metrics.increment('llm.tokens', usage.totalTokens, {
+  metrics.increment("llm.tokens", usage.totalTokens, {
     agent: event.agentName,
     model: event.request.requestedModel,
     purpose: event.purpose, // 'agent' | 'compaction' | 'compaction_prefix'
   });
-  metrics.increment('llm.cost', usage.cost.total, { agent: event.agentName });
+  metrics.increment("llm.cost", usage.cost.total, { agent: event.agentName });
 });
 ```
 
@@ -106,17 +106,17 @@ Usage also rolls up at coarser boundaries: `operation` and `compaction` events c
 
 A `turn` event’s `response` is normalized — `finishReason` and `error` use Flue’s vocabulary regardless of provider. Alongside them, the response carries allowlisted raw provider metadata when the provider attaches it:
 
-* `providerFinishReason` — the provider’s exact finish value before normalization (for example, Workers AI’s `tool_calls` behind the normalized `toolUse`).
-* `gatewayLogId` — the response’s own Cloudflare AI Gateway log id (`cf-aig-log-id`), for correlating a specific turn with its entry in the gateway dashboard.
+- `providerFinishReason` — the provider’s exact finish value before normalization (for example, Workers AI’s `tool_calls` behind the normalized `toolUse`).
+- `gatewayLogId` — the response’s own Cloudflare AI Gateway log id (`cf-aig-log-id`), for correlating a specific turn with its entry in the gateway dashboard.
 
 Both are telemetry only — they never affect execution or replay — and are present only when the provider records them. The [Workers AI provider](https://flueframework.com/docs/guide/models/#cloudflare-workers-ai-cloudflare-only) attaches both today. A diagnostic observer for failed turns reads them directly from the event:
 
 ```ts
-import { observe } from '@flue/runtime';
+import { observe } from "@flue/runtime";
 
 observe((event) => {
-  if (event.type !== 'turn' || !event.isError) return;
-  console.error('model turn failed', {
+  if (event.type !== "turn" || !event.isError) return;
+  console.error("model turn failed", {
     provider: event.request.providerName,
     model: event.request.requestedModel,
     finishReason: event.response.finishReason,
@@ -145,11 +145,11 @@ async run({ data, log }) {
 ```
 
 ```ts
-import { observe } from '@flue/runtime';
-import { logger } from './shared/logger.ts';
+import { observe } from "@flue/runtime";
+import { logger } from "./shared/logger.ts";
 
 observe((event) => {
-  if (event.type !== 'log') return;
+  if (event.type !== "log") return;
   logger.log(event.level, event.message, {
     ...event.attributes,
     conversation: event.conversationId,
@@ -163,15 +163,15 @@ Log lines are runtime events, not conversation content: they never appear in the
 
 For production telemetry, Flue ships integrations with three ecosystems rather than a bundled dashboard:
 
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/) — terminal failures as issues, every log in Sentry Logs, and optional AI traces with content off by default. Add with `flue add tooling sentry`.
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/) — LLM tracing: operations as traces with model, tool, task, and compaction spans plus usage. Add with `flue add tooling braintrust`.
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/) — standards-based GenAI spans, metrics, and logs for any OTel-compatible backend. Add `@flue/opentelemetry` to your OTel SDK setup.
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/) — terminal failures as issues, every log in Sentry Logs, and optional AI traces with content off by default. Add with `flue add tooling sentry`.
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/) — LLM tracing: operations as traces with model, tool, task, and compaction spans plus usage. Add with `flue add tooling braintrust`.
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/) — standards-based GenAI spans, metrics, and logs for any OTel-compatible backend. Add `@flue/opentelemetry` to your OTel SDK setup.
 
 The Sentry and Braintrust [blueprints](https://flueframework.com/docs/cli/add/) generate a source-root module that `app.ts` imports — an event bridge like the ones above, plus provider initialization. Span-producing integrations register through `instrument(...)`, which pairs an observer with an execution interceptor so spans wrap live agent, model, tool, and task execution:
 
 ```ts
-import { createOpenTelemetryInstrumentation } from '@flue/opentelemetry';
-import { instrument } from '@flue/runtime';
+import { createOpenTelemetryInstrumentation } from "@flue/opentelemetry";
+import { instrument } from "@flue/runtime";
 
 instrument(createOpenTelemetryInstrumentation());
 ```
@@ -185,8 +185,8 @@ On the [Cloudflare target](https://flueframework.com/docs/guide/cloudflare-targe
 Agent-shaped spans are built in — with traces enabled, every response’s trace carries them, no wiring needed. To customize the adapter (content policy, redaction), install it yourself once at `app.ts` module scope, which replaces the default:
 
 ```ts
-import { instrument } from '@flue/runtime';
-import { createCloudflareTracing } from '@flue/runtime/cloudflare';
+import { instrument } from "@flue/runtime";
+import { createCloudflareTracing } from "@flue/runtime/cloudflare";
 
 instrument(createCloudflareTracing({ content: false }));
 ```
@@ -205,11 +205,11 @@ Two protections are unconditional: `turn_request` events never leave the process
 
 ## Next steps
 
-* [Events Reference](https://flueframework.com/docs/reference/events/) — the full event vocabulary, envelope fields, and the `observe()` contract.
-* [Routing](https://flueframework.com/docs/guide/routing/) and the [Agent SDK](https://flueframework.com/docs/sdk/overview/) — the conversation stream your UI consumes.
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/#event-hooks) — read usage and stamp response metadata from inside the agent.
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/), [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/), and [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/) — per-integration setup and content policies.
-* [Evals](https://flueframework.com/docs/guide/evals/) — turn observed behavior into scored regression checks.
+- [Events Reference](https://flueframework.com/docs/reference/events/) — the full event vocabulary, envelope fields, and the `observe()` contract.
+- [Routing](https://flueframework.com/docs/guide/routing/) and the [Agent SDK](https://flueframework.com/docs/sdk/overview/) — the conversation stream your UI consumes.
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/#event-hooks) — read usage and stamp response metadata from inside the agent.
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/), [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/), and [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/) — per-integration setup and content policies.
+- [Evals](https://flueframework.com/docs/guide/evals/) — turn observed behavior into scored regression checks.
 
 ## Docs Navigation
 
@@ -217,48 +217,48 @@ Current page: [Observability](https://flueframework.com/docs/guide/observability
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

@@ -56,27 +56,27 @@ An agent function isn’t much on its own. It returns instructions, but a workin
 
 A hook is a plain function that you call inside your agent function’s body to give your agent one new capability. All hooks start with `use`, and the naming is the idea: each one lets your agent _hook into_ a different feature of the Flue runtime:
 
-* [Model](https://flueframework.com/docs/guide/models/) (`useModel`) selects the LLM that powers the agent.
-* [Sandbox](https://flueframework.com/docs/guide/sandboxes/) (`useSandbox`) provides its filesystem and command-execution environment.
-* [Tools](https://flueframework.com/docs/guide/tools/) (`useTool`) let it call application code and affect external systems.
-* [MCP servers](https://flueframework.com/docs/guide/mcp/) (`useMcpConnection`) mount tools from the open MCP ecosystem.
-* [Skills](https://flueframework.com/docs/guide/skills/) (`useSkill`) provide expertise it can load when needed.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) (`useSubagent`) let it delegate focused work to other agents.
-* [Persisted State](https://flueframework.com/docs/guide/agent-hooks/#persisted-state) (`usePersistentState`) preserves custom data across the agent lifetime.
-* [Event Hooks](https://flueframework.com/docs/guide/agent-hooks/#event-hooks) (`useAgentStart`, `useAgentFinish`, and others) trigger logic on different lifecycle events.
+- [Model](https://flueframework.com/docs/guide/models/) (`useModel`) selects the LLM that powers the agent.
+- [Sandbox](https://flueframework.com/docs/guide/sandboxes/) (`useSandbox`) provides its filesystem and command-execution environment.
+- [Tools](https://flueframework.com/docs/guide/tools/) (`useTool`) let it call application code and affect external systems.
+- [MCP servers](https://flueframework.com/docs/guide/mcp/) (`useMcpConnection`) mount tools from the open MCP ecosystem.
+- [Skills](https://flueframework.com/docs/guide/skills/) (`useSkill`) provide expertise it can load when needed.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) (`useSubagent`) let it delegate focused work to other agents.
+- [Persisted State](https://flueframework.com/docs/guide/agent-hooks/#persisted-state) (`usePersistentState`) preserves custom data across the agent lifetime.
+- [Event Hooks](https://flueframework.com/docs/guide/agent-hooks/#event-hooks) (`useAgentStart`, `useAgentFinish`, and others) trigger logic on different lifecycle events.
 
 ```ts
-import { useModel, useSandbox, useSkill, useTool } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
-import { searchIssues } from '../tools/search-issues.ts';
-import reviewChecklist from '../skills/review-checklist/SKILL.md';
+import { useModel, useSandbox, useSkill, useTool } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
+import { searchIssues } from "../tools/search-issues.ts";
+import reviewChecklist from "../skills/review-checklist/SKILL.md";
 
 function Triage() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox(local());
   useTool(searchIssues);
   useSkill(reviewChecklist);
-  return 'Investigate the reported issue and recommend the next action.';
+  return "Investigate the reported issue and recommend the next action.";
 }
 ```
 
@@ -87,12 +87,12 @@ To learn more about agent hooks, see [Agent Hooks](https://flueframework.com/doc
 The examples above define agent functions, but your application doesn’t know about them yet. To register an agent, mark its module with the `'use agent'` directive and export the function:
 
 ```ts
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 export function TriageAgent() {
-  useModel('anthropic/claude-sonnet-4-6');
-  return 'Investigate the reported issue and recommend the next action.';
+  useModel("anthropic/claude-sonnet-4-6");
+  return "Investigate the reported issue and recommend the next action.";
 }
 ```
 
@@ -101,15 +101,15 @@ Like `'use strict'` in JavaScript or `'use client'` in React, the directive is a
 Registration is what makes an agent addressable by the rest of your application: `dispatch(...)` can send it messages, and `createAgentRouter(...)` can serve it over HTTP. The exported function’s name also becomes the agent’s durable identity, which keys its conversation storage in the persistent database. To rename the function without a database migration, pin the identity with the [agentName static](https://flueframework.com/docs/reference/agent-api/#agent-statics). Setting an explicit agent name is considered a best-practice by some Flue developers.
 
 ```ts
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 export function TriageAgent() {
-  useModel('anthropic/claude-sonnet-4-6');
-  return 'Investigate the reported issue and recommend the next action.';
+  useModel("anthropic/claude-sonnet-4-6");
+  return "Investigate the reported issue and recommend the next action.";
 }
 
-TriageAgent.agentName = 'triage-agent';
+TriageAgent.agentName = "triage-agent";
 ```
 
 ## Interacting with your agent
@@ -156,20 +156,20 @@ Anyone who can reach a conversation URL can talk to that conversation. Protect t
 Use `dispatch(...)` when your application receives an event for an agent asynchronously, such as a webhook, queue message, chat event, or notification. For example, an application route can verify an incoming support-system webhook and dispatch the comment to the agent for that ticket:
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { Hono } from 'hono';
-import { SupportAssistant } from './agents/support-assistant.ts';
-import { verifySupportWebhook } from './shared/support-webhooks.ts';
+import { dispatch } from "@flue/runtime";
+import { Hono } from "hono";
+import { SupportAssistant } from "./agents/support-assistant.ts";
+import { verifySupportWebhook } from "./shared/support-webhooks.ts";
 
 const app = new Hono();
 
-app.post('/webhooks/support-comments', async (c) => {
+app.post("/webhooks/support-comments", async (c) => {
   const event = await verifySupportWebhook(c.req.raw);
   const receipt = await dispatch(SupportAssistant, {
     id: event.ticketId,
     message: {
-      kind: 'signal',
-      type: 'support.comment.created',
+      kind: "signal",
+      type: "support.comment.created",
       body: event.text,
       attributes: { commentId: event.commentId },
     },
@@ -188,17 +188,17 @@ Your application chooses the agent conversation before dispatching the event. `d
 Finally, you can run agents outside of a Flue application entirely — no server, no `app.ts` — with the more advanced `start()` API. It boots the Flue runtime inside your own Node.js process, which is useful for cron jobs, one-off scripts, and tests:
 
 ```ts
-import { init } from '@flue/runtime';
-import { sqlite, start } from '@flue/runtime/node';
-import { Reporter } from '../src/agents/reporter.ts';
+import { init } from "@flue/runtime";
+import { sqlite, start } from "@flue/runtime/node";
+import { Reporter } from "../src/agents/reporter.ts";
 
 await using flue = await start({
   agents: [Reporter],
-  db: sqlite('./nightly.db'),
+  db: sqlite("./nightly.db"),
 });
 
-const reporter = init(Reporter, { id: 'nightly-2026-07-16' });
-const receipt = await reporter.dispatch('Produce the nightly report.');
+const reporter = init(Reporter, { id: "nightly-2026-07-16" });
+const receipt = await reporter.dispatch("Produce the nightly report.");
 const reply = await reporter.read(receipt);
 console.log(reply.text);
 ```
@@ -207,12 +207,12 @@ Provider credentials come from the process environment, and the `db` option deci
 
 ## Next steps
 
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — compose your agent’s capabilities: tools, skills, state, and event hooks.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/) — look up session operations and their results.
-* [Routing](https://flueframework.com/docs/guide/routing/) — mount agent HTTP surfaces inside an authenticated application.
-* [Schedules](https://flueframework.com/docs/guide/schedules/) — dispatch agent input on a schedule.
-* [Channels](https://flueframework.com/docs/guide/channels/) — deliver verified provider events into agent conversations.
-* [Observability](https://flueframework.com/docs/guide/observability/) — inspect agent activity.
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — compose your agent’s capabilities: tools, skills, state, and event hooks.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/) — look up session operations and their results.
+- [Routing](https://flueframework.com/docs/guide/routing/) — mount agent HTTP surfaces inside an authenticated application.
+- [Schedules](https://flueframework.com/docs/guide/schedules/) — dispatch agent input on a schedule.
+- [Channels](https://flueframework.com/docs/guide/channels/) — deliver verified provider events into agent conversations.
+- [Observability](https://flueframework.com/docs/guide/observability/) — inspect agent activity.
 
 ## Docs Navigation
 
@@ -220,48 +220,48 @@ Current page: [Agents](https://flueframework.com/docs/guide/building-agents/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

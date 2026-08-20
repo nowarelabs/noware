@@ -107,7 +107,7 @@ export class QueryProfilerTool extends WorkerEntrypoint<Env> {
       try {
         const res = await db.prepare(`EXPLAIN QUERY PLAN ${input.sql}`).all();
         return { database: input.database ?? "d1", engine: "sqlite", plan: res.results };
-      } catch (err) {
+      } catch {
         // fall through to heuristic analysis if the DB rejects EXPLAIN
       }
     }

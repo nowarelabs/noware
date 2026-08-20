@@ -16,50 +16,50 @@ This guide covers what hooks are, the built-in hooks Flue ships with, and how to
 
 A hook is a plain function that you call inside your agent function’s body to give your agent one new capability. You can spot hooks by their names — they all start with `use`. Each built-in hook lets your agent hook into a different feature of the Flue runtime:
 
-* [Model](https://flueframework.com/docs/guide/models/) (`useModel`) selects the LLM that powers the agent.
-* [Sandbox](https://flueframework.com/docs/guide/sandboxes/) (`useSandbox`) provides its filesystem and command-execution environment.
-* [Tools](https://flueframework.com/docs/guide/tools/) (`useTool`) let it call application code and affect external systems.
-* [MCP servers](https://flueframework.com/docs/guide/mcp/) (`useMcpConnection`) mount tools from the open MCP ecosystem.
-* [Skills](https://flueframework.com/docs/guide/skills/) (`useSkill`) provide expertise it can load when needed.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) (`useSubagent`) let it delegate focused work to other agents.
-* [Persisted State](#persisted-state) (`usePersistentState`) preserves custom data across the agent lifetime.
-* [Event Hooks](#event-hooks) (`useAgentStart`, `useAgentFinish`, and others) trigger logic on different lifecycle events.
-* [Data Writers](#streaming-data-to-the-client) (`useDataWriter`) stream structured data to your client UI.
-* [Custom Hooks](#custom-hooks) let you compose new hooks out of the built-ins.
+- [Model](https://flueframework.com/docs/guide/models/) (`useModel`) selects the LLM that powers the agent.
+- [Sandbox](https://flueframework.com/docs/guide/sandboxes/) (`useSandbox`) provides its filesystem and command-execution environment.
+- [Tools](https://flueframework.com/docs/guide/tools/) (`useTool`) let it call application code and affect external systems.
+- [MCP servers](https://flueframework.com/docs/guide/mcp/) (`useMcpConnection`) mount tools from the open MCP ecosystem.
+- [Skills](https://flueframework.com/docs/guide/skills/) (`useSkill`) provide expertise it can load when needed.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) (`useSubagent`) let it delegate focused work to other agents.
+- [Persisted State](#persisted-state) (`usePersistentState`) preserves custom data across the agent lifetime.
+- [Event Hooks](#event-hooks) (`useAgentStart`, `useAgentFinish`, and others) trigger logic on different lifecycle events.
+- [Data Writers](#streaming-data-to-the-client) (`useDataWriter`) stream structured data to your client UI.
+- [Custom Hooks](#custom-hooks) let you compose new hooks out of the built-ins.
 
 ```ts
-'use agent';
-import { useModel, useSandbox, useSkill, useTool } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
-import { searchIssues } from '../tools/search-issues.ts';
-import reviewChecklist from '../skills/review-checklist/SKILL.md';
+"use agent";
+import { useModel, useSandbox, useSkill, useTool } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
+import { searchIssues } from "../tools/search-issues.ts";
+import reviewChecklist from "../skills/review-checklist/SKILL.md";
 
 export function TriageAgent() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox(local());
   useTool(searchIssues);
   useSkill(reviewChecklist);
-  return 'Investigate the reported issue and recommend the next action.';
+  return "Investigate the reported issue and recommend the next action.";
 }
 ```
 
 Similar to React, the agent function _re-renders_ on every model call and re-runs its hooks. Unlike React, resource hooks can be added and removed conditionally. This allows Flue to manage your declared agent capabilities for you automatically, adding and removing resources (tools, skills, subagents, etc.) as your conversation with the agent evolves:
 
 ```ts
-'use agent';
-import { useModel, usePersistentState, useTool } from '@flue/runtime';
-import refundTool from '../tools/refund.ts';
+"use agent";
+import { useModel, usePersistentState, useTool } from "@flue/runtime";
+import refundTool from "../tools/refund.ts";
 
 export function SupportAgent() {
-  useModel('anthropic/claude-haiku-4-5');
-  const [escalated, setEscalated] = usePersistentState('escalated', false);
+  useModel("anthropic/claude-haiku-4-5");
+  const [escalated, setEscalated] = usePersistentState("escalated", false);
   // Tools can modify persisted state.
   useTool({
-    name: 'escalate',
-    description: 'Escalate this conversation when the customer needs a refund.',
+    name: "escalate",
+    description: "Escalate this conversation when the customer needs a refund.",
     async run() {
       setEscalated(true);
-      return 'Escalated. The refund tool is now available.';
+      return "Escalated. The refund tool is now available.";
     },
   });
   // If the agent has determined that the conversation needs escalation,
@@ -67,7 +67,7 @@ export function SupportAgent() {
   if (escalated) {
     useTool(refundTool);
   }
-  return 'Answer customer support questions clearly and accurately.';
+  return "Answer customer support questions clearly and accurately.";
 }
 ```
 
@@ -80,26 +80,26 @@ Every built-in hook is documented in the [Agent API](https://flueframework.com/d
 An agent conversation can live for days or months, and along the way the agent learns things worth keeping: which phase of a workflow it’s in, what it has already checked, decisions it has made. `usePersistentState` gives that knowledge a durable home:
 
 ```ts
-'use agent';
-import { useModel, usePersistentState, useTool } from '@flue/runtime';
+"use agent";
+import { useModel, usePersistentState, useTool } from "@flue/runtime";
 
 export function CaseAssistant() {
-  useModel('anthropic/claude-haiku-4-5');
-  const [phase, setPhase] = usePersistentState('phase', 'gathering');
-  const [factsChecked, setFactsChecked] = usePersistentState('factsChecked', 0);
+  useModel("anthropic/claude-haiku-4-5");
+  const [phase, setPhase] = usePersistentState("phase", "gathering");
+  const [factsChecked, setFactsChecked] = usePersistentState("factsChecked", 0);
 
   useTool({
-    name: 'check_fact',
-    description: 'Verify one case fact.',
+    name: "check_fact",
+    description: "Verify one case fact.",
     async run() {
       setFactsChecked((previous) => previous + 1);
     },
   });
   useTool({
-    name: 'begin_draft',
-    description: 'Call once the case facts are verified.',
+    name: "begin_draft",
+    description: "Call once the case facts are verified.",
     async run() {
-      setPhase('drafting');
+      setPhase("drafting");
     },
   });
 
@@ -117,21 +117,21 @@ Everything else an agent knows lives loosely in the conversation transcript; per
 
 Event hooks register callbacks that run at set moments in an agent’s lifecycle.
 
-* `useResponseStart()`
-* `useAgentStart()` Runs every time a message is delivered to the agent.
-* `useAgentFinish()`
-* `useResponseFinish()`
+- `useResponseStart()`
+- `useAgentStart()` Runs every time a message is delivered to the agent.
+- `useAgentFinish()`
+- `useResponseFinish()`
 
 `useAgentStart()` is special because it is async, which makes it the natural place to load data before the model runs. This can be especially useful for passing some loaded, initial data to the model in the agent instructions, or modifying capabilities based on the data loaded.
 
 ```ts
-'use agent';
-import { type AgentProps, useAgentStart, useModel, usePersistentState } from '@flue/runtime';
-import { crm, type Customer } from '../shared/crm.ts';
+"use agent";
+import { type AgentProps, useAgentStart, useModel, usePersistentState } from "@flue/runtime";
+import { crm, type Customer } from "../shared/crm.ts";
 
 export function AccountSupport({ id }: AgentProps) {
-  useModel('anthropic/claude-haiku-4-5');
-  const [customer, setCustomer] = usePersistentState<Customer | null>('customer', null);
+  useModel("anthropic/claude-haiku-4-5");
+  const [customer, setCustomer] = usePersistentState<Customer | null>("customer", null);
 
   useAgentStart(async () => {
     if (customer) return; // load once per conversation
@@ -140,7 +140,7 @@ export function AccountSupport({ id }: AgentProps) {
 
   return customer
     ? `Help ${customer.name} (${customer.plan} plan) with their account.`
-    : 'Help the customer with their account.';
+    : "Help the customer with their account.";
 }
 ```
 
@@ -161,12 +161,12 @@ Event hooks may be declared conditionally, just like resources. Their callbacks 
 You can pass structured data to an agent at creation time via `initialData`, and read it inside of your agent function with the `useInitialData()` hook.
 
 ```ts
-'use agent';
-import * as v from 'valibot';
-import { useModel, useInitialData } from '@flue/runtime';
+"use agent";
+import * as v from "valibot";
+import { useModel, useInitialData } from "@flue/runtime";
 
 export function Triage() {
-  useModel('anthropic/claude-opus-4-6');
+  useModel("anthropic/claude-opus-4-6");
   const data = useInitialData<v.InferOutput<typeof Triage.initialData>>();
   return `Triage GitHub issue #${data!.issue} end-to-end.`;
 }
@@ -177,9 +177,9 @@ Triage.initialData = v.object({ issue: v.pipe(v.number(), v.integer()) });
 ```ts
 // Dispatch
 await dispatch(Triage, {
-  id: 'issue-17307',
+  id: "issue-17307",
   initialData: { issue: 17307 },
-  message: 'New GitHub issue created.',
+  message: "New GitHub issue created.",
 });
 ```
 
@@ -205,30 +205,30 @@ An LLM replies with text, but a client often needs more structured data. This is
 When you need to write structured data alongside the agent response, use the `useDataWriter()` hook. A data writer declares a named data channel and returns a write function that passes structured data to the client, keyed to the given name:
 
 ```ts
-'use agent';
-import { useDataWriter, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { orders } from '../shared/orders.ts';
+"use agent";
+import { useDataWriter, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { orders } from "../shared/orders.ts";
 
 export function OrderAssistant() {
-  useModel('anthropic/claude-haiku-4-5');
-  const writeOrderCard = useDataWriter('orderCard', {
-    schema: v.object({ orderId: v.string(), status: v.picklist(['loading', 'loaded']) }),
+  useModel("anthropic/claude-haiku-4-5");
+  const writeOrderCard = useDataWriter("orderCard", {
+    schema: v.object({ orderId: v.string(), status: v.picklist(["loading", "loaded"]) }),
   });
 
   useTool({
-    name: 'lookup_order',
-    description: 'Look up one order for the customer.',
+    name: "lookup_order",
+    description: "Look up one order for the customer.",
     input: v.object({ orderId: v.string() }),
     async run({ data }) {
-      writeOrderCard({ orderId: data.orderId, status: 'loading' });
+      writeOrderCard({ orderId: data.orderId, status: "loading" });
       const order = await orders.get(data.orderId);
-      writeOrderCard({ orderId: data.orderId, status: 'loaded' });
+      writeOrderCard({ orderId: data.orderId, status: "loaded" });
       return order.summary;
     },
   });
 
-  return 'Help customers check the status of their orders.';
+  return "Help customers check the status of their orders.";
 }
 ```
 
@@ -237,16 +237,16 @@ Each write is recorded durably and streamed to connected clients immediately —
 On the client, data parts arrive alongside text parts on the same message. With [@flue/react](https://flueframework.com/docs/guide/react/), rendering them is one extra branch in your message-parts loop:
 
 ```tsx
-import { useFlueAgent } from '@flue/react';
-import { OrderCard } from './order-card.tsx';
+import { useFlueAgent } from "@flue/react";
+import { OrderCard } from "./order-card.tsx";
 
 export function OrderChat({ conversationId }: { conversationId: string }) {
   const agent = useFlueAgent({ url: `/api/agents/order-assistant/${conversationId}` });
 
   return agent.messages.map((message) =>
     message.parts.map((part, index) => {
-      if (part.type === 'text') return <p key={index}>{part.text}</p>;
-      if (part.type === 'data-orderCard') {
+      if (part.type === "text") return <p key={index}>{part.text}</p>;
+      if (part.type === "data-orderCard") {
         const order = part.data as { orderId: string; status: string };
         return <OrderCard key={index} {...order} />;
       }
@@ -263,16 +263,16 @@ The channel is strictly one-way, out of the agent: the model never sees data par
 Because hooks are plain function calls, you can extract related declarations into named, reusable pieces the same way React does: with **custom hooks**. A custom hook is a function that you define yourself, always prefixed with `use`. It may take arguments and return values to its caller, just like any other function:
 
 ```ts
-import { useModel, useTool } from '@flue/runtime';
-import { escalateCase } from '../shared/support-tools.ts';
+import { useModel, useTool } from "@flue/runtime";
+import { escalateCase } from "../shared/support-tools.ts";
 
 function useEscalation() {
   useTool(escalateCase);
-  return 'Escalate to a specialist only after you have confirmed the account and issue.';
+  return "Escalate to a specialist only after you have confirmed the account and issue.";
 }
 
 function SupportAssistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const escalationInstructions = useEscalation();
   return `Answer customer support questions accurately. ${escalationInstructions}`;
 }
@@ -282,11 +282,11 @@ Custom hooks are how larger agents stay readable, and how capabilities get share
 
 ## Next steps
 
-* [Agent Guide](https://flueframework.com/docs/guide/building-agents/) — the definitive guide about building agents in Flue.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/) — the full contract for every built-in hook.
-* [Tools](https://flueframework.com/docs/guide/tools/), [Skills](https://flueframework.com/docs/guide/skills/), and [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — configure what an agent can do and where it works.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) — delegate focused work to a specialist agent function.
-* [Durability](https://flueframework.com/docs/guide/durability/) — how persistent state, retries, and recovery work.
+- [Agent Guide](https://flueframework.com/docs/guide/building-agents/) — the definitive guide about building agents in Flue.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/) — the full contract for every built-in hook.
+- [Tools](https://flueframework.com/docs/guide/tools/), [Skills](https://flueframework.com/docs/guide/skills/), and [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — configure what an agent can do and where it works.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) — delegate focused work to a specialist agent function.
+- [Durability](https://flueframework.com/docs/guide/durability/) — how persistent state, retries, and recovery work.
 
 ## Docs Navigation
 
@@ -294,49 +294,52 @@ Current page: [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
-````````````````````
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)
+
+```
+
+```

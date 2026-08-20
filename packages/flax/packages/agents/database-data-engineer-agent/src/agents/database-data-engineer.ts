@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -12,10 +13,10 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 import { Bash, InMemoryFs } from "just-bash";
@@ -29,11 +30,7 @@ interface MigrationState {
   object: string;
 }
 
-function MigrationReviewer() {
-  return `You are a migration reviewer. Given a proposed schema migration, check it for data loss, irreversibility, lock-time risk on large tables, and index necessity. Return APPROVED or REVISE with the specific problem. Be terse.`;
-}
-
-export function DatabaseDataEngineer() {
+const databaseDataEngineer = defineAgent("database-data-engineer", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
@@ -65,34 +62,39 @@ export function DatabaseDataEngineer() {
       (delivery.kind === "signal" ? delivery.attributes?.object : undefined) ||
       "schema";
     log.info("database.started", { object });
-    setMigration((prev) => ({ ...prev, status: "planning", object }));
+    setMigration({ ...migration, status: "planning", object });
     writeDatabase({ status: "planning", object });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("database.finished", { toolCalls: response.toolCalls.length });
-    setMigration((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("database.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setMigration({ ...migration, status: "done" });
     writeDatabase({ status: "done", object: migration.object });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent({
-    name: "migration-reviewer",
-    description:
-      "Reviews a schema migration for data loss, irreversibility, and lock risk before it is applied.",
-    agent: MigrationReviewer,
-  });
+  useSubagent(
+    "migration-reviewer",
+    "Reviews a schema migration for data loss, irreversibility, and lock risk before it is applied.",
+    GeneralSubagent,
+  );
   useTool(dbClientTool);
   useTool(migrationsTool);
   useTool(queryProfilerTool);
 
   return `You are the Database Data Engineer agent. Model data deliberately, index for real query patterns rather than speculative ones, and design ETL/ELT pipelines that are idempotent, observable, and reversible.`;
-}
+});
+
+export default databaseDataEngineer;

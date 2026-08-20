@@ -38,12 +38,18 @@ export class BaseIntegrationEvent<
     this.beforeHooks.push({ fn: fn as HookFunction, options });
   }
 
-  static after<T extends BaseIntegrationEvent>(fn: AfterHookFunction<T>, options?: HookOptions): void {
+  static after<T extends BaseIntegrationEvent>(
+    fn: AfterHookFunction<T>,
+    options?: HookOptions,
+  ): void {
     if (!Object.hasOwn(this, "afterHooks")) this.afterHooks = [];
     this.afterHooks.push({ fn: fn as AfterHookFunction, options });
   }
 
-  static around<T extends BaseIntegrationEvent>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+  static around<T extends BaseIntegrationEvent>(
+    fn: AroundHookFunction<T>,
+    options?: HookOptions,
+  ): void {
     if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }

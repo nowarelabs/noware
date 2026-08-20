@@ -15,9 +15,9 @@ New package, scaffolded per `02-package-conventions.md`. Composes `result`, `tel
 ```ts
 interface AgentSession {
   projectId: string;
-  agentId: string;             // stable identity, e.g. "frontend-agent"
-  branchName: string;          // branch-per-agent derived from the task
-  editorId: string;            // same as the agent's editor identity in cfour
+  agentId: string; // stable identity, e.g. "frontend-agent"
+  branchName: string; // branch-per-agent derived from the task
+  editorId: string; // same as the agent's editor identity in cfour
   lease: { workspaceName: string; claimIds: string[] };
 }
 ```
@@ -28,7 +28,8 @@ by `agentId` so a crashed agent restarts into the same branch.
 
 ### 6.2 Claim ↔ lease mapping
 
-A claim in cfour *is* the crash-safe lease:
+A claim in cfour _is_ the crash-safe lease:
+
 - `agent.claim("default", elementIds, editorId)` on workspace-do grants the lease.
 - Heartbeat loop: every `heartbeatMs` (default e.g. 30s) call `touchClaim`; run over a WS
   channel when connected (single in-flight, coalesce).
@@ -46,6 +47,7 @@ agentId, payload, priority, deadline, retry policy, result refs.
 ### 6.4 Reconciliation
 
 `reconcile(projectId)`:
+
 - Find sessions whose lease expired (query claims or `getChanges`) → mark their task
   `failed` with reason `"lease-expired"` → re-queue according to retry policy.
 - Find orphaned branches (branch exists, no live session) → report, optionally delete.

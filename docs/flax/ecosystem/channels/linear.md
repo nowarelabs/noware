@@ -21,10 +21,10 @@ flue add channel linear
 The blueprint installs `@flue/linear` and the official `@linear/sdk`, creates a source-root `channels/linear.ts` module with named `channel` and project-owned `client` exports, and modifies the selected agent to bind the generated message tool.
 
 ```ts
-import { createLinearChannel } from '@flue/linear';
-import { dispatch } from '@flue/runtime';
-import { LinearClient } from '@linear/sdk';
-import { Assistant } from '../agents/assistant.ts';
+import { createLinearChannel } from "@flue/linear";
+import { dispatch } from "@flue/runtime";
+import { LinearClient } from "@linear/sdk";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new LinearClient({
   apiKey: process.env.LINEAR_API_KEY!,
@@ -33,24 +33,24 @@ export const client = new LinearClient({
 export const channel = createLinearChannel({
   webhookSecret: process.env.LINEAR_WEBHOOK_SECRET!,
   async webhook({ payload, deliveryId }) {
-    if (payload.type !== 'Comment' || !('body' in payload.data)) return;
+    if (payload.type !== "Comment" || !("body" in payload.data)) return;
     const comment = payload.data;
-    if (payload.action !== 'create' || !comment.issueId) return;
+    if (payload.action !== "create" || !comment.issueId) return;
     await dispatch(Assistant, {
       id: channel.instanceId({
-        type: 'issue',
+        type: "issue",
         organizationId: payload.organizationId,
         issueId: comment.issueId,
         ...(comment.parentId ? { threadCommentId: comment.parentId } : {}),
       }),
       message: {
-        kind: 'signal',
-        type: 'linear.comment.created',
+        kind: "signal",
+        type: "linear.comment.created",
         body: comment.body,
         attributes: {
           deliveryId,
           ...(payload.actor ? { actorId: payload.actor.id } : {}),
-          ...(payload.actor && 'name' in payload.actor ? { actorName: payload.actor.name } : {}),
+          ...(payload.actor && "name" in payload.actor ? { actorName: payload.actor.name } : {}),
         },
       },
     });
@@ -65,21 +65,21 @@ The abridged example shows the generated comment path and omits the agent-sessio
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as linear } from './channels/linear.ts';
+import { channel as linear } from "./channels/linear.ts";
 
-app.route('/channels/linear', linear.route());
+app.route("/channels/linear", linear.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/linear` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                 | Purpose                                                                 |
-| ------------------------ | ----------------------------------------------------------------------- |
-| LINEAR\_WEBHOOK\_SECRET  | **Required** — Verifies inbound webhook deliveries.                     |
-| LINEAR\_API\_KEY         | **Required** — Authenticates the example’s outbound SDK client.         |
-| LINEAR\_ORGANIZATION\_ID | **Optional** — Restricts inbound deliveries to one Linear organization. |
-| LINEAR\_WEBHOOK\_ID      | **Optional** — Restricts inbound deliveries to one configured webhook.  |
+| Variable               | Purpose                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
+| LINEAR_WEBHOOK_SECRET  | **Required** — Verifies inbound webhook deliveries.                     |
+| LINEAR_API_KEY         | **Required** — Authenticates the example’s outbound SDK client.         |
+| LINEAR_ORGANIZATION_ID | **Optional** — Restricts inbound deliveries to one Linear organization. |
+| LINEAR_WEBHOOK_ID      | **Optional** — Restricts inbound deliveries to one configured webhook.  |
 
 It installs `@flue/linear` for verified ingress and the official `@linear/sdk` for project-owned outbound API access. Linear uses that SDK in its own Cloudflare Workers agent example with `nodejs_compat`, which Flue’s Cloudflare target already enables.
 
@@ -92,15 +92,15 @@ https://example.com/channels/linear/webhook
 ## Channel module
 
 ```ts
-import { createLinearChannel, type LinearWebhookPayload } from '@flue/linear';
-import { defineTool, dispatch } from '@flue/runtime';
-import { LinearClient } from '@linear/sdk';
-import * as v from 'valibot';
+import { createLinearChannel, type LinearWebhookPayload } from "@flue/linear";
+import { defineTool, dispatch } from "@flue/runtime";
+import { LinearClient } from "@linear/sdk";
+import * as v from "valibot";
 import type {
   AgentSessionEventWebhookPayload,
   EntityWebhookPayloadWithCommentData,
-} from '@linear/sdk/webhooks';
-import { Assistant } from '../agents/assistant.ts';
+} from "@linear/sdk/webhooks";
+import { Assistant } from "../agents/assistant.ts";
 
 const organizationId = process.env.LINEAR_ORGANIZATION_ID;
 
@@ -116,29 +116,29 @@ export const channel = createLinearChannel({
   async webhook({ payload, deliveryId }) {
     if (isCommentEvent(payload)) {
       const comment = payload.data;
-      if (payload.action !== 'create' || !comment.issueId) return;
+      if (payload.action !== "create" || !comment.issueId) return;
       await dispatch(Assistant, {
         id: channel.instanceId({
-          type: 'issue',
+          type: "issue",
           organizationId: payload.organizationId,
           issueId: comment.issueId,
           ...(comment.parentId ? { threadCommentId: comment.parentId } : {}),
         }),
         // Recorded once when this event creates the instance; ignored after.
         initialData: {
-          type: 'issue',
+          type: "issue",
           issueId: comment.issueId,
           ...(comment.parentId ? { threadCommentId: comment.parentId } : {}),
           ...(comment.issue?.title ? { issueTitle: comment.issue.title } : {}),
         },
         message: {
-          kind: 'signal',
-          type: 'linear.comment.created',
+          kind: "signal",
+          type: "linear.comment.created",
           body: comment.body,
           attributes: {
             deliveryId,
             ...(payload.actor ? { actorId: payload.actor.id } : {}),
-            ...(payload.actor && 'name' in payload.actor ? { actorName: payload.actor.name } : {}),
+            ...(payload.actor && "name" in payload.actor ? { actorName: payload.actor.name } : {}),
           },
         },
       });
@@ -148,20 +148,20 @@ export const channel = createLinearChannel({
     if (isAgentSessionEvent(payload)) {
       await dispatch(Assistant, {
         id: channel.instanceId({
-          type: 'agent-session',
+          type: "agent-session",
           organizationId: payload.organizationId,
           agentSessionId: payload.agentSession.id,
         }),
         // Recorded once when this event creates the instance; ignored after.
         initialData: {
-          type: 'agent-session',
+          type: "agent-session",
           agentSessionId: payload.agentSession.id,
           ...(payload.agentSession.issue?.title
             ? { issueTitle: payload.agentSession.issue.title }
             : {}),
         },
         message: {
-          kind: 'signal',
+          kind: "signal",
           type: `linear.agent_session.${payload.action}`,
           body: JSON.stringify({
             promptContext: payload.promptContext,
@@ -180,31 +180,31 @@ export const channel = createLinearChannel({
 function isCommentEvent(
   payload: LinearWebhookPayload,
 ): payload is EntityWebhookPayloadWithCommentData {
-  return payload.type === 'Comment' && 'body' in payload.data;
+  return payload.type === "Comment" && "body" in payload.data;
 }
 
 function isAgentSessionEvent(
   payload: LinearWebhookPayload,
 ): payload is AgentSessionEventWebhookPayload {
-  return payload.type === 'AgentSessionEvent' && 'agentSession' in payload;
+  return payload.type === "AgentSessionEvent" && "agentSession" in payload;
 }
 
 /** The subset of `LinearConversationRef` actually needed to post a message. */
 export type LinearMessageRef =
-  | { type: 'agent-session'; agentSessionId: string }
-  | { type: 'issue'; issueId: string; threadCommentId?: string };
+  | { type: "agent-session"; agentSessionId: string }
+  | { type: "issue"; issueId: string; threadCommentId?: string };
 
 export function postMessage(ref: LinearMessageRef) {
   return defineTool({
-    name: 'post_linear_message',
-    description: 'Post a message to the Linear conversation bound to this agent.',
+    name: "post_linear_message",
+    description: "Post a message to the Linear conversation bound to this agent.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data }) {
       const { text } = data;
-      if (ref.type === 'agent-session') {
+      if (ref.type === "agent-session") {
         const result = await client.createAgentActivity({
           agentSessionId: ref.agentSessionId,
-          content: { type: 'response', body: text },
+          content: { type: "response", body: text },
         });
         return { output: { success: result.success } };
       }
@@ -232,19 +232,19 @@ Use `accessToken` instead of `apiKey` for an installed OAuth application. OAuth 
 ## Wire the agent
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { postMessage } from '../channels/linear.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { postMessage } from "../channels/linear.ts";
 
-const initialData = v.variant('type', [
+const initialData = v.variant("type", [
   v.object({
-    type: v.literal('agent-session'),
+    type: v.literal("agent-session"),
     agentSessionId: v.string(),
     issueTitle: v.optional(v.string()),
   }),
   v.object({
-    type: v.literal('issue'),
+    type: v.literal("issue"),
     issueId: v.string(),
     threadCommentId: v.optional(v.string()),
     issueTitle: v.optional(v.string()),
@@ -252,11 +252,11 @@ const initialData = v.variant('type', [
 ]);
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Linear channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Linear channel dispatch.");
   useTool(postMessage(data));
-  const issueTitle = data.issueTitle ? ` on "${data.issueTitle}"` : '';
+  const issueTitle = data.issueTitle ? ` on "${data.issueTitle}"` : "";
   return `Reply concisely in the bound Linear conversation${issueTitle}.`;
 }
 
@@ -297,75 +297,75 @@ Current page: [Linear](https://flueframework.com/docs/ecosystem/channels/linear/
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

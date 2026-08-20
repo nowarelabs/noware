@@ -291,7 +291,7 @@ async function latestStage(db: D1Database, conversationId: string): Promise<stri
 async function currentStatus(
   db: D1Database,
   conversationId: string,
-  stageCount: number,
+  _stageCount: number,
 ): Promise<"running" | "blocked_on_human"> {
   const pending = await db
     .prepare("SELECT COUNT(*) AS n FROM flax_hitl WHERE conversation_id = ? AND status = ?")

@@ -21,10 +21,10 @@ flue add channel resend
 The Resend blueprint installs `@flue/resend` and the official `resend` SDK, adds the SDK’s declaration-only development dependencies, and creates `channels/resend.ts` in the source-root. It also updates the selected agent to bind a message-retrieval tool to the verified inbound email.
 
 ```ts
-import { createResendChannel } from '@flue/resend';
-import { dispatch, useModel } from '@flue/runtime';
-import { Resend } from 'resend';
-import { Assistant } from '../agents/assistant.ts';
+import { createResendChannel } from "@flue/resend";
+import { dispatch, useModel } from "@flue/runtime";
+import { Resend } from "resend";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new Resend(process.env.RESEND_API_KEY!);
 
@@ -32,12 +32,12 @@ export const channel = createResendChannel({
   client,
   webhookSecret: process.env.RESEND_WEBHOOK_SECRET!,
   async webhook({ event, delivery }) {
-    if (event.type !== 'email.received') return;
+    if (event.type !== "email.received") return;
     await dispatch(Assistant, {
       id: emailInstanceId(event.data.email_id),
       message: {
-        kind: 'signal',
-        type: 'resend.email.received',
+        kind: "signal",
+        type: "resend.email.received",
         // The webhook carries envelope data only; the agent retrieves the
         // full email text through the retrieve_resend_email tool.
         body: event.data.subject,
@@ -45,7 +45,7 @@ export const channel = createResendChannel({
           deliveryId: delivery.id,
           emailId: event.data.email_id,
           from: event.data.from,
-          to: event.data.to.join(', '),
+          to: event.data.to.join(", "),
         },
       },
     });
@@ -60,19 +60,19 @@ The abridged example omits the generated local email-id helpers and `retrieveRec
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as resend } from './channels/resend.ts';
+import { channel as resend } from "./channels/resend.ts";
 
-app.route('/channels/resend', resend.route());
+app.route("/channels/resend", resend.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/resend` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                | Purpose                                          |
-| ----------------------- | ------------------------------------------------ |
-| RESEND\_WEBHOOK\_SECRET | **Required** — Verifies inbound deliveries.      |
-| RESEND\_API\_KEY        | **Required** — Authenticates outbound SDK calls. |
+| Variable              | Purpose                                          |
+| --------------------- | ------------------------------------------------ |
+| RESEND_WEBHOOK_SECRET | **Required** — Verifies inbound deliveries.      |
+| RESEND_API_KEY        | **Required** — Authenticates outbound SDK calls. |
 
 It installs `@flue/resend` and the official `resend@6.12.4` SDK. The blueprint creates a channel module with named `channel` and project-owned `client`exports.
 
@@ -89,12 +89,12 @@ The SDK’s public declarations reference `Buffer` and React email types. Add `@
 ## Channel module
 
 ```ts
-import { createResendChannel } from '@flue/resend';
-import { defineTool, dispatch, useModel } from '@flue/runtime';
-import { Resend } from 'resend';
-import { Assistant } from '../agents/assistant.ts';
+import { createResendChannel } from "@flue/resend";
+import { defineTool, dispatch, useModel } from "@flue/runtime";
+import { Resend } from "resend";
+import { Assistant } from "../agents/assistant.ts";
 
-const EMAIL_INSTANCE_PREFIX = 'resend-email:';
+const EMAIL_INSTANCE_PREFIX = "resend-email:";
 
 export const client = new Resend(process.env.RESEND_API_KEY!);
 
@@ -105,12 +105,12 @@ export const channel = createResendChannel({
   // Path: /channels/resend/webhook
   async webhook({ event, delivery }) {
     switch (event.type) {
-      case 'email.received': {
+      case "email.received": {
         await dispatch(Assistant, {
           id: emailInstanceId(event.data.email_id),
           message: {
-            kind: 'signal',
-            type: 'resend.email.received',
+            kind: "signal",
+            type: "resend.email.received",
             // The webhook carries envelope data only; the agent retrieves the
             // full email text through the retrieve_resend_email tool.
             body: event.data.subject,
@@ -119,8 +119,8 @@ export const channel = createResendChannel({
               emailId: event.data.email_id,
               messageId: event.data.message_id,
               from: event.data.from,
-              to: event.data.to.join(', '),
-              ...(event.data.cc.length === 0 ? {} : { cc: event.data.cc.join(', ') }),
+              to: event.data.to.join(", "),
+              ...(event.data.cc.length === 0 ? {} : { cc: event.data.cc.join(", ") }),
               ...(event.data.attachments.length === 0
                 ? {}
                 : { attachmentCount: String(event.data.attachments.length) }),
@@ -137,8 +137,8 @@ export const channel = createResendChannel({
 
 export function retrieveReceivedEmail(emailId: string) {
   return defineTool({
-    name: 'retrieve_resend_email',
-    description: 'Retrieve the complete inbound email already bound to this agent.',
+    name: "retrieve_resend_email",
+    description: "Retrieve the complete inbound email already bound to this agent.",
     async run() {
       const result = await client.emails.receiving.get(emailId);
       if (result.error) throw new Error(result.error.message);
@@ -148,16 +148,16 @@ export function retrieveReceivedEmail(emailId: string) {
 }
 
 export function emailInstanceId(emailId: string): string {
-  if (!emailId) throw new TypeError('Resend email id must be non-empty.');
+  if (!emailId) throw new TypeError("Resend email id must be non-empty.");
   return `${EMAIL_INSTANCE_PREFIX}${encodeURIComponent(emailId)}`;
 }
 
 export function emailIdFromInstanceId(id: string): string {
   if (!id.startsWith(EMAIL_INSTANCE_PREFIX)) {
-    throw new TypeError('Expected a local Resend email instance id.');
+    throw new TypeError("Expected a local Resend email instance id.");
   }
   const emailId = decodeURIComponent(id.slice(EMAIL_INSTANCE_PREFIX.length));
-  if (!emailId) throw new TypeError('Expected a local Resend email instance id.');
+  if (!emailId) throw new TypeError("Expected a local Resend email instance id.");
   return emailId;
 }
 ```
@@ -179,15 +179,15 @@ Use `client.emails.receiving.attachments` to obtain signed download URLs when at
 ## Bind the tool
 
 ```ts
-'use agent';
-import { type AgentProps, useModel, useTool } from '@flue/runtime';
-import { emailIdFromInstanceId, retrieveReceivedEmail } from '../channels/resend.ts';
+"use agent";
+import { type AgentProps, useModel, useTool } from "@flue/runtime";
+import { emailIdFromInstanceId, retrieveReceivedEmail } from "../channels/resend.ts";
 
 export function Assistant({ id }: AgentProps) {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const emailId = emailIdFromInstanceId(id);
   useTool(retrieveReceivedEmail(emailId));
-  return 'Review the inbound support email. Retrieve the complete email when its body or headers are needed.';
+  return "Review the inbound support email. Retrieve the complete email when its body or headers are needed.";
 }
 ```
 
@@ -217,75 +217,75 @@ Current page: [Resend](https://flueframework.com/docs/ecosystem/channels/resend/
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

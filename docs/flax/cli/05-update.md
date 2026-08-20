@@ -48,17 +48,17 @@ Current page: [flue update](https://flueframework.com/docs/cli/update/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### CLI
 
-* [Overview](https://flueframework.com/docs/cli/overview/)
-* [init](https://flueframework.com/docs/cli/init/)
-* [run](https://flueframework.com/docs/cli/run/)
-* [add](https://flueframework.com/docs/cli/add/)
-* [update](https://flueframework.com/docs/cli/update/)
-* [docs](https://flueframework.com/docs/cli/docs/)
+- [Overview](https://flueframework.com/docs/cli/overview/)
+- [init](https://flueframework.com/docs/cli/init/)
+- [run](https://flueframework.com/docs/cli/run/)
+- [add](https://flueframework.com/docs/cli/add/)
+- [update](https://flueframework.com/docs/cli/update/)
+- [docs](https://flueframework.com/docs/cli/docs/)

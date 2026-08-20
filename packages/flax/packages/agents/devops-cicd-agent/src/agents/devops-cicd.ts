@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -12,10 +13,10 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 import { Bash, InMemoryFs } from "just-bash";
@@ -29,11 +30,7 @@ interface DeployState {
   environment: string;
 }
 
-function InfraPlanReviewer() {
-  return `You are an infrastructure reviewer. Given a planned change (IaC diff, pipeline change, or environment provisioning), check it for drift risk, blast radius, missing rollback, and security exposure. Return APPROVED or REVISE with the specific problem. Be terse.`;
-}
-
-export function DevopsCicd() {
+const devopsCicd = defineAgent("devops-cicd", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -65,34 +62,39 @@ export function DevopsCicd() {
       (delivery.kind === "signal" ? delivery.attributes?.environment : undefined) ||
       "staging";
     log.info("deploy.started", { environment });
-    setDeploy((prev) => ({ ...prev, status: "planning", environment }));
+    setDeploy({ ...deploy, status: "planning", environment });
     writeDeploy({ status: "planning", environment });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("deploy.finished", { toolCalls: response.toolCalls.length });
-    setDeploy((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("deploy.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setDeploy({ ...deploy, status: "done" });
     writeDeploy({ status: "done", environment: deploy.environment });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent({
-    name: "infra-plan-reviewer",
-    description:
-      "Reviews an infrastructure or pipeline change for drift, blast radius, rollback, and exposure before it is applied.",
-    agent: InfraPlanReviewer,
-  });
+  useSubagent(
+    "infra-plan-reviewer",
+    "Reviews an infrastructure or pipeline change for drift, blast radius, rollback, and exposure before it is applied.",
+    GeneralSubagent,
+  );
   useTool(cicdPipelineTool);
   useTool(containersTool);
   useTool(iacTool);
 
   return `You are the DevOps/CI-CD agent. Provision infrastructure as code and design fast, reversible pipelines. Prefer declarative configuration, plan changes before applying them, and make rollback boring.`;
-}
+});
+
+export default devopsCicd;

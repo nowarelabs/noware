@@ -22,7 +22,7 @@ survive.
 
 - **Schema**: `views` table (`workspace_name`, `view_id`, `kind`, `title`,
   `description`, `scope_id`, `data`, `updated_at`, PK `(workspace_name,
-  view_id)`) and `events` table (`seq INTEGER PRIMARY KEY AUTOINCREMENT`,
+view_id)`) and `events` table (`seq INTEGER PRIMARY KEY AUTOINCREMENT`,
   `workspace_name`, `op`, `element_id`, `element_kind`, `payload`,
   `timestamp`) + `idx_events_ws_op_ts`.
 - **3.1 Views**: `restoreViews` on hydrate; View events upserted in `persist`;

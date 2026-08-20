@@ -5,7 +5,7 @@
  * `defineTool(...)` call. The tool name defaults to the filename slug.
  */
 
-import type { ToolDefinition, ToolInput, ToolOutput, ToolLogger } from "./types.js";
+import type { ToolDefinition, ToolInput, ToolOutput, ToolLogger, StepHandle } from "./types.js";
 
 // ----------------------------------------------------------------
 // Default logger (console-based, Workers-safe)
@@ -43,11 +43,12 @@ export interface DefineToolOpts<
   };
   durable?: boolean;
   harness?: boolean;
-  run: (ctx: { data: TInput; log: ToolLogger; step?: StepHandle }) => Promise<TOutput>;
-}
-
-export interface StepHandle {
-  do<T>(name: string, fn: () => Promise<T>): Promise<T>;
+  run: (ctx: {
+    data: TInput;
+    log: ToolLogger;
+    step?: StepHandle;
+    harness?: unknown;
+  }) => Promise<TOutput>;
 }
 
 /**

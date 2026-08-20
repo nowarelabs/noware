@@ -79,7 +79,7 @@ export interface CodebaseFs {
 ## What gets ADDED later (Phase 4)
 
 - **Extractors** (reverse direction): `Extractor` interface + `extractWorkspace(source:
-  CodebaseFs, opts)` → returns a cfour `C4Workspace`; TypeScript extractor first
+CodebaseFs, opts)` → returns a cfour `C4Workspace`; TypeScript extractor first
   (components ↔ modules, code elements ↔ exports). Enables onboarding without hand-writing
   the model.
 - **Drift reports**: `reportDrift(cfour, fs)` combining `detectDrift` + `diffWorkspaces` into
@@ -93,6 +93,6 @@ export interface CodebaseFs {
 
 - Phase 1: moved tests pass (all generator/Dsl test blocks from cfour), example updated,
   `grep -rn "node:" packages/gen-diesel/src` empty except `node/` subpath, `vp check` + `vp
-  pack` clean, and cfour is node-free afterward.
+pack` clean, and cfour is node-free afterward.
 - Phase 4: extractor round-trip tests (source → model → generator output), drift tests,
   renderer golden tests.

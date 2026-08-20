@@ -21,16 +21,16 @@ npm install @flue/sdk
 ## A minimal round trip
 
 ```ts
-import { createFlueClient } from '@flue/sdk';
+import { createFlueClient } from "@flue/sdk";
 
 const conversation = createFlueClient({
-  url: 'https://example.com/agents/support/ticket-8472',
+  url: "https://example.com/agents/support/ticket-8472",
   token: process.env.FLUE_TOKEN,
 });
 
 // Admit one message. The server responds 202 before the agent runs.
 const admission = await conversation.send({
-  message: { kind: 'user', body: 'Summarize the open issues in my case.' },
+  message: { kind: "user", body: "Summarize the open issues in my case." },
 });
 
 // Await the submission's settlement and read its reply.
@@ -44,35 +44,35 @@ Sends are fire-and-forget admissions — the agent’s response lands in the con
 
 There is no deployment-wide client and no agent-name addressing. The framework does not know where an application mounts its agents — the application’s route map (`app.ts`) does — so a client addresses exactly one conversation by URL. Consequences:
 
-* Starting a new conversation is constructing a client with a fresh id appended to the mount URL. The conversation itself is created on the first message it receives; `createFlueClient()` performs no I/O.
-* There is no API to enumerate conversations, look up agents by name, or delete a conversation. Those are application concerns behind application routes.
-* Auth is whatever the application’s routes require: the client attaches a bearer `token` or arbitrary `headers` to every request, including stream reconnections. Construction options are documented under [CreateFlueClientOptions](https://flueframework.com/docs/sdk/create-flue-client/#createflueclientoptions).
+- Starting a new conversation is constructing a client with a fresh id appended to the mount URL. The conversation itself is created on the first message it receives; `createFlueClient()` performs no I/O.
+- There is no API to enumerate conversations, look up agents by name, or delete a conversation. Those are application concerns behind application routes.
+- Auth is whatever the application’s routes require: the client attaches a bearer `token` or arbitrary `headers` to every request, including stream reconnections. Construction options are documented under [CreateFlueClientOptions](https://flueframework.com/docs/sdk/create-flue-client/#createflueclientoptions).
 
 ## The HTTP surface it wraps
 
 Every client method is a typed wrapper over one route of the conversation URL (see [Routing — The conversation URL](https://flueframework.com/docs/guide/routing/#the-conversation-url)):
 
-* `send()` — `POST <url>`; the body is the same `DeliveredMessage` shape a server-side `dispatch(...)` admits, optionally with `initialData` and a `uid` send condition.
-* `read()` — `wait()`’s stream follow, then one `history()` read to return the submission’s reply.
-* `wait()` — reads the `GET <url>?view=updates` stream from the admission’s offset until the submission’s `submission-settled` chunk arrives.
-* `history()` — `GET <url>?view=history`; one materialized snapshot.
-* `observe()` — `history()` to hydrate, then the `updates` stream to stay live, with reconnection, rehydration, and duplicate-chunk suppression handled internally.
-* `abort()` — `POST <url>/abort`.
-* `attachmentUrl()` — resolves `<url>/attachments/<attachmentId>` for one `file` part’s bytes.
+- `send()` — `POST <url>`; the body is the same `DeliveredMessage` shape a server-side `dispatch(...)` admits, optionally with `initialData` and a `uid` send condition.
+- `read()` — `wait()`’s stream follow, then one `history()` read to return the submission’s reply.
+- `wait()` — reads the `GET <url>?view=updates` stream from the admission’s offset until the submission’s `submission-settled` chunk arrives.
+- `history()` — `GET <url>?view=history`; one materialized snapshot.
+- `observe()` — `history()` to hydrate, then the `updates` stream to stay live, with reconnection, rehydration, and duplicate-chunk suppression handled internally.
+- `abort()` — `POST <url>/abort`.
+- `attachmentUrl()` — resolves `<url>/attachments/<attachmentId>` for one `file` part’s bytes.
 
 Any HTTP client can call these routes directly — the wire protocol is documented in the [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/) reference. What the SDK adds is the typed contract plus the stream mechanics you would otherwise reimplement: offset-based resume, reconnection backoff, per-request header resolution, and at-least-once redelivery dedup.
 
 ## Relationship to `@flue/react` and `@flue/runtime`
 
-* [useFlueAgent()](https://flueframework.com/docs/guide/react/) from `@flue/react` is built on this package: it constructs a `createFlueClient(...)` from its `url` option (or accepts a pre-configured client for custom headers, auth, or fetch behavior) and reduces the client’s `observe()` output into React state.
-* Inside a Flue server process, HTTP is unnecessary: `init()` and `dispatch()` from `@flue/runtime` address agents directly (see [Building agents](https://flueframework.com/docs/guide/building-agents/)). The SDK is for code outside the process — browsers, scripts, CI, other services — reaching a deployed agent over its HTTP surface.
+- [useFlueAgent()](https://flueframework.com/docs/guide/react/) from `@flue/react` is built on this package: it constructs a `createFlueClient(...)` from its `url` option (or accepts a pre-configured client for custom headers, auth, or fetch behavior) and reduces the client’s `observe()` output into React state.
+- Inside a Flue server process, HTTP is unnecessary: `init()` and `dispatch()` from `@flue/runtime` address agents directly (see [Building agents](https://flueframework.com/docs/guide/building-agents/)). The SDK is for code outside the process — browsers, scripts, CI, other services — reaching a deployed agent over its HTTP surface.
 
 ## Pages in this section
 
-* [createFlueClient(…)](https://flueframework.com/docs/sdk/create-flue-client/) — constructing a client (`CreateFlueClientOptions`: `url`, `fetch`, `headers`, `token`), URL resolution, and custom transports.
-* [FlueClient](https://flueframework.com/docs/sdk/flue-client/) — the conversation methods — `send()`, `wait()`, `abort()`, `history()`, `observe()`, and `attachmentUrl()` — with their option, result, and materialized conversation state types.
-* [Events and records](https://flueframework.com/docs/sdk/events/) — the `updates` wire union (`ConversationStreamChunk`), the `FlueEventStream` iteration surface, and offset/redelivery semantics.
-* [Errors](https://flueframework.com/docs/sdk/errors/) — `FlueApiError` (failed HTTP requests), `FlueExecutionError` (failed or aborted settlements), the documented server error envelope, and the re-exported `@durable-streams/client` stream errors.
+- [createFlueClient(…)](https://flueframework.com/docs/sdk/create-flue-client/) — constructing a client (`CreateFlueClientOptions`: `url`, `fetch`, `headers`, `token`), URL resolution, and custom transports.
+- [FlueClient](https://flueframework.com/docs/sdk/flue-client/) — the conversation methods — `send()`, `wait()`, `abort()`, `history()`, `observe()`, and `attachmentUrl()` — with their option, result, and materialized conversation state types.
+- [Events and records](https://flueframework.com/docs/sdk/events/) — the `updates` wire union (`ConversationStreamChunk`), the `FlueEventStream` iteration surface, and offset/redelivery semantics.
+- [Errors](https://flueframework.com/docs/sdk/errors/) — `FlueApiError` (failed HTTP requests), `FlueExecutionError` (failed or aborted settlements), the documented server error envelope, and the re-exported `@durable-streams/client` stream errors.
 
 ## Docs Navigation
 
@@ -80,16 +80,16 @@ Current page: [Flue Agent SDK](https://flueframework.com/docs/sdk/overview/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Agent SDK
 
-* [Overview](https://flueframework.com/docs/sdk/overview/)
-* [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/)
-* [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
-* [Events](https://flueframework.com/docs/sdk/events/)
-* [Errors](https://flueframework.com/docs/sdk/errors/)
+- [Overview](https://flueframework.com/docs/sdk/overview/)
+- [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/)
+- [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
+- [Events](https://flueframework.com/docs/sdk/events/)
+- [Errors](https://flueframework.com/docs/sdk/errors/)

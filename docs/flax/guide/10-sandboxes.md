@@ -14,11 +14,11 @@ A **sandbox** is an execution environment you attach to an agent: a filesystem a
 
 An agent has at most one environment, and attaching it defines several capabilities at once:
 
-* **The file and shell tools.** With a sandbox attached, the agent’s tool set gains `read`, `write`, `edit`, `bash`, `grep`, and `glob`, all operating on it. When the model runs `bash`, the command executes wherever the sandbox says commands execute. (A sandbox can also replace this tool set with its own — see [Sandbox-provided tools](#sandbox-provided-tools).)
-* **Workspace context.** At initialization, Flue looks around the sandbox’s working directory and composes what it finds into the agent’s system prompt: the working directory path, a directory listing, and the contents of `AGENTS.md` when present.
-* **Workspace skills.** Skill directories under `<cwd>/.agents/skills/` are discovered at the same time and offered to the agent by name, no import required. See [Skills](https://flueframework.com/docs/guide/skills/#workspace-skills).
-* **Subagents.** Delegates share the parent’s environment — same filesystem, same tools. A `task` call can scope a child to a different working directory, but never to a different sandbox. See [Subagents](https://flueframework.com/docs/guide/subagents/#what-a-subagent-inherits).
-* **Your application code.** [Harness tools](https://flueframework.com/docs/guide/tools/#harness-tools) reach the same environment as `harness.sandbox`, for staging files in and out without a conversation record.
+- **The file and shell tools.** With a sandbox attached, the agent’s tool set gains `read`, `write`, `edit`, `bash`, `grep`, and `glob`, all operating on it. When the model runs `bash`, the command executes wherever the sandbox says commands execute. (A sandbox can also replace this tool set with its own — see [Sandbox-provided tools](#sandbox-provided-tools).)
+- **Workspace context.** At initialization, Flue looks around the sandbox’s working directory and composes what it finds into the agent’s system prompt: the working directory path, a directory listing, and the contents of `AGENTS.md` when present.
+- **Workspace skills.** Skill directories under `<cwd>/.agents/skills/` are discovered at the same time and offered to the agent by name, no import required. See [Skills](https://flueframework.com/docs/guide/skills/#workspace-skills).
+- **Subagents.** Delegates share the parent’s environment — same filesystem, same tools. A `task` call can scope a child to a different working directory, but never to a different sandbox. See [Subagents](https://flueframework.com/docs/guide/subagents/#what-a-subagent-inherits).
+- **Your application code.** [Harness tools](https://flueframework.com/docs/guide/tools/#harness-tools) reach the same environment as `harness.sandbox`, for staging files in and out without a conversation record.
 
 Without a sandbox, an agent simply has none of this: no file or shell tools, no workspace in its prompt, and `harness.sandbox` throws. Everything else — custom tools, skills, subagents, state — works the same either way, and plenty of agents never need more.
 
@@ -31,40 +31,40 @@ The lightest environment is a **virtual sandbox** — an in-memory filesystem pa
 Add `just-bash` to your project’s dependencies and wrap an instance with the `bash(...)` helper:
 
 ```ts
-'use agent';
-import { bash, useModel, useSandbox } from '@flue/runtime';
-import { Bash, InMemoryFs } from 'just-bash';
+"use agent";
+import { bash, useModel, useSandbox } from "@flue/runtime";
+import { Bash, InMemoryFs } from "just-bash";
 
 export function ScratchWorker() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs() })));
-  return 'Fetch, reshape, and summarize the data the user points you at.';
+  return "Fetch, reshape, and summarize the data the user points you at.";
 }
 ```
 
 Two properties define it:
 
-* **It’s isolated from the host.** Commands are emulated in-process; the model cannot reach your host filesystem, processes, or environment variables. The network is opt-in: pass `network: { allowedUrlPrefixes: [...] }` (or `dangerouslyAllowFullInternetAccess: true`) to let the emulated `curl` reach out.
-* **It’s ephemeral.** The filesystem starts empty and is rebuilt fresh each time the runtime initializes the agent for new work. Files written while processing one message are gone by the next. Keep durable knowledge in [persistent state](https://flueframework.com/docs/guide/agent-hooks/#persisted-state), and use a real sandbox when files themselves must last.
+- **It’s isolated from the host.** Commands are emulated in-process; the model cannot reach your host filesystem, processes, or environment variables. The network is opt-in: pass `network: { allowedUrlPrefixes: [...] }` (or `dangerouslyAllowFullInternetAccess: true`) to let the emulated `curl` reach out.
+- **It’s ephemeral.** The filesystem starts empty and is rebuilt fresh each time the runtime initializes the agent for new work. Files written while processing one message are gone by the next. Keep durable knowledge in [persistent state](https://flueframework.com/docs/guide/agent-hooks/#persisted-state), and use a real sandbox when files themselves must last.
 
 This is enough for many production agents — `curl`\-and-`jq` data work, text reshaping, anything that only needs scratch space.
 
 Application code reaches the same environment as `harness.sandbox`, so a [harness tool](https://flueframework.com/docs/guide/tools/#harness-tools) can stage an input file, let the agent work on it, and collect the result:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
 
 export const reviewDocument = defineTool({
-  name: 'review_document',
-  description: 'Review one supplied document and report findings.',
+  name: "review_document",
+  description: "Review one supplied document and report findings.",
   input: v.object({ document: v.string() }),
   harness: true,
 
   async run({ harness, data }) {
-    await harness.sandbox.writeFile('document.md', data.document);
-    await harness.prompt('Review document.md and write your findings to review.md.');
-    return { output: { review: await harness.sandbox.readFile('review.md') } };
+    await harness.sandbox.writeFile("document.md", data.document);
+    await harness.prompt("Review document.md and write your findings to review.md.");
+    return { output: { review: await harness.sandbox.readFile("review.md") } };
   },
 });
 ```
@@ -76,23 +76,23 @@ The model sees `document.md` appear in its workspace and works on it with the fi
 The just-bash instance is yours to configure — seed files, allowlist network access, or add custom commands:
 
 ```ts
-'use agent';
-import { bash, useModel, useSandbox } from '@flue/runtime';
-import { Bash, InMemoryFs } from 'just-bash';
-import { exportCatalogCsv } from '../shared/catalog.ts';
+"use agent";
+import { bash, useModel, useSandbox } from "@flue/runtime";
+import { Bash, InMemoryFs } from "just-bash";
+import { exportCatalogCsv } from "../shared/catalog.ts";
 
 export function CatalogAnalyst() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   useSandbox(
     bash(
       () =>
         new Bash({
-          fs: new InMemoryFs({ '/data/catalog.csv': exportCatalogCsv() }),
-          network: { allowedUrlPrefixes: ['https://api.example.com/'] },
+          fs: new InMemoryFs({ "/data/catalog.csv": exportCatalogCsv() }),
+          network: { allowedUrlPrefixes: ["https://api.example.com/"] },
         }),
     ),
   );
-  return 'Answer questions about the product catalog in /data/catalog.csv.';
+  return "Answer questions about the product catalog in /data/catalog.csv.";
 }
 ```
 
@@ -104,29 +104,29 @@ The `useSandbox()` hook attaches an environment inside the agent function, like 
 
 ```ts
 useSandbox(factory);
-useSandbox(factory, { cwd: '/srv/checkouts/flue' });
+useSandbox(factory, { cwd: "/srv/checkouts/flue" });
 ```
 
 A few rules shape how it behaves:
 
-* **At most once per render.** An agent has one environment. Call it in the agent body or inside a single custom hook; a second call in the same render throws. It also throws inside a subagent’s render — delegates share the parent’s environment.
-* **The factory is lazy.** Constructing the factory value on every render is cheap by design. The expensive work happens inside the factory’s `createSandbox()`, which the runtime calls once when it initializes the agent — never on re-renders.
-* **The factory receives the agent instance id.** Adapters can key provider resources on it, which is how a remote sandbox gives each conversation its own durable workspace (more below).
-* **`cwd` scopes the working directory** inside the environment, resolved once at initialization against the sandbox’s own base directory. It determines where commands run by default and where workspace discovery (`AGENTS.md`, skills, the directory listing) happens.
+- **At most once per render.** An agent has one environment. Call it in the agent body or inside a single custom hook; a second call in the same render throws. It also throws inside a subagent’s render — delegates share the parent’s environment.
+- **The factory is lazy.** Constructing the factory value on every render is cheap by design. The expensive work happens inside the factory’s `createSandbox()`, which the runtime calls once when it initializes the agent — never on re-renders.
+- **The factory receives the agent instance id.** Adapters can key provider resources on it, which is how a remote sandbox gives each conversation its own durable workspace (more below).
+- **`cwd` scopes the working directory** inside the environment, resolved once at initialization against the sandbox’s own base directory. It determines where commands run by default and where workspace discovery (`AGENTS.md`, skills, the directory listing) happens.
 
 ## The local sandbox
 
 On the [Node.js target](https://flueframework.com/docs/guide/node-target/), the built-in `local()` factory binds the agent directly to the host: file operations use the real filesystem, and `bash` commands run as real processes through the host shell. There is no isolation, by design. Use it for development tools, CI tasks, coding agents, and self-hosted automation where the host environment either is the workspace or already provides the isolation (a container, a dedicated VM). Do not use it as an isolation boundary for untrusted requests or multiple tenants.
 
 ```ts
-'use agent';
-import { useModel, useSandbox } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+"use agent";
+import { useModel, useSandbox } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
 
 export function ReleaseManager() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox(local({ env: { GH_TOKEN: process.env.GH_TOKEN } }));
-  return 'Prepare the release: check CI status, draft the changelog, tag the release.';
+  return "Prepare the release: check CI status, draft the changelog, tag the release.";
 }
 ```
 
@@ -153,13 +153,13 @@ The blueprint walks your coding agent through creating `<source-dir>/sandboxes/e
 Adapters are deliberately thin: your application creates, reuses, and deletes provider sandboxes; Flue only connects to what you hand it and never destroys provider infrastructure. The usual pattern wraps the provider call in the factory itself, so the sandbox is created (or reconnected) lazily at initialization:
 
 ```ts
-'use agent';
-import { Daytona } from '@daytona/sdk';
-import { useModel, useSandbox } from '@flue/runtime';
-import { daytona } from '../sandboxes/daytona.ts';
+"use agent";
+import { Daytona } from "@daytona/sdk";
+import { useModel, useSandbox } from "@flue/runtime";
+import { daytona } from "../sandboxes/daytona.ts";
 
 export function CodeRunner() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox({
     async createSandbox(options) {
       const client = new Daytona();
@@ -167,7 +167,7 @@ export function CodeRunner() {
       return daytona(sandbox).createSandbox(options);
     },
   });
-  return 'Clone the repository the user names, run its test suite, and report results.';
+  return "Clone the repository the user names, run its test suite, and report results.";
 }
 ```
 
@@ -184,30 +184,30 @@ A sandbox factory may also carry a `tools` function. When present, it **replaces
 Like other hooks, `useSandbox()` may be called conditionally — an agent can legally gain or lose its sandbox mid-conversation. Gate the call on [persistent state](https://flueframework.com/docs/guide/agent-hooks/#persisted-state) and let a tool flip it:
 
 ```ts
-'use agent';
-import { useModel, usePersistentState, useSandbox, useTool } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+"use agent";
+import { useModel, usePersistentState, useSandbox, useTool } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
 
 export function SupportEngineer() {
-  useModel('anthropic/claude-sonnet-4-6');
-  const [investigating, setInvestigating] = usePersistentState('investigating', false);
+  useModel("anthropic/claude-sonnet-4-6");
+  const [investigating, setInvestigating] = usePersistentState("investigating", false);
 
   useTool({
-    name: 'open_investigation',
-    description: 'Call when the issue needs hands-on debugging in the repository.',
+    name: "open_investigation",
+    description: "Call when the issue needs hands-on debugging in the repository.",
     async run() {
       setInvestigating(true);
-      return 'Investigation opened. The repository workspace will be attached.';
+      return "Investigation opened. The repository workspace will be attached.";
     },
   });
 
   if (investigating) {
-    useSandbox(local({ cwd: '/srv/support/repro' }));
+    useSandbox(local({ cwd: "/srv/support/repro" }));
   }
 
   return investigating
-    ? 'Reproduce the issue in the workspace and report your findings.'
-    : 'Diagnose the issue from the conversation. Open an investigation when you need hands-on debugging.';
+    ? "Reproduce the issue in the workspace and report your findings."
+    : "Diagnose the issue from the conversation. Open an investigation when you need hands-on debugging.";
 }
 ```
 
@@ -219,13 +219,13 @@ Only _presence_ is observable: factories are fresh objects on every render, so r
 
 ## Next steps
 
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — the hook model `useSandbox()` participates in.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/) — the full `useSandbox(...)` and `harness.sandbox` contracts.
-* [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/) — build an adapter for your own sandbox provider.
-* [Ecosystem: Sandboxes](https://flueframework.com/docs/ecosystem/#sandboxes) — the catalog of supported providers.
-* [Node.js target](https://flueframework.com/docs/guide/node-target/#local-sandbox) — the `local()` reference and host deployment.
-* [Cloudflare target](https://flueframework.com/docs/guide/cloudflare-target/#cloudflare-sandbox) — container-backed sandboxes on Workers.
-* [Durability](https://flueframework.com/docs/guide/durability/#keep-workspace-state-separate) — conversation persistence and workspace persistence are independent choices.
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — the hook model `useSandbox()` participates in.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/) — the full `useSandbox(...)` and `harness.sandbox` contracts.
+- [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/) — build an adapter for your own sandbox provider.
+- [Ecosystem: Sandboxes](https://flueframework.com/docs/ecosystem/#sandboxes) — the catalog of supported providers.
+- [Node.js target](https://flueframework.com/docs/guide/node-target/#local-sandbox) — the `local()` reference and host deployment.
+- [Cloudflare target](https://flueframework.com/docs/guide/cloudflare-target/#cloudflare-sandbox) — container-backed sandboxes on Workers.
+- [Durability](https://flueframework.com/docs/guide/durability/#keep-workspace-state-separate) — conversation persistence and workspace persistence are independent choices.
 
 ## Docs Navigation
 
@@ -233,48 +233,48 @@ Current page: [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

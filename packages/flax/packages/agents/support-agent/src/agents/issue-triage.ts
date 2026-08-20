@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -11,9 +12,9 @@ import {
   usePersistentState,
   useResponseFinish,
   useResponseStart,
-  useSkill,
   useSubagent,
   useTool,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 
@@ -29,11 +30,7 @@ interface TriageState {
   category: string;
 }
 
-function TicketTriageReviewer() {
-  return `You are a support triage reviewer. Given a ticket and its triage (summary, category, severity, clarifying questions, next steps), check that the severity matches the impact, nothing was invented, and the next steps are actionable. Return APPROVED or REVISE with the specific issue. Be terse.`;
-}
-
-export function IssueTriage() {
+const issueTriage = defineAgent("issue-triage", () => {
   // cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct
   useModel("ollama/qwen2.5-coder:7b", {
     thinkingLevel: "low",
@@ -70,7 +67,7 @@ export function IssueTriage() {
       (delivery.kind === "signal" ? delivery.attributes?.ticket : undefined) ||
       "unknown";
     log.info("triage.started", { ticket });
-    setTriage((prev) => ({ ...prev, status: "triaging", ticket }));
+    setTriage({ ...triage, status: "triaging", ticket });
     writeSupport({
       status: "triaging",
       ticket,
@@ -81,14 +78,18 @@ export function IssueTriage() {
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("triage.finished", { toolCalls: response.toolCalls.length });
-    setTriage((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("triage.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setTriage({ ...triage, status: "done" });
     writeSupport({
       status: "done",
       ticket: triage.ticket,
@@ -97,16 +98,17 @@ export function IssueTriage() {
     });
   });
 
-  useSubagent({
-    name: "triage-reviewer",
-    description:
-      "Reviews a ticket triage for severity accuracy, invented details, and actionable next steps before it is sent.",
-    agent: TicketTriageReviewer,
-  });
+  useSubagent(
+    "triage-reviewer",
+    "Reviews a ticket triage for severity accuracy, invented details, and actionable next steps before it is sent.",
+    GeneralSubagent,
+  );
   useTool(jiraLinearTool);
   useTool(supportTicketsTool);
   useTool(sentimentAnalysisTool);
   useTool(webSearchTool);
 
   return `You are the Support agent. Given a user issue or ticket, pull the ticket with your tools, triage it (summary, category, severity, clarifying questions, next steps), search the knowledge base when useful, create backlog items when needed, and reply to the user empathetically. Be concise and never invent details.`;
-}
+});
+
+export default issueTriage;

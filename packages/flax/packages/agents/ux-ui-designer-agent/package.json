@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@nowarelabs/agents": "workspace:*",
+    "@nowarelabs/entrypoints": "workspace:*",
     "agents": "^0.20.1",
-    "hono": "^4.13.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {

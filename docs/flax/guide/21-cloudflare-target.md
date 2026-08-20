@@ -113,9 +113,9 @@ The submitting connection observes the work but does not own it. If a client dis
 
 Accepted work runs inside the Durable Object itself, as one platform-visible unit per response: after admission answers, Flue schedules a zero-delay wake, and the object’s alarm invocation claims the queued submission and awaits the full response — every model turn and tool call — before completing. Admission always returns first; the response begins on the next alarm tick, typically within tens of milliseconds. Three consequences:
 
-* **Platform observability sees agent work.** Workers Logs, Workers Traces, and invocation-wrapping integrations (the Sentry `wrap` pattern in [Extending Agents](#extending-agents-on-cloudflare)) attribute the whole response to the one invocation that ran it. [createCloudflareTracing()](#createcloudflaretracing) (installed by default) adds agent-level spans to those traces. See [Observability](https://flueframework.com/docs/guide/observability/#cloudflare) for the two views and [Deploy on Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/#observability) for enabling them.
-* **Scheduled callbacks wait for a running response.** A Durable Object runs one alarm at a time, so `schedule()`/`scheduleEvery()` callbacks that come due mid-response fire after it settles — delivery is durable; timeliness is not guaranteed while the agent is busy. `queue()` is not alarm-driven and is unaffected. Steering is also unaffected: a message that arrives mid-response still joins it at the next turn boundary.
-* **CPU limits are per invocation.** Agent responses are I/O-bound and sit far below the default 30-second active-CPU limit; raise [limits.cpu\_ms](https://developers.cloudflare.com/durable-objects/platform/limits/) in `wrangler.jsonc` if an agent computes heavily.
+- **Platform observability sees agent work.** Workers Logs, Workers Traces, and invocation-wrapping integrations (the Sentry `wrap` pattern in [Extending Agents](#extending-agents-on-cloudflare)) attribute the whole response to the one invocation that ran it. [createCloudflareTracing()](#createcloudflaretracing) (installed by default) adds agent-level spans to those traces. See [Observability](https://flueframework.com/docs/guide/observability/#cloudflare) for the two views and [Deploy on Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/#observability) for enabling them.
+- **Scheduled callbacks wait for a running response.** A Durable Object runs one alarm at a time, so `schedule()`/`scheduleEvery()` callbacks that come due mid-response fire after it settles — delivery is durable; timeliness is not guaranteed while the agent is busy. `queue()` is not alarm-driven and is unaffected. Steering is also unaffected: a message that arrives mid-response still joins it at the next turn boundary.
+- **CPU limits are per invocation.** Agent responses are I/O-bound and sit far below the default 30-second active-CPU limit; raise [limits.cpu_ms](https://developers.cloudflare.com/durable-objects/platform/limits/) in `wrangler.jsonc` if an agent computes heavily.
 
 When a Durable Object resumes after interruption, Flue decides what to do next from the stored input and canonical conversation progress. It requeues only when it can prove the input was not applied, recognizes already-completed output, and records an interruption instead of blindly repeating uncertain model or tool work.
 
@@ -126,7 +126,7 @@ For the full recovery model, see [Durability](https://flueframework.com/docs/gui
 A Flue Worker deployed without a public route can still be reached from another Worker through a [service binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/). The Flue Agent SDK client sends every request through its `fetch` option, so point that option at the binding instead of the network:
 
 ```ts
-import { createFlueClient } from '@flue/sdk';
+import { createFlueClient } from "@flue/sdk";
 
 type Env = { AGENT_APP: Fetcher };
 
@@ -136,12 +136,12 @@ export default {
       // The host is never dialed — only the pathname and query select a route.
       // The URL must be absolute, so any placeholder origin works; the path is
       // wherever the agent app's app.ts mounts the agent, plus the conversation id.
-      url: 'https://agent.internal/agents/support/ticket-42',
+      url: "https://agent.internal/agents/support/ticket-42",
       fetch: (input, init) => env.AGENT_APP.fetch(new Request(input, init)),
     });
 
     const admission = await convo.send({
-      message: { kind: 'user', body: 'Summarize this ticket.' },
+      message: { kind: "user", body: "Summarize this ticket." },
     });
 
     return Response.json(admission);
@@ -164,7 +164,7 @@ const response = await env.AGENT_APP.fetch(new Request(url));
 
 ```ts
 export function Assistant() {
-  useModel('cloudflare/@cf/moonshotai/kimi-k2.6');
+  useModel("cloudflare/@cf/moonshotai/kimi-k2.6");
 }
 ```
 
@@ -179,15 +179,15 @@ To customize the gateway, disable it, or target a named gateway, re-register the
 [Cloudflare Sandbox](https://developers.cloudflare.com/containers/) provides container-backed Linux environments for agents that need tools such as git, package installation, native binaries, or a real filesystem. Export the sandbox Durable Object class from `cloudflare.ts`, declare its binding and container image in `wrangler.jsonc`, then wrap the RPC stub returned by `getSandbox(...)` with `cloudflareSandbox(...)`:
 
 ```ts
-'use agent';
-import { getSandbox } from '@cloudflare/sandbox';
-import { env } from 'cloudflare:workers';
-import { type AgentProps, useModel, useSandbox } from '@flue/runtime';
-import { cloudflareSandbox } from '@flue/runtime/cloudflare';
+"use agent";
+import { getSandbox } from "@cloudflare/sandbox";
+import { env } from "cloudflare:workers";
+import { type AgentProps, useModel, useSandbox } from "@flue/runtime";
+import { cloudflareSandbox } from "@flue/runtime/cloudflare";
 
 export function Assistant({ id }: AgentProps) {
-  useModel('anthropic/claude-sonnet-4-6');
-  useSandbox(cloudflareSandbox(getSandbox(env.Sandbox, id)), { cwd: '/workspace' });
+  useModel("anthropic/claude-sonnet-4-6");
+  useSandbox(cloudflareSandbox(getSandbox(env.Sandbox, id)), { cwd: "/workspace" });
 }
 ```
 
@@ -208,7 +208,7 @@ pnpm exec flue add sandbox cloudflare-computer
 Then import its helpers from your generated sandbox adapter file, not from `@flue/runtime/cloudflare`:
 
 ```ts
-import { getComputerSandbox, getComputerWorkspace } from '../sandboxes/cloudflare-computer';
+import { getComputerSandbox, getComputerWorkspace } from "../sandboxes/cloudflare-computer";
 ```
 
 Use Cloudflare Computer when a durable workspace and shell-expressible work are enough. Use Cloudflare Sandbox when you need a full Linux environment with native binaries. See [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/) for setup details.
@@ -218,19 +218,19 @@ Use Cloudflare Computer when a durable workspace and shell-expressible work are 
 Flue owns each generated Durable Object class. When an agent needs access to native Cloudflare Agents SDK capabilities such as `onStart()`, `schedule()`, `scheduleEvery()`, or `queue()`, export a `cloudflare` extension descriptor from its module:
 
 ```ts
-'use agent';
-import { useModel } from '@flue/runtime';
-import { extend } from '@flue/runtime/cloudflare';
+"use agent";
+import { useModel } from "@flue/runtime";
+import { extend } from "@flue/runtime/cloudflare";
 
 export function Assistant() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
 }
 
 export const cloudflare = extend({
   base: (Base) =>
     class extends Base {
       async onStart() {
-        await this.scheduleEvery(60, 'heartbeat');
+        await this.scheduleEvery(60, "heartbeat");
       }
 
       async heartbeat() {
@@ -262,13 +262,13 @@ Your project may include a source-root `cloudflare.ts` file for Worker-level Clo
 Any **named export** from this file becomes a top-level Worker export. This is how you add application-owned Durable Objects to the same Worker that Flue manages. For example, a cache Durable Object that your agents can access through `env`:
 
 ```ts
-import { DurableObject } from 'cloudflare:workers';
+import { DurableObject } from "cloudflare:workers";
 
 // This class becomes a Worker export. Declare its binding and
 // migration in wrangler.jsonc so Cloudflare knows about it.
 export class SalesforceAuthCache extends DurableObject {
   async refreshIfNeeded() {
-    return await this.ctx.storage.get('token');
+    return await this.ctx.storage.get("token");
   }
 }
 ```
@@ -280,7 +280,7 @@ The **default export** may contribute non-HTTP Worker handlers. For example, a `
 ```ts
 export default {
   async scheduled(_controller, env) {
-    await env.SALESFORCE_AUTH_CACHE.getByName('default').refreshIfNeeded();
+    await env.SALESFORCE_AUTH_CACHE.getByName("default").refreshIfNeeded();
   },
 };
 ```
@@ -294,7 +294,7 @@ Use `cloudflare.ts` for Worker-level events such as inbound email, queues, or cr
 ### `extend(...)`
 
 ```ts
-import { extend } from '@flue/runtime/cloudflare';
+import { extend } from "@flue/runtime/cloudflare";
 
 function extend<TBase extends object = CloudflareAgentLike, TEnv = any>(
   extension: CloudflareExtension<TBase, TEnv>,
@@ -314,7 +314,7 @@ Both callbacks are optional. When omitted, the corresponding step is an identity
 ### `getCloudflareContext()`
 
 ```ts
-import { getCloudflareContext } from '@flue/runtime/cloudflare';
+import { getCloudflareContext } from "@flue/runtime/cloudflare";
 
 function getCloudflareContext(): CloudflareContext;
 ```
@@ -323,8 +323,8 @@ Returns the current Cloudflare runtime context. Only valid while code is running
 
 The returned `CloudflareContext` includes:
 
-* `env` – the Worker’s environment bindings.
-* `storage` – the Durable Object’s `{ sql }` SQLite storage handle.
+- `env` – the Worker’s environment bindings.
+- `storage` – the Durable Object’s `{ sql }` SQLite storage handle.
 
 Throws outside of Cloudflare runtime work.
 
@@ -333,7 +333,7 @@ This is intended for advanced application-owned integrations such as custom Clou
 ### `getDurableObjectIdentity()`
 
 ```ts
-import { getDurableObjectIdentity } from '@flue/runtime/cloudflare';
+import { getDurableObjectIdentity } from "@flue/runtime/cloudflare";
 
 function getDurableObjectIdentity(): FlueDurableObjectIdentity;
 ```
@@ -342,18 +342,18 @@ Returns the generated Durable Object identity for the current agent context. Onl
 
 The returned `FlueDurableObjectIdentity` includes:
 
-* `bindingName` – the Wrangler binding name, such as `"FLUE_SUPPORT_CHAT_AGENT"`.
-* `className` – the generated class name, such as `"FlueSupportChatAgent"`.
-* `name` – the instance name passed to `idFromName` or `getAgentByName`.
-* `id` – the Durable Object ID as a string.
+- `bindingName` – the Wrangler binding name, such as `"FLUE_SUPPORT_CHAT_AGENT"`.
+- `className` – the generated class name, such as `"FlueSupportChatAgent"`.
+- `name` – the instance name passed to `idFromName` or `getAgentByName`.
+- `id` – the Durable Object ID as a string.
 
 Throws when called outside a generated Durable Object context.
 
 ### `createCloudflareTracing()`
 
 ```ts
-import { instrument } from '@flue/runtime';
-import { createCloudflareTracing } from '@flue/runtime/cloudflare';
+import { instrument } from "@flue/runtime";
+import { createCloudflareTracing } from "@flue/runtime/cloudflare";
 
 function createCloudflareTracing(options?: CloudflareTracingOptions): FlueInstrumentation;
 
@@ -370,9 +370,9 @@ instrument(createCloudflareTracing({ content: false }));
 
 Each agent response’s trace carries agent-level spans nested under the invocation that ran it:
 
-* `invoke_agent {agent}` – the whole run, with `gen_ai.agent.name`, `gen_ai.agent.id` (the instance), `gen_ai.conversation.id`, aggregate `gen_ai.usage.*` token counts, and the caller’s input and output messages.
-* `chat {model}` – one per model turn (compaction turns included), with request and response model identity, per-turn `gen_ai.usage.*`, the finish reason, and the turn’s messages, system instructions, and tool definitions. Provider `fetch` subrequests nest inside it.
-* `execute_tool {tool}` – one per tool call, with `gen_ai.tool.name`, `gen_ai.tool.call.id`, and the call’s arguments and result. Subagent task runs appear as nested `invoke_agent` spans instead.
+- `invoke_agent {agent}` – the whole run, with `gen_ai.agent.name`, `gen_ai.agent.id` (the instance), `gen_ai.conversation.id`, aggregate `gen_ai.usage.*` token counts, and the caller’s input and output messages.
+- `chat {model}` – one per model turn (compaction turns included), with request and response model identity, per-turn `gen_ai.usage.*`, the finish reason, and the turn’s messages, system instructions, and tool definitions. Provider `fetch` subrequests nest inside it.
+- `execute_tool {tool}` – one per tool call, with `gen_ai.tool.name`, `gen_ai.tool.call.id`, and the call’s arguments and result. Subagent task runs appear as nested `invoke_agent` spans instead.
 
 Span names and attributes follow the OpenTelemetry GenAI conventions that Cloudflare’s own agent tracing emits, so Flue agents read natively in the Traces dashboard; Flue-specific keys live under `flue.*`.
 
@@ -383,7 +383,7 @@ instrument(
   createCloudflareTracing({
     content: {
       transform(content, scope) {
-        if (scope.contentType === 'tool_result') return undefined; // omit entirely
+        if (scope.contentType === "tool_result") return undefined; // omit entirely
         return scrubPII(content);
       },
     },
@@ -403,48 +403,48 @@ Current page: [Cloudflare](https://flueframework.com/docs/guide/cloudflare-targe
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

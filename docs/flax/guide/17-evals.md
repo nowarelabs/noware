@@ -16,8 +16,8 @@ An agent’s behavior emerges from its instructions, its model, and its tools to
 
 Two properties shape how evals are written:
 
-* **Evals are nondeterministic.** The same input can produce different wording, a different tool order, occasionally a different outcome. Assert on the behavioral contract — required tool calls, key facts in the reply, the shape of structured data — rather than exact output strings.
-* **Evals spend real tokens and real time.** Every case runs one or more live model turns. Evals therefore live in their own suite, with their own configuration, credentials, timeouts, and run cadence, separate from unit tests.
+- **Evals are nondeterministic.** The same input can produce different wording, a different tool order, occasionally a different outcome. Assert on the behavioral contract — required tool calls, key facts in the reply, the shape of structured data — rather than exact output strings.
+- **Evals spend real tokens and real time.** Every case runs one or more live model turns. Evals therefore live in their own suite, with their own configuration, credentials, timeouts, and run cadence, separate from unit tests.
 
 Flue has no dedicated eval framework. An eval is a [Vitest](https://vitest.dev) test that drives an agent through the same public surfaces every other caller uses — the in-process [init() handle](https://flueframework.com/docs/reference/agent-api/#init) or the HTTP conversation surface — and asserts on the result. The [vitest-evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/) integration layers eval harnesses, judges, and CI reporting on top; see [below](#vitest-evals).
 
@@ -26,11 +26,11 @@ Flue has no dedicated eval framework. An eval is a [Vitest](https://vitest.dev) 
 Keep evals in a dedicated Vitest configuration. Live-model tests need different file discovery, longer timeouts, and different credentials than unit tests, and a separate config lets each run independently:
 
 ```ts
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ['src/evals/**/*.eval.ts'],
+    include: ["src/evals/**/*.eval.ts"],
     testTimeout: 60_000,
   },
 });
@@ -53,37 +53,37 @@ Eval files live under `src/evals/` and are named for the capability or scenario 
 The most direct way to run an agent in a test is [start()](https://flueframework.com/docs/guide/building-agents/#standalone-scripts) from `@flue/runtime/node`, which boots the Flue runtime inside the test process — no server, no build. The [init()](https://flueframework.com/docs/reference/agent-api/#init) handle then sends a message and awaits the settled reply:
 
 ```ts
-import { init } from '@flue/runtime';
-import { start } from '@flue/runtime/node';
-import { afterAll, expect, it } from 'vitest';
-import { ServiceStatus } from '../agents/service-status.ts';
+import { init } from "@flue/runtime";
+import { start } from "@flue/runtime/node";
+import { afterAll, expect, it } from "vitest";
+import { ServiceStatus } from "../agents/service-status.ts";
 
 const flue = await start({ agents: [ServiceStatus] });
 afterAll(() => flue.stop());
 
-it('checks live service status before answering', async () => {
+it("checks live service status before answering", async () => {
   const toolsCalled: string[] = [];
 
   // No id: init() mints a fresh conversation for this case.
   const agent = init(ServiceStatus);
-  const receipt = await agent.dispatch('Is the checkout service currently operational?');
+  const receipt = await agent.dispatch("Is the checkout service currently operational?");
   const reply = await agent.read(receipt, {
     onEvent: (chunk) => {
-      if (chunk.type === 'tool-input') toolsCalled.push(chunk.toolName);
+      if (chunk.type === "tool-input") toolsCalled.push(chunk.toolName);
     },
   });
 
-  expect(reply.text).toContain('operational');
-  expect(toolsCalled).toContain('get_service_status');
+  expect(reply.text).toContain("operational");
+  expect(toolsCalled).toContain("get_service_status");
 });
 ```
 
 Everything here is the ordinary programmatic surface:
 
-* **Fresh conversation per case.** `init(agent)` without an `id` addresses a new, uniquely named conversation, so cases stay independent — saved conversation history cannot affect other cases. A case that evaluates conversation memory reuses one handle and sends several `dispatch(...)`/`read(...)` pairs through it.
-* **The reply is the assertion target.** `reply.text` is the final assistant text, and `reply.data` carries named [useDataWriter](https://flueframework.com/docs/guide/agent-hooks/#streaming-data-to-the-client) parts — the place to assert on structured results. A failed or aborted run rejects `read()` with `AgentRunError`, which fails the test.
-* **Tool calls arrive as events.** `read()`’s `onEvent` callback receives every conversation chunk as it is recorded; `tool-input` chunks carry the `toolName` and `input` of each tool call the model made.
-* **Full runtime behavior.** Hooks, durability, and sandboxes work exactly as they do in a server — `start()` is the same assembly without an HTTP surface.
+- **Fresh conversation per case.** `init(agent)` without an `id` addresses a new, uniquely named conversation, so cases stay independent — saved conversation history cannot affect other cases. A case that evaluates conversation memory reuses one handle and sends several `dispatch(...)`/`read(...)` pairs through it.
+- **The reply is the assertion target.** `reply.text` is the final assistant text, and `reply.data` carries named [useDataWriter](https://flueframework.com/docs/guide/agent-hooks/#streaming-data-to-the-client) parts — the place to assert on structured results. A failed or aborted run rejects `read()` with `AgentRunError`, which fails the test.
+- **Tool calls arrive as events.** `read()`’s `onEvent` callback receives every conversation chunk as it is recorded; `tool-input` chunks carry the `toolName` and `input` of each tool call the model made.
+- **Full runtime behavior.** Hooks, durability, and sandboxes work exactly as they do in a server — `start()` is the same assembly without an HTTP surface.
 
 Three constraints apply. One process holds one Flue runtime, so call `start()` once per test file and stop it when the file finishes — Vitest’s default isolation gives each test file its own worker, which keeps files from colliding. Provider credentials come from the test process environment (see [Models — Provider credentials](https://flueframework.com/docs/guide/models/#provider-credentials)). And the eval imports the agent module directly, so the module must load under plain Vitest: an agent that depends on build-resolved imports, such as a [SKILL.md import](https://flueframework.com/docs/guide/skills/#import-and-mount-a-skill), needs the Flue build and should be evaluated over HTTP instead.
 
@@ -92,31 +92,31 @@ Three constraints apply. One process holds one Flue runtime, so call `start()` o
 An agent [mounted in app.ts](https://flueframework.com/docs/guide/routing/#mounting-an-agent) can be evaluated through its HTTP surface with the [Flue Agent SDK](https://flueframework.com/docs/sdk/overview/) — the same boundary a deployed application serves, including your route middleware. A fresh conversation is a fresh id appended to the mount URL:
 
 ```ts
-import { createFlueClient } from '@flue/sdk';
-import { expect, it } from 'vitest';
+import { createFlueClient } from "@flue/sdk";
+import { expect, it } from "vitest";
 
 // The agent's mount URL from app.ts; point FLUE_AGENT_URL at a deployment.
-const mountUrl = process.env.FLUE_AGENT_URL ?? 'http://127.0.0.1:5173/agents/service-status';
+const mountUrl = process.env.FLUE_AGENT_URL ?? "http://127.0.0.1:5173/agents/service-status";
 
-it('checks live service status before answering', async () => {
+it("checks live service status before answering", async () => {
   const conversation = createFlueClient({
     url: `${mountUrl}/eval-${crypto.randomUUID()}`,
   });
 
   const admission = await conversation.send({
-    message: { kind: 'user', body: 'Is the checkout service currently operational?' },
+    message: { kind: "user", body: "Is the checkout service currently operational?" },
   });
   await conversation.wait(admission);
 
   const { messages } = await conversation.history();
-  const reply = messages.findLast((message) => message.role === 'assistant');
+  const reply = messages.findLast((message) => message.role === "assistant");
   const text =
     reply?.parts
-      .filter((part) => part.type === 'text')
+      .filter((part) => part.type === "text")
       .map((part) => part.text)
-      .join('') ?? '';
+      .join("") ?? "";
 
-  expect(text).toContain('operational');
+  expect(text).toContain("operational");
 });
 ```
 
@@ -124,8 +124,8 @@ Prompts are fire-and-forget over HTTP: `send()` admits the message, `wait()` awa
 
 Choose a surface by what the eval should exercise:
 
-* **In-process (`start()`)** exercises the agent itself — instructions, model, hooks, tools — and needs provider credentials in the test environment.
-* **HTTP (`@flue/sdk`)** exercises the agent plus `app.ts` routing and middleware, and needs a running dev server or deployment.
+- **In-process (`start()`)** exercises the agent itself — instructions, model, hooks, tools — and needs provider credentials in the test environment.
+- **HTTP (`@flue/sdk`)** exercises the agent plus `app.ts` routing and middleware, and needs a running dev server or deployment.
 
 Both surfaces are public APIs, so they also serve as the integration point for other eval libraries and hosted platforms such as [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/) — drive the agent the same way and hand the result to your own scoring pipeline.
 
@@ -142,20 +142,20 @@ The blueprint creates the eval configuration and scripts from [above](#set-up-an
 Cases are written with `describeEval`, which binds the harness to a suite and hands each test a `run(...)` function:
 
 ```ts
-import { expect } from 'vitest';
-import { describeEval, toolCalls } from 'vitest-evals';
-import { createFlueAgentHarness } from './harness.ts';
+import { expect } from "vitest";
+import { describeEval, toolCalls } from "vitest-evals";
+import { createFlueAgentHarness } from "./harness.ts";
 
 const harness = createFlueAgentHarness({
-  agentUrl: process.env.FLUE_AGENT_URL ?? 'http://127.0.0.1:5173/agents/service-status',
+  agentUrl: process.env.FLUE_AGENT_URL ?? "http://127.0.0.1:5173/agents/service-status",
 });
 
-describeEval('service status agent', { harness }, (it) => {
-  it('checks live service status before answering', async ({ run }) => {
-    const result = await run('Is the checkout service currently operational?');
+describeEval("service status agent", { harness }, (it) => {
+  it("checks live service status before answering", async ({ run }) => {
+    const result = await run("Is the checkout service currently operational?");
 
-    expect(result.output).toContain('operational');
-    expect(toolCalls(result).map((call) => call.name)).toContain('get_service_status');
+    expect(result.output).toContain("operational");
+    expect(toolCalls(result).map((call) => call.name)).toContain("get_service_status");
   });
 });
 ```
@@ -165,15 +165,15 @@ describeEval('service status agent', { harness }, (it) => {
 Deterministic assertions cover exact contracts: required tools, prohibited tools, structured output, stable content. For semantic behavior — factual consistency, tone, policy adherence — `vitest-evals` provides **judges**, scorers that grade a result and fail the case below a threshold. LLM-backed judges run on a _judge harness_: the judge’s own model connection, configured separately from the agent under evaluation:
 
 ```ts
-import { expect } from 'vitest';
-import { describeEval, FactualityJudge } from 'vitest-evals';
+import { expect } from "vitest";
+import { describeEval, FactualityJudge } from "vitest-evals";
 
-describeEval('service status agent', { harness, judgeHarness }, (it) => {
-  it('reports status consistent with the reference answer', async ({ run }) => {
-    const result = await run('Is the checkout service currently operational?');
+describeEval("service status agent", { harness, judgeHarness }, (it) => {
+  it("reports status consistent with the reference answer", async ({ run }) => {
+    const result = await run("Is the checkout service currently operational?");
 
     await expect(result).toSatisfyJudge(FactualityJudge(), {
-      expected: 'The checkout service is currently operational.',
+      expected: "The checkout service is currently operational.",
       threshold: 0.6,
     });
   });
@@ -202,11 +202,11 @@ For reporting, the vitest-evals blueprint adds an `evals:json` script that write
 
 ## Next steps
 
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/) — the blueprint, generated harness, and report commands.
-* [Agents](https://flueframework.com/docs/guide/building-agents/#standalone-scripts) — `start()` and standalone scripts, the same surface evals build on.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/#init) — the full `init()` handle contract, `AgentReply`, and `AgentRunError`.
-* [Agent SDK](https://flueframework.com/docs/sdk/flue-client/) — `send()`, `wait()`, and `history()` on one conversation URL.
-* [Observability](https://flueframework.com/docs/guide/observability/) — tracing agent runs with [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/) and other providers; identifiers such as `submissionId` and the conversation id connect a failing case to the execution that produced it.
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/) — the blueprint, generated harness, and report commands.
+- [Agents](https://flueframework.com/docs/guide/building-agents/#standalone-scripts) — `start()` and standalone scripts, the same surface evals build on.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/#init) — the full `init()` handle contract, `AgentReply`, and `AgentRunError`.
+- [Agent SDK](https://flueframework.com/docs/sdk/flue-client/) — `send()`, `wait()`, and `history()` on one conversation URL.
+- [Observability](https://flueframework.com/docs/guide/observability/) — tracing agent runs with [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/) and other providers; identifiers such as `submissionId` and the conversation id connect a failing case to the execution that produced it.
 
 ## Docs Navigation
 
@@ -214,48 +214,48 @@ Current page: [Evals](https://flueframework.com/docs/guide/evals/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

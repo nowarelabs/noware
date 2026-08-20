@@ -9,10 +9,10 @@ image: https://flueframework.com/docs/og4.jpg
 Last updated Jul 21, 2026[View as Markdown](https://flueframework.com/docs/sdk/create-flue-client/index.md)
 
 ```ts
-import { createFlueClient } from '@flue/sdk';
+import { createFlueClient } from "@flue/sdk";
 
 const conversation = createFlueClient({
-  url: 'https://example.com/agents/triage/ticket-42',
+  url: "https://example.com/agents/triage/ticket-42",
   token: process.env.FLUE_TOKEN,
 });
 ```
@@ -57,7 +57,7 @@ Because every request — streaming reads included — travels through the `fetc
 
 ```ts
 const conversation = createFlueClient({
-  url: 'https://agent.internal/agents/support/ticket-42',
+  url: "https://agent.internal/agents/support/ticket-42",
   fetch: (input, init) => env.AGENT_APP.fetch(new Request(input, init)),
 });
 ```
@@ -68,7 +68,8 @@ The same override injects a test transport: hand `fetch` a function that returns
 
 ```ts
 type RequestHeaders =
-  Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
+  | Record<string, string>
+  | (() => Record<string, string> | Promise<Record<string, string>>);
 ```
 
 Static headers, or a function that resolves headers for each HTTP request. The function form (sync or async) is re-evaluated once per JSON request and once per stream connection and reconnection, so an async factory can refresh a short-lived token and every retry picks up the fresh value.
@@ -81,16 +82,16 @@ Current page: [createFlueClient(...)](https://flueframework.com/docs/sdk/create-
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Agent SDK
 
-* [Overview](https://flueframework.com/docs/sdk/overview/)
-* [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/)
-* [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
-* [Events](https://flueframework.com/docs/sdk/events/)
-* [Errors](https://flueframework.com/docs/sdk/errors/)
+- [Overview](https://flueframework.com/docs/sdk/overview/)
+- [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/)
+- [FlueClient](https://flueframework.com/docs/sdk/flue-client/)
+- [Events](https://flueframework.com/docs/sdk/events/)
+- [Errors](https://flueframework.com/docs/sdk/errors/)

@@ -1,6 +1,8 @@
 "use agent";
 
 import {
+  GeneralSubagent,
+  defineAgent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -32,11 +34,7 @@ interface ScanState {
   high: number;
 }
 
-function ThreatModelReviewer() {
-  return `You are a threat-model reviewer. Given a component and its data flows, check the STRIDE threat model for missed trust boundaries, missing mitigations, and unrealistic assumptions. Return APPROVED or REVISE with the specific gaps. Be terse.`;
-}
-
-export function SecurityAppsec() {
+const agent = defineAgent("security-appsec", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -72,20 +70,24 @@ export function SecurityAppsec() {
       (delivery.kind === "signal" ? delivery.attributes?.target : undefined) ||
       "application";
     log.info("scan.started", { target });
-    setScan((prev) => ({ ...prev, status: "scanning", target }));
+    setScan({ ...scan, status: "scanning", target });
     writeSecurity({ status: "scanning", target, critical: 0, high: 0 });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("scan.finished", { toolCalls: response.toolCalls.length });
-    setScan((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("scan.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setScan({ ...scan, status: "done" });
     writeSecurity({
       status: "done",
       target: scan.target,
@@ -96,16 +98,22 @@ export function SecurityAppsec() {
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSkill(strideThreatModeling);
-  useSubagent({
-    name: "threat-model-reviewer",
+  useSkill({
+    name: "stride-threat-modeling",
     description:
-      "Reviews a STRIDE threat model for missed trust boundaries and missing mitigations before it is accepted.",
-    agent: ThreatModelReviewer,
+      "STRIDE threat modeling methodology for identifying and mitigating security threats",
+    content: strideThreatModeling,
   });
+  useSubagent(
+    "threat-model-reviewer",
+    "Reviews a STRIDE threat model for missed trust boundaries and missing mitigations before it is accepted.",
+    GeneralSubagent,
+  );
   useTool(pentestTool);
   useTool(sbomTool);
   useTool(securityScanTool);
 
   return `You are the Security/AppSec agent. Assess risk against the OWASP Top 10, threat-model components with STRIDE, and enforce secure coding practices. Report severity, exploitability, and concrete remediation for every finding.`;
-}
+});
+
+export default agent;

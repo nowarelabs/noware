@@ -14,7 +14,7 @@ additions are additive — the existing Phase 1 API is unchanged.
   Ignores dotfiles and `node_modules`. `ExtractOpts` carries
   `workspaceName`/`workspaceDescription`.
 - **`reportDrift`**: `DriftReport` interface (`driftedFiles: Map<string,
-  string[]>`, `modelDiff: C4WorkspaceDiff`, `orphans: string[]`) and
+string[]>`, `modelDiff: C4WorkspaceDiff`, `orphans: string[]`) and
   `reportDrift(cfour, fs, manifest)` combining per-node `detectDrift` with
   `cfour.diff("applied", "desired")`. `orphans` is reserved (empty for now).
 - **Diagram renderers**: `renderMermaid(workspace)` produces a Mermaid `C4`
@@ -43,14 +43,14 @@ The `Diesel` interface and `createDiesel` gained: `reportDrift(fs, manifest)`,
 
 ## Tests added
 
-| Describe block | Tests | What's covered |
-|---|---|---|
-| Extractor round-trip | 1 | Stub extractor maps directories to systems, ignores non-source files |
-| reportDrift | 3 | No drift → empty; hand-edited file → driftedFiles; model changed → modelDiff |
-| renderMermaid | 2 | Systems/containers/components/rel render; empty workspace renders minimal diagram |
-| renderPlantUml | 2 | Systems/containers/rel render with PlantUML syntax; empty workspace renders valid wrapper |
-| writeDiagram | 1 | Writes string to disk via CodebaseFs |
-| Template pack | 1 | `createReactNodePack` registers generators that resolve to correct file paths |
+| Describe block       | Tests | What's covered                                                                            |
+| -------------------- | ----- | ----------------------------------------------------------------------------------------- |
+| Extractor round-trip | 1     | Stub extractor maps directories to systems, ignores non-source files                      |
+| reportDrift          | 3     | No drift → empty; hand-edited file → driftedFiles; model changed → modelDiff              |
+| renderMermaid        | 2     | Systems/containers/components/rel render; empty workspace renders minimal diagram         |
+| renderPlantUml       | 2     | Systems/containers/rel render with PlantUML syntax; empty workspace renders valid wrapper |
+| writeDiagram         | 1     | Writes string to disk via CodebaseFs                                                      |
+| Template pack        | 1     | `createReactNodePack` registers generators that resolve to correct file paths             |
 
 ## Verification
 

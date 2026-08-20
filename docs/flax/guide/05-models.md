@@ -15,12 +15,12 @@ Every agent is powered by exactly one LLM at a time, declared with `useModel()` 
 Call `useModel()` in your agent function’s body with a model specifier string:
 
 ```ts
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 export function TriageAgent() {
-  useModel('anthropic/claude-sonnet-4-6');
-  return 'Investigate the reported issue and recommend the next action.';
+  useModel("anthropic/claude-sonnet-4-6");
+  return "Investigate the reported issue and recommend the next action.";
 }
 ```
 
@@ -28,8 +28,8 @@ export function TriageAgent() {
 
 Two rules:
 
-* **The call is required.** An agent render without a `useModel()` call cannot start.
-* **Call it exactly once per render.** An agent has one model. The _argument_ may change from render to render (more on that [below](#changing-models-mid-conversation)), but the call itself may not disappear or repeat.
+- **The call is required.** An agent render without a `useModel()` call cannot start.
+- **Call it exactly once per render.** An agent has one model. The _argument_ may change from render to render (more on that [below](#changing-models-mid-conversation)), but the call itself may not disappear or repeat.
 
 The call can live in the agent body or in a [custom hook](https://flueframework.com/docs/guide/agent-hooks/#custom-hooks) the body calls. The one place it’s not available is a subagent render — a delegate’s model is set on its `useSubagent()` definition instead, and it inherits the parent’s model when unset. See [Subagents](https://flueframework.com/docs/guide/subagents/).
 
@@ -37,17 +37,17 @@ The call can live in the agent body or in a [custom hook](https://flueframework.
 
 A model specifier is a plain string in `'provider-id/model-id'` format. Everything up to the first `/` names the provider; the rest is the provider’s own model ID, which may itself contain slashes:
 
-* `anthropic/claude-sonnet-4-6` — provider `anthropic`, model `claude-sonnet-4-6`
-* `openai/gpt-5.5` — provider `openai`, model `gpt-5.5`
-* `openrouter/moonshotai/kimi-k2.6` — provider `openrouter`, model `moonshotai/kimi-k2.6`
-* `cloudflare/@cf/moonshotai/kimi-k2.6` — provider `cloudflare`, model `@cf/moonshotai/kimi-k2.6`
+- `anthropic/claude-sonnet-4-6` — provider `anthropic`, model `claude-sonnet-4-6`
+- `openai/gpt-5.5` — provider `openai`, model `gpt-5.5`
+- `openrouter/moonshotai/kimi-k2.6` — provider `openrouter`, model `moonshotai/kimi-k2.6`
+- `cloudflare/@cf/moonshotai/kimi-k2.6` — provider `cloudflare`, model `@cf/moonshotai/kimi-k2.6`
 
 Flue resolves specifiers against the providers registered with the runtime. By default that is the full built-in set from [Pi](https://pi.dev/docs/latest/providers), which ships the major providers — `anthropic`, `openai`, `google`, `amazon-bedrock`, `google-vertex`, `groq`, `mistral`, `xai`, `deepseek`, `cerebras`, `together`, `fireworks`, `openrouter`, and more. Each provider’s catalog entries carry the model’s wire protocol, endpoint, context-window size, output-token limit, cost rates, reasoning support, and accepted input modalities. That metadata decides when [compaction](#compaction) triggers, whether a [thinking level](#model-reasoning-effort) reaches the wire, and whether the model can accept images.
 
 To ship only the providers you actually use, list them in the `flue()` plugin config — the generated server entry then imports just those factories, and nothing else enters the build:
 
 ```ts
-flue({ providers: ['anthropic', 'openai'] });
+flue({ providers: ["anthropic", "openai"] });
 ```
 
 With a `providers` list set, a specifier naming any other provider fails at resolution — the list is exhaustive, so on the Cloudflare target include `'cloudflare'` when your agents use `cloudflare/...` models. Omit the field to keep the full set. See the [Provider API reference](https://flueframework.com/docs/reference/provider-api/#the-providers-config) for the exact semantics.
@@ -61,8 +61,8 @@ On the Cloudflare target there is one more built-in provider ID: `cloudflare/...
 `useModel()` accepts an options object as its second argument with two fields: `thinkingLevel` and `compaction`.
 
 ```ts
-useModel('anthropic/claude-opus-4-6', {
-  thinkingLevel: 'high',
+useModel("anthropic/claude-opus-4-6", {
+  thinkingLevel: "high",
   compaction: { keepRecentTokens: 16000 },
 });
 ```
@@ -78,7 +78,7 @@ Thinking only reaches the wire for models marked reasoning-capable. Catalog mode
 Agent conversations can outlive any context window. As a conversation approaches the model’s limit, Flue automatically **compacts** it: older history is folded into a summary while recent messages stay verbatim, and the conversation continues. The `compaction` option tunes that behavior:
 
 ```ts
-useModel('anthropic/claude-opus-4-6', {
+useModel("anthropic/claude-opus-4-6", {
   compaction: {
     // Trigger earlier or later: compaction runs when used tokens
     // exceed contextWindow - reserveTokens. Default: model-aware, ≤ 20000.
@@ -86,7 +86,7 @@ useModel('anthropic/claude-opus-4-6', {
     // How much recent history survives verbatim. Default: 8000.
     keepRecentTokens: 16000,
     // Summarize with a cheaper model than the session runs on.
-    model: 'anthropic/claude-haiku-4-5',
+    model: "anthropic/claude-haiku-4-5",
   },
 });
 ```
@@ -100,23 +100,23 @@ Passing `compaction: false` disables _threshold_ compaction — the automatic tr
 The agent function re-renders before every model call, and `useModel()` runs again each time — so the specifier can be computed, not constant. A common pattern is escalation, where durable state moves an agent from a cheap model to a strong one:
 
 ```ts
-'use agent';
-import { useModel, usePersistentState, useTool } from '@flue/runtime';
+"use agent";
+import { useModel, usePersistentState, useTool } from "@flue/runtime";
 
 export function Reviewer() {
-  const [escalated, setEscalated] = usePersistentState('escalated', false);
-  useModel(escalated ? 'anthropic/claude-opus-4-6' : 'anthropic/claude-haiku-4-5');
+  const [escalated, setEscalated] = usePersistentState("escalated", false);
+  useModel(escalated ? "anthropic/claude-opus-4-6" : "anthropic/claude-haiku-4-5");
 
   useTool({
-    name: 'escalate_review',
-    description: 'Escalate when the change is too complex for a quick pass.',
+    name: "escalate_review",
+    description: "Escalate when the change is too complex for a quick pass.",
     async run() {
       setEscalated(true);
-      return 'Escalated. A stronger model will take over.';
+      return "Escalated. A stronger model will take over.";
     },
   });
 
-  return 'Review the proposed change and leave actionable feedback.';
+  return "Review the proposed change and leave actionable feedback.";
 }
 ```
 
@@ -140,8 +140,8 @@ GEMINI_API_KEY="..."
 
 `anthropic` reads `ANTHROPIC_API_KEY`, `openai` reads `OPENAI_API_KEY`, `google` reads `GEMINI_API_KEY`, `groq` reads `GROQ_API_KEY` — the pattern holds across providers (see [Pi’s provider documentation](https://pi.dev/docs/latest/providers) for the full list). Both local entry points load the file for you, with shell-exported values always winning over file values:
 
-* [flue run](https://flueframework.com/docs/cli/run/) loads the project-root `.env`; pass `--env <path>` to select one alternate file.
-* `vite dev` loads Vite’s standard file set: `.env`, `.env.local`, `.env.<mode>`, `.env.<mode>.local`.
+- [flue run](https://flueframework.com/docs/cli/run/) loads the project-root `.env`; pass `--env <path>` to select one alternate file.
+- `vite dev` loads Vite’s standard file set: `.env`, `.env.local`, `.env.<mode>`, `.env.<mode>.local`.
 
 Don’t commit `.env` files.
 
@@ -149,8 +149,8 @@ Don’t commit `.env` files.
 
 Deployed servers read only the real environment — no `.env` loading:
 
-* **Node.js** — supply keys as process environment variables through your host’s secret mechanism. See [Node.js target — Environment and secrets](https://flueframework.com/docs/guide/node-target/#environment-and-secrets).
-* **Cloudflare** — add each key as a Worker secret (`npx wrangler secret put ANTHROPIC_API_KEY`); locally, `.dev.vars` plays the `.env` role. See the [Cloudflare deploy guide](https://flueframework.com/docs/ecosystem/deploy/cloudflare/).
+- **Node.js** — supply keys as process environment variables through your host’s secret mechanism. See [Node.js target — Environment and secrets](https://flueframework.com/docs/guide/node-target/#environment-and-secrets).
+- **Cloudflare** — add each key as a Worker secret (`npx wrangler secret put ANTHROPIC_API_KEY`); locally, `.dev.vars` plays the `.env` role. See the [Cloudflare deploy guide](https://flueframework.com/docs/ecosystem/deploy/cloudflare/).
 
 When the environment-variable convention doesn’t fit — a gateway with its own credential, a secret manager that hands you the value in code — declare the credential on a [custom provider](#custom-providers): a provider’s `auth.apiKey.resolve()` returns whatever your code produces, and it runs per request, so rotating credentials work too.
 
@@ -161,24 +161,24 @@ Providers are [Pi](https://pi.dev/docs/latest/providers)’s own objects, and Fl
 Any OpenAI- or Anthropic-compatible endpoint works. Here’s a local Ollama server:
 
 ```ts
-import { createProvider, envApiKeyAuth } from '@earendil-works/pi-ai';
-import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy';
-import { setProvider } from '@flue/runtime';
+import { createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
+import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
+import { setProvider } from "@flue/runtime";
 
 setProvider(
   createProvider({
-    id: 'ollama',
+    id: "ollama",
     // Keyless local server; use envApiKeyAuth('...', ['MY_KEY']) for real keys.
-    auth: { apiKey: { name: 'Ollama (keyless)', resolve: async () => ({ auth: {} }) } },
+    auth: { apiKey: { name: "Ollama (keyless)", resolve: async () => ({ auth: {} }) } },
     models: [
       {
-        id: 'llama3.1:8b',
-        name: 'Llama 3.1 8B (local)',
-        api: 'openai-completions',
-        provider: 'ollama',
-        baseUrl: 'http://localhost:11434/v1',
+        id: "llama3.1:8b",
+        name: "Llama 3.1 8B (local)",
+        api: "openai-completions",
+        provider: "ollama",
+        baseUrl: "http://localhost:11434/v1",
         reasoning: false,
-        input: ['text'],
+        input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 128000,
         maxTokens: 8192,
@@ -190,7 +190,7 @@ setProvider(
 ```
 
 ```ts
-useModel('ollama/llama3.1:8b');
+useModel("ollama/llama3.1:8b");
 ```
 
 The provider declares its models, and the runtime trusts that metadata: `reasoning: false` means a `thinkingLevel` is silently dropped, `input: ['text']` means attached images are replaced with an “(image omitted)” placeholder, and `contextWindow: 0` reads as unknown, so threshold compaction can’t engage.
@@ -198,23 +198,23 @@ The provider declares its models, and the runtime trusts that metadata: `reasoni
 Routing a built-in provider through a gateway or proxy is the same move — register your own provider under the built-in’s ID, reusing its catalog models with your endpoint and credential:
 
 ```ts
-import { createProvider } from '@earendil-works/pi-ai';
-import { anthropicMessagesApi } from '@earendil-works/pi-ai/api/anthropic-messages.lazy';
-import { anthropicProvider } from '@earendil-works/pi-ai/providers/anthropic';
-import { setProvider } from '@flue/runtime';
+import { createProvider } from "@earendil-works/pi-ai";
+import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
+import { anthropicProvider } from "@earendil-works/pi-ai/providers/anthropic";
+import { setProvider } from "@flue/runtime";
 
 setProvider(
   createProvider({
-    id: 'anthropic',
+    id: "anthropic",
     auth: {
       apiKey: {
-        name: 'Gateway key',
+        name: "Gateway key",
         resolve: async () => ({ auth: { apiKey: process.env.GATEWAY_KEY } }),
       },
     },
     models: anthropicProvider()
       .getModels()
-      .map((model) => ({ ...model, baseUrl: 'https://gateway.example.com/anthropic' })),
+      .map((model) => ({ ...model, baseUrl: "https://gateway.example.com/anthropic" })),
     api: anthropicMessagesApi(),
   }),
 );
@@ -228,8 +228,8 @@ On the Cloudflare target, the `cloudflare` provider ID is registered automatical
 
 ```ts
 export function Assistant() {
-  useModel('cloudflare/@cf/moonshotai/kimi-k2.6');
-  return 'Help the user with their question.';
+  useModel("cloudflare/@cf/moonshotai/kimi-k2.6");
+  return "Help the user with their question.";
 }
 ```
 
@@ -249,14 +249,14 @@ Everything after `cloudflare/` is passed as the model ID to `env.AI.run(...)`. T
 By default, every `cloudflare/...` call routes through Cloudflare’s [AI Gateway](https://developers.cloudflare.com/ai-gateway/), giving you caching, logging, and budget controls in the dashboard out of the box. To target a named gateway, tune caching and logging, or opt out, register the `cloudflare` provider yourself in `app.ts` — your registration wins over the generated default:
 
 ```ts
-import { setProvider } from '@flue/runtime';
-import { cloudflareBindingProvider } from '@flue/runtime/cloudflare/workers-ai';
-import { env } from 'cloudflare:workers';
+import { setProvider } from "@flue/runtime";
+import { cloudflareBindingProvider } from "@flue/runtime/cloudflare/workers-ai";
+import { env } from "cloudflare:workers";
 
 setProvider(
   cloudflareBindingProvider({
     binding: env.AI,
-    gateway: { id: 'my-gateway', cacheTtl: 300, metadata: { tenant: 'acme' } },
+    gateway: { id: "my-gateway", cacheTtl: 300, metadata: { tenant: "acme" } },
     // ...or `gateway: false` to bypass AI Gateway entirely.
   }),
 );
@@ -266,11 +266,11 @@ Cloudflare’s model surface is also reachable from any target through two ordin
 
 ## Next steps
 
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/#usemodel) — the full `useModel()` contract, `ThinkingLevel`, and `CompactionConfig`.
-* [Provider API](https://flueframework.com/docs/reference/provider-api/) — the `providers` config, `setProvider()`, and `cloudflareBindingProvider()`.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) — give a delegate its own model and thinking level.
-* [Durability](https://flueframework.com/docs/guide/durability/) — what a submission is and how interrupted model work recovers.
-* [Observability](https://flueframework.com/docs/guide/observability/) — inspect model calls, token usage, and provider diagnostics.
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/#usemodel) — the full `useModel()` contract, `ThinkingLevel`, and `CompactionConfig`.
+- [Provider API](https://flueframework.com/docs/reference/provider-api/) — the `providers` config, `setProvider()`, and `cloudflareBindingProvider()`.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) — give a delegate its own model and thinking level.
+- [Durability](https://flueframework.com/docs/guide/durability/) — what a submission is and how interrupted model work recovers.
+- [Observability](https://flueframework.com/docs/guide/observability/) — inspect model calls, token usage, and provider diagnostics.
 
 ## Docs Navigation
 
@@ -278,48 +278,48 @@ Current page: [Models](https://flueframework.com/docs/guide/models/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

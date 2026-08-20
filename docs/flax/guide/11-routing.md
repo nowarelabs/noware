@@ -15,13 +15,13 @@ Flue never mounts an agent automatically. Registering an agent (the ['use agent'
 Every Flue application has one HTTP entrypoint: `src/app.ts`. Its default export is the server — every agent, channel, and custom route your application serves is mounted there explicitly. Flue does not generate routes from filenames or directory conventions: if a route exists, `app.ts` put it there. The scaffolded version is a complete application:
 
 ```ts
-import { createAgentRouter } from '@flue/runtime/routing';
-import { Hono } from 'hono';
-import { Hello } from './agents/hello.ts';
+import { createAgentRouter } from "@flue/runtime/routing";
+import { Hono } from "hono";
+import { Hello } from "./agents/hello.ts";
 
 const app = new Hono();
 
-app.route('/agents/hello', createAgentRouter(Hello));
+app.route("/agents/hello", createAgentRouter(Hello));
 
 export default app;
 ```
@@ -31,11 +31,11 @@ The same `app.ts` works on both targets. On Node.js, the [built server](https://
 Flue uses [Hono](https://hono.dev/) by convention, but nothing here is Hono-specific: the default export just needs a fetch-compatible shape, and the routers Flue gives you expose `.fetch` themselves, so they mount in any fetch-based framework. The `Fetchable` interface is available when you need to type a custom application entry:
 
 ```ts
-import type { Fetchable } from '@flue/runtime/routing';
+import type { Fetchable } from "@flue/runtime/routing";
 
 const app: Fetchable = {
   fetch(request, env, ctx) {
-    return new Response('Not found', { status: 404 });
+    return new Response("Not found", { status: 404 });
   },
 };
 
@@ -51,25 +51,25 @@ Because it’s a plain router, `app.ts` is also where the rest of your applicati
 `createAgentRouter(agent)` from `@flue/runtime/routing` builds the HTTP surface for one agent: a small sub-router you mount wherever you want it to live.
 
 ```ts
-import { createAgentRouter } from '@flue/runtime/routing';
-import { Hono } from 'hono';
-import { Support } from './agents/support.ts';
-import { Triage } from './agents/triage.ts';
+import { createAgentRouter } from "@flue/runtime/routing";
+import { Hono } from "hono";
+import { Support } from "./agents/support.ts";
+import { Triage } from "./agents/triage.ts";
 
 const app = new Hono();
 
-app.route('/agents/support', createAgentRouter(Support));
-app.route('/api/assistants/triage', createAgentRouter(Triage));
+app.route("/agents/support", createAgentRouter(Support));
+app.route("/api/assistants/triage", createAgentRouter(Triage));
 
 export default app;
 ```
 
 A few properties worth knowing:
 
-* **The URL is yours.** `/agents/<name>` is a convention, not a requirement — mount under `/api`, behind a versioned prefix, anywhere. The mount path is pure routing, and clients address whatever URL you choose.
-* **The mount path is not the agent’s identity.** Conversations are keyed by the agent’s durable identity — its function name, or an `agentName` static override — never by the URL. You can move a mount without a data migration, and mounting the same agent at two paths serves the same conversations from both.
-* **It’s a pure factory.** `createAgentRouter(...)` has no side effects and no options; call it any number of times, or never. Everything else about the agent — model, durability, initial-data schema — is declared on the agent module itself, not at the mount.
-* **Mounting is the exposure decision, not registration.** The ['use agent' scan](https://flueframework.com/docs/guide/building-agents/#use-agent-directive) is what makes an agent exist; the router only builds an HTTP surface over an already-registered agent. An agent that is registered but never mounted is simply unreachable over HTTP — `dispatch(...)` and [schedules](https://flueframework.com/docs/guide/schedules/) can still drive it (see [Dispatch-only agents](#dispatch-only-agents) below).
+- **The URL is yours.** `/agents/<name>` is a convention, not a requirement — mount under `/api`, behind a versioned prefix, anywhere. The mount path is pure routing, and clients address whatever URL you choose.
+- **The mount path is not the agent’s identity.** Conversations are keyed by the agent’s durable identity — its function name, or an `agentName` static override — never by the URL. You can move a mount without a data migration, and mounting the same agent at two paths serves the same conversations from both.
+- **It’s a pure factory.** `createAgentRouter(...)` has no side effects and no options; call it any number of times, or never. Everything else about the agent — model, durability, initial-data schema — is declared on the agent module itself, not at the mount.
+- **Mounting is the exposure decision, not registration.** The ['use agent' scan](https://flueframework.com/docs/guide/building-agents/#use-agent-directive) is what makes an agent exist; the router only builds an HTTP surface over an already-registered agent. An agent that is registered but never mounted is simply unreachable over HTTP — `dispatch(...)` and [schedules](https://flueframework.com/docs/guide/schedules/) can still drive it (see [Dispatch-only agents](#dispatch-only-agents) below).
 
 ## The conversation URL
 
@@ -118,15 +118,15 @@ There is no “wait for the reply” mode on this route. The agent’s reply lan
 A [createFlueClient(...)](https://flueframework.com/docs/sdk/create-flue-client/) client addresses exactly one conversation URL and packages the whole surface — `send()`, `wait()`, `observe()`, `history()`, `abort()`, and `attachmentUrl()` — over the routes above:
 
 ```ts
-import { createFlueClient } from '@flue/sdk';
+import { createFlueClient } from "@flue/sdk";
 
 const conversation = createFlueClient({
-  url: 'https://example.com/agents/support/ticket-8472',
+  url: "https://example.com/agents/support/ticket-8472",
   token: userToken,
 });
 
 const admission = await conversation.send({
-  message: { kind: 'user', body: 'Can you summarize the open issues in my case?' },
+  message: { kind: "user", body: "Can you summarize the open issues in my case?" },
 });
 await conversation.wait(admission);
 const { messages } = await conversation.history();
@@ -146,25 +146,25 @@ There are two checks, and production applications need both:
 Conversation ids are caller-chosen path segments: without an ownership check, any authenticated user can read another user’s conversation by guessing its id.
 
 ```ts
-import { createAgentRouter } from '@flue/runtime/routing';
-import { Hono } from 'hono';
-import { Support } from './agents/support.ts';
-import { canAccessTicket, verifySession } from './shared/auth.ts';
+import { createAgentRouter } from "@flue/runtime/routing";
+import { Hono } from "hono";
+import { Support } from "./agents/support.ts";
+import { canAccessTicket, verifySession } from "./shared/auth.ts";
 
 const app = new Hono();
 
-app.use('/agents/support/*', async (c, next) => {
+app.use("/agents/support/*", async (c, next) => {
   const user = await verifySession(c.req.raw); // your application's auth
-  if (!user) return c.json({ error: 'unauthorized' }, 401);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
 
   // The conversation id is the first path segment after the mount.
-  const [conversationId] = c.req.path.slice('/agents/support/'.length).split('/');
+  const [conversationId] = c.req.path.slice("/agents/support/".length).split("/");
   if (!(await canAccessTicket(user, conversationId))) {
-    return c.json({ error: 'forbidden' }, 403);
+    return c.json({ error: "forbidden" }, 403);
   }
   return next();
 });
-app.route('/agents/support', createAgentRouter(Support));
+app.route("/agents/support", createAgentRouter(Support));
 
 export default app;
 ```
@@ -173,8 +173,8 @@ Because the middleware pattern ends in `/*`, it covers every route the agent rou
 
 Two related patterns:
 
-* **Server-issued ids.** Instead of trusting caller-chosen ids, derive them from the authenticated principal (`user-${user.id}`) or issue them from your own database. The ownership check then becomes a simple equality test.
-* **Private agents.** An agent that only your own backend should reach doesn’t need a public mount at all — keep it dispatch-only (below), or on Cloudflare, reach a private Worker over a [service binding](https://flueframework.com/docs/guide/cloudflare-target/#calling-a-private-agent-over-a-service-binding).
+- **Server-issued ids.** Instead of trusting caller-chosen ids, derive them from the authenticated principal (`user-${user.id}`) or issue them from your own database. The ownership check then becomes a simple equality test.
+- **Private agents.** An agent that only your own backend should reach doesn’t need a public mount at all — keep it dispatch-only (below), or on Cloudflare, reach a private Worker over a [service binding](https://flueframework.com/docs/guide/cloudflare-target/#calling-a-private-agent-over-a-service-binding).
 
 ## CORS
 
@@ -183,14 +183,14 @@ Cross-origin access is an application concern: the agent router sets no `Access-
 If browsers on another origin call your agents in production, add your framework’s CORS middleware in `app.ts`. Expose the stream coordination headers so the SDK can resume conversation streams across reconnects:
 
 ```ts
-import { cors } from 'hono/cors';
+import { cors } from "hono/cors";
 
 app.use(
-  '/agents/*',
+  "/agents/*",
   cors({
-    origin: 'https://app.example.com',
+    origin: "https://app.example.com",
     credentials: true,
-    exposeHeaders: ['Stream-Next-Offset', 'Stream-Up-To-Date', 'Location'],
+    exposeHeaders: ["Stream-Next-Offset", "Stream-Up-To-Date", "Location"],
   }),
 );
 ```
@@ -202,9 +202,9 @@ Same-origin deployments — the common setup, where `app.ts` serves both the UI 
 Channel objects expose their own `.route()` factory — a separate API from the agent router, but the same kind of pure, mountable sub-router. It serves the provider’s declared routes relative to the mount point:
 
 ```ts
-import { channel as slack } from './channels/slack.ts';
+import { channel as slack } from "./channels/slack.ts";
 
-app.route('/channels/slack', slack.route());
+app.route("/channels/slack", slack.route());
 // Slack's Events API endpoint is now POST /channels/slack/events
 ```
 
@@ -215,16 +215,16 @@ The channel package declares its route suffixes (`/events`, `/webhook`, `/intera
 Per-route mounting keeps the route map explicit, but nothing stops you from generating it. Vite’s `import.meta.glob` recovers directory-style mounting in userland — enumerate the agent modules and mount each exported agent:
 
 ```ts
-import type { Agent } from '@flue/runtime';
-import { createAgentRouter } from '@flue/runtime/routing';
-import { Hono } from 'hono';
+import type { Agent } from "@flue/runtime";
+import { createAgentRouter } from "@flue/runtime/routing";
+import { Hono } from "hono";
 
 const app = new Hono();
 
-const modules = import.meta.glob<Record<string, Agent>>('./agents/*.ts', { eager: true });
+const modules = import.meta.glob<Record<string, Agent>>("./agents/*.ts", { eager: true });
 for (const mod of Object.values(modules)) {
   for (const [exportName, agent] of Object.entries(mod)) {
-    if (typeof agent !== 'function' || !/^[A-Z]/.test(exportName)) continue; // agents are the capitalized exports
+    if (typeof agent !== "function" || !/^[A-Z]/.test(exportName)) continue; // agents are the capitalized exports
     app.route(`/agents/${agent.agentName ?? exportName}`, createAgentRouter(agent));
   }
 }
@@ -239,22 +239,22 @@ The glob only enumerates the modules — each mount is as explicit as a hand-wri
 Registration comes from the `'use agent'` scan, so any registered agent can receive messages through server-side [dispatch(...)](https://flueframework.com/docs/guide/building-agents/#dispatch) — from a webhook route in `app.ts`, a [channel](https://flueframework.com/docs/guide/channels/), or a [schedule](https://flueframework.com/docs/guide/schedules/) — without ever being mounted. An internal agent that only reacts to application events has no reason to be reachable from outside:
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { Hono } from 'hono';
-import { InvoiceAuditor } from './agents/invoice-auditor.ts';
-import { verifyBillingWebhook } from './shared/billing.ts';
+import { dispatch } from "@flue/runtime";
+import { Hono } from "hono";
+import { InvoiceAuditor } from "./agents/invoice-auditor.ts";
+import { verifyBillingWebhook } from "./shared/billing.ts";
 
 const app = new Hono();
 
 // No createAgentRouter(InvoiceAuditor) mount anywhere — the agent is
 // registered, but only this verified webhook can reach it.
-app.post('/webhooks/billing', async (c) => {
+app.post("/webhooks/billing", async (c) => {
   const event = await verifyBillingWebhook(c.req.raw);
   const receipt = await dispatch(InvoiceAuditor, {
     id: event.invoiceId,
     message: {
-      kind: 'signal',
-      type: 'billing.invoice.flagged',
+      kind: "signal",
+      type: "billing.invoice.flagged",
       body: event.summary,
     },
   });
@@ -268,12 +268,12 @@ The webhook route belongs to your application: it decides which requests are val
 
 ## Next steps
 
-* [Agents](https://flueframework.com/docs/guide/building-agents/) — every way to interact with an agent: CLI, HTTP, `dispatch()`, and standalone scripts.
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/) — the client that wraps a conversation URL.
-* [React](https://flueframework.com/docs/guide/react/) — build a chat UI on a mounted agent.
-* [Channels](https://flueframework.com/docs/guide/channels/) — verified provider webhooks that deliver events into agents.
-* [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/) — the wire protocol behind conversation reads.
-* [Deploy](https://flueframework.com/docs/guide/deploy/) — build `app.ts` and your agents into a deployable server.
+- [Agents](https://flueframework.com/docs/guide/building-agents/) — every way to interact with an agent: CLI, HTTP, `dispatch()`, and standalone scripts.
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/) — the client that wraps a conversation URL.
+- [React](https://flueframework.com/docs/guide/react/) — build a chat UI on a mounted agent.
+- [Channels](https://flueframework.com/docs/guide/channels/) — verified provider webhooks that deliver events into agents.
+- [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/) — the wire protocol behind conversation reads.
+- [Deploy](https://flueframework.com/docs/guide/deploy/) — build `app.ts` and your agents into a deployable server.
 
 ## Docs Navigation
 
@@ -281,48 +281,48 @@ Current page: [Routing](https://flueframework.com/docs/guide/routing/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

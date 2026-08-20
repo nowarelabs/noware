@@ -12,8 +12,8 @@ Last updated Jul 21, 2026[View as Markdown](https://flueframework.com/docs/guide
 
 ## Prerequisites
 
-* **Node.js** — `>=22.19.0` minimum required version.
-* **LLM** — API key(s) to connect to your favorite model provider. Flue is built on Pi, and supports [all Pi providers](https://pi.dev/docs/latest/providers) out of the box. Flue’s [Cloudflare runtime](https://flueframework.com/docs/guide/targets/cloudflare/) provides a built-in `cloudflare/*` AI gateway, no API keys required.
+- **Node.js** — `>=22.19.0` minimum required version.
+- **LLM** — API key(s) to connect to your favorite model provider. Flue is built on Pi, and supports [all Pi providers](https://pi.dev/docs/latest/providers) out of the box. Flue’s [Cloudflare runtime](https://flueframework.com/docs/guide/targets/cloudflare/) provides a built-in `cloudflare/*` AI gateway, no API keys required.
 
 ## Automatic Installation
 
@@ -38,10 +38,10 @@ npm install @flue/runtime @flue/cli
 Then, create a basic `flue.config.ts` file:
 
 ```ts
-import { defineConfig } from '@flue/runtime/config';
+import { defineConfig } from "@flue/runtime/config";
 
 export default defineConfig({
-	target: 'node', // or 'cloudflare'
+  target: "node", // or 'cloudflare'
 });
 ```
 
@@ -49,15 +49,15 @@ And finally, create your first `src/agents/assistant.ts`:
 
 ```ts
 // The `'use agent'` directive marks the Assistant() function below as a Flue agent.
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 // This is your first agent: `Assistant`.
 // It's return value is your agent's instructions, which become the agent's "system" instructions.
 // Flue Hooks like `useModel()` allow you to customize and modify your agent abilities.
 export function Assistant() {
-	useModel('anthropic/claude-haiku-4-5');
-	return 'You are a helpful assistant. Keep replies short.';
+  useModel("anthropic/claude-haiku-4-5");
+  return "You are a helpful assistant. Keep replies short.";
 }
 ```
 
@@ -102,11 +102,11 @@ npm install @flue/vite hono vite
 Create two small config files at the project root:
 
 ```ts
-import { flue } from '@flue/vite';
-import { defineConfig } from 'vite';
+import { flue } from "@flue/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-	plugins: [flue()],
+  plugins: [flue()],
 });
 ```
 
@@ -117,14 +117,14 @@ If you are deploying to Cloudflare, then you should also install `@cloudflare/vi
 `src/app.ts` is the special file where your Flue app router always lives. Create your [Hono](https://hono.dev/) application instance, mount your agent, and export it so that it gets picked up by your build.
 
 ```ts
-import { createAgentRouter } from '@flue/runtime/routing';
-import { Hono } from 'hono';
-import { Assistant } from './agents/assistant.ts';
+import { createAgentRouter } from "@flue/runtime/routing";
+import { Hono } from "hono";
+import { Assistant } from "./agents/assistant.ts";
 
 // 1. Create your Hono application instance.
 const app = new Hono();
 // 2. Define your agent routes.
-app.route('/agents/assistant', createAgentRouter(Assistant));
+app.route("/agents/assistant", createAgentRouter(Assistant));
 // 3. Export your application.
 export default app;
 ```
@@ -155,11 +155,11 @@ Congratulations, you’ve completed our quickstart guide! You have created your 
 
 ## Next steps
 
-* [Agents](https://flueframework.com/docs/guide/building-agents/) — configure the model, add capabilities, and understand how conversations persist over time.
-* [Tools](https://flueframework.com/docs/guide/tools/), [Skills](https://flueframework.com/docs/guide/skills/), and [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — give your agent real capabilities and a workspace to work in.
-* [Routing](https://flueframework.com/docs/guide/routing/) — mount additional agents and application routes in `app.ts`.
-* [Deploy to Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/) or [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/) — host your agent for real traffic.
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/) and [React](https://flueframework.com/docs/guide/react/) — build product experiences on top of a deployed agent.
+- [Agents](https://flueframework.com/docs/guide/building-agents/) — configure the model, add capabilities, and understand how conversations persist over time.
+- [Tools](https://flueframework.com/docs/guide/tools/), [Skills](https://flueframework.com/docs/guide/skills/), and [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — give your agent real capabilities and a workspace to work in.
+- [Routing](https://flueframework.com/docs/guide/routing/) — mount additional agents and application routes in `app.ts`.
+- [Deploy to Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/) or [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/) — host your agent for real traffic.
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/) and [React](https://flueframework.com/docs/guide/react/) — build product experiences on top of a deployed agent.
 
 ## Docs Navigation
 
@@ -167,48 +167,48 @@ Current page: [Getting Started](https://flueframework.com/docs/guide/getting-sta
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

@@ -16,9 +16,9 @@ Skills follow the open [Agent Skills](https://agentskills.io) format, so a skill
 
 Every skill has three parts:
 
-* **`name`** — a short identifier (`refunds`, `review-pr`) the model uses to activate it.
-* **`description`** — one or two sentences stating what the skill does _and when to use it_. This is the only part the model always sees, so it carries the entire routing decision.
-* **`instructions`** — the full procedure, loaded only on activation.
+- **`name`** — a short identifier (`refunds`, `review-pr`) the model uses to activate it.
+- **`description`** — one or two sentences stating what the skill does _and when to use it_. This is the only part the model always sees, so it carries the entire routing decision.
+- **`instructions`** — the full procedure, loaded only on activation.
 
 A skill may also carry **supporting files** — checklists, templates, reference documents — that stay unloaded until the model explicitly reads one.
 
@@ -54,12 +54,12 @@ The description is what the model reads when deciding whether the skill applies 
 
 Flue validates every `SKILL.md` against the [Agent Skills specification](https://agentskills.io/specification), whether the skill is imported or discovered in a workspace:
 
-* `name` (required) — lowercase letters, numbers, and hyphens; no leading, trailing, or consecutive hyphens; at most 64 characters; must match the skill directory name.
-* `description` (required) — non-empty, at most 1024 characters. Tells the agent what the skill does and when to use it.
-* `license` (optional) — accepted; informational only.
-* `compatibility` (optional) — accepted; at most 500 characters; informational only.
-* `metadata` (optional) — accepted; string-to-string mapping; not interpreted by Flue.
-* `allowed-tools` (optional) — accepted, not enforced. The field is experimental in the spec and support may vary between implementations; Flue does not restrict the session’s toolset.
+- `name` (required) — lowercase letters, numbers, and hyphens; no leading, trailing, or consecutive hyphens; at most 64 characters; must match the skill directory name.
+- `description` (required) — non-empty, at most 1024 characters. Tells the agent what the skill does and when to use it.
+- `license` (optional) — accepted; informational only.
+- `compatibility` (optional) — accepted; at most 500 characters; informational only.
+- `metadata` (optional) — accepted; string-to-string mapping; not interpreted by Flue.
+- `allowed-tools` (optional) — accepted, not enforced. The field is experimental in the spec and support may vary between implementations; Flue does not restrict the session’s toolset.
 
 Unknown frontmatter fields are ignored, so skills that carry extra host-specific fields still load. The spec’s [skills-ref validator](https://github.com/agentskills/agentskills/tree/main/skills-ref) flags unknown fields if you want stricter authoring checks.
 
@@ -68,14 +68,14 @@ Unknown frontmatter fields are ignored, so skills that carry extra host-specific
 Import the `SKILL.md` file by its module specifier, like any other module. At build time, Flue recognizes the import, validates the frontmatter, and packages the entire directory with your application. The import’s value is a typed `SkillReference`; mount it with the [useSkill](https://flueframework.com/docs/reference/agent-hooks-api/#useskill) hook:
 
 ```ts
-'use agent';
-import { useModel, useSkill } from '@flue/runtime';
-import refunds from '../skills/refunds/SKILL.md';
+"use agent";
+import { useModel, useSkill } from "@flue/runtime";
+import refunds from "../skills/refunds/SKILL.md";
 
 export function SupportAgent() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   useSkill(refunds);
-  return 'Answer customer support questions clearly and accurately.';
+  return "Answer customer support questions clearly and accurately.";
 }
 ```
 
@@ -84,16 +84,16 @@ There is no registration step and no runtime file copying — the import is the 
 An import from a package works the same way:
 
 ```ts
-import review from '@acme/review-skills/review/SKILL.md';
+import review from "@acme/review-skills/review/SKILL.md";
 ```
 
 The package must publish `SKILL.md` and its supporting files; if it defines package exports, it must export the imported `SKILL.md` subpath.
 
 A few rules to know:
 
-* Skill imports must be **static** — a dynamic `import('./skills/x/SKILL.md')` is a build error.
-* Each skill name mounts **once per render**; mounting the same name twice throws.
-* Packaging skips repository noise (`node_modules`, `.git`, `dist`, and similar), warns on files over 1MB, and **refuses to package secrets** — `.env` files, private keys, credential stores, and symbolic links are hard errors.
+- Skill imports must be **static** — a dynamic `import('./skills/x/SKILL.md')` is a build error.
+- Each skill name mounts **once per render**; mounting the same name twice throws.
+- Packaging skips repository noise (`node_modules`, `.git`, `dist`, and similar), warns on files over 1MB, and **refuses to package secrets** — `.env` files, private keys, credential stores, and symbolic links are hard errors.
 
 Mounts can be conditional, like every resource hook — gate `useSkill(...)` on [persistent state](https://flueframework.com/docs/guide/agent-hooks/#persisted-state) to unlock a skill mid-conversation. The runtime announces catalog changes to the model without invalidating your cached prompt; see [Dynamic resources](https://flueframework.com/docs/reference/agent-api/#dynamic-resources) for the mechanics.
 
@@ -102,14 +102,14 @@ Mounts can be conditional, like every resource hook — gate `useSkill(...)` on 
 When the content is short, generated, or assembled from data, declare the skill in code with [defineSkill(...)](https://flueframework.com/docs/reference/agent-api/#defineskill):
 
 ```ts
-import { defineSkill } from '@flue/runtime';
+import { defineSkill } from "@flue/runtime";
 
 export const escalation = defineSkill({
-  name: 'escalation',
+  name: "escalation",
   description:
-    'Escalate an unresolved case to a human specialist. Use when the customer asks for a human or the issue is out of scope.',
+    "Escalate an unresolved case to a human specialist. Use when the customer asks for a human or the issue is out of scope.",
   instructions:
-    'Summarize the case so far, tag the conversation with the escalation reason, and hand off with the `escalate_case` tool.',
+    "Summarize the case so far, tag the conversation with the escalation reason, and hand off with the `escalate_case` tool.",
 });
 ```
 
@@ -117,10 +117,10 @@ Pass the result to `useSkill(escalation)` exactly like an import. A definition i
 
 ```ts
 const reviewSkill = defineSkill({
-  name: 'review-pr',
-  description: 'Review a pull request against the team checklist. Use when asked to review code.',
-  instructions: 'Read CHECKLIST.md, then review the diff against every item.',
-  files: { 'CHECKLIST.md': checklistText },
+  name: "review-pr",
+  description: "Review a pull request against the team checklist. Use when asked to review code.",
+  instructions: "Read CHECKLIST.md, then review the diff against every item.",
+  files: { "CHECKLIST.md": checklistText },
 });
 ```
 
@@ -129,13 +129,13 @@ const reviewSkill = defineSkill({
 `defineSkill` also converts markdown that isn’t named `SKILL.md`. A bare `.md` import loads as a plain string — nothing is packaged — so pass it through `defineSkill` to make it a skill:
 
 ```ts
-import { defineSkill } from '@flue/runtime';
-import runbook from './incident-runbook.md'; // plain markdown text
+import { defineSkill } from "@flue/runtime";
+import runbook from "./incident-runbook.md"; // plain markdown text
 
 export const incidents = defineSkill({
-  name: 'incidents',
+  name: "incidents",
   description:
-    'Run the incident response procedure. Use when an outage or security event is reported.',
+    "Run the incident response procedure. Use when an outage or security event is reported.",
   instructions: runbook,
 });
 ```
@@ -152,7 +152,7 @@ Because activation is a tool call, your instructions can direct it:
 
 ```ts
 useSkill(refunds);
-return 'Activate the `refunds` skill before handling any refund request.';
+return "Activate the `refunds` skill before handling any refund request.";
 ```
 
 The same steering works from application code. A [harness tool](https://flueframework.com/docs/guide/tools/#harness-tools)’s `harness.prompt(...)` runs with the agent’s rendered configuration — same system prompt, skill catalog, and tools — so naming the skill in the prompt text is enough for the model to activate it there too, workspace-discovered skills included.
@@ -181,12 +181,12 @@ Use workspace skills when the expertise ships with the workspace — a repositor
 
 ## Next steps
 
-* [Agent Skills specification](https://agentskills.io/specification) — the full `SKILL.md` format, shared across compatible harnesses.
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — how `useSkill` composes with the rest of an agent’s capabilities.
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/#useskill) — the full contract for `useSkill`, `defineSkill`, and `SkillDefinition`.
-* [Tools](https://flueframework.com/docs/guide/tools/) — executable application capabilities, and when a tool beats a skill.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) — delegate a whole procedure to a specialist agent instead of teaching it.
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — the workspace where workspace skills are discovered.
+- [Agent Skills specification](https://agentskills.io/specification) — the full `SKILL.md` format, shared across compatible harnesses.
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — how `useSkill` composes with the rest of an agent’s capabilities.
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/#useskill) — the full contract for `useSkill`, `defineSkill`, and `SkillDefinition`.
+- [Tools](https://flueframework.com/docs/guide/tools/) — executable application capabilities, and when a tool beats a skill.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) — delegate a whole procedure to a specialist agent instead of teaching it.
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — the workspace where workspace skills are discovered.
 
 ## Docs Navigation
 
@@ -194,48 +194,48 @@ Current page: [Skills](https://flueframework.com/docs/guide/skills/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

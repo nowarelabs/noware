@@ -30,8 +30,8 @@ npm install -D @flue/vite @flue/cli vite
 Add the Vite plugin:
 
 ```ts
-import { flue } from '@flue/vite';
-import { defineConfig } from 'vite';
+import { flue } from "@flue/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [flue()],
@@ -54,12 +54,12 @@ And the scripts:
 An agent module is an ordinary TypeScript file plus one line: the `'use agent'` directive. The directive is how an agent joins the application — the build scans your source root for marked modules, every exported function with a capitalized name is an agent, and the function’s name becomes the agent’s durable identity (an optional `Translator.agentName = '...'` string-literal static overrides it).
 
 ```typescript
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 export function Translator() {
-  useModel('openai/gpt-5.5');
-  return 'Translate the user message into the requested language. Reply with the translation only.';
+  useModel("openai/gpt-5.5");
+  return "Translate the user message into the requested language. Reply with the translation only.";
 }
 ```
 
@@ -70,14 +70,14 @@ Agents that need a filesystem can attach an in-memory [virtual sandbox](https://
 `app.ts` is the only required file. Its default export owns the request pipeline, and every route is mounted explicitly — `app.ts` IS the routing table:
 
 ```typescript
-import { createAgentRouter } from '@flue/runtime/routing';
-import { Hono } from 'hono';
-import { Translator } from './agents/translator.ts';
+import { createAgentRouter } from "@flue/runtime/routing";
+import { Hono } from "hono";
+import { Translator } from "./agents/translator.ts";
 
 const app = new Hono();
 
-app.route('/agents/translator', createAgentRouter(Translator));
-app.get('/api/ping', (c) => c.text('pong'));
+app.route("/agents/translator", createAgentRouter(Translator));
+app.get("/api/ping", (c) => c.text("pong"));
 
 export default app;
 ```
@@ -142,15 +142,15 @@ To verify the artifact before deploying, `vite preview` serves the built applica
 For structured, schema-validated work inside the conversation, give the agent a harness-connected tool with `useTool({ harness: true })`: `run` receives the agent’s runtime (sandbox and model access) and can call back into the model for sub-tasks.
 
 ```typescript
-'use agent';
-import { useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
+"use agent";
+import { useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
 
 export function Reporter() {
-  useModel('openai/gpt-5.5');
+  useModel("openai/gpt-5.5");
   useTool({
-    name: 'compile-report',
-    description: 'Compile the weekly metrics report.',
+    name: "compile-report",
+    description: "Compile the weekly metrics report.",
     input: v.object({ period: v.string() }),
     harness: true,
     async run({ harness, data }) {
@@ -160,7 +160,7 @@ export function Reporter() {
       return { output: response.data };
     },
   });
-  return 'When asked for a report, call the `compile-report` tool.';
+  return "When asked for a report, call the `compile-report` tool.";
 }
 ```
 
@@ -171,20 +171,20 @@ Drive it with `flue run src/agents/reporter.ts --message "Compile the weekly rep
 `useSubagent(...)` declares a named delegate the model can hand focused work to via a task:
 
 ```typescript
-'use agent';
-import { useModel, useSubagent } from '@flue/runtime';
+"use agent";
+import { useModel, useSubagent } from "@flue/runtime";
 
 function Analyst() {
-  return 'Focus on quantitative insights, trends, and actionable takeaways.';
+  return "Focus on quantitative insights, trends, and actionable takeaways.";
 }
 
 export function Reporter() {
   useSubagent({
-    name: 'analyst',
-    description: 'Analyzes metrics for quantitative insights and actionable takeaways.',
+    name: "analyst",
+    description: "Analyzes metrics for quantitative insights and actionable takeaways.",
     agent: Analyst,
   });
-  return 'Delegate metric analysis to the `analyst` subagent via a task.';
+  return "Delegate metric analysis to the `analyst` subagent via a task.";
 }
 ```
 
@@ -211,7 +211,7 @@ Focus on the key points and keep it to 2-3 sentences.
 Direct a skill from an Action or tool body with `harness.prompt(...)` — it shares the agent’s own conversation context, so naming the skill is enough for the model to activate it:
 
 ```typescript
-import * as v from 'valibot';
+import * as v from "valibot";
 
 const { data } = await harness.prompt(`Apply the summarize skill to this text:\n\n${document}`, {
   result: v.object({ summary: v.string() }),
@@ -227,14 +227,14 @@ Run flue itself inside an isolation boundary you trust — a CI runner, a contai
 Env exposure is opt-in. By default only shell essentials (`PATH`, `HOME`, locale, etc.) are inherited from `process.env`; anything else — API keys, tokens, deploy credentials — has to be passed explicitly via `local({ env: { ... } })`. That keeps the model’s `bash` tool from seeing host secrets by accident.
 
 ```typescript
-'use agent';
-import { useModel, useSandbox } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+"use agent";
+import { useModel, useSandbox } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
 
 export function Reviewer() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox(local());
-  return 'Review the codebase and identify potential issues in the area the user names.';
+  return "Review the codebase and identify potential issues in the area the user names.";
 }
 ```
 
@@ -242,10 +242,10 @@ The agent reads, searches, and modifies files via its built-in tools — read, w
 
 ### When to use it
 
-* **Self-hosted coding agents** — review PRs, fix bugs, refactor against the actual repo.
-* **File processing** — read documents, transform data, generate reports from local files.
-* **Dev tooling** — analyze project structure, run linters, generate boilerplate.
-* **CI** — issue triage, deploy checks, anything where the runner already provides isolation. `flue run` is a natural fit here: one agent, one message, no port.
+- **Self-hosted coding agents** — review PRs, fix bugs, refactor against the actual repo.
+- **File processing** — read documents, transform data, generate reports from local files.
+- **Dev tooling** — analyze project structure, run linters, generate boilerplate.
+- **CI** — issue triage, deploy checks, anything where the runner already provides isolation. `flue run` is a natural fit here: one agent, one message, no port.
 
 No container startup, real project context, fast iteration. If you need a tighter boundary on a specific operation — agent can call it, never sees the underlying secret — wrap it as a custom tool via `useTool(...)` in the agent function. The tool reads `process.env`; the agent only sees the tool’s params and result.
 
@@ -288,9 +288,9 @@ The built server never runs in local dev mode: developer-only error guidance and
 
 The deployed server exposes exactly the routes `app.ts` mounts. For each mounted agent, relative to its mount:
 
-* `POST /:id` — deliver a message into a conversation (`202` admission);
-* `GET /:id` — read the conversation (materialized history or live updates via the Durable Streams protocol);
-* `POST /:id/abort` — abort in-flight and queued work.
+- `POST /:id` — deliver a message into a conversation (`202` admission);
+- `GET /:id` — read the conversation (materialized history or live updates via the Durable Streams protocol);
+- `POST /:id/abort` — abort in-flight and queued work.
 
 Flue does not add a health endpoint or inspection routes by default. Define a host-required health route in `app.ts` and compose any operator endpoints behind your own authorization. See [Routing](https://flueframework.com/docs/guide/routing/).
 
@@ -311,75 +311,75 @@ Current page: [Deploy Agents on Node.js](https://flueframework.com/docs/ecosyste
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

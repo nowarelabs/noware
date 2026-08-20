@@ -23,7 +23,7 @@ async function pdFetch(env: Env, path: string, init: RequestInit = {}): Promise<
       Authorization: `Token token=${requireSecret(env, "PAGERDUTY_API_KEY")}`,
       Accept: "application/vnd.pagerduty+json;version=2",
       "Content-Type": "application/json",
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
   const text = await res.text();

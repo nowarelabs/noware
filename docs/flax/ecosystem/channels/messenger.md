@@ -21,15 +21,15 @@ flue add channel messenger
 The Facebook Messenger blueprint installs `@flue/messenger`, creates a project-owned Graph API Fetch client at the source-root `messenger-client.ts`, and creates `channels/messenger.ts`. It also updates the selected agent to bind the generated reply tool to the verified Page conversation.
 
 ```ts
-import { createMessengerChannel } from '@flue/messenger';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { MessengerClient } from '../messenger-client.ts';
+import { createMessengerChannel } from "@flue/messenger";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { MessengerClient } from "../messenger-client.ts";
 
 export const client = new MessengerClient({
   pageId: process.env.MESSENGER_PAGE_ID!,
   pageAccessToken: process.env.MESSENGER_PAGE_ACCESS_TOKEN!,
-  graphVersion: 'v25.0',
+  graphVersion: "v25.0",
 });
 
 export const channel = createMessengerChannel({
@@ -53,8 +53,8 @@ export const channel = createMessengerChannel({
             participant: conversation.participant,
           },
           message: {
-            kind: 'signal',
-            type: 'messenger.message',
+            kind: "signal",
+            type: "messenger.message",
             body: event.message.text,
             attributes: {
               messageId: event.message.mid,
@@ -63,7 +63,7 @@ export const channel = createMessengerChannel({
                 : { quickReplyPayload: event.message.quick_reply.payload }),
               ...(attachmentTypes.length === 0
                 ? {}
-                : { attachmentTypes: attachmentTypes.join(',') }),
+                : { attachmentTypes: attachmentTypes.join(",") }),
             },
           },
         });
@@ -80,21 +80,21 @@ The abridged example omits the generated `postMessage()` tool and Graph client i
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as messenger } from './channels/messenger.ts';
+import { channel as messenger } from "./channels/messenger.ts";
 
-app.route('/channels/messenger', messenger.route());
+app.route("/channels/messenger", messenger.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/messenger` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                       | Purpose                                                                            |
-| ------------------------------ | ---------------------------------------------------------------------------------- |
-| MESSENGER\_APP\_SECRET         | **Required** — Verifies signed inbound webhook bodies.                             |
-| MESSENGER\_VERIFY\_TOKEN       | **Required** — Verifies Meta’s callback setup challenge.                           |
-| MESSENGER\_PAGE\_ID            | **Required** — Scopes conversation identity to your Page and binds outbound sends. |
-| MESSENGER\_PAGE\_ACCESS\_TOKEN | **Required** — Authenticates outbound Graph API calls.                             |
+| Variable                    | Purpose                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| MESSENGER_APP_SECRET        | **Required** — Verifies signed inbound webhook bodies.                             |
+| MESSENGER_VERIFY_TOKEN      | **Required** — Verifies Meta’s callback setup challenge.                           |
+| MESSENGER_PAGE_ID           | **Required** — Scopes conversation identity to your Page and binds outbound sends. |
+| MESSENGER_PAGE_ACCESS_TOKEN | **Required** — Authenticates outbound Graph API calls.                             |
 
 It installs `@flue/messenger` for verified Page ingress and creates an editable Graph API Fetch client for outbound messages. The same client runs in Node and workerd with Flue’s required `nodejs_compat` configuration.
 
@@ -113,16 +113,16 @@ The app secret is an inbound verification credential. The Page access token is a
 ## Channel module
 
 ```ts
-import { createMessengerChannel, type MessengerConversationRef } from '@flue/messenger';
-import { defineTool, dispatch } from '@flue/runtime';
-import * as v from 'valibot';
-import { Assistant } from '../agents/assistant.ts';
-import { MessengerClient } from '../messenger-client.ts';
+import { createMessengerChannel, type MessengerConversationRef } from "@flue/messenger";
+import { defineTool, dispatch } from "@flue/runtime";
+import * as v from "valibot";
+import { Assistant } from "../agents/assistant.ts";
+import { MessengerClient } from "../messenger-client.ts";
 
 export const client = new MessengerClient({
   pageId: process.env.MESSENGER_PAGE_ID!,
   pageAccessToken: process.env.MESSENGER_PAGE_ACCESS_TOKEN!,
-  graphVersion: 'v25.0',
+  graphVersion: "v25.0",
 });
 
 export const channel = createMessengerChannel({
@@ -153,8 +153,8 @@ export const channel = createMessengerChannel({
             participant: conversation.participant,
           },
           message: {
-            kind: 'signal',
-            type: 'messenger.message',
+            kind: "signal",
+            type: "messenger.message",
             body: event.message.text,
             attributes: {
               messageId: event.message.mid,
@@ -163,7 +163,7 @@ export const channel = createMessengerChannel({
                 : { quickReplyPayload: event.message.quick_reply.payload }),
               ...(attachmentTypes.length === 0
                 ? {}
-                : { attachmentTypes: attachmentTypes.join(',') }),
+                : { attachmentTypes: attachmentTypes.join(",") }),
             },
           },
         });
@@ -174,8 +174,8 @@ export const channel = createMessengerChannel({
 
 export function postMessage(ref: MessengerConversationRef) {
   return defineTool({
-    name: 'post_messenger_message',
-    description: 'Post to the Messenger conversation bound to this agent.',
+    name: "post_messenger_message",
+    description: "Post to the Messenger conversation bound to this agent.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data: { text } }) {
       const result = await client.messages.sendText({
@@ -191,25 +191,25 @@ export function postMessage(ref: MessengerConversationRef) {
 The blueprint creates `src/messenger-client.ts` with the Fetch client used above. `initialData` is the instance’s creation data: recorded once when the event creates the instance and ignored afterward, so the channel passes it on every dispatch. Bind the tool from the agent with `useInitialData()` instead of parsing the instance id:
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { postMessage } from '../channels/messenger.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { postMessage } from "../channels/messenger.ts";
 
 const initialData = v.object({
   pageId: v.string(),
-  participant: v.variant('type', [
-    v.object({ type: v.literal('page-scoped-id'), id: v.string() }),
-    v.object({ type: v.literal('user-ref'), id: v.string() }),
+  participant: v.variant("type", [
+    v.object({ type: v.literal("page-scoped-id"), id: v.string() }),
+    v.object({ type: v.literal("user-ref"), id: v.string() }),
   ]),
 });
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Messenger channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Messenger channel dispatch.");
   useTool(postMessage(data));
-  return 'Reply concisely in the bound Facebook Messenger conversation.';
+  return "Reply concisely in the bound Facebook Messenger conversation.";
 }
 
 Assistant.initialData = initialData;
@@ -219,7 +219,7 @@ Assistant.initialData = initialData;
 
 One signed POST can contain several Page entries and several events. The callback runs once with the provider-native `payload`. Iterate `payload.entry[]`and the native `messaging`, `standby`, and `changes` arrays in Meta’s delivered order; the channel does not reshape, filter, or deduplicate them.
 
-The event family is discriminated by **which property is present** — not by a `type` field — exactly as Meta delivers it. A message has `event.message`, a postback has `event.postback`, a reaction has `event.reaction`, and so on through `event.delivery`, `event.read`, `event.optin`, `event.referral`, and `event.message_edit`. Field names stay snake\_case (`mid`, `quick_reply.payload`, `is_echo`), and unmodeled families and fields forward intact.
+The event family is discriminated by **which property is present** — not by a `type` field — exactly as Meta delivers it. A message has `event.message`, a postback has `event.postback`, a reaction has `event.reaction`, and so on through `event.delivery`, `event.read`, `event.optin`, `event.referral`, and `event.message_edit`. Field names stay snake_case (`mid`, `quick_reply.payload`, `is_echo`), and unmodeled families and fields forward intact.
 
 `standby` events arrive while another app owns the conversation under the Handover protocol. Bot and echo filtering (`message.is_echo`) is application policy: the channel forwards every verified delivery and the application decides what to admit.
 
@@ -247,75 +247,75 @@ Current page: [Facebook Messenger](https://flueframework.com/docs/ecosystem/chan
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

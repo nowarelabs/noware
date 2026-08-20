@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -12,10 +13,10 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 import { Bash, InMemoryFs } from "just-bash";
@@ -28,11 +29,7 @@ interface DocsState {
   page: string;
 }
 
-function DocsReviewer() {
-  return `You are a documentation reviewer. Given a draft page and its audience, check it for clarity, working examples, task orientation, and information-architecture consistency. Return APPROVED or REVISE with the specific issue and a one-line fix. Be terse.`;
-}
-
-export function Documentation() {
+const documentation = defineAgent("documentation", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
@@ -66,33 +63,38 @@ export function Documentation() {
       "untitled";
     const audience = initialData?.audience || "end users";
     log.info("docs.started", { page, audience });
-    setDocs((prev) => ({ ...prev, status: "writing", page }));
+    setDocs({ ...docs, status: "writing", page });
     writeDocs({ status: "writing", page, audience });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("docs.finished", { toolCalls: response.toolCalls.length });
-    setDocs((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("docs.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setDocs({ ...docs, status: "done" });
     writeDocs({ status: "done", page: docs.page, audience: initialData?.audience || "end users" });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent({
-    name: "docs-reviewer",
-    description:
-      "Reviews a documentation draft for clarity, examples, and information-architecture consistency before it is published.",
-    agent: DocsReviewer,
-  });
+  useSubagent(
+    "docs-reviewer",
+    "Reviews a documentation draft for clarity, examples, and information-architecture consistency before it is published.",
+    GeneralSubagent,
+  );
   useTool(confluenceNotionTool);
   useTool(docsGeneratorTool);
 
   return `You are the Documentation agent. Write clear, task-oriented documentation organized by user journey. Keep the audience explicit, use working examples over abstract prose, and keep information architecture consistent.`;
-}
+});
+
+export default documentation;

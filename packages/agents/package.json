@@ -32,9 +32,10 @@
   },
   "dependencies": {
     "@nowarelabs/cfour": "workspace:*",
+    "@nowarelabs/contexts": "workspace:*",
+    "@nowarelabs/entrypoints": "workspace:*",
     "@nowarelabs/shared": "workspace:*",
-    "@nowarelabs/telemetry": "workspace:*",
-    "hono": "^4.13.0"
+    "@nowarelabs/telemetry": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260522.1",

@@ -15,21 +15,21 @@ A **subagent** is a named delegate an agent can hand a focused task to. The dele
 Declare a delegate with the `useSubagent()` hook. A subagent definition has three required fields — a `name`, a `description`, and an `agent` function:
 
 ```ts
-'use agent';
-import { useModel, useSubagent } from '@flue/runtime';
+"use agent";
+import { useModel, useSubagent } from "@flue/runtime";
 
 function Summarizer() {
-  return 'You summarize support cases in three sentences.';
+  return "You summarize support cases in three sentences.";
 }
 
 export function CaseAgent() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSubagent({
-    name: 'summarizer',
-    description: 'Summarizes one support case.',
+    name: "summarizer",
+    description: "Summarizes one support case.",
     agent: Summarizer,
   });
-  return 'Investigate the case. Delegate the summary to the `summarizer` subagent.';
+  return "Investigate the case. Delegate the summary to the `summarizer` subagent.";
 }
 ```
 
@@ -51,8 +51,8 @@ The `task` tool is always present, but its required `agent` parameter only resol
 
 Two properties follow from the fresh-context design:
 
-* **The prompt is the entire briefing.** The child does not see the parent’s conversation, so a task prompt like “summarize the case” only works if the delegate’s instructions or the prompt itself carry everything the child needs. Your parent instructions should tell the model to delegate with complete, self-contained prompts.
-* **Tasks parallelize.** Tool calls in one batch execute in parallel, so the model can launch several tasks at once — five independent checks become five concurrent child sessions, each with its own context window instead of the parent’s.
+- **The prompt is the entire briefing.** The child does not see the parent’s conversation, so a task prompt like “summarize the case” only works if the delegate’s instructions or the prompt itself carry everything the child needs. Your parent instructions should tell the model to delegate with complete, self-contained prompts.
+- **Tasks parallelize.** Tool calls in one batch execute in parallel, so the model can launch several tasks at once — five independent checks become five concurrent child sessions, each with its own context window instead of the parent’s.
 
 Delegates can declare delegates of their own with nested `useSubagent()` calls; the runtime caps delegation depth at four levels. Child sessions write their own durable records, so a task interrupted by a crash or redeploy resumes where it left off — see [Delegated tasks](https://flueframework.com/docs/guide/durability/#delegated-tasks) in the Durability guide.
 
@@ -62,34 +62,34 @@ The model isn’t the only party that can delegate. A [harness tool](https://flu
 
 A delegate is isolated from the parent by default. It inherits the parent’s _environment_:
 
-* the sandbox and its harness tools (read, write, bash, …);
-* workspace context discovered from the working directory (`AGENTS.md`, workspace skills);
-* the parent’s model and reasoning effort (unless overridden — see below).
+- the sandbox and its harness tools (read, write, bash, …);
+- workspace context discovered from the working directory (`AGENTS.md`, workspace skills);
+- the parent’s model and reasoning effort (unless overridden — see below).
 
 It inherits nothing about the parent’s _conversation_: not its history, not its instructions, tools, skills, or subagents, and not its persistent state or initial data.
 
 Everything on the right comes only from the delegate’s own render: the instructions it returns, the tools and skills its agent function mounts. A delegate’s world is exactly what you compose for it:
 
 ```ts
-'use agent';
-import { useModel, useSkill, useSubagent, useTool } from '@flue/runtime';
-import { searchIssues } from '../tools/search-issues.ts';
-import reproduceSkill from '../skills/reproduce/SKILL.md';
+"use agent";
+import { useModel, useSkill, useSubagent, useTool } from "@flue/runtime";
+import { searchIssues } from "../tools/search-issues.ts";
+import reproduceSkill from "../skills/reproduce/SKILL.md";
 
 function Reproducer() {
   useTool(searchIssues);
   useSkill(reproduceSkill);
-  return 'You reproduce one reported issue. Write your findings to report.md.';
+  return "You reproduce one reported issue. Write your findings to report.md.";
 }
 
 export function Triage() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSubagent({
-    name: 'reproducer',
-    description: 'Sets up the reproduction for one issue and writes report.md.',
+    name: "reproducer",
+    description: "Sets up the reproduction for one issue and writes report.md.",
     agent: Reproducer,
   });
-  return 'Investigate the reported issue. Delegate the reproduction to the `reproducer` subagent.';
+  return "Investigate the reported issue. Delegate the reproduction to the `reproducer` subagent.";
 }
 ```
 
@@ -99,8 +99,8 @@ Inside a delegate’s render, `useTool()`, `useSkill()`, `useInstruction()`, cus
 
 Two definition fields override what the delegate would otherwise inherit:
 
-* `model` — a [model specifier](https://flueframework.com/docs/guide/models/#model-specifier) for the delegate. Inherits the parent’s model when omitted.
-* `thinkingLevel` — the delegate’s [reasoning effort](https://flueframework.com/docs/guide/models/#model-reasoning-effort). Inherits when omitted.
+- `model` — a [model specifier](https://flueframework.com/docs/guide/models/#model-specifier) for the delegate. Inherits the parent’s model when omitted.
+- `thinkingLevel` — the delegate’s [reasoning effort](https://flueframework.com/docs/guide/models/#model-reasoning-effort). Inherits when omitted.
 
 Routing a delegate to a cheaper model is a common pattern: a classification step that runs on every ticket doesn’t need the parent’s model.
 
@@ -109,13 +109,13 @@ Routing a delegate to a cheaper model is a common pattern: a classification step
 To fan work out into fresh contexts without defining a specialist, Flue ships `GeneralSubagent`, a ready-made blank delegate:
 
 ```ts
-'use agent';
-import { GeneralSubagent, useModel, useSubagent } from '@flue/runtime';
+"use agent";
+import { GeneralSubagent, useModel, useSubagent } from "@flue/runtime";
 
 export function Researcher() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSubagent(GeneralSubagent);
-  return 'Answer questions about this codebase. Fan independent research out to the `flue-general` subagent, one question per task.';
+  return "Answer questions about this codebase. Fan independent research out to the `flue-general` subagent, one question per task.";
 }
 ```
 
@@ -126,15 +126,15 @@ export function Researcher() {
 A delegate that several agents mount belongs in its own module, defined once with `defineSubagent()` and exported:
 
 ```ts
-import { defineSubagent } from '@flue/runtime';
+import { defineSubagent } from "@flue/runtime";
 
 function IssueClassifier() {
-  return 'Return the likely product area and urgency for the reported issue.';
+  return "Return the likely product area and urgency for the reported issue.";
 }
 
 export const issueClassifier = defineSubagent({
-  name: 'issue_classifier',
-  description: 'Classifies support issues for routing.',
+  name: "issue_classifier",
+  description: "Classifies support issues for routing.",
   agent: IssueClassifier,
 });
 ```
@@ -142,14 +142,14 @@ export const issueClassifier = defineSubagent({
 Like `defineTool(...)` and `defineSkill(...)`, `defineSubagent(...)` is a typing helper: it validates the definition at module load (instead of first render) and returns it frozen. Mount the exported definition from any agent — per-mount overrides spread cleanly, so here the classifier runs on a small model for one high-volume agent:
 
 ```ts
-'use agent';
-import { useModel, useSubagent } from '@flue/runtime';
-import { issueClassifier } from '../subagents/issue-classifier.ts';
+"use agent";
+import { useModel, useSubagent } from "@flue/runtime";
+import { issueClassifier } from "../subagents/issue-classifier.ts";
 
 export function Support() {
-  useModel('anthropic/claude-sonnet-4-6');
-  useSubagent({ ...issueClassifier, model: 'anthropic/claude-haiku-4-5' });
-  return 'Handle the support ticket. Classify it with the `issue_classifier` subagent first.';
+  useModel("anthropic/claude-sonnet-4-6");
+  useSubagent({ ...issueClassifier, model: "anthropic/claude-haiku-4-5" });
+  return "Handle the support ticket. Classify it with the `issue_classifier` subagent first.";
 }
 ```
 
@@ -157,20 +157,20 @@ export function Support() {
 
 Subagents are most useful when:
 
-* exploratory work would flood the parent’s context but produces a short answer — research, codebase exploration, log analysis;
-* one phase of a workflow needs different instructions, tools, or skills than the rest of the conversation;
-* independent pieces of work can run in parallel, each in its own context window;
-* a class of work should run on a different model or reasoning effort than the parent.
+- exploratory work would flood the parent’s context but produces a short answer — research, codebase exploration, log analysis;
+- one phase of a workflow needs different instructions, tools, or skills than the rest of the conversation;
+- independent pieces of work can run in parallel, each in its own context window;
+- a class of work should run on a different model or reasoning effort than the parent.
 
 Against the neighboring primitives: a [tool](https://flueframework.com/docs/guide/tools/) is a bounded function your application code executes — reach for one when the work is deterministic, not model-driven. A [skill](https://flueframework.com/docs/guide/skills/) adds instructions and resources to the _current_ agent — reach for one when the agent needs guidance, not isolation. And a subagent is not a second registered agent: it has no conversation id, no persistent state, and no address. When another party of your system should message an agent over time, register a real agent and [dispatch()](https://flueframework.com/docs/guide/building-agents/#dispatch) to it instead.
 
 ## Next steps
 
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/#usesubagent) — the full contract for `useSubagent`, `defineSubagent`, and `GeneralSubagent`.
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — the hook model that delegates compose with.
-* [Tools](https://flueframework.com/docs/guide/tools/) and [Skills](https://flueframework.com/docs/guide/skills/) — the primitives to reach for when isolation isn’t the goal.
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — the shared environment parent and child work in.
-* [Durability](https://flueframework.com/docs/guide/durability/#delegated-tasks) — how interrupted tasks recover.
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/#usesubagent) — the full contract for `useSubagent`, `defineSubagent`, and `GeneralSubagent`.
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/) — the hook model that delegates compose with.
+- [Tools](https://flueframework.com/docs/guide/tools/) and [Skills](https://flueframework.com/docs/guide/skills/) — the primitives to reach for when isolation isn’t the goal.
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/) — the shared environment parent and child work in.
+- [Durability](https://flueframework.com/docs/guide/durability/#delegated-tasks) — how interrupted tasks recover.
 
 ## Docs Navigation
 
@@ -178,48 +178,48 @@ Current page: [Subagents](https://flueframework.com/docs/guide/subagents/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

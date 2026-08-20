@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -12,10 +13,10 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 import { Bash, InMemoryFs } from "just-bash";
@@ -30,11 +31,7 @@ interface DesignState {
   decisions: string[];
 }
 
-function TradeoffReviewer() {
-  return `You are a design trade-off reviewer. Given a proposed architecture, check it against proven patterns and known failure modes. Flag over-engineering, hidden coupling, capacity assumptions, and unstated costs. Return APPROVED or REVISE with the specific trade-offs. Be terse.`;
-}
-
-export function SolutionsArchitect() {
+const solutionsArchitect = defineAgent("solutions-architect", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -68,20 +65,24 @@ export function SolutionsArchitect() {
       (delivery.kind === "signal" ? delivery.attributes?.system : undefined) ||
       "platform";
     log.info("design.started", { system });
-    setDesign((prev) => ({ ...prev, status: "designing", system }));
+    setDesign({ ...design, status: "designing", system });
     writeArchitecture({ status: "designing", system, decisionCount: design.decisions.length });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("design.finished", { toolCalls: response.toolCalls.length });
-    setDesign((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("design.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setDesign({ ...design, status: "done" });
     writeArchitecture({
       status: "done",
       system: design.system,
@@ -91,15 +92,16 @@ export function SolutionsArchitect() {
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent({
-    name: "tradeoff-reviewer",
-    description:
-      "Reviews a proposed architecture for over-engineering, coupling, capacity assumptions, and unstated costs before it is committed.",
-    agent: TradeoffReviewer,
-  });
+  useSubagent(
+    "tradeoff-reviewer",
+    "Reviews a proposed architecture for over-engineering, coupling, capacity assumptions, and unstated costs before it is committed.",
+    GeneralSubagent,
+  );
   useTool(cloudPricingTool);
   useTool(diagrammingTool);
   useTool(iacTool);
 
   return `You are the Solutions Architect agent. Design resilient distributed systems and prefer proven patterns over novelty. Plan capacity and cost explicitly, document the trade-offs of each decision, and stress the design against failure modes before committing to it.`;
-}
+});
+
+export default solutionsArchitect;

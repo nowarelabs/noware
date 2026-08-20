@@ -154,7 +154,7 @@ export { defineSkill, parseSkillMarkdown } from "./skills.js";
 // ----------------------------------------------------------------
 
 export { createAgentRouter } from "./router.js";
-export type { AgentRouterOptions, HonoRoute, HonoHandler } from "./router.js";
+export type { AgentRouterOptions, AgentRoute } from "./router.js";
 
 // ----------------------------------------------------------------
 // Cloudflare adapters

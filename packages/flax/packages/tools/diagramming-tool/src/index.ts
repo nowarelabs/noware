@@ -63,7 +63,7 @@ function fromText(description: string): string {
   }
   const hasEdges = lines.some((l) => /(-->|->>|-->|->)/.test(l));
   if (hasEdges) return ["flowchart LR", ...lines].join("\n");
-  const nodes = lines.slice(0, 20).map((l, i) => `  n${i}["${l.replace(/["\[\]{}<>]/g, "")}"]`);
+  const nodes = lines.slice(0, 20).map((l, i) => `  n${i}["${l.replace(/["[\]{}<>]/g, "")}"]`);
   return ["flowchart TD", ...nodes].join("\n");
 }
 

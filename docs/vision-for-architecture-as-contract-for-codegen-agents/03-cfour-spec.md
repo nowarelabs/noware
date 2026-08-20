@@ -60,11 +60,15 @@ relationships), which ones are currently claimed by another editor in the **targ
 workspace (`into`). Add to `C4MergePlan`:
 
 ```ts
-claimBlockers: { elementId: string; holderEditorId: string }[];
+claimBlockers: {
+  elementId: string;
+  holderEditorId: string;
+}
+[];
 ```
 
 Must mirror `applyMerge`'s claim enforcement exactly (check `getClaimFor` on `into` for each
-id the plan touches). Rationale: lets the UI/agent see *before* merging who would block the
+id the plan touches). Rationale: lets the UI/agent see _before_ merging who would block the
 merge. Keep `applyMerge` still throwing on races (the check is authoritative); `claimBlockers`
 is advisory.
 
@@ -76,7 +80,7 @@ blockers independent of `conflicts`.
 
 `setProposalTtl(ms)`, `expireStaleProposals(workspaceName?, maxAgeMs?)` returning expired
 proposal ids, plus `createdAt` on proposals. Mirror the claims TTL pattern
-(`setClaimTtl`/`expireStaleClaims`), including *not* emitting events for expiry (matching the
+(`setClaimTtl`/`expireStaleClaims`), including _not_ emitting events for expiry (matching the
 claims precedent — the DO's alarm sweep owns persistence-side cleanup).
 
 ### 2.3 Structured conflict resolution

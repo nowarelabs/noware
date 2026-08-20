@@ -37,18 +37,18 @@ A flag may be passed at most once (`--target may only be passed once.`). Unknown
 
 Every skeleton contains:
 
-* `flue.config.ts`
-* `package.json`
-* `tsconfig.json`
-* `.gitignore`
-* `.env`
-* `src/agents/hello.ts`
-* `AGENTS.md`
-* `README.md`
-* `vite.config.ts` (`--deploy` only)
-* `src/app.ts` (`--deploy` only)
-* `src/db.ts` (Node only)
-* `src/cloudflare.ts` (Cloudflare only)
+- `flue.config.ts`
+- `package.json`
+- `tsconfig.json`
+- `.gitignore`
+- `.env`
+- `src/agents/hello.ts`
+- `AGENTS.md`
+- `README.md`
+- `vite.config.ts` (`--deploy` only)
+- `src/app.ts` (`--deploy` only)
+- `src/db.ts` (Node only)
+- `src/cloudflare.ts` (Cloudflare only)
 
 ## Examples
 
@@ -67,17 +67,17 @@ Current page: [flue init](https://flueframework.com/docs/cli/init/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### CLI
 
-* [Overview](https://flueframework.com/docs/cli/overview/)
-* [init](https://flueframework.com/docs/cli/init/)
-* [run](https://flueframework.com/docs/cli/run/)
-* [add](https://flueframework.com/docs/cli/add/)
-* [update](https://flueframework.com/docs/cli/update/)
-* [docs](https://flueframework.com/docs/cli/docs/)
+- [Overview](https://flueframework.com/docs/cli/overview/)
+- [init](https://flueframework.com/docs/cli/init/)
+- [run](https://flueframework.com/docs/cli/run/)
+- [add](https://flueframework.com/docs/cli/add/)
+- [update](https://flueframework.com/docs/cli/update/)
+- [docs](https://flueframework.com/docs/cli/docs/)

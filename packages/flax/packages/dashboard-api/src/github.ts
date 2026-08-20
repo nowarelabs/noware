@@ -85,7 +85,7 @@ async function githubFetch(path: string, init: RequestInit = {}): Promise<unknow
       "User-Agent": "flax-dashboard",
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
   const text = await res.text();
@@ -293,7 +293,7 @@ export async function ghFetch(
     ...init,
     headers: {
       Authorization: `Bearer ${token.token}`,
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
 }

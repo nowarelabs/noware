@@ -51,9 +51,9 @@ The final assistant reply prints to stdout; everything else — streamed text, t
 
 `--json` always prints exactly one envelope, discriminated by `outcome`, for every terminal result:
 
-* `"outcome": "completed"` carries `message` (the assistant reply).
-* `"outcome": "failed"` and `"outcome": "aborted"` carry an `error` object instead of a reply — `{ message, type?, details?, dev? }`, the typed fields present when the underlying error is a Flue error.
-* A setup or admission failure before the run starts (module resolution, config, creation-data validation) prints `{ "outcome": "error", "error": { … } }`.
+- `"outcome": "completed"` carries `message` (the assistant reply).
+- `"outcome": "failed"` and `"outcome": "aborted"` carry an `error` object instead of a reply — `{ message, type?, details?, dev? }`, the typed fields present when the underlying error is a Flue error.
+- A setup or admission failure before the run starts (module resolution, config, creation-data validation) prints `{ "outcome": "error", "error": { … } }`.
 
 The envelope supplements the exit code rather than replacing it: `0` for completed, `1` for failed and setup errors, `130` for aborts.
 
@@ -86,17 +86,17 @@ Current page: [flue run](https://flueframework.com/docs/cli/run/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### CLI
 
-* [Overview](https://flueframework.com/docs/cli/overview/)
-* [init](https://flueframework.com/docs/cli/init/)
-* [run](https://flueframework.com/docs/cli/run/)
-* [add](https://flueframework.com/docs/cli/add/)
-* [update](https://flueframework.com/docs/cli/update/)
-* [docs](https://flueframework.com/docs/cli/docs/)
+- [Overview](https://flueframework.com/docs/cli/overview/)
+- [init](https://flueframework.com/docs/cli/init/)
+- [run](https://flueframework.com/docs/cli/run/)
+- [add](https://flueframework.com/docs/cli/add/)
+- [update](https://flueframework.com/docs/cli/update/)
+- [docs](https://flueframework.com/docs/cli/docs/)

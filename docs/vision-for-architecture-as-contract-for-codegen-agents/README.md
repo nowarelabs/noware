@@ -10,16 +10,16 @@ Read order: `01-motivation.md` → `02-package-conventions.md` → per-package s
 
 ## Index
 
-| File | What it is |
-| --- | --- |
-| `01-motivation.md` | Why we are doing this — product vision, review findings, the layering decision, the Cloudflare constraint. |
-| `02-package-conventions.md` | The exact package scaffold + tooling conventions all packages must follow. |
-| `03-cfour-spec.md` | cfour: what stays, what moves out, what gets added. Pure domain only. |
-| `04-workspace-do-spec.md` | workspace-do: durability + RPC additions only. |
-| `05-gen-diesel-spec.md` | `@nowarelabs/gen-diesel`: the new codegen / "generative DSL" package. |
-| `06-agents-spec.md` | `@nowarelabs/agents`: multi-agent orchestration + crash-safe leases. |
-| `07-merge-review-spec.md` | `@nowarelabs/merge-review`: review/approval + CI pipeline. |
-| `08-ordered-work.md` | The master work list, in order, with acceptance criteria per phase. |
+| File                        | What it is                                                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `01-motivation.md`          | Why we are doing this — product vision, review findings, the layering decision, the Cloudflare constraint. |
+| `02-package-conventions.md` | The exact package scaffold + tooling conventions all packages must follow.                                 |
+| `03-cfour-spec.md`          | cfour: what stays, what moves out, what gets added. Pure domain only.                                      |
+| `04-workspace-do-spec.md`   | workspace-do: durability + RPC additions only.                                                             |
+| `05-gen-diesel-spec.md`     | `@nowarelabs/gen-diesel`: the new codegen / "generative DSL" package.                                      |
+| `06-agents-spec.md`         | `@nowarelabs/agents`: multi-agent orchestration + crash-safe leases.                                       |
+| `07-merge-review-spec.md`   | `@nowarelabs/merge-review`: review/approval + CI pipeline.                                                 |
+| `08-ordered-work.md`        | The master work list, in order, with acceptance criteria per phase.                                        |
 
 ## Decisions in one screen
 

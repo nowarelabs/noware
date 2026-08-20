@@ -21,10 +21,10 @@ flue add channel zendesk
 The blueprint installs `@flue/zendesk` and `lossless-json`. It creates a narrow Fetch client at `<source-root>/zendesk-client.ts` and `<source-root>/channels/zendesk.ts` with named `channel` and project-owned `client` exports, ticket identity handling, and a ticket-bound retrieval tool. It wires that tool into an agent and adds Node types only when the target needs them; no community Zendesk SDK is installed.
 
 ```ts
-import { createZendeskChannel } from '@flue/zendesk';
-import { dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createZendeskClient } from '../zendesk-client.ts';
+import { createZendeskChannel } from "@flue/zendesk";
+import { dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createZendeskClient } from "../zendesk-client.ts";
 
 export const client = createZendeskClient({
   subdomain: process.env.ZENDESK_SUBDOMAIN!,
@@ -36,14 +36,14 @@ export const channel = createZendeskChannel({
   signingSecret: process.env.ZENDESK_WEBHOOK_SIGNING_SECRET!,
   accountId: process.env.ZENDESK_ACCOUNT_ID!,
   async webhook({ payload, delivery }) {
-    if (payload.type !== 'zen:event-type:ticket.created') return;
+    if (payload.type !== "zen:event-type:ticket.created") return;
     const ticketId = ticketIdFromEvent(payload.subject, payload.detail);
     if (!ticketId) return;
 
     await dispatch(Assistant, {
       id: channel.instanceId({ accountId: payload.account_id, ticketId }),
       message: {
-        kind: 'signal',
+        kind: "signal",
         type: `zendesk.${payload.type}`,
         // `event` is Zendesk's provider-native change object; its
         // properties vary by event type.
@@ -69,23 +69,23 @@ A matching ticket event is admitted to the agent bound to that account and ticke
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as zendesk } from './channels/zendesk.ts';
+import { channel as zendesk } from "./channels/zendesk.ts";
 
-app.route('/channels/zendesk', zendesk.route());
+app.route("/channels/zendesk", zendesk.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/zendesk` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                          | Purpose                                                                |
-| --------------------------------- | ---------------------------------------------------------------------- |
-| ZENDESK\_WEBHOOK\_SIGNING\_SECRET | **Required** — Verifies inbound event bodies.                          |
-| ZENDESK\_ACCOUNT\_ID              | **Required** — Restricts events and resource identity to one account.  |
-| ZENDESK\_WEBHOOK\_ID              | **Optional** — Restricts deliveries to one configured webhook.         |
-| ZENDESK\_SUBDOMAIN                | **Required** — Selects the account’s Ticketing API origin.             |
-| ZENDESK\_EMAIL                    | **Required** — Identifies the API-token user for Basic authentication. |
-| ZENDESK\_API\_TOKEN               | **Required** — Authenticates outbound Ticketing API requests.          |
+| Variable                       | Purpose                                                                |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| ZENDESK_WEBHOOK_SIGNING_SECRET | **Required** — Verifies inbound event bodies.                          |
+| ZENDESK_ACCOUNT_ID             | **Required** — Restricts events and resource identity to one account.  |
+| ZENDESK_WEBHOOK_ID             | **Optional** — Restricts deliveries to one configured webhook.         |
+| ZENDESK_SUBDOMAIN              | **Required** — Selects the account’s Ticketing API origin.             |
+| ZENDESK_EMAIL                  | **Required** — Identifies the API-token user for Basic authentication. |
+| ZENDESK_API_TOKEN              | **Required** — Authenticates outbound Ticketing API requests.          |
 
 It installs `@flue/zendesk` and creates a channel module with named `channel`and project-owned `client` exports. Zendesk has no officially supported Node server SDK, so the blueprint uses a narrow native Fetch client instead of adding a community wrapper.
 
@@ -100,32 +100,32 @@ The webhook signing secret and outbound API token are separate credentials.
 ## Channel module
 
 ```ts
-import { createZendeskChannel, type JsonValue, type ZendeskTicketRef } from '@flue/zendesk';
-import { defineTool, dispatch } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createZendeskClient } from '../zendesk-client.ts';
+import { createZendeskChannel, type JsonValue, type ZendeskTicketRef } from "@flue/zendesk";
+import { defineTool, dispatch } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createZendeskClient } from "../zendesk-client.ts";
 
-const accountId = requiredEnv('ZENDESK_ACCOUNT_ID');
+const accountId = requiredEnv("ZENDESK_ACCOUNT_ID");
 
 export const client = createZendeskClient({
-  subdomain: requiredEnv('ZENDESK_SUBDOMAIN'),
-  email: requiredEnv('ZENDESK_EMAIL'),
-  apiToken: requiredEnv('ZENDESK_API_TOKEN'),
+  subdomain: requiredEnv("ZENDESK_SUBDOMAIN"),
+  email: requiredEnv("ZENDESK_EMAIL"),
+  apiToken: requiredEnv("ZENDESK_API_TOKEN"),
 });
 
 export const channel = createZendeskChannel({
-  signingSecret: requiredEnv('ZENDESK_WEBHOOK_SIGNING_SECRET'),
+  signingSecret: requiredEnv("ZENDESK_WEBHOOK_SIGNING_SECRET"),
   accountId,
   webhookId: process.env.ZENDESK_WEBHOOK_ID || undefined,
 
   // Path: /channels/zendesk/webhook
   async webhook({ c, payload, delivery }) {
     switch (payload.type) {
-      case 'zen:event-type:ticket.created':
-      case 'zen:event-type:ticket.comment_added': {
+      case "zen:event-type:ticket.created":
+      case "zen:event-type:ticket.comment_added": {
         const ticketId = ticketIdFromEvent(payload.subject, payload.detail);
         if (!ticketId) {
-          return c.json({ error: 'Expected a Zendesk ticket event.' }, 400);
+          return c.json({ error: "Expected a Zendesk ticket event." }, 400);
         }
 
         const ticket: ZendeskTicketRef = {
@@ -140,7 +140,7 @@ export const channel = createZendeskChannel({
             ticketId: ticket.ticketId,
           },
           message: {
-            kind: 'signal',
+            kind: "signal",
             type: `zendesk.${payload.type}`,
             // `event` is Zendesk's provider-native change object; its
             // properties vary by event type.
@@ -163,11 +163,11 @@ export const channel = createZendeskChannel({
 
 export function retrieveTicket(ref: ZendeskTicketRef) {
   if (ref.accountId !== accountId) {
-    throw new TypeError('Expected the configured Zendesk account.');
+    throw new TypeError("Expected the configured Zendesk account.");
   }
   return defineTool({
-    name: 'retrieve_zendesk_ticket',
-    description: 'Retrieve the Zendesk ticket already bound to this agent.',
+    name: "retrieve_zendesk_ticket",
+    description: "Retrieve the Zendesk ticket already bound to this agent.",
     async run() {
       return { output: await client.getTicket(ref.ticketId) };
     },
@@ -178,10 +178,12 @@ function ticketIdFromEvent(subject: string, detail: Record<string, JsonValue>): 
   const match = /^zen:ticket:([1-9]\d*)$/.exec(subject);
   if (!match?.[1]) return undefined;
   const id = detail.id;
-  if (!(
-    (typeof id === 'string' && /^[1-9]\d*$/.test(id)) ||
-    (typeof id === 'number' && Number.isSafeInteger(id) && id > 0)
-  )) {
+  if (
+    !(
+      (typeof id === "string" && /^[1-9]\d*$/.test(id)) ||
+      (typeof id === "number" && Number.isSafeInteger(id) && id > 0)
+    )
+  ) {
     return undefined;
   }
   return String(id) === match[1] ? match[1] : undefined;
@@ -201,7 +203,7 @@ The grouped branch handles selected ticket events while leaving the provider cat
 Use the original account subdomain and bind credentials in trusted code:
 
 ```ts
-import { isLosslessNumber, isSafeNumber, parse } from 'lossless-json';
+import { isLosslessNumber, isSafeNumber, parse } from "lossless-json";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -217,20 +219,20 @@ export function createZendeskClient({
   fetcher?: typeof globalThis.fetch;
 }) {
   if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(subdomain)) {
-    throw new TypeError('Zendesk subdomain must be a bare DNS label.');
+    throw new TypeError("Zendesk subdomain must be a bare DNS label.");
   }
-  const authorization = `Basic ${Buffer.from(`${email}/token:${apiToken}`).toString('base64')}`;
+  const authorization = `Basic ${Buffer.from(`${email}/token:${apiToken}`).toString("base64")}`;
 
   return {
     async getTicket(ticketId: string) {
       if (!/^[1-9]\d*$/.test(ticketId)) {
-        throw new TypeError('Zendesk ticket id must be a positive integer.');
+        throw new TypeError("Zendesk ticket id must be a positive integer.");
       }
       const response = await fetcher(
         `https://${subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`,
         {
           headers: {
-            accept: 'application/json',
+            accept: "application/json",
             authorization,
           },
         },
@@ -240,7 +242,7 @@ export function createZendeskClient({
       }
       const body = normalizeJsonValue(parse(await response.text()));
       if (!isRecord(body) || !isRecord(body.ticket) || !isZendeskId(body.ticket.id)) {
-        throw new TypeError('Zendesk returned an invalid ticket response.');
+        throw new TypeError("Zendesk returned an invalid ticket response.");
       }
       return body.ticket;
     },
@@ -248,16 +250,16 @@ export function createZendeskClient({
 }
 
 function isZendeskId(value: unknown): value is string | number {
-  if (typeof value === 'string') return /^[1-9]\d*$/.test(value);
-  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+  if (typeof value === "string") return /^[1-9]\d*$/.test(value);
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 function normalizeJsonValue(value: unknown): JsonValue | undefined {
   if (
     value === null ||
-    typeof value === 'boolean' ||
-    typeof value === 'string' ||
-    (typeof value === 'number' && Number.isFinite(value))
+    typeof value === "boolean" ||
+    typeof value === "string" ||
+    (typeof value === "number" && Number.isFinite(value))
   ) {
     return value;
   }
@@ -285,7 +287,7 @@ function normalizeJsonValue(value: unknown): JsonValue | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
     !Array.isArray(value) &&
     !isLosslessNumber(value) &&
@@ -303,10 +305,10 @@ Install `lossless-json@4.3.0` for this client. Zendesk identifiers can exceed Ja
 ## Bind the tool
 
 ```ts
-'use agent';
-import { useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { retrieveTicket } from '../channels/zendesk.ts';
+"use agent";
+import { useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { retrieveTicket } from "../channels/zendesk.ts";
 
 const initialData = v.object({
   accountId: v.string(),
@@ -314,11 +316,11 @@ const initialData = v.object({
 });
 
 export function Assistant() {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const data = useInitialData<v.InferOutput<typeof initialData>>();
-  if (!data) throw new Error('This agent is created by the Zendesk channel dispatch.');
+  if (!data) throw new Error("This agent is created by the Zendesk channel dispatch.");
   useTool(retrieveTicket(data));
-  return 'Review the inbound Zendesk ticket event. Retrieve the current ticket when more context is needed.';
+  return "Review the inbound Zendesk ticket event. Retrieve the current ticket when more context is needed.";
 }
 
 Assistant.initialData = initialData;
@@ -350,13 +352,13 @@ Zendesk does not document a timestamp acceptance window or clock-skew rule. The 
 
 The callback receives `{ c, payload, delivery }`, keeping the Flue-verified provider-native payload separate from the unsigned header metadata.
 
-`payload` is Zendesk’s own [common event envelope](https://developer.zendesk.com/api-reference/webhooks/event-types/webhook-event-types/), with the provider’s snake\_case field names:
+`payload` is Zendesk’s own [common event envelope](https://developer.zendesk.com/api-reference/webhooks/event-types/webhook-event-types/), with the provider’s snake_case field names:
 
-* `account_id`, normalized to a positive decimal string;
-* `id`, the provider event id;
-* `type` and `zendesk_event_version`, both open strings;
-* `subject` such as `zen:ticket:<id>`, and `time`;
-* provider-native `detail` and `event` JSON objects.
+- `account_id`, normalized to a positive decimal string;
+- `id`, the provider event id;
+- `type` and `zendesk_event_version`, both open strings;
+- `subject` such as `zen:ticket:<id>`, and `time`;
+- provider-native `detail` and `event` JSON objects.
 
 An index signature forwards any authenticated future or unmodeled fields, so verified future event families remain observable. JSON is parsed losslessly: unsafe integer literals retain their exact decimal spelling as strings, and the top-level integer `account_id` is normalized to a decimal string.
 
@@ -388,75 +390,75 @@ Current page: [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendes
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

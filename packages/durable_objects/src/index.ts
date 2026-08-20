@@ -56,7 +56,10 @@ export class BaseDurableObject<
     this.afterHooks.push({ fn: fn as AfterHookFunction, options });
   }
 
-  static around<T extends BaseDurableObject>(fn: AroundHookFunction<T>, options?: HookOptions): void {
+  static around<T extends BaseDurableObject>(
+    fn: AroundHookFunction<T>,
+    options?: HookOptions,
+  ): void {
     if (!Object.hasOwn(this, "aroundHooks")) this.aroundHooks = [];
     this.aroundHooks.push({ fn: fn as AroundHookFunction, options });
   }

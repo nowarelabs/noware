@@ -20,7 +20,7 @@ async function ghFetch(env: Env, path: string, init: RequestInit = {}): Promise<
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       Authorization: `Bearer ${requireSecret(env, "GITHUB_TOKEN")}`,
-      ...(init.headers ?? {}),
+      ...init.headers,
     },
   });
   const text = await res.text();
@@ -107,13 +107,11 @@ function spdxSbom(
       creators: ["Tool: flax-sbom-tool"],
     },
     packages,
-    relationships: [
-      ...deps.map((_, i) => ({
-        spdxElementId: "SPDXRef-DOCUMENT",
-        relationshipType: "DESCRIBES",
-        relatedSpdxElement: `SPDXRef-Package-${i + 1}`,
-      })),
-    ],
+    relationships: deps.map((_, i) => ({
+      spdxElementId: "SPDXRef-DOCUMENT",
+      relationshipType: "DESCRIBES",
+      relatedSpdxElement: `SPDXRef-Package-${i + 1}`,
+    })),
   };
 }
 
@@ -175,9 +173,9 @@ export class SbomTool extends WorkerEntrypoint<Env> {
       const pkg = JSON.parse(manifest.content);
       root = { name: pkg.name ?? repo, version: pkg.version ?? "0.0.0" };
       const all = {
-        ...(pkg.dependencies ?? {}),
-        ...(pkg.devDependencies ?? {}),
-        ...(pkg.optionalDependencies ?? {}),
+        ...pkg.dependencies,
+        ...pkg.devDependencies,
+        ...pkg.optionalDependencies,
       };
       deps = Object.entries(all).map(([name, version]) => ({ name, version: String(version) }));
       const settled = await Promise.allSettled(
@@ -195,10 +193,10 @@ export class SbomTool extends WorkerEntrypoint<Env> {
         const t = line.trim();
         if (!t || t.startsWith("#")) continue;
         if (manifest.path.endsWith("requirements.txt")) {
-          const m = /^([A-Za-z0-9_.\-]+)(?:[=<>!~]+([^;\s]+))?/.exec(t);
+          const m = /^([A-Za-z0-9_.-]+)(?:[=<>!~]+([^;\s]+))?/.exec(t);
           if (m) deps.push({ name: m[1], version: m[2] ?? "latest" });
         } else if (manifest.path.endsWith("pyproject.toml")) {
-          const m = /^([A-Za-z0-9_.\-]+)\s*(?:=\s*"?([^"]+)"?)?/.exec(t);
+          const m = /^([A-Za-z0-9_.-]+)\s*(?:=\s*"?([^"]+)"?)?/.exec(t);
           if (m && m[1] !== "name") deps.push({ name: m[1], version: m[2]?.trim() ?? "latest" });
         }
       }

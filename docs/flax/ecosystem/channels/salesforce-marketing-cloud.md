@@ -21,11 +21,11 @@ flue add channel salesforce-marketing-cloud
 The blueprint installs `@flue/salesforce`. It creates a narrow Fetch client at `<source-root>/salesforce-marketing-cloud-client.ts`, family identity helpers at `<source-root>/salesforce-marketing-cloud-email.ts`, and `<source-root>/channels/salesforce-marketing-cloud.ts` with named `channel` and project-owned `client` exports. It also creates or updates an agent to bind a callback lookup tool to validated email-event identity. This integration is for Marketing Cloud Engagement ENS, not generic Salesforce APIs.
 
 ```ts
-import { createSalesforceMarketingCloudChannel } from '@flue/salesforce';
-import { dispatch, useModel } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createSalesforceMarketingCloudClient } from '../salesforce-marketing-cloud-client.ts';
-import { emailEventInstanceId, emailRefFromEvent } from '../salesforce-marketing-cloud-email.ts';
+import { createSalesforceMarketingCloudChannel } from "@flue/salesforce";
+import { dispatch, useModel } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createSalesforceMarketingCloudClient } from "../salesforce-marketing-cloud-client.ts";
+import { emailEventInstanceId, emailRefFromEvent } from "../salesforce-marketing-cloud-email.ts";
 
 const callbackId = process.env.SALESFORCE_MARKETING_CLOUD_CALLBACK_ID!;
 export const client = createSalesforceMarketingCloudClient({
@@ -39,22 +39,22 @@ export const channel = createSalesforceMarketingCloudChannel({
   async events({ c, batch }) {
     const usefulEvents = [];
     for (const event of batch.events) {
-      if (event.eventCategoryType !== 'EngagementEvents.EmailOpen') continue;
+      if (event.eventCategoryType !== "EngagementEvents.EmailOpen") continue;
       const ref = emailRefFromEvent(callbackId, event);
-      if (!ref) return c.json({ error: 'Expected a supported email event.' }, 400);
+      if (!ref) return c.json({ error: "Expected a supported email event." }, 400);
       usefulEvents.push({ event, ref });
     }
     for (const { event, ref } of usefulEvents) {
       await dispatch(Assistant, {
         id: emailEventInstanceId(ref),
         message: {
-          kind: 'signal',
+          kind: "signal",
           type: `salesforce-marketing-cloud.${event.eventCategoryType}`,
           // `info` carries the family-specific event fields; there is no
           // natural message text for an engagement event.
           body: JSON.stringify(event.info ?? {}),
           attributes: {
-            ...(typeof event.timestampUTC === 'string' ? { occurredAt: event.timestampUTC } : {}),
+            ...(typeof event.timestampUTC === "string" ? { occurredAt: event.timestampUTC } : {}),
             callbackId: ref.callbackId,
             mid: ref.mid,
             eid: ref.eid,
@@ -78,21 +78,21 @@ Each valid selected email event in a signed batch is admitted to the agent bound
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as salesforceMarketingCloud } from './channels/salesforce-marketing-cloud.ts';
+import { channel as salesforceMarketingCloud } from "./channels/salesforce-marketing-cloud.ts";
 
-app.route('/channels/salesforce-marketing-cloud', salesforceMarketingCloud.route());
+app.route("/channels/salesforce-marketing-cloud", salesforceMarketingCloud.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/salesforce-marketing-cloud` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                                      | Purpose                                                                 |
-| --------------------------------------------- | ----------------------------------------------------------------------- |
-| SALESFORCE\_MARKETING\_CLOUD\_SIGNATURE\_KEY  | **Required** — Verifies inbound ENS batches.                            |
-| SALESFORCE\_MARKETING\_CLOUD\_CALLBACK\_ID    | **Required** — Restricts and identifies the configured ENS callback.    |
-| SALESFORCE\_MARKETING\_CLOUD\_REST\_BASE\_URL | **Required** — Selects the tenant-specific Marketing Cloud REST origin. |
-| SALESFORCE\_MARKETING\_CLOUD\_ACCESS\_TOKEN   | **Required** — Authenticates application-owned REST requests.           |
+| Variable                                 | Purpose                                                                 |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| SALESFORCE_MARKETING_CLOUD_SIGNATURE_KEY | **Required** — Verifies inbound ENS batches.                            |
+| SALESFORCE_MARKETING_CLOUD_CALLBACK_ID   | **Required** — Restricts and identifies the configured ENS callback.    |
+| SALESFORCE_MARKETING_CLOUD_REST_BASE_URL | **Required** — Selects the tenant-specific Marketing Cloud REST origin. |
+| SALESFORCE_MARKETING_CLOUD_ACCESS_TOKEN  | **Required** — Authenticates application-owned REST requests.           |
 
 It installs `@flue/salesforce` and creates named `channel` and project-owned `client` exports. The integration targets Marketing Cloud Engagement Event Notification Service (ENS), not generic Salesforce APIs.
 
@@ -110,25 +110,25 @@ The signature key and outbound access token are separate credentials. Callback r
 import {
   createSalesforceMarketingCloudChannel,
   type SalesforceMarketingCloudEvent,
-} from '@flue/salesforce';
-import { defineTool, dispatch, useModel } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
-import { createSalesforceMarketingCloudClient } from '../salesforce-marketing-cloud-client.ts';
+} from "@flue/salesforce";
+import { defineTool, dispatch, useModel } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
+import { createSalesforceMarketingCloudClient } from "../salesforce-marketing-cloud-client.ts";
 import {
   emailEventInstanceId,
   emailRefFromEvent,
   type SalesforceMarketingCloudEmailRef,
-} from '../salesforce-marketing-cloud-email.ts';
+} from "../salesforce-marketing-cloud-email.ts";
 
-const callbackId = requiredEnv('SALESFORCE_MARKETING_CLOUD_CALLBACK_ID');
+const callbackId = requiredEnv("SALESFORCE_MARKETING_CLOUD_CALLBACK_ID");
 
 export const client = createSalesforceMarketingCloudClient({
-  restBaseUrl: requiredEnv('SALESFORCE_MARKETING_CLOUD_REST_BASE_URL'),
-  accessToken: requiredEnv('SALESFORCE_MARKETING_CLOUD_ACCESS_TOKEN'),
+  restBaseUrl: requiredEnv("SALESFORCE_MARKETING_CLOUD_REST_BASE_URL"),
+  accessToken: requiredEnv("SALESFORCE_MARKETING_CLOUD_ACCESS_TOKEN"),
 });
 
 export const channel = createSalesforceMarketingCloudChannel({
-  signatureKey: requiredEnv('SALESFORCE_MARKETING_CLOUD_SIGNATURE_KEY'),
+  signatureKey: requiredEnv("SALESFORCE_MARKETING_CLOUD_SIGNATURE_KEY"),
   callbackId,
 
   // Path: /channels/salesforce-marketing-cloud/events
@@ -140,15 +140,15 @@ export const channel = createSalesforceMarketingCloudChannel({
 
     for (const event of batch.events) {
       switch (event.eventCategoryType) {
-        case 'TransactionalSendEvents.EmailSent':
-        case 'TransactionalSendEvents.EmailNotSent':
-        case 'TransactionalSendEvents.EmailBounced':
-        case 'EngagementEvents.EmailOpen':
-        case 'EngagementEvents.EmailClick':
-        case 'EngagementEvents.EmailUnsubscribe': {
+        case "TransactionalSendEvents.EmailSent":
+        case "TransactionalSendEvents.EmailNotSent":
+        case "TransactionalSendEvents.EmailBounced":
+        case "EngagementEvents.EmailOpen":
+        case "EngagementEvents.EmailClick":
+        case "EngagementEvents.EmailUnsubscribe": {
           const ref = emailRefFromEvent(callbackId, event);
           if (!ref) {
-            return c.json({ error: 'Expected a supported Marketing Cloud email event.' }, 400);
+            return c.json({ error: "Expected a supported Marketing Cloud email event." }, 400);
           }
           usefulEvents.push({ event, ref });
           break;
@@ -162,13 +162,13 @@ export const channel = createSalesforceMarketingCloudChannel({
       await dispatch(Assistant, {
         id: emailEventInstanceId(ref),
         message: {
-          kind: 'signal',
+          kind: "signal",
           type: `salesforce-marketing-cloud.${event.eventCategoryType}`,
           // `info` carries the family-specific event fields; there is no
           // natural message text for an engagement event.
           body: JSON.stringify(event.info ?? {}),
           attributes: {
-            ...(typeof event.timestampUTC === 'string' ? { occurredAt: event.timestampUTC } : {}),
+            ...(typeof event.timestampUTC === "string" ? { occurredAt: event.timestampUTC } : {}),
             callbackId: ref.callbackId,
             mid: ref.mid,
             eid: ref.eid,
@@ -187,11 +187,11 @@ export const channel = createSalesforceMarketingCloudChannel({
 
 export function retrieveCallback(ref: SalesforceMarketingCloudEmailRef) {
   if (ref.callbackId !== callbackId) {
-    throw new TypeError('Expected the configured Marketing Cloud callback.');
+    throw new TypeError("Expected the configured Marketing Cloud callback.");
   }
   return defineTool({
-    name: 'retrieve_salesforce_marketing_cloud_callback',
-    description: 'Retrieve the Marketing Cloud ENS callback bound to this agent.',
+    name: "retrieve_salesforce_marketing_cloud_callback",
+    description: "Retrieve the Marketing Cloud ENS callback bound to this agent.",
     async run() {
       return { output: await client.getCallback(callbackId) };
     },
@@ -225,20 +225,20 @@ export function createSalesforceMarketingCloudClient({
 }) {
   const origin = salesforceMarketingCloudRestOrigin(restBaseUrl);
   if (!accessToken || accessToken.trim() !== accessToken) {
-    throw new TypeError('Marketing Cloud access token must be non-empty and trimmed.');
+    throw new TypeError("Marketing Cloud access token must be non-empty and trimmed.");
   }
 
   return {
     async getCallback(callbackId: string) {
       if (!callbackId || callbackId.trim() !== callbackId) {
-        throw new TypeError('Marketing Cloud callback id must be non-empty and trimmed.');
+        throw new TypeError("Marketing Cloud callback id must be non-empty and trimmed.");
       }
       const response = await fetcher(
         `${origin}/platform/v1/ens-callbacks/${encodeURIComponent(callbackId)}`,
         {
-          method: 'GET',
+          method: "GET",
           headers: {
-            accept: 'application/json',
+            accept: "application/json",
             authorization: `Bearer ${accessToken}`,
           },
         },
@@ -247,8 +247,8 @@ export function createSalesforceMarketingCloudClient({
         throw new Error(`Marketing Cloud API request failed with ${response.status}.`);
       }
       const value: unknown = await response.json();
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        throw new TypeError('Marketing Cloud returned an invalid callback response.');
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new TypeError("Marketing Cloud returned an invalid callback response.");
       }
       return value;
     },
@@ -257,19 +257,19 @@ export function createSalesforceMarketingCloudClient({
 
 function salesforceMarketingCloudRestOrigin(value: string): string {
   const url = new URL(value);
-  const suffix = '.rest.marketingcloudapis.com';
+  const suffix = ".rest.marketingcloudapis.com";
   if (
-    url.protocol !== 'https:' ||
-    url.username !== '' ||
-    url.password !== '' ||
-    url.port !== '' ||
-    url.pathname !== '/' ||
-    url.search !== '' ||
-    url.hash !== '' ||
+    url.protocol !== "https:" ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.port !== "" ||
+    url.pathname !== "/" ||
+    url.search !== "" ||
+    url.hash !== "" ||
     !url.hostname.endsWith(suffix) ||
     url.hostname.length === suffix.length
   ) {
-    throw new TypeError('Expected an HTTPS tenant origin ending in .rest.marketingcloudapis.com.');
+    throw new TypeError("Expected an HTTPS tenant origin ending in .rest.marketingcloudapis.com.");
   }
   return url.origin;
 }
@@ -287,16 +287,16 @@ No Salesforce SDK is required. Callback registration, OAuth, token refresh, subs
 ## Bind the agent
 
 ```ts
-'use agent';
-import { type AgentProps, useModel, useTool } from '@flue/runtime';
-import { retrieveCallback } from '../channels/salesforce-marketing-cloud.ts';
-import { parseEmailEventInstanceId } from '../salesforce-marketing-cloud-email.ts';
+"use agent";
+import { type AgentProps, useModel, useTool } from "@flue/runtime";
+import { retrieveCallback } from "../channels/salesforce-marketing-cloud.ts";
+import { parseEmailEventInstanceId } from "../salesforce-marketing-cloud-email.ts";
 
 export function Assistant({ id }: AgentProps) {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const email = parseEmailEventInstanceId(id);
   useTool(retrieveCallback(email));
-  return 'Review the inbound Salesforce Marketing Cloud email lifecycle event. Retrieve the configured ENS callback when callback status or delivery configuration is relevant.';
+  return "Review the inbound Salesforce Marketing Cloud email lifecycle event. Retrieve the configured ENS callback when callback status or delivery configuration is relevant.";
 }
 ```
 
@@ -329,11 +329,11 @@ Marketing Cloud signs the exact body bytes. `signatureKey` is required: it is th
 
 The signed payload is an ordered, nonempty array of at most 1000 events. Each event is passed through with Marketing Cloud’s own field names and nesting — there is no `raw` wrapper and no field projection. Ingress requires only a nonempty `eventCategoryType` on each event; that one field is what makes a batch forwardable. Everything else is delivered as ENS sent it:
 
-* `timestampUTC`, the provider UTC epoch in milliseconds, forwarded unchanged and not validated (some families omit it or use a different representation);
-* `composite` (`{ jobId, batchId, listId, … }`), `definitionKey`, and `definitionId` on the email send and engagement families that carry them;
-* `info`, the family-specific details;
-* `mid` and `eid`, which arrive as `number` on some families and `string` on others;
-* `compositeId`, the flattened tracking id, deprecated for transactional email.
+- `timestampUTC`, the provider UTC epoch in milliseconds, forwarded unchanged and not validated (some families omit it or use a different representation);
+- `composite` (`{ jobId, batchId, listId, … }`), `definitionKey`, and `definitionId` on the email send and engagement families that carry them;
+- `info`, the family-specific details;
+- `mid` and `eid`, which arrive as `number` on some families and `string` on others;
+- `compositeId`, the flattened tracking id, deprecated for transactional email.
 
 A top-level index signature forwards any authenticated field the modeled type does not name. The batch also exposes `rawBody`, the exact UTF-8 body after signature verification. The package does not close the event taxonomy or infer a universal resource, actor, delivery, or conversation identity. Narrow on `eventCategoryType` and validate every family-specific field you read.
 
@@ -361,75 +361,75 @@ Current page: [Salesforce Marketing Cloud](https://flueframework.com/docs/ecosys
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

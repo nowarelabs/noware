@@ -7,12 +7,13 @@
     "build": "vite build",
     "deploy": "vite build && wrangler deploy",
     "check": "vp check",
+    "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types --include-runtime=false"
   },
   "dependencies": {
     "@nowarelabs/agents": "workspace:*",
+    "@nowarelabs/entrypoints": "workspace:*",
     "agents": "^0.20.1",
-    "hono": "^4.13.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {

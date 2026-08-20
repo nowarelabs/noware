@@ -27,7 +27,7 @@ async function tfcFetch(env: Env, path: string, init: RequestInit = {}): Promise
       Authorization: `Bearer ${requireSecret(env, "TFE_TOKEN")}`,
       "Content-Type": "application/vnd.api+json",
       Accept: "application/vnd.api+json",
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
   const text = await res.text();

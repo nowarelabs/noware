@@ -20,8 +20,8 @@ flue add channel slack
 
 Applying the Slack blueprint installs two packages and wires them into your project:
 
-* `@flue/slack` — the **ingress** package: request verification and the channel’s HTTP routes.
-* `@slack/web-api` — Slack’s own SDK, for **outbound** calls your application makes.
+- `@flue/slack` — the **ingress** package: request verification and the channel’s HTTP routes.
+- `@slack/web-api` — Slack’s own SDK, for **outbound** calls your application makes.
 
 The result is one new module, `src/channels/slack.ts`, exporting the configured `channel` and the SDK `client`, plus a mount in `app.ts` and a reply tool bound into the target agent. Every channel follows the same split: Flue owns verified ingress, and outbound behavior stays in your application through the provider’s established SDK ([below](#use-provider-sdks)).
 
@@ -32,17 +32,17 @@ Each provider’s ecosystem page documents its environment variables — for Sla
 A channel module configures the provider’s `create*Channel()` factory with a verification secret and one handler per protocol surface. The package verifies each request — signatures checked against the exact raw bytes, replay windows enforced, protocol handshakes such as Slack’s URL verification answered internally — and calls your handler only for authenticated deliveries, passing the provider’s native payload types alongside the Hono context `c`:
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { createSlackChannel } from '@flue/slack';
-import { Assistant } from '../agents/assistant.ts';
+import { dispatch } from "@flue/runtime";
+import { createSlackChannel } from "@flue/slack";
+import { Assistant } from "../agents/assistant.ts";
 
 export const channel = createSlackChannel({
   signingSecret: process.env.SLACK_SIGNING_SECRET!,
 
   // Served at POST /channels/slack/events (with the mount below).
   async events({ payload }) {
-    if (payload.type !== 'event_callback') return;
-    if (payload.event.type !== 'app_mention') return;
+    if (payload.type !== "event_callback") return;
+    if (payload.event.type !== "app_mention") return;
 
     const event = payload.event;
     const thread = {
@@ -63,8 +63,8 @@ export const channel = createSlackChannel({
         startedBy: event.user,
       },
       message: {
-        kind: 'signal',
-        type: 'slack.app_mention',
+        kind: "signal",
+        type: "slack.app_mention",
         body: event.text,
         attributes: { eventId: payload.event_id },
       },
@@ -77,19 +77,19 @@ The handler filters the events the application cares about, chooses the receivin
 
 The channel packages share a few conventions:
 
-* **Handlers select routes.** Each configured handler publishes its route (`events` → `/events`, `interactions` → `/interactions`, …); omit a handler and its route does not exist. Most providers expose a single `webhook` handler at `/webhook`.
-* **Return values become responses.** Returning nothing produces an empty `200`; a JSON-compatible value becomes a JSON response; a `Response` passes through unchanged — for the surfaces (like Slack slash commands or Discord interactions) whose protocol reads the acknowledgement body. See each package’s reference for its exact contract.
-* **Acknowledge quickly.** `dispatch(...)` resolves as soon as the message is durably admitted — the agent runs asynchronously. Providers retry slow acknowledgements, so admit the work and return rather than awaiting agent output in the handler.
-* **Deliveries can repeat.** Providers retry failed requests and may deliver an event more than once; channel packages are stateless and do not deduplicate. Pass the provider’s redelivery-stable id as the dispatch `idempotencyKey` — `idempotencyKey: payload.event_id` for Slack events — and a redelivered event converges on the original submission instead of running a second turn: same receipt (marked `deduplicated: true`), at most one answer. The key names the delivery, not the outcome, and reusing it with a different payload rejects with a 409 `submission_conflict`. Carrying the id in signal `attributes` as well keeps it visible for tracing.
+- **Handlers select routes.** Each configured handler publishes its route (`events` → `/events`, `interactions` → `/interactions`, …); omit a handler and its route does not exist. Most providers expose a single `webhook` handler at `/webhook`.
+- **Return values become responses.** Returning nothing produces an empty `200`; a JSON-compatible value becomes a JSON response; a `Response` passes through unchanged — for the surfaces (like Slack slash commands or Discord interactions) whose protocol reads the acknowledgement body. See each package’s reference for its exact contract.
+- **Acknowledge quickly.** `dispatch(...)` resolves as soon as the message is durably admitted — the agent runs asynchronously. Providers retry slow acknowledgements, so admit the work and return rather than awaiting agent output in the handler.
+- **Deliveries can repeat.** Providers retry failed requests and may deliver an event more than once; channel packages are stateless and do not deduplicate. Pass the provider’s redelivery-stable id as the dispatch `idempotencyKey` — `idempotencyKey: payload.event_id` for Slack events — and a redelivered event converges on the original submission instead of running a second turn: same receipt (marked `deduplicated: true`), at most one answer. The key names the delivery, not the outcome, and reusing it with a different payload rejects with a 409 `submission_conflict`. Carrying the id in signal `attributes` as well keeps it visible for tracing.
 
 ## Mounting
 
 A channel serves HTTP only where `app.ts` mounts it. The channel object exposes a `route()` factory — a pure, mountable sub-router serving the channel’s declared routes relative to the mount point:
 
 ```ts
-import { channel as slack } from './channels/slack.ts';
+import { channel as slack } from "./channels/slack.ts";
 
-app.route('/channels/slack', slack.route());
+app.route("/channels/slack", slack.route());
 // Slack's Events API endpoint is now POST /channels/slack/events
 ```
 
@@ -117,9 +117,9 @@ Event-feed providers — Stripe, Shopify, Notion, Resend — have no inherent co
 
 Channel deliveries are dispatched as `kind: 'signal'` messages, not `kind: 'user'`. A Slack thread or GitHub issue is a multi-participant surface the agent joins as one member — a `user` message would present every participant as the agent’s own user, where a signal carries the event with its metadata intact:
 
-* `type` — a namespaced event name you choose (`'slack.app_mention'`, `'github.issue_comment.created'`).
-* `body` — the message content, a plain string.
-* `attributes` — a string-to-string map of structured facts your verified handler attaches: sender, delivery id, resource identifiers.
+- `type` — a namespaced event name you choose (`'slack.app_mention'`, `'github.issue_comment.created'`).
+- `body` — the message content, a plain string.
+- `attributes` — a string-to-string map of structured facts your verified handler attaches: sender, delivery id, resource identifiers.
 
 Keep short-lived provider capabilities — interaction tokens, `response_url` values — out of the dispatched message: signals enter model context and durable history, and those values belong only in immediate request handling. The full message shape is [DeliveredMessage](https://flueframework.com/docs/reference/agent-api/#deliveredmessage) in the Agent API.
 
@@ -132,21 +132,21 @@ Keep short-lived provider capabilities — interaction tokens, `response_url` va
 Two hooks read these inputs inside the agent: [useInitialData()](https://flueframework.com/docs/reference/agent-hooks-api/#useinitialdata) returns the creation data, and [useDelivery()](https://flueframework.com/docs/reference/agent-hooks-api/#usedelivery) returns the message currently in front of the model as the same `DeliveredMessage` the channel dispatched:
 
 ```ts
-'use agent';
-import { useDelivery, useInitialData, useModel, useTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { replyInThread } from '../channels/slack.ts';
+"use agent";
+import { useDelivery, useInitialData, useModel, useTool } from "@flue/runtime";
+import * as v from "valibot";
+import { replyInThread } from "../channels/slack.ts";
 
 export function Assistant() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
 
   const data = useInitialData<v.InferOutput<typeof Assistant.initialData>>();
   useTool(replyInThread(data));
 
   const delivery = useDelivery();
-  const eventId = delivery.kind === 'signal' ? delivery.attributes?.eventId : undefined;
+  const eventId = delivery.kind === "signal" ? delivery.attributes?.eventId : undefined;
 
-  return 'You participate in one Slack thread. Reply with the reply_in_slack_thread tool when a response is called for.';
+  return "You participate in one Slack thread. Reply with the reply_in_slack_thread tool when a response is called for.";
 }
 
 Assistant.initialData = v.object({
@@ -163,7 +163,7 @@ Because the schema static is required here, a conversation cannot exist without 
 Channels are ingress-only: Flue has no outbound messaging API, no reply routing, and no send-message abstraction over providers. Outbound behavior belongs to your application, written against the provider’s own SDK — the blueprint installs one and exports a configured client from the channel module:
 
 ```ts
-import { WebClient } from '@slack/web-api';
+import { WebClient } from "@slack/web-api";
 
 export const client = new WebClient(process.env.SLACK_BOT_TOKEN);
 ```
@@ -171,13 +171,13 @@ export const client = new WebClient(process.env.SLACK_BOT_TOKEN);
 Application code calls the client directly, with the provider’s full documented surface. OAuth installation flows, token storage, and rotation are likewise application concerns, outside the channel package. To let the _model_ act on the provider, wrap exactly the actions the application needs as [tools](https://flueframework.com/docs/guide/tools/), binding the destination in trusted code:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
 
 export function replyInThread(ref: { channelId: string; threadTs: string }) {
   return defineTool({
-    name: 'reply_in_slack_thread',
-    description: 'Reply in the Slack thread bound to this conversation.',
+    name: "reply_in_slack_thread",
+    description: "Reply in the Slack thread bound to this conversation.",
     input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
     async run({ data }) {
       const result = await client.chat.postMessage({
@@ -230,7 +230,7 @@ flue add channel https://developers.provider.example/webhooks
 A channel is an object with declarative routes, so you can also write one by hand. `createChannelRouter(routes)` from `@flue/runtime` builds the same mountable sub-router the packaged channels’ `route()` returns:
 
 ```ts
-import type { Handler } from 'hono';
+import type { Handler } from "hono";
 
 const webhook: Handler = async (c) => {
   const rawBody = await c.req.text();
@@ -240,26 +240,26 @@ const webhook: Handler = async (c) => {
 };
 
 export const channel = {
-  routes: [{ method: 'POST', path: '/webhook', handler: webhook }],
+  routes: [{ method: "POST", path: "/webhook", handler: webhook }],
 };
 ```
 
 ```ts
-import { createChannelRouter } from '@flue/runtime';
-import { channel as acme } from './channels/acme.ts';
+import { createChannelRouter } from "@flue/runtime";
+import { channel as acme } from "./channels/acme.ts";
 
-app.route('/channels/acme', createChannelRouter(acme.routes));
+app.route("/channels/acme", createChannelRouter(acme.routes));
 ```
 
 Verify signatures against the exact unconsumed request body, keep every route suffix a non-empty path beginning with `/`, and test both valid and invalid signatures along with the provider’s protocol handshakes. Channels model verified HTTP delivery; long-lived sockets, polling loops, and provider-managed background transports stay in application-owned infrastructure.
 
 ## Next steps
 
-* [Routing](https://flueframework.com/docs/guide/routing/) — the `app.ts` route map that channel mounts live in.
-* [Agents](https://flueframework.com/docs/guide/building-agents/#dispatch) — `dispatch(...)`, receipts, and the other ways to reach an agent.
-* [Tools](https://flueframework.com/docs/guide/tools/#protect-access) — binding trusted identifiers so the model can act without selecting destinations.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/) — `useDelivery()`, `useInitialData()`, and the `DeliveredMessage` shape.
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/) and the other [ecosystem channel pages](https://flueframework.com/docs/ecosystem/#channels) — per-provider setup, payloads, and configuration.
+- [Routing](https://flueframework.com/docs/guide/routing/) — the `app.ts` route map that channel mounts live in.
+- [Agents](https://flueframework.com/docs/guide/building-agents/#dispatch) — `dispatch(...)`, receipts, and the other ways to reach an agent.
+- [Tools](https://flueframework.com/docs/guide/tools/#protect-access) — binding trusted identifiers so the model can act without selecting destinations.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/) — `useDelivery()`, `useInitialData()`, and the `DeliveredMessage` shape.
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/) and the other [ecosystem channel pages](https://flueframework.com/docs/ecosystem/#channels) — per-provider setup, payloads, and configuration.
 
 ## Docs Navigation
 
@@ -267,48 +267,48 @@ Current page: [Channels](https://flueframework.com/docs/guide/channels/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

@@ -15,8 +15,7 @@ import {
   StatCard,
 } from "./components";
 import { HitlWidget } from "./hitl";
-import type { ConversationDetail as Detail, HitlRow } from "./types";
-import { STAGE_LABELS } from "./types";
+import type { ConversationDetail as Detail } from "./types";
 import { useLiveConversation } from "./useLiveConversation";
 
 type TabId = "chat" | "pipeline" | "artifacts";
@@ -38,8 +37,7 @@ export function Conversation({ id, onBack }: { id: string; onBack: () => void })
   const [scanning, setScanning] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const { status, error, messages, settlements, dataParts, live, working, sendMessage, refresh } =
-    useLiveConversation(id);
+  const { status, error, messages, live, working, sendMessage, refresh } = useLiveConversation(id);
 
   const loadDetail = useCallback(async () => {
     try {

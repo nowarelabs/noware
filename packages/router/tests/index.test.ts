@@ -82,8 +82,7 @@ describe("BaseRouter", () => {
 
   test("static before hooks run before routing", async () => {
     const calls: string[] = [];
-    class HookedRouter extends TestRouter {
-    }
+    class HookedRouter extends TestRouter {}
     HookedRouter.before(async () => {
       calls.push("before");
     });
@@ -95,8 +94,7 @@ describe("BaseRouter", () => {
 
   test("static after hooks run after routing", async () => {
     const calls: string[] = [];
-    class HookedRouter extends TestRouter {
-    }
+    class HookedRouter extends TestRouter {}
     HookedRouter.after(async (_r: any, result: Response) => {
       calls.push("after");
       return result;
@@ -108,8 +106,7 @@ describe("BaseRouter", () => {
   });
 
   test("before hook can short-circuit", async () => {
-    class ProtectedRouter extends TestRouter {
-    }
+    class ProtectedRouter extends TestRouter {}
     ProtectedRouter.before(async () => new Response("Blocked", { status: 403 }));
 
     const response = await new ProtectedRouter().handle(
@@ -122,8 +119,7 @@ describe("BaseRouter", () => {
 
   test("around hook wraps the routing", async () => {
     const calls: string[] = [];
-    class AroundRouter extends TestRouter {
-    }
+    class AroundRouter extends TestRouter {}
     AroundRouter.around(async (_r: any, next: () => Promise<any>) => {
       calls.push("before");
       const result = await next();
@@ -136,10 +132,8 @@ describe("BaseRouter", () => {
   });
 
   test("static hooks are isolated per subclass", () => {
-    class RouterA extends TestRouter {
-    }
-    class RouterB extends TestRouter {
-    }
+    class RouterA extends TestRouter {}
+    class RouterB extends TestRouter {}
     const fnA = async () => {};
     const fnB = async () => {};
     RouterA.before(fnA as any);

@@ -12,11 +12,11 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
   GeneralSubagent,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 import { Bash, InMemoryFs } from "just-bash";
@@ -32,7 +32,7 @@ interface WorktreeState {
   changedFiles: string[];
 }
 
-export function Coding() {
+const codingAgent = defineAgent("coding", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -66,30 +66,36 @@ export function Coding() {
       (delivery.kind === "signal" ? delivery.attributes?.branch : undefined) ||
       "main";
     log.info("coding.started", { branch, repo: initialData?.repo, issue: initialData?.issue });
-    setWorktree((prev) => ({ ...prev, status: "implementing", branch }));
+    setWorktree({ status: "implementing", branch, changedFiles: worktree.changedFiles });
     writeCoding({ status: "implementing", branch, changedFiles: worktree.changedFiles });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("coding.finished", { toolCalls: response.toolCalls.length });
-    setWorktree((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("coding.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setWorktree({ status: "done", branch: worktree.branch, changedFiles: worktree.changedFiles });
     writeCoding({ status: "done", branch: worktree.branch, changedFiles: worktree.changedFiles });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent(GeneralSubagent);
+  useSubagent("general", "General-purpose subagent", GeneralSubagent);
   useTool(githubTool);
   useTool(lintLangserverTool);
   useTool(packageManagerTool);
   useTool(sandboxExecTool);
 
   return `You are the Coding agent. Implement features idiomatically in the target stack, match the codebase's existing patterns, and keep changes small and reviewable. Work inside the sandbox: inspect files, run builds and tests, and verify changes before committing. Manage dependencies deliberately and commit according to the repo's git conventions. Use the sandbox exec tool for any command the task needs.`;
-}
+});
+
+export default codingAgent;

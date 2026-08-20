@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -11,9 +12,9 @@ import {
   usePersistentState,
   useResponseFinish,
   useResponseStart,
-  useSkill,
   useSubagent,
   useTool,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 
@@ -27,11 +28,7 @@ interface DesignState {
   variants: string[];
 }
 
-function AccessibilityReviewer() {
-  return `You are an accessibility reviewer. Given a UI design and its WCAG assessment, check color contrast, keyboard operability, focus order, labels, and error messaging against WCAG AA. Return APPROVED or REVISE with the specific violations and how to fix each. Be terse.`;
-}
-
-export function UxUiDesigner() {
+const uxUiDesigner = defineAgent("ux-ui-designer", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "low",
     compaction: { keepRecentTokens: 16000 },
@@ -65,32 +62,37 @@ export function UxUiDesigner() {
       (delivery.kind === "signal" ? delivery.attributes?.flow : undefined) ||
       "untitled";
     log.info("design.started", { flow });
-    setDesign((prev) => ({ ...prev, status: "designing", flow }));
+    setDesign({ ...design, status: "designing", flow });
     writeDesign({ status: "designing", flow, variantCount: design.variants.length });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("design.finished", { toolCalls: response.toolCalls.length });
-    setDesign((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("design.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setDesign({ ...design, status: "done" });
     writeDesign({ status: "done", flow: design.flow, variantCount: design.variants.length });
   });
 
-  useSubagent({
-    name: "accessibility-reviewer",
-    description:
-      "Reviews a UI design for WCAG AA violations (contrast, keyboard, focus, labels, errors) before it ships.",
-    agent: AccessibilityReviewer,
-  });
+  useSubagent(
+    "accessibility-reviewer",
+    "Reviews a UI design for WCAG AA violations (contrast, keyboard, focus, labels, errors) before it ships.",
+    GeneralSubagent,
+  );
   useTool(accessibilityCheckerTool);
   useTool(figmaTool);
   useTool(imageGenTool);
 
   return `You are the UX/UI Designer agent. Design task flows that match user mental models, stay consistent with the design system, and meet WCAG accessibility standards. Treat accessibility and clarity as requirements, not polish.`;
-}
+});
+
+export default uxUiDesigner;

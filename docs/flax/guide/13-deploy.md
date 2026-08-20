@@ -17,8 +17,8 @@ This guide covers the build and the deploy path for each target. For each target
 Adding `flue()` from `@flue/vite` to `vite.config.ts` makes a Vite project a Flue application:
 
 ```ts
-import { flue } from '@flue/vite';
-import { defineConfig } from 'vite';
+import { flue } from "@flue/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [flue()],
@@ -26,9 +26,9 @@ export default defineConfig({
 ```
 
 ```ts
-import { cloudflare } from '@cloudflare/vite-plugin';
-import { flue } from '@flue/vite';
-import { defineConfig } from 'vite';
+import { cloudflare } from "@cloudflare/vite-plugin";
+import { flue } from "@flue/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [flue(), cloudflare()],
@@ -47,8 +47,8 @@ The plugin does three jobs on both targets:
 
 Flue builds for two targets:
 
-* **Node.js** produces a self-starting server you can run anywhere Node runs: a VM, a container, or a managed host.
-* **Cloudflare** produces a Worker where each agent runs inside its own Durable Object, with durable state and global addressability out of the box.
+- **Node.js** produces a self-starting server you can run anywhere Node runs: a VM, a container, or a managed host.
+- **Cloudflare** produces a Worker where each agent runs inside its own Durable Object, with durable state and global addressability out of the box.
 
 When `target` is unset, `flue()` auto-detects it from the Vite plugin array: with `@cloudflare/vite-plugin` present the target is `'cloudflare'`, otherwise `'node'`. An explicit [target](https://flueframework.com/docs/reference/configuration/#target) overrides detection.
 
@@ -63,9 +63,9 @@ node dist/server.mjs
 
 Three things to know before shipping the artifact:
 
-* **Environment:** the built server does not load `.env` — supply provider keys and other configuration when you start it. It listens on port `3000` by default; set `PORT` to change it.
-* **Dependencies:** application dependencies are externalized, not bundled. Deploy the artifact alongside its `node_modules`, or in a container that installs them.
-* **State:** without a [db.ts](https://flueframework.com/docs/guide/database/) adapter, conversations live in process-local memory and a restart loses them. Configure a durable adapter before deploying anything you care about.
+- **Environment:** the built server does not load `.env` — supply provider keys and other configuration when you start it. It listens on port `3000` by default; set `PORT` to change it.
+- **Dependencies:** application dependencies are externalized, not bundled. Deploy the artifact alongside its `node_modules`, or in a container that installs them.
+- **State:** without a [db.ts](https://flueframework.com/docs/guide/database/) adapter, conversations live in process-local memory and a restart loses them. Configure a durable adapter before deploying anything you care about.
 
 `vite preview` serves the built artifact locally with production behavior — a faithful pre-deploy check.
 
@@ -97,10 +97,10 @@ Build and deploy through the Cloudflare plugin: `vite build`, then deploy agains
 
 ## Next steps
 
-* [Node.js](https://flueframework.com/docs/guide/node-target/) and [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/) — each target’s runtime behavior in depth.
-* [Deploy Agents on Node.js](https://flueframework.com/docs/ecosystem/deploy/node/) and [Deploy Agents on Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/) — step-by-step walkthroughs, plus [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/) and other platforms.
-* [Database](https://flueframework.com/docs/guide/database/) — durable conversation storage for the Node target.
-* [Configuration](https://flueframework.com/docs/reference/configuration/) — every `flue.config.ts` field and the Vite plugin’s options.
+- [Node.js](https://flueframework.com/docs/guide/node-target/) and [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/) — each target’s runtime behavior in depth.
+- [Deploy Agents on Node.js](https://flueframework.com/docs/ecosystem/deploy/node/) and [Deploy Agents on Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/) — step-by-step walkthroughs, plus [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/) and other platforms.
+- [Database](https://flueframework.com/docs/guide/database/) — durable conversation storage for the Node target.
+- [Configuration](https://flueframework.com/docs/reference/configuration/) — every `flue.config.ts` field and the Vite plugin’s options.
 
 ## Docs Navigation
 
@@ -108,48 +108,48 @@ Current page: [Deploy](https://flueframework.com/docs/guide/deploy/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

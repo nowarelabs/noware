@@ -21,10 +21,10 @@ flue add channel stripe
 The blueprint installs `@flue/stripe`, Stripe’s official `stripe` SDK, and its required TypeScript peer when needed. It creates `<source-root>/channels/stripe.ts`, where the named `channel` export verifies snapshot webhook events by default and the project-owned `client` handles outbound API calls. Adapt the selected events, agent, and tool to the application.
 
 ```ts
-import Stripe from 'stripe';
-import { createStripeChannel } from '@flue/stripe';
-import { dispatch, useModel } from '@flue/runtime';
-import { Billing } from '../agents/billing.ts';
+import Stripe from "stripe";
+import { createStripeChannel } from "@flue/stripe";
+import { dispatch, useModel } from "@flue/runtime";
+import { Billing } from "../agents/billing.ts";
 
 export const client = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -34,16 +34,16 @@ export const channel = createStripeChannel({
   client,
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
   async webhook({ event }) {
-    if (event.type !== 'checkout.session.completed') return;
+    if (event.type !== "checkout.session.completed") return;
     const session = event.data.object;
     const customerId =
-      typeof session.customer === 'string' ? session.customer : session.customer?.id;
+      typeof session.customer === "string" ? session.customer : session.customer?.id;
     if (!customerId) return;
 
     await dispatch(Billing, {
       id: customerId,
       message: {
-        kind: 'signal',
+        kind: "signal",
         type: `stripe.${event.type}`,
         body: `Checkout session ${session.id} reported payment status ${session.payment_status}.`,
         attributes: {
@@ -67,19 +67,19 @@ A matching event is admitted to the billing agent identified by its Stripe custo
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as stripe } from './channels/stripe.ts';
+import { channel as stripe } from "./channels/stripe.ts";
 
-app.route('/channels/stripe', stripe.route());
+app.route("/channels/stripe", stripe.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/stripe` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                | Purpose                                          |
-| ----------------------- | ------------------------------------------------ |
-| STRIPE\_WEBHOOK\_SECRET | **Required** — Verifies inbound deliveries.      |
-| STRIPE\_SECRET\_KEY     | **Required** — Authenticates outbound SDK calls. |
+| Variable              | Purpose                                          |
+| --------------------- | ------------------------------------------------ |
+| STRIPE_WEBHOOK_SECRET | **Required** — Verifies inbound deliveries.      |
+| STRIPE_SECRET_KEY     | **Required** — Authenticates outbound SDK calls. |
 
 It installs `@flue/stripe` and Stripe’s official `stripe` SDK. The SDK verifies inbound payloads and remains the project-owned client for outbound API calls. The blueprint creates `src/channels/stripe.ts` with named `channel` and `client`exports.
 
@@ -96,10 +96,10 @@ If `flue()` is mounted beneath an outer prefix, include that prefix. Subscribe o
 Snapshot events are the default:
 
 ```ts
-import Stripe from 'stripe';
-import { createStripeChannel } from '@flue/stripe';
-import { defineTool, dispatch, useModel } from '@flue/runtime';
-import { Billing } from '../agents/billing.ts';
+import Stripe from "stripe";
+import { createStripeChannel } from "@flue/stripe";
+import { defineTool, dispatch, useModel } from "@flue/runtime";
+import { Billing } from "../agents/billing.ts";
 
 export const client = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -112,17 +112,17 @@ export const channel = createStripeChannel({
   // Path: /channels/stripe/webhook
   async webhook({ event }) {
     switch (event.type) {
-      case 'checkout.session.completed':
-      case 'checkout.session.async_payment_succeeded': {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const session = event.data.object;
         const customerId =
-          typeof session.customer === 'string' ? session.customer : session.customer?.id;
+          typeof session.customer === "string" ? session.customer : session.customer?.id;
         if (!customerId) return;
 
         await dispatch(Billing, {
           id: customerId,
           message: {
-            kind: 'signal',
+            kind: "signal",
             type: `stripe.${event.type}`,
             body: `Checkout session ${session.id} reported payment status ${session.payment_status}.`,
             attributes: {
@@ -147,14 +147,15 @@ export const channel = createStripeChannel({
 
 export function retrieveCustomer(customerId: string) {
   return defineTool({
-    name: 'retrieve_stripe_customer',
-    description: 'Retrieve the Stripe customer bound to this billing agent.',
+    name: "retrieve_stripe_customer",
+    description: "Retrieve the Stripe customer bound to this billing agent.",
     async run() {
       const customer = await client.customers.retrieve(customerId);
       return {
-        output: 'deleted' in customer
-          ? { id: customer.id, deleted: true }
-          : { id: customer.id, name: customer.name, email: customer.email },
+        output:
+          "deleted" in customer
+            ? { id: customer.id, deleted: true }
+            : { id: customer.id, name: customer.name, email: customer.email },
       };
     },
   });
@@ -168,14 +169,14 @@ The example uses a customer id as the agent instance id for one Stripe account. 
 ## Bind the tool
 
 ```ts
-'use agent';
-import { type AgentProps, useModel, useTool } from '@flue/runtime';
-import { retrieveCustomer } from '../channels/stripe.ts';
+"use agent";
+import { type AgentProps, useModel, useTool } from "@flue/runtime";
+import { retrieveCustomer } from "../channels/stripe.ts";
 
 export function Billing({ id: customerId }: AgentProps) {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   useTool(retrieveCustomer(customerId));
-  return 'Review the completed Checkout event and summarize any billing follow-up that is needed.';
+  return "Review the completed Checkout event and summarize any billing follow-up that is needed.";
 }
 ```
 
@@ -189,7 +190,7 @@ Set `eventPayload: 'thin'` only for an event destination configured to send Stri
 export const channel = createStripeChannel({
   client,
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
-  eventPayload: 'thin',
+  eventPayload: "thin",
 
   // Path: /channels/stripe/webhook
   async webhook({ event }) {
@@ -221,75 +222,75 @@ Current page: [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

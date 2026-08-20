@@ -1,6 +1,7 @@
 "use agent";
 
 import {
+  GeneralSubagent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -12,10 +13,10 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
+  defineAgent,
 } from "@nowarelabs/agents";
 import * as v from "valibot";
 import { Bash, InMemoryFs } from "just-bash";
@@ -30,11 +31,7 @@ interface ReviewState {
   findings: string[];
 }
 
-function FileReviewer() {
-  return `You are a code reviewer working inside the parent agent's environment. Given one file or diff and the review brief, return concrete ranked findings: each with a file reference, a one-line summary, severity (BLOCKER or NIT), and a suggested fix. Do not editorialize beyond the findings.`;
-}
-
-export function CodeReview() {
+const codeReview = defineAgent("code-review", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -69,20 +66,24 @@ export function CodeReview() {
       (delivery.kind === "signal" ? delivery.attributes?.repo : undefined) ||
       "";
     log.info("review.started", { repo, branch: initialData?.branch });
-    setReview((prev) => ({ ...prev, status: "reviewing", repo }));
+    setReview({ ...review, status: "reviewing", repo });
     writeReview({ status: "reviewing", repo, blockerCount: 0, nitCount: 0 });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("review.finished", { toolCalls: response.toolCalls.length });
-    setReview((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("review.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setReview({ ...review, status: "done" });
     writeReview({
       status: "done",
       repo: review.repo,
@@ -93,15 +94,16 @@ export function CodeReview() {
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent({
-    name: "file-reviewer",
-    description:
-      "Reviews one file or diff and returns ranked findings with severity. Use for parallel per-file review of a large change.",
-    agent: FileReviewer,
-  });
+  useSubagent(
+    "file-reviewer",
+    "Reviews one file or diff and returns ranked findings with severity. Use for parallel per-file review of a large change.",
+    GeneralSubagent,
+  );
   useTool(ciStatusTool);
   useTool(githubTool);
   useTool(staticAnalysisTool);
 
   return `You are the Code Review agent. Review code for maintainability, security, and style, and return concrete ranked findings with file references and suggested fixes. Be specific rather than pedantic, and separate blockers from nits.`;
-}
+});
+
+export default codeReview;

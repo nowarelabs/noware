@@ -1,6 +1,8 @@
 "use agent";
 
 import {
+  GeneralSubagent,
+  defineAgent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -30,11 +32,7 @@ interface RequirementsState {
   decisions: string[];
 }
 
-function RequirementsValidator() {
-  return `You are a requirements validator. Given a set of user stories and decisions, check each story against INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable) and flag ambiguity or missing acceptance criteria. Return APPROVED or REVISE with the specific gaps. Be terse.`;
-}
-
-export function ProductRequirements() {
+const agent = defineAgent("product-requirements", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -64,9 +62,9 @@ export function ProductRequirements() {
   const initialData = useInitialData<{ goal?: string }>();
 
   useAgentStart(({ log }) => {
-    const goal = requirements.goal || initialData?.goal || delivery.body;
+    const goal = (requirements.goal || initialData?.goal || delivery.body) as string;
     log.info("requirements.started", { goal });
-    setRequirements((prev) => ({ ...prev, status: "eliciting", goal }));
+    setRequirements({ ...requirements, status: "eliciting", goal });
     writeRequirements({
       status: "eliciting",
       goal,
@@ -77,14 +75,18 @@ export function ProductRequirements() {
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("requirements.finished", { toolCalls: response.toolCalls.length });
-    setRequirements((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("requirements.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setRequirements({ ...requirements, status: "done" });
     writeRequirements({
       status: "done",
       goal: requirements.goal,
@@ -93,17 +95,22 @@ export function ProductRequirements() {
     });
   });
 
-  useSkill(domainModeling);
-  useSubagent({
-    name: "requirements-validator",
-    description:
-      "Validates user stories against INVEST and flags ambiguity or missing acceptance criteria before they are finalized.",
-    agent: RequirementsValidator,
+  useSkill({
+    name: "domain-modeling",
+    description: "Domain modeling techniques for capturing business concepts and relationships",
+    content: domainModeling,
   });
+  useSubagent(
+    "requirements-validator",
+    "Validates user stories against INVEST and flags ambiguity or missing acceptance criteria before they are finalized.",
+    GeneralSubagent,
+  );
   useTool(confluenceNotionTool);
   useTool(jiraLinearTool);
   useTool(transcriptionTool);
   useTool(vectorStoreTool);
 
   return `You are the Product Requirements agent. Elicit complete, unambiguous requirements, ask one clarifying question at a time, and write user stories that satisfy INVEST criteria. Prioritize with RICE or MoSCoW and model the problem domain before proposing a solution. Capture decisions you make so they survive into the backlog and knowledge base.`;
-}
+});
+
+export default agent;

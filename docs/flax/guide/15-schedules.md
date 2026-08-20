@@ -21,12 +21,12 @@ A schedule has three parts:
 The agent itself is ordinary — nothing in the agent function marks it as scheduled:
 
 ```ts
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 export function Reporter() {
-  useModel('anthropic/claude-sonnet-4-6');
-  return 'Complete scheduled tasks autonomously.';
+  useModel("anthropic/claude-sonnet-4-6");
+  return "Complete scheduled tasks autonomously.";
 }
 ```
 
@@ -37,27 +37,27 @@ When the scheduled work involves application-controlled steps — reading a data
 On the Node target, the server process is long-lived, so an in-process cron library in `app.ts` module scope is the simplest trigger. The [croner](https://www.npmjs.com/package/croner) package is what Flue’s own example uses:
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { Cron } from 'croner';
-import { Hono } from 'hono';
-import { Reporter } from './agents/reporter.ts';
+import { dispatch } from "@flue/runtime";
+import { Cron } from "croner";
+import { Hono } from "hono";
+import { Reporter } from "./agents/reporter.ts";
 
 const app = new Hono();
 
 new Cron(
-  '0 9 * * *',
+  "0 9 * * *",
   {
-    timezone: 'America/New_York',
+    timezone: "America/New_York",
     protect: true,
-    catch: (error) => console.error('Scheduled dispatch failed', error),
+    catch: (error) => console.error("Scheduled dispatch failed", error),
   },
   async () => {
     await dispatch(Reporter, {
-      id: 'daily-summary',
+      id: "daily-summary",
       message: {
-        kind: 'signal',
-        type: 'schedule',
-        body: 'Review recent activity and prepare the daily summary.',
+        kind: "signal",
+        type: "schedule",
+        body: "Review recent activity and prepare the daily summary.",
         attributes: { scheduledAt: new Date().toISOString() },
       },
     });
@@ -90,17 +90,17 @@ Cloudflare evaluates cron expressions in **UTC**; there is no timezone option.
 The fire arrives as a Worker [scheduled event](https://developers.cloudflare.com/workers/runtime-apis/handlers/scheduled/). Contribute the handler from the default export of [src/cloudflare.ts](https://flueframework.com/docs/guide/cloudflare-target/#extending-cloudflarets-entrypoint) — Flue merges it into the generated Worker entry — and call `dispatch(...)` inside it:
 
 ```ts
-import { dispatch } from '@flue/runtime';
-import { Reporter } from './agents/reporter.ts';
+import { dispatch } from "@flue/runtime";
+import { Reporter } from "./agents/reporter.ts";
 
 export default {
   async scheduled(controller) {
     await dispatch(Reporter, {
-      id: 'daily-summary',
+      id: "daily-summary",
       message: {
-        kind: 'signal',
-        type: 'schedule',
-        body: 'Review recent activity and prepare the daily summary.',
+        kind: "signal",
+        type: "schedule",
+        body: "Review recent activity and prepare the daily summary.",
         attributes: {
           cron: controller.cron,
           scheduledAt: new Date(controller.scheduledTime).toISOString(),
@@ -143,11 +143,11 @@ A fixed id suits recurring work that builds on its own history — the agent can
 `dispatch(...)` is fire-and-forget. When the schedule needs the run’s result — to post a summary to Slack, for example — use the [init() handle](https://flueframework.com/docs/reference/agent-api/#init): `dispatch()` admits the message and resolves with a receipt, and `read()` awaits the settled reply. It works inside a cron callback in `app.ts` and in a `scheduled` handler alike:
 
 ```ts
-import { init } from '@flue/runtime';
-import { Reporter } from './agents/reporter.ts';
+import { init } from "@flue/runtime";
+import { Reporter } from "./agents/reporter.ts";
 
 const reporter = init(Reporter, { id: `daily-${isoDate}` });
-const receipt = await reporter.dispatch('Review recent activity and prepare the daily summary.');
+const receipt = await reporter.dispatch("Review recent activity and prepare the daily summary.");
 const reply = await reporter.read(receipt);
 await postSummary(reply.text);
 ```
@@ -204,11 +204,11 @@ Deliveries to one conversation never run concurrently: inputs are processed in a
 
 ## Next steps
 
-* [Building Agents](https://flueframework.com/docs/guide/building-agents/#dispatch) — the `dispatch(...)` walkthrough and standalone `start()` scripts.
-* [dispatch(...) reference](https://flueframework.com/docs/reference/agent-api/#dispatch) — receipts, conditional sends, and the full `DeliveredMessage` shape.
-* [Routing](https://flueframework.com/docs/guide/routing/#dispatch-only-agents) — dispatch-only agents and protecting mounted conversation URLs.
-* [Durability](https://flueframework.com/docs/guide/durability/) — recovery behavior behind admitted work on each target.
-* [Channels](https://flueframework.com/docs/guide/channels/) — the same signal-delivery pattern driven by provider webhooks instead of cron.
+- [Building Agents](https://flueframework.com/docs/guide/building-agents/#dispatch) — the `dispatch(...)` walkthrough and standalone `start()` scripts.
+- [dispatch(...) reference](https://flueframework.com/docs/reference/agent-api/#dispatch) — receipts, conditional sends, and the full `DeliveredMessage` shape.
+- [Routing](https://flueframework.com/docs/guide/routing/#dispatch-only-agents) — dispatch-only agents and protecting mounted conversation URLs.
+- [Durability](https://flueframework.com/docs/guide/durability/) — recovery behavior behind admitted work on each target.
+- [Channels](https://flueframework.com/docs/guide/channels/) — the same signal-delivery pattern driven by provider webhooks instead of cron.
 
 ## Docs Navigation
 
@@ -216,48 +216,48 @@ Current page: [Schedules](https://flueframework.com/docs/guide/schedules/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

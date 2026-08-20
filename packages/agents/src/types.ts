@@ -14,6 +14,10 @@ export interface ToolOutput {
   [key: string]: unknown;
 }
 
+export interface StepHandle {
+  do<T>(name: string, fn: () => T | Promise<T>): Promise<T>;
+}
+
 export interface ToolDefinition<
   TInput extends ToolInput = ToolInput,
   TOutput extends ToolOutput = ToolOutput,
@@ -28,7 +32,12 @@ export interface ToolDefinition<
   };
   durable?: boolean;
   harness?: boolean;
-  run: (ctx: { data: TInput; log: ToolLogger }) => Promise<TOutput>;
+  run: (ctx: {
+    data: TInput;
+    log: ToolLogger;
+    step?: StepHandle;
+    harness?: unknown;
+  }) => Promise<TOutput>;
 }
 
 export interface ToolLogger {

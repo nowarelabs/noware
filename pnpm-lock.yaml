@@ -42,15 +42,18 @@ importers:
       '@nowarelabs/cfour':
         specifier: workspace:*
         version: link:../cfour
+      '@nowarelabs/contexts':
+        specifier: workspace:*
+        version: link:../contexts
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../entrypoints
       '@nowarelabs/shared':
         specifier: workspace:*
         version: link:../shared
       '@nowarelabs/telemetry':
         specifier: workspace:*
         version: link:../telemetry
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20260522.1
@@ -392,12 +395,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -438,12 +441,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -484,12 +487,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -530,12 +533,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -576,12 +579,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -622,12 +625,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -668,12 +671,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)
@@ -711,12 +714,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)
@@ -754,12 +757,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -800,12 +803,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)
@@ -843,12 +846,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -889,12 +892,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       just-bash:
         specifier: ^3.2.0
         version: 3.3.0
@@ -935,12 +938,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)
@@ -978,15 +981,15 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       '@nowarelabs/ollama-provider':
         specifier: workspace:*
         version: link:../../ollama-provider
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)
@@ -1024,12 +1027,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@6.0.3)
@@ -1067,12 +1070,12 @@ importers:
       '@nowarelabs/agents':
         specifier: workspace:*
         version: link:../../../../agents
+      '@nowarelabs/entrypoints':
+        specifier: workspace:*
+        version: link:../../../../entrypoints
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260818.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(just-bash@3.3.0)(react@19.2.7)(rolldown@1.2.4)(vite@8.2.1(@types/node@25.6.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: ^4.13.0
-        version: 4.13.3
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)

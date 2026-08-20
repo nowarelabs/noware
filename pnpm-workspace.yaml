@@ -1,11 +1,11 @@
 packages:
-  - 'packages/*'
-  - 'packages/flax/packages/*'
-  - 'packages/flax/packages/agents/*'
-  - 'packages/flax/packages/tools/*'
+  - "packages/*"
+  - "packages/flax/packages/*"
+  - "packages/flax/packages/agents/*"
+  - "packages/flax/packages/tools/*"
 allowBuilds:
-  '@google/genai': set this to true or false
-  '@mongodb-js/zstd': set this to true or false
+  "@google/genai": set this to true or false
+  "@mongodb-js/zstd": set this to true or false
   core-js-pure: set this to true or false
   esbuild: set this to true or false
   node-liblzma: set this to true or false

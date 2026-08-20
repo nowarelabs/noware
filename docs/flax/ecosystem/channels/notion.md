@@ -21,22 +21,22 @@ flue add channel notion
 The blueprint installs `@flue/notion`, the official `@notionhq/client`, and its required TypeScript peer when needed. It creates `<source-root>/channels/notion.ts` with a named `channel`, project-owned `client`, local page identity helpers, and a page-bound retrieval tool, then wires that tool into an agent. It may also add `"node"` to a restrictive `compilerOptions.types` list.
 
 ```ts
-import { Client } from '@notionhq/client';
-import { createNotionChannel } from '@flue/notion';
-import { dispatch, useModel } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
+import { Client } from "@notionhq/client";
+import { createNotionChannel } from "@flue/notion";
+import { dispatch, useModel } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
 
 export const client = new Client({ auth: process.env.NOTION_TOKEN! });
 
 export const channel = createNotionChannel({
   verificationToken: process.env.NOTION_WEBHOOK_VERIFICATION_TOKEN!,
   async webhook({ event }) {
-    if (event.type !== 'page.content_updated') return;
+    if (event.type !== "page.content_updated") return;
 
     await dispatch(Assistant, {
       id: `notion-page:${encodeURIComponent(event.entity.id)}`,
       message: {
-        kind: 'signal',
+        kind: "signal",
         type: `notion.${event.type}`,
         // `data` is Notion's event-specific detail object; page events
         // carry no natural message text.
@@ -45,7 +45,7 @@ export const channel = createNotionChannel({
           eventId: event.id,
           pageId: event.entity.id,
           attemptNumber: String(event.attempt_number),
-          authorIds: event.authors.map((author) => author.id).join(','),
+          authorIds: event.authors.map((author) => author.id).join(","),
         },
       },
     });
@@ -60,19 +60,19 @@ A matching page update is admitted to the agent identified by that page, while o
 A channel serves HTTP routes only where `app.ts` mounts it. Mount the module’s named `channel` export:
 
 ```ts
-import { channel as notion } from './channels/notion.ts';
+import { channel as notion } from "./channels/notion.ts";
 
-app.route('/channels/notion', notion.route());
+app.route("/channels/notion", notion.route());
 ```
 
 `channel.route()` is a pure router factory serving the channel’s declared routes relative to the mount path. The webhook paths in this guide assume the conventional `/channels/notion` mount; a different mount path shifts them accordingly. The dispatch-target agent module carries the `'use agent'` directive — the directive registers it, so a dispatch-only agent needs no HTTP mount of its own.
 
 ## Configure
 
-| Variable                             | Purpose                                                                                  |
-| ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| NOTION\_WEBHOOK\_VERIFICATION\_TOKEN | **Required after initial verification** — Verifies recurring webhook events after setup. |
-| NOTION\_TOKEN                        | **Required** — Authenticates outbound API calls.                                         |
+| Variable                          | Purpose                                                                                  |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| NOTION_WEBHOOK_VERIFICATION_TOKEN | **Required after initial verification** — Verifies recurring webhook events after setup. |
+| NOTION_TOKEN                      | **Required** — Authenticates outbound API calls.                                         |
 
 It installs `@flue/notion` and the official `@notionhq/client@5.22.0`. The blueprint creates a channel module with named `channel` and `client` exports.
 
@@ -89,14 +89,14 @@ The package declares `@types/node` as a required peer because the official clien
 ## Channel module
 
 ```ts
-import { Client } from '@notionhq/client';
-import { createNotionChannel } from '@flue/notion';
-import { defineTool, dispatch, useModel } from '@flue/runtime';
-import { Assistant } from '../agents/assistant.ts';
+import { Client } from "@notionhq/client";
+import { createNotionChannel } from "@flue/notion";
+import { defineTool, dispatch, useModel } from "@flue/runtime";
+import { Assistant } from "../agents/assistant.ts";
 
-const PAGE_INSTANCE_PREFIX = 'notion-page:';
+const PAGE_INSTANCE_PREFIX = "notion-page:";
 
-const notionFetch: NonNullable<NonNullable<ConstructorParameters<typeof Client>[0]>['fetch']> = (
+const notionFetch: NonNullable<NonNullable<ConstructorParameters<typeof Client>[0]>["fetch"]> = (
   url,
   init,
 ) =>
@@ -125,17 +125,17 @@ export const channel = createNotionChannel({
   // Path: /channels/notion/webhook
   async webhook({ event }) {
     switch (event.type) {
-      case 'page.created':
-      case 'page.content_updated':
-      case 'page.properties_updated':
-      case 'page.moved':
-      case 'page.undeleted':
-      case 'page.locked':
-      case 'page.unlocked': {
+      case "page.created":
+      case "page.content_updated":
+      case "page.properties_updated":
+      case "page.moved":
+      case "page.undeleted":
+      case "page.locked":
+      case "page.unlocked": {
         await dispatch(Assistant, {
           id: pageInstanceId(event.entity.id),
           message: {
-            kind: 'signal',
+            kind: "signal",
             type: `notion.${event.type}`,
             // `data` is Notion's event-specific detail object; page events
             // carry no natural message text.
@@ -144,7 +144,7 @@ export const channel = createNotionChannel({
               eventId: event.id,
               pageId: event.entity.id,
               attemptNumber: String(event.attempt_number),
-              authorIds: event.authors.map((author) => author.id).join(','),
+              authorIds: event.authors.map((author) => author.id).join(","),
             },
           },
         });
@@ -158,16 +158,16 @@ export const channel = createNotionChannel({
 
 export function retrievePage(pageId: string) {
   return defineTool({
-    name: 'retrieve_notion_page',
-    description: 'Retrieve the Notion page bound to this agent.',
+    name: "retrieve_notion_page",
+    description: "Retrieve the Notion page bound to this agent.",
     async run() {
       const page = await client.pages.retrieve({ page_id: pageId });
       return {
         output: {
           id: page.id,
           object: page.object,
-          archived: 'archived' in page ? page.archived : null,
-          inTrash: 'in_trash' in page ? page.in_trash : null,
+          archived: "archived" in page ? page.archived : null,
+          inTrash: "in_trash" in page ? page.in_trash : null,
         },
       };
     },
@@ -175,16 +175,16 @@ export function retrievePage(pageId: string) {
 }
 
 export function pageInstanceId(pageId: string): string {
-  if (!pageId) throw new TypeError('Notion page id must be non-empty.');
+  if (!pageId) throw new TypeError("Notion page id must be non-empty.");
   return `${PAGE_INSTANCE_PREFIX}${encodeURIComponent(pageId)}`;
 }
 
 export function pageIdFromInstanceId(id: string): string {
   if (!id.startsWith(PAGE_INSTANCE_PREFIX)) {
-    throw new TypeError('Expected a local Notion page instance id.');
+    throw new TypeError("Expected a local Notion page instance id.");
   }
   const pageId = decodeURIComponent(id.slice(PAGE_INSTANCE_PREFIX.length));
-  if (!pageId) throw new TypeError('Expected a local Notion page instance id.');
+  if (!pageId) throw new TypeError("Expected a local Notion page instance id.");
   return pageId;
 }
 ```
@@ -196,15 +196,15 @@ The `notion-page:` id is a local application convention because `@flue/notion` d
 ## Bind the tool
 
 ```ts
-'use agent';
-import { type AgentProps, useModel, useTool } from '@flue/runtime';
-import { pageIdFromInstanceId, retrievePage } from '../channels/notion.ts';
+"use agent";
+import { type AgentProps, useModel, useTool } from "@flue/runtime";
+import { pageIdFromInstanceId, retrievePage } from "../channels/notion.ts";
 
 export function Assistant({ id }: AgentProps) {
-  useModel('anthropic/claude-haiku-4-5');
+  useModel("anthropic/claude-haiku-4-5");
   const pageId = pageIdFromInstanceId(id);
   useTool(retrievePage(pageId));
-  return 'Review the Notion page change. Retrieve the current page when its properties are needed.';
+  return "Review the Notion page change. Retrieve the current page when its properties are needed.";
 }
 ```
 
@@ -252,75 +252,75 @@ Current page: [Notion](https://flueframework.com/docs/ecosystem/channels/notion/
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

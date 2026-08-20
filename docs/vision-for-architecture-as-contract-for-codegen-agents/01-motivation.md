@@ -31,7 +31,7 @@ corrupt or diverge from the architecture. Codegen is a projection of the model, 
   project, persisting every mutation to SQLite storage, exposing the model over RPC and
   hibernatable WebSockets, with a self-scheduling claim-expiry alarm. 18 tests.
 
-A third-party code review validated the implementation (restore* hydration, reserved
+A third-party code review validated the implementation (restore\* hydration, reserved
 `REGISTER_EDITOR`, claim-enforced `applyMerge`, correct per-workspace locking) and found one
 real bug we fixed (reset wiped all claim junction rows DO-wide) plus smaller issues.
 
@@ -48,8 +48,9 @@ of their own. They should be packages that **compose** cfour + workspace-do, not
 crammed into them.
 
 Per-package scope rule:
-- **cfour** gets only what is *pure C4 domain semantics*.
-- **workspace-do** gets only what needs *SQLite durability or the DO lifecycle / RPC*.
+
+- **cfour** gets only what is _pure C4 domain semantics_.
+- **workspace-do** gets only what needs _SQLite durability or the DO lifecycle / RPC_.
 - Everything else is a new package.
 
 ### 2. The "runs on Cloudflare" rule is currently violated

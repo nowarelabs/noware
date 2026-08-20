@@ -1,8 +1,8 @@
-import { createAgentRouter } from "@nowarelabs/agents";
+import { HttpEntrypoint } from "@nowarelabs/entrypoints";
+import { createAgentRouter, type AgentRoute } from "@nowarelabs/agents";
 import type { D1Database } from "@cloudflare/workers-types";
-import { Hono } from "hono";
 
-import { Documentation } from "./agents/documentation";
+import agentDef from "./agents/documentation";
 
 interface FlaxEnv {
   FLAX_DB?: D1Database;
@@ -29,42 +29,31 @@ function ensureRegistry(db: D1Database): Promise<void> {
   return registryReady;
 }
 
-const app = new Hono();
-
-// Register every instance id we see traffic for, so dashboards can list them.
-app.use("*", async (c, next) => {
-  const db = (c.env as FlaxEnv).FLAX_DB;
-  const path = new URL(c.req.url).pathname;
-  const match = path.match(/^\/agents\/[^/]+\/([^/]+)/);
-  if (db && match) {
-    const id = match[1];
-    try {
+const routes: AgentRoute[] = [
+  // List instances
+  {
+    method: "GET",
+    pattern: AGENT_PATH,
+    handler: async (request, env) => {
+      const db = (env as FlaxEnv).FLAX_DB;
+      if (!db) return Response.json({ instances: [] });
       await ensureRegistry(db);
-      await db
+      const { results } = await db
         .prepare(
-          `INSERT INTO flax_instances (id, created_at, last_seen_at) VALUES (?, ?, ?)
-           ON CONFLICT(id) DO UPDATE SET last_seen_at = excluded.last_seen_at`,
+          "SELECT id, created_at, last_seen_at FROM flax_instances ORDER BY last_seen_at DESC",
         )
-        .bind(id, Date.now(), Date.now())
-        .run();
-    } catch {
-      // registry is best-effort; never block agent traffic on it
-    }
-  }
-  await next();
-});
+        .all<{ id: string; created_at: number; last_seen_at: number }>();
+      return Response.json({ instances: results });
+    },
+  },
+  // Ping
+  {
+    method: "GET",
+    pattern: "/api/ping",
+    handler: () => new Response("pong"),
+  },
+];
 
-app.get(AGENT_PATH, async (c) => {
-  const db = (c.env as FlaxEnv).FLAX_DB;
-  if (!db) return c.json({ instances: [] });
-  await ensureRegistry(db);
-  const { results } = await db
-    .prepare("SELECT id, created_at, last_seen_at FROM flax_instances ORDER BY last_seen_at DESC")
-    .all<{ id: string; created_at: number; last_seen_at: number }>();
-  return c.json({ instances: results });
-});
-
-app.route(AGENT_PATH, createAgentRouter(Documentation));
-app.get("/api/ping", (c: any) => c.text("pong"));
-
-export default app;
+export default class AgentEntrypoint extends HttpEntrypoint {
+  router = createAgentRouter(agentDef, { routes });
+}

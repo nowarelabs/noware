@@ -13,18 +13,19 @@ The system follows a **Double-Gate RPC** architecture:
 
 ### Why Two-Tier?
 
-| Aspect | Group by Data (Layered) | Group by Task (Nomo Two-Tier) |
-|--------|---------------------|------------------------|
-| Organization | Technical layers | Business capabilities |
-| File navigation | Jump between folders | Everything in feature place |
-| Code reuse | Easy to share models | Explicit interfaces |
-| Feature development | Touch multiple layers | Contained changes |
-| Testing | Easy to mock layers | Easy to test scenarios |
-| Team scaling | Teams step on each other | Teams own modules |
-| Coupling | High (shared models) | Low (modules + events) |
-| Bug isolation | Hard (layer interactions) | Easy (within boundaries) |
+| Aspect              | Group by Data (Layered)   | Group by Task (Nomo Two-Tier) |
+| ------------------- | ------------------------- | ----------------------------- |
+| Organization        | Technical layers          | Business capabilities         |
+| File navigation     | Jump between folders      | Everything in feature place   |
+| Code reuse          | Easy to share models      | Explicit interfaces           |
+| Feature development | Touch multiple layers     | Contained changes             |
+| Testing             | Easy to mock layers       | Easy to test scenarios        |
+| Team scaling        | Teams step on each other  | Teams own modules             |
+| Coupling            | High (shared models)      | Low (modules + events)        |
+| Bug isolation       | Hard (layer interactions) | Easy (within boundaries)      |
 
 This architecture handles every case:
+
 - Simple CRUD? Use RCSM directly
 - Complex workflow? Use Features
 - Need to scale one area? Extract a context
@@ -36,28 +37,28 @@ This architecture handles every case:
 
 ## The Standard Gauge Framework Reference
 
-| Layer / Folder | Base Class | Type | Responsibility | Connects To | Primary Hooks | Plugin Points |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Context** | `BaseContext` | - | Bounded Context Container | `BaseModule` | `onSetup`, `onTeardown` | Config |
-| **Module** | `BaseModule` | - | Autoloading & Registry | `FeatureHandler` | `onLoad`, `onUnload` | Middlewares |
-| **Api (T1)** | `BaseRpcServer` | Generic\<Env, Ctx\> | Public Routes → Features | `BaseFeatureHandler` | `onInbound`, `onOutbound` | Rate Limiting |
-| **Api** | `BaseIntegrationEvent` | Generic\<T\> | Cross-Context Broadcast | `EventBus` | `onPublish`, `onReceive` | Serializers |
-| **Feature** | `BaseFeatureHandler` | Generic\<TInput, TOutput\> | **Orchestrator** | `BaseRpc` (multiple allowed) | `validate`, `prepare`, `execute`, `finalize` | Contracts |
-| **Core** | `BaseCore` | - | Domain Kernel | (self-contained) | `onWarmup` | Policies |
-| **Command (T2)** | `BaseRpc` | Generic\<TInput, TOutput\> | Internal Gate | `BaseController` (RCSM) | `beforeDispatch` | Audit Logs |
-| **Controller** | `BaseController` | Generic\<Env, Ctx, Service, Entity, NewEntity\> | **Manager** (C in RCSM) | `BaseService` (RCSM) | `beforeAction`, `afterAction` | Validator, Normalizer |
-| **Controller** | `BaseResourceController` | extends BaseController | RESTful CRUD | `BaseService` (RCSM) | `trash`, `restore`, `hide`... | Relations |
-| **Service** | `BaseService` | Generic\<Env, Ctx, Model, Entity\> | **Worker** (S in RCSM) | `BaseModel` (RCSM) | `beforeCreate`, `afterUpdate` | Transactions |
-| **Model** | `BaseModel` | Generic\<TTable, Entity, NewEntity\> | **State** (M in RCSM) | `BasePersistence` (RCSM) | `beforeSave`, `afterCreate` | Events |
-| **Aggregate** | `BaseAggregate` | Generic\<TState, TEvent\> | Consistency Boundary | `EventStore` | `afterCommand`, `applyEvent` | Snapshots |
-| **Query** | `BaseQueryController` | Generic\<Env, Ctx, Projection\> | Optimized Reads | `BaseQueryProjection` (RCSM) | `beforeFetch`, `afterFetch` | Formatters |
-| **Query** | `BaseQueryProjection` | Generic\<TEntity\> | View Model Updates | `BasePersistence` | `onEvent`, `rebuild` | Materialized Views |
-| **View** | `BaseView` | Generic\<TProps\> | JSX Rendering | (data receiver) | `render` | Layouts |
-| **View** | `BaseLayout` | Generic\<TData\> | HTML Layout | `BaseView` | `render` | CSS/JS |
-| **Infra** | `BaseInfrastructureAdapter` | Generic\<TPort\> | Port Implementation | `BasePort` | `onConnect`, `onDisconnect` | Circuit Breakers |
-| **Infra** | `BasePersistence` | - | Data Access Driver | Driver SDKs | `onQuery`, `onTransaction` | Pooling |
-| **Microkernel** | `BaseGlobalPlugin` | - | Aspect-Oriented | ALL layers | `onInit`, `aroundFeature` | Telemetry |
-| **Shared** | `BaseSharedKernel` | - | Language of System | (used by all) | Immutable | Value Objects |
+| Layer / Folder   | Base Class                  | Type                                            | Responsibility            | Connects To                  | Primary Hooks                                | Plugin Points         |
+| :--------------- | :-------------------------- | :---------------------------------------------- | :------------------------ | :--------------------------- | :------------------------------------------- | :-------------------- |
+| **Context**      | `BaseContext`               | -                                               | Bounded Context Container | `BaseModule`                 | `onSetup`, `onTeardown`                      | Config                |
+| **Module**       | `BaseModule`                | -                                               | Autoloading & Registry    | `FeatureHandler`             | `onLoad`, `onUnload`                         | Middlewares           |
+| **Api (T1)**     | `BaseRpcServer`             | Generic\<Env, Ctx\>                             | Public Routes → Features  | `BaseFeatureHandler`         | `onInbound`, `onOutbound`                    | Rate Limiting         |
+| **Api**          | `BaseIntegrationEvent`      | Generic\<T\>                                    | Cross-Context Broadcast   | `EventBus`                   | `onPublish`, `onReceive`                     | Serializers           |
+| **Feature**      | `BaseFeatureHandler`        | Generic\<TInput, TOutput\>                      | **Orchestrator**          | `BaseRpc` (multiple allowed) | `validate`, `prepare`, `execute`, `finalize` | Contracts             |
+| **Core**         | `BaseCore`                  | -                                               | Domain Kernel             | (self-contained)             | `onWarmup`                                   | Policies              |
+| **Command (T2)** | `BaseRpc`                   | Generic\<TInput, TOutput\>                      | Internal Gate             | `BaseController` (RCSM)      | `beforeDispatch`                             | Audit Logs            |
+| **Controller**   | `BaseController`            | Generic\<Env, Ctx, Service, Entity, NewEntity\> | **Manager** (C in RCSM)   | `BaseService` (RCSM)         | `beforeAction`, `afterAction`                | Validator, Normalizer |
+| **Controller**   | `BaseResourceController`    | extends BaseController                          | RESTful CRUD              | `BaseService` (RCSM)         | `trash`, `restore`, `hide`...                | Relations             |
+| **Service**      | `BaseService`               | Generic\<Env, Ctx, Model, Entity\>              | **Worker** (S in RCSM)    | `BaseModel` (RCSM)           | `beforeCreate`, `afterUpdate`                | Transactions          |
+| **Model**        | `BaseModel`                 | Generic\<TTable, Entity, NewEntity\>            | **State** (M in RCSM)     | `BasePersistence` (RCSM)     | `beforeSave`, `afterCreate`                  | Events                |
+| **Aggregate**    | `BaseAggregate`             | Generic\<TState, TEvent\>                       | Consistency Boundary      | `EventStore`                 | `afterCommand`, `applyEvent`                 | Snapshots             |
+| **Query**        | `BaseQueryController`       | Generic\<Env, Ctx, Projection\>                 | Optimized Reads           | `BaseQueryProjection` (RCSM) | `beforeFetch`, `afterFetch`                  | Formatters            |
+| **Query**        | `BaseQueryProjection`       | Generic\<TEntity\>                              | View Model Updates        | `BasePersistence`            | `onEvent`, `rebuild`                         | Materialized Views    |
+| **View**         | `BaseView`                  | Generic\<TProps\>                               | JSX Rendering             | (data receiver)              | `render`                                     | Layouts               |
+| **View**         | `BaseLayout`                | Generic\<TData\>                                | HTML Layout               | `BaseView`                   | `render`                                     | CSS/JS                |
+| **Infra**        | `BaseInfrastructureAdapter` | Generic\<TPort\>                                | Port Implementation       | `BasePort`                   | `onConnect`, `onDisconnect`                  | Circuit Breakers      |
+| **Infra**        | `BasePersistence`           | -                                               | Data Access Driver        | Driver SDKs                  | `onQuery`, `onTransaction`                   | Pooling               |
+| **Microkernel**  | `BaseGlobalPlugin`          | -                                               | Aspect-Oriented           | ALL layers                   | `onInit`, `aroundFeature`                    | Telemetry             |
+| **Shared**       | `BaseSharedKernel`          | -                                               | Language of System        | (used by all)                | Immutable                                    | Value Objects         |
 
 **Note**: RCSM layers (Controller → Service → Model → Persistence) follow the Rails pattern: **one call per layer only**. FeatureHandler is the orchestration layer and can call multiple RCSM chains.
 
@@ -65,41 +66,41 @@ This architecture handles every case:
 
 ## Noware Packages
 
-| Package | Description | Layer |
-| :--- | :--- | :--- |
-| `aggregates` | BaseAggregate for event sourcing | Domain |
-| `assets` | AssetPipeline for static assets | Infrastructure |
-| `controllers` | BaseController, BaseResourceController | RCSM (C) |
-| `contexts` | BaseContext - bounded context container | Context |
-| `docs` | Documentation | - |
-| `domains` | Domain utilities | Domain |
-| `durable_objects` | BaseDurableObject for Cloudflare DO | Infrastructure |
-| `entrypoints` | Worker entry points | API |
-| `events` | BaseDomainEvent, DomainEventBus | Domain |
-| `features` | BaseFeatureHandler, SimpleFeatureHandler | Orchestration |
-| `formatters` | BaseFormatter for output formatting | View |
-| `gateways` | BaseInfrastructureAdapter, CircuitBreaker | Infrastructure |
-| `integration-events` | BaseIntegrationEvent, EventBus | API |
-| `jobs` | JobRunner for background jobs | Infrastructure |
-| `logger` | Logger for logging | Infrastructure |
-| `maintenance` | TaskRegistry for maintenance tasks | Infrastructure |
-| `migrations` | MigrationRunner for database migrations | Infrastructure |
-| `models` | BaseModel with Drizzle ORM | RCSM (M) |
-| `modules` | BaseModule for feature registration | Context |
-| `normalizers` | BaseNormalizer for input normalization | Controller |
-| `persistence` | BasePersistence, D1Persistence | Infrastructure |
-| `plugins` | BaseGlobalPlugin, PluginRegistry | Microkernel |
-| `ports` | BasePort interfaces for hexagonal architecture | Domain |
-| `query` | BaseQueryController, BaseQueryProjection | CQRS |
-| `result` | Result type for error handling | Shared |
-| `router` | Router, RouteDrawer for routing | API |
-| `rpc` | BaseRpcServer, BaseRpc for RPC | API |
-| `scripts` | Script utilities | - |
-| `services` | BaseService for business logic | RCSM (S) |
-| `shared` | Value objects, shared types | Shared |
-| `sql` | SQL query builder, dialects | Infrastructure |
-| `validators` | BaseValidator for input validation | Controller |
-| `views` | BaseView, BaseLayout for JSX rendering | View |
+| Package              | Description                                    | Layer          |
+| :------------------- | :--------------------------------------------- | :------------- |
+| `aggregates`         | BaseAggregate for event sourcing               | Domain         |
+| `assets`             | AssetPipeline for static assets                | Infrastructure |
+| `controllers`        | BaseController, BaseResourceController         | RCSM (C)       |
+| `contexts`           | BaseContext - bounded context container        | Context        |
+| `docs`               | Documentation                                  | -              |
+| `domains`            | Domain utilities                               | Domain         |
+| `durable_objects`    | BaseDurableObject for Cloudflare DO            | Infrastructure |
+| `entrypoints`        | Worker entry points                            | API            |
+| `events`             | BaseDomainEvent, DomainEventBus                | Domain         |
+| `features`           | BaseFeatureHandler, SimpleFeatureHandler       | Orchestration  |
+| `formatters`         | BaseFormatter for output formatting            | View           |
+| `gateways`           | BaseInfrastructureAdapter, CircuitBreaker      | Infrastructure |
+| `integration-events` | BaseIntegrationEvent, EventBus                 | API            |
+| `jobs`               | JobRunner for background jobs                  | Infrastructure |
+| `logger`             | Logger for logging                             | Infrastructure |
+| `maintenance`        | TaskRegistry for maintenance tasks             | Infrastructure |
+| `migrations`         | MigrationRunner for database migrations        | Infrastructure |
+| `models`             | BaseModel with Drizzle ORM                     | RCSM (M)       |
+| `modules`            | BaseModule for feature registration            | Context        |
+| `normalizers`        | BaseNormalizer for input normalization         | Controller     |
+| `persistence`        | BasePersistence, D1Persistence                 | Infrastructure |
+| `plugins`            | BaseGlobalPlugin, PluginRegistry               | Microkernel    |
+| `ports`              | BasePort interfaces for hexagonal architecture | Domain         |
+| `query`              | BaseQueryController, BaseQueryProjection       | CQRS           |
+| `result`             | Result type for error handling                 | Shared         |
+| `router`             | Router, RouteDrawer for routing                | API            |
+| `rpc`                | BaseRpcServer, BaseRpc for RPC                 | API            |
+| `scripts`            | Script utilities                               | -              |
+| `services`           | BaseService for business logic                 | RCSM (S)       |
+| `shared`             | Value objects, shared types                    | Shared         |
+| `sql`                | SQL query builder, dialects                    | Infrastructure |
+| `validators`         | BaseValidator for input validation             | Controller     |
+| `views`              | BaseView, BaseLayout for JSX rendering         | View           |
 
 ```
 app/
@@ -154,38 +155,38 @@ app/
 
 ### Maps to Existing Noware Packages
 
-| Directory | Package (@nowarelabs/*) | Base Classes |
-| :--- | :--- | :--- |
-| `core/commands/controllers` | `controllers` | `BaseController`, `BaseResourceController` |
-| `core/commands/services` | `services` | `BaseService` |
-| `core/commands/models` | `models` | `BaseModel` |
-| `core/commands/aggregates` | `aggregates` | `BaseAggregate` |
-| `core/commands/ports` | `ports` | `BasePort`, `BaseInboundPort`, `BaseOutboundPort` |
-| `core/queries/controllers` | `query` | `BaseQueryController` |
-| `core/queries/projections` | `query` | `BaseQueryProjection` |
-| `core/events` | `events` | `BaseDomainEvent`, `DomainEventBus` |
-| `api/rpc` | `rpc` | `BaseRpcServer`, `BaseRpc` |
-| `api/events` | `integration-events` | `BaseIntegrationEvent`, `EventBus` |
-| `features` | `features` | `BaseFeatureHandler`, `SimpleFeatureHandler` |
-| `modules` | `modules` | `BaseModule` |
-| `contexts` | `contexts` | `BaseContext` |
-| `infrastructure/persistence` | `persistence` | `BasePersistence`, `D1Persistence` |
-| `infrastructure/gateways` | `gateways` | `BaseInfrastructureAdapter`, `CircuitBreaker` |
-| `plugins/global` | `plugins` | `BaseGlobalPlugin`, `PluginRegistry` |
-| - | `views` | `BaseView`, `BaseLayout` |
-| - | `validators` | `BaseValidator` |
-| - | `normalizers` | `BaseNormalizer` |
-| - | `formatters` | `BaseFormatter` |
-| - | `router` | `Router`, `RouteDrawer` |
-| - | `logger` | `Logger` |
-| - | `sql` | `Dialect`, `QueryBuilder` |
-| - | `migrations` | `MigrationRunner` |
-| - | `durable_objects` | `BaseDurableObject` |
-| - | `assets` | `AssetPipeline` |
-| - | `jobs` | `JobRunner` |
-| - | `maintenance` | `TaskRegistry` |
-| - | `result` | `Result` |
-| - | `shared` | Value Objects |
+| Directory                    | Package (@nowarelabs/\*) | Base Classes                                      |
+| :--------------------------- | :----------------------- | :------------------------------------------------ |
+| `core/commands/controllers`  | `controllers`            | `BaseController`, `BaseResourceController`        |
+| `core/commands/services`     | `services`               | `BaseService`                                     |
+| `core/commands/models`       | `models`                 | `BaseModel`                                       |
+| `core/commands/aggregates`   | `aggregates`             | `BaseAggregate`                                   |
+| `core/commands/ports`        | `ports`                  | `BasePort`, `BaseInboundPort`, `BaseOutboundPort` |
+| `core/queries/controllers`   | `query`                  | `BaseQueryController`                             |
+| `core/queries/projections`   | `query`                  | `BaseQueryProjection`                             |
+| `core/events`                | `events`                 | `BaseDomainEvent`, `DomainEventBus`               |
+| `api/rpc`                    | `rpc`                    | `BaseRpcServer`, `BaseRpc`                        |
+| `api/events`                 | `integration-events`     | `BaseIntegrationEvent`, `EventBus`                |
+| `features`                   | `features`               | `BaseFeatureHandler`, `SimpleFeatureHandler`      |
+| `modules`                    | `modules`                | `BaseModule`                                      |
+| `contexts`                   | `contexts`               | `BaseContext`                                     |
+| `infrastructure/persistence` | `persistence`            | `BasePersistence`, `D1Persistence`                |
+| `infrastructure/gateways`    | `gateways`               | `BaseInfrastructureAdapter`, `CircuitBreaker`     |
+| `plugins/global`             | `plugins`                | `BaseGlobalPlugin`, `PluginRegistry`              |
+| -                            | `views`                  | `BaseView`, `BaseLayout`                          |
+| -                            | `validators`             | `BaseValidator`                                   |
+| -                            | `normalizers`            | `BaseNormalizer`                                  |
+| -                            | `formatters`             | `BaseFormatter`                                   |
+| -                            | `router`                 | `Router`, `RouteDrawer`                           |
+| -                            | `logger`                 | `Logger`                                          |
+| -                            | `sql`                    | `Dialect`, `QueryBuilder`                         |
+| -                            | `migrations`             | `MigrationRunner`                                 |
+| -                            | `durable_objects`        | `BaseDurableObject`                               |
+| -                            | `assets`                 | `AssetPipeline`                                   |
+| -                            | `jobs`                   | `JobRunner`                                       |
+| -                            | `maintenance`            | `TaskRegistry`                                    |
+| -                            | `result`                 | `Result`                                          |
+| -                            | `shared`                 | Value Objects                                     |
 
 ### Convention Over Configuration
 
@@ -231,13 +232,13 @@ RpcServer → FeatureHandler → Rpc (Tier 2) → Controller → Service → Mod
                                   QueryController → Projection → View
 ```
 
-| Layer | Can Call | Cannot Call |
-| :--- | :--- | :--- |
-| **Controller** | Service | Model directly |
-| **Service** | Model | Controller |
-| **Model** | Persistence | Service |
-| **FeatureHandler** | Controller (via Rpc) | Service, Model |
-| **RpcServer** | FeatureHandler | Controller, Service, Model |
+| Layer              | Can Call             | Cannot Call                |
+| :----------------- | :------------------- | :------------------------- |
+| **Controller**     | Service              | Model directly             |
+| **Service**        | Model                | Controller                 |
+| **Model**          | Persistence          | Service                    |
+| **FeatureHandler** | Controller (via Rpc) | Service, Model             |
+| **RpcServer**      | FeatureHandler       | Controller, Service, Model |
 
 ---
 
@@ -252,12 +253,12 @@ The foundation for all controllers.
 ```typescript
 // Generic signature
 export class BaseController<
-  TEnv,              // Environment (Cloudflare bindings)
-  TCtx,              // Router context
+  TEnv, // Environment (Cloudflare bindings)
+  TCtx, // Router context
   TService extends BaseService<TEnv, TCtx, any, any>,
   TModel extends BaseModel<any, any, any>,
   TEntity,
-  TNewEntity
+  TNewEntity,
 > {
   protected request: Request;
   protected env: TEnv;
@@ -279,20 +280,25 @@ export class BaseController<
   protected getService(): TService;
 
   // Accessors
-  protected params;        // All params (path + query + body)
-  protected pathParams;    // URL path parameters
-  protected queryParams;  // Query string parameters
-  protected headers;      // Request headers
-  protected cookies;     // Parsed cookies
-  protected body;        // Parsed body
+  protected params; // All params (path + query + body)
+  protected pathParams; // URL path parameters
+  protected queryParams; // Query string parameters
+  protected headers; // Request headers
+  protected cookies; // Parsed cookies
+  protected body; // Parsed body
 
   // Static plugin points
-  static beforeActions: Array<{ normalize?: any; validate?: any; only?: string[]; except?: string[] }> = [];
+  static beforeActions: Array<{
+    normalize?: any;
+    validate?: any;
+    only?: string[];
+    except?: string[];
+  }> = [];
   static afterActions: Array<{ after?: (result: any) => Promise<any>; only?: string[] }> = [];
 
   // Lifecycle hooks
-  async beforeAction() {}  // Called before any action
-  async afterAction() {}   // Called after any action
+  async beforeAction() {} // Called before any action
+  async afterAction() {} // Called after any action
 
   // Response helpers
   json(data: any, options?: { status?: number }): Response;
@@ -315,39 +321,38 @@ export class BaseResourceController<
   TService extends BaseService<TEnv, TCtx, any, any>,
   TModel extends BaseModel<any, any, any>,
   TEntity,
-  TNewEntity
+  TNewEntity,
 > extends BaseController<TEnv, TCtx, TService, TModel, TEntity, TNewEntity> {
-
   // Automatic REST Actions
-  async index(params?): Promise<Response>      // GET    - List all resources
-  async show(id): Promise<Response>           // GET    - Get single resource
-  async new(): Promise<Response>           // GET    - Form for new resource
-  async create(): Promise<Response>         // POST   - Create resource
-  async edit(id): Promise<Response>         // GET    - Form for editing
-  async update(id): Promise<Response>       // PUT/PATCH - Update resource
-  async destroy(id): Promise<Response>       // DELETE - Delete resource
+  async index(params?): Promise<Response>; // GET    - List all resources
+  async show(id): Promise<Response>; // GET    - Get single resource
+  async new(): Promise<Response>; // GET    - Form for new resource
+  async create(): Promise<Response>; // POST   - Create resource
+  async edit(id): Promise<Response>; // GET    - Form for editing
+  async update(id): Promise<Response>; // PUT/PATCH - Update resource
+  async destroy(id): Promise<Response>; // DELETE - Delete resource
 
   // Lifecycle Actions (soft/hard deletes, visibility, flags)
-  async trash(id)       // Soft delete - sets deleted_at timestamp
-  async restore(id)    // Restore from soft delete
-  async hide(id)        // Hide resource from lists
-  async unhide(id)      // Unhide resource
-  async flag(id)       // Flag for review
-  async unflag(id)     // Remove flag
-  async purge(id)      // Hard delete - permanent removal
-  async retire(id)    // Mark as retired
-  async unretire(id)  // Unretire
+  async trash(id); // Soft delete - sets deleted_at timestamp
+  async restore(id); // Restore from soft delete
+  async hide(id); // Hide resource from lists
+  async unhide(id); // Unhide resource
+  async flag(id); // Flag for review
+  async unflag(id); // Remove flag
+  async purge(id); // Hard delete - permanent removal
+  async retire(id); // Mark as retired
+  async unretire(id); // Unretire
 
   // Relationship Actions
-  async listChildIds(parentId: string): Promise<string[]>
-  async listParentIds(childId: string): Promise<string[]>
-  async listSiblingIds(id: string): Promise<string[]>
-  async listAncestorIds(id: string): Promise<string[]>
-  async listDescendantIds(id: string): Promise<string[]>
+  async listChildIds(parentId: string): Promise<string[]>;
+  async listParentIds(childId: string): Promise<string[]>;
+  async listSiblingIds(id: string): Promise<string[]>;
+  async listAncestorIds(id: string): Promise<string[]>;
+  async listDescendantIds(id: string): Promise<string[]>;
 
   // Eager Loading
-  async findAllWith(...relations: string[]): Promise<TEntity[]>
-  async findWith(id: string, ...relations: string[]): Promise<TEntity>
+  async findAllWith(...relations: string[]): Promise<TEntity[]>;
+  async findWith(id: string, ...relations: string[]): Promise<TEntity>;
 }
 ```
 
@@ -360,12 +365,7 @@ The service layer with database access.
 **References**: RCSM pattern - Service calls ONE model only.
 
 ```typescript
-export class BaseService<
-  TEnv,
-  TCtx,
-  TModel extends BaseModel<any, any, any>,
-  TEntity
-> {
+export class BaseService<TEnv, TCtx, TModel extends BaseModel<any, any, any>, TEntity> {
   protected req: Request;
   protected env: TEnv;
   protected ctx: TCtx;
@@ -387,7 +387,7 @@ export class BaseService<
 
   // Abstract - implement to return Model instance
   protected getModel(): TModel {
-    throw new Error('Must be implemented');
+    throw new Error("Must be implemented");
   }
 
   // Static plugin points
@@ -399,24 +399,18 @@ export class BaseService<
   static afterDeletes: Array<(id: string) => Promise<void>> = [];
 
   // Lifecycle hooks
-  async beforeCreate(data: any): Promise<any>
-  async afterCreate(entity: TEntity): Promise<void>
-  async beforeUpdate(id: string, data: Partial<TEntity>): Promise<Partial<TEntity>>
-  async afterUpdate(entity: TEntity): Promise<void>
-  async beforeDelete(id: string): Promise<void>
-  async afterDelete(id: string): Promise<void>
+  async beforeCreate(data: any): Promise<any>;
+  async afterCreate(entity: TEntity): Promise<void>;
+  async beforeUpdate(id: string, data: Partial<TEntity>): Promise<Partial<TEntity>>;
+  async afterUpdate(entity: TEntity): Promise<void>;
+  async beforeDelete(id: string): Promise<void>;
+  async afterDelete(id: string): Promise<void>;
 
   // HTTP fetching (external calls)
-  protected async fetch(
-    input: string | Request | URL,
-    init?: RequestInit
-  ): Promise<Response>
+  protected async fetch(input: string | Request | URL, init?: RequestInit): Promise<Response>;
 
   // Create child context for nested operations
-  protected createServiceContext(
-    serviceName: string,
-    metadata?: Record<string, any>
-  ): TCtx
+  protected createServiceContext(serviceName: string, metadata?: Record<string, any>): TCtx;
 }
 ```
 
@@ -446,13 +440,13 @@ The model layer with Drizzle ORM support and fluent query API.
 
 ```typescript
 export class BaseModel<
-  TTable,          // Drizzle table definition
-  TEntity,        // Select type (inferred)
-  TNewEntity      // Insert type (inferred)
+  TTable, // Drizzle table definition
+  TEntity, // Select type (inferred)
+  TNewEntity, // Insert type (inferred)
 > {
-  protected db: any;           // Database instance (D1)
-  protected table: TTable;     // Drizzle table definition
-  protected alias?: string;     // Table alias for joins
+  protected db: any; // Database instance (D1)
+  protected table: TTable; // Drizzle table definition
+  protected alias?: string; // Table alias for joins
   protected req?: Request;
   protected env?: any;
   protected ctx?: any;
@@ -485,7 +479,7 @@ export class BaseModel<
   where(conditions: WhereConditions): QueryBuilder<TTable, TEntity>;
   whereId(id: string): QueryBuilder<TTable, TEntity>;
   select(...columns: string[]): QueryBuilder<TTable, TEntity>;
-  orderBy(column: string, direction?: 'ASC' | 'DESC'): QueryBuilder<TTable, TEntity>;
+  orderBy(column: string, direction?: "ASC" | "DESC"): QueryBuilder<TTable, TEntity>;
   limit(n: number): QueryBuilder<TTable, TEntity>;
   offset(n: number): QueryBuilder<TTable, TEntity>;
   page(page: number, perPage: number): QueryBuilder<TTable, TEntity>;
@@ -506,9 +500,9 @@ export class BaseModel<
   async delete(id: string): Promise<void>;
 
   // Lifecycle Actions
-  async trash(id: string): Promise<void>     // Soft delete
-  async restore(id: string): Promise<void> // Restore
-  async purge(id: string): Promise<void> // Hard delete
+  async trash(id: string): Promise<void>; // Soft delete
+  async restore(id: string): Promise<void>; // Restore
+  async purge(id: string): Promise<void>; // Hard delete
 
   // Relationships
   hasMany(name: string, config: RelationshipConfig): void;
@@ -579,21 +573,21 @@ export class BaseContext {
   static contextConfigs: Record<string, any> = {};
 
   // Lifecycle
-  async onSetup(): Promise<void>      // Initialize context
-  async onTeardown(): Promise<void>   // Cleanup
+  async onSetup(): Promise<void>; // Initialize context
+  async onTeardown(): Promise<void>; // Cleanup
 
   // Module management
-  async loadModule(name: string, module: BaseModule): Promise<void>
-  async unloadModule(name: string): Promise<void>
-  getModule<T extends BaseModule>(name: string): T | undefined
-  getModuleNames(): string[]
+  async loadModule(name: string, module: BaseModule): Promise<void>;
+  async unloadModule(name: string): Promise<void>;
+  getModule<T extends BaseModule>(name: string): T | undefined;
+  getModuleNames(): string[];
 
   // Config
-  getConfig(key: string, fallback?: any): any
-  setConfig(key: string, value: any): void
+  getConfig(key: string, fallback?: any): any;
+  setConfig(key: string, value: any): void;
 
   // Get context name
-  getName(): string
+  getName(): string;
 }
 ```
 
@@ -621,27 +615,21 @@ export class BaseModule {
   // Static plugin points
   static onLoads: Array<(module: any) => Promise<void>> = [];
   static onUnloads: Array<(module: any) => Promise<void>> = [];
-  static autoDiscovers: Array<string> = [];   // Auto-discover features from folder
-  static middlewares: Array<any> = [];        // Module-level middleware
+  static autoDiscovers: Array<string> = []; // Auto-discover features from folder
+  static middlewares: Array<any> = []; // Module-level middleware
 
   // Lifecycle
-  async onLoad(): Promise<void>      // Register features & plugins
-  async onUnload(): Promise<void>     // Cleanup registrations
+  async onLoad(): Promise<void>; // Register features & plugins
+  async onUnload(): Promise<void>; // Cleanup registrations
 
   // Feature registration
-  registerFeature<T extends FeatureHandler>(
-    name: string,
-    handler: new (...args: any[]) => T
-  ): void
-  getFeature<T extends FeatureHandler>(name: string): T | undefined
-  getFeatureNames(): string[]
+  registerFeature<T extends FeatureHandler>(name: string, handler: new (...args: any[]) => T): void;
+  getFeature<T extends FeatureHandler>(name: string): T | undefined;
+  getFeatureNames(): string[];
 
   // Plugin registration
-  registerPlugin<T extends BasePlugin>(
-    name: string,
-    plugin: T
-  ): void
-  getPlugin<T extends BasePlugin>(name: string): T | undefined
+  registerPlugin<T extends BasePlugin>(name: string, plugin: T): void;
+  getPlugin<T extends BasePlugin>(name: string): T | undefined;
 }
 ```
 
@@ -656,8 +644,8 @@ Tier 1: Public entrance - maps frontend to features.
 ```typescript
 // Generic: Env (Cloudflare bindings), Ctx (Router context)
 export class BaseRpcServer<
-  TEnv,              // Environment (Cloudflare bindings)
-  TCtx               // Router context
+  TEnv, // Environment (Cloudflare bindings)
+  TCtx, // Router context
 > {
   protected env: TEnv;
   protected ctx: TCtx;
@@ -683,24 +671,24 @@ export class BaseRpcServer<
   static authenticators: Array<(input: any) => Promise<AuthResult>> = [];
 
   // Lifecycle
-  async onInbound(input: any): Promise<any>      // Handle incoming RPC
-  async onOutbound(output: any): Promise<void>    // Handle outgoing
+  async onInbound(input: any): Promise<any>; // Handle incoming RPC
+  async onOutbound(output: any): Promise<void>; // Handle outgoing
 
   // Routing - auto-discovers features
   registerRoute<T extends BaseFeatureHandler<any, any>>(
     method: string,
     path: string,
-    handler: new (...args: any[]) => T
-  ): void
-  routeToFeature(featureName: string, input: any): Promise<any>
+    handler: new (...args: any[]) => T,
+  ): void;
+  routeToFeature(featureName: string, input: any): Promise<any>;
 
   // Routing lookup
   protected getRoute(method: string, path: string): FeatureHandler | undefined;
   protected resolveHandler(method: string, path: string): BaseFeatureHandler<any, any> | undefined;
 
   // Global hooks
-  async beforeRoute(input: any): Promise<void>   // Rate limiting, auth
-  async afterRoute(output: any): Promise<void>  // Logging
+  async beforeRoute(input: any): Promise<void>; // Rate limiting, auth
+  async afterRoute(output: any): Promise<void>; // Logging
 }
 ```
 
@@ -714,10 +702,7 @@ Tier 2: Internal gate between Feature and Controller.
 
 ```typescript
 // Generic: Input and Output types
-export class BaseRpc<
-  TInput,
-  TOutput
-> {
+export class BaseRpc<TInput, TOutput> {
   protected input: TInput;
   protected output?: TOutput;
 
@@ -735,18 +720,18 @@ export class BaseRpc<
   static auditLogs: Array<(input: any, output: any) => Promise<void>> = [];
 
   // Lifecycle
-  async beforeDispatch(input: TInput): Promise<TInput>    // Validate, audit
-  async afterDispatch(output: TOutput): Promise<void>    // Audit logs
+  async beforeDispatch(input: TInput): Promise<TInput>; // Validate, audit
+  async afterDispatch(output: TOutput): Promise<void>; // Audit logs
 
   // Dispatch to controller
   async dispatch<TController extends BaseController<any, any, any, any, any, any>>(
     controller: new (...args: any[]) => TController,
     action: string,
-    params: any
-  ): Promise<any>
+    params: any,
+  ): Promise<any>;
 
   // Error handling
-  async onError(error: Error): Promise<void>
+  async onError(error: Error): Promise<void>;
 }
 ```
 
@@ -756,26 +741,23 @@ Tier 2: Internal gate between Feature and Controller.
 
 ```typescript
 // Generic: Input and Output types
-export class BaseRpc<
-  TInput,
-  TOutput
-> {
+export class BaseRpc<TInput, TOutput> {
   protected input: TInput;
   protected output?: TOutput;
 
   // Lifecycle
-  async beforeDispatch(input: TInput): Promise<TInput>    // Validate
-  async afterDispatch(output: TOutput): Promise<void>    // Audit logs
+  async beforeDispatch(input: TInput): Promise<TInput>; // Validate
+  async afterDispatch(output: TOutput): Promise<void>; // Audit logs
 
   // Dispatch to controller
   async dispatch<TController extends BaseController<any, any, any, any, any, any>>(
     controller: new (...args: any[]) => TController,
     action: string,
-    params: any
-  ): Promise<any>
+    params: any,
+  ): Promise<any>;
 
   // Error handling
-  async onError(error: Error): Promise<void>
+  async onError(error: Error): Promise<void>;
 }
 ```
 
@@ -791,10 +773,7 @@ The orchestrator with validate → prepare → execute → finalized lifecycle.
 
 ```typescript
 // Generic: Input and Output types
-export class BaseFeatureHandler<
-  TInput,
-  TOutput
-> {
+export class BaseFeatureHandler<TInput, TOutput> {
   protected input!: TInput;
   protected output?: TOutput;
   protected env!: any;
@@ -824,21 +803,18 @@ export class BaseFeatureHandler<
   static plugins: Array<FeaturePlugin> = [];
 
   // The 4-Phase Lifecycle (convention)
-  async validate(input: TInput): Promise<void>      // Business rule validation
-  async prepare(input: TInput): Promise<any>   // Gather data from sources
-  async execute(prepared: any): Promise<TOutput>  // Core logic
-  async finalize(output: TOutput): Promise<void> // Emit events, side effects
+  async validate(input: TInput): Promise<void>; // Business rule validation
+  async prepare(input: TInput): Promise<any>; // Gather data from sources
+  async execute(prepared: any): Promise<TOutput>; // Core logic
+  async finalize(output: TOutput): Promise<void>; // Emit events, side effects
 
   // Hooks
-  async beforeExecute(input: TInput): Promise<void>
-  async afterExecute(output: TOutput): Promise<void>
-  async onError(error: Error): Promise<void>
+  async beforeExecute(input: TInput): Promise<void>;
+  async afterExecute(output: TOutput): Promise<void>;
+  async onError(error: Error): Promise<void>;
 
   // Internal RPC (Tier 2) - ONLY way to call Controller
-  async internalRpc(
-    rpcName: string,
-    input: any
-  ): Promise<any>
+  async internalRpc(rpcName: string, input: any): Promise<any>;
 
   // Run the complete flow
   async run(input: TInput): Promise<TOutput> {
@@ -853,8 +829,12 @@ export class BaseFeatureHandler<
 
   // Events (internal)
   protected events = {
-    emit: async (eventName: string, payload: any) => { /* emit internally */ },
-    dispatch: async (eventName: string, payload: any) => { /* dispatch */ }
+    emit: async (eventName: string, payload: any) => {
+      /* emit internally */
+    },
+    dispatch: async (eventName: string, payload: any) => {
+      /* dispatch */
+    },
   };
 }
 ```
@@ -888,12 +868,12 @@ export class PostsController extends BaseResourceController<...> {
 ```typescript
 // Generic signature
 export class BaseController<
-  TEnv,              // Environment (Cloudflare bindings)
-  TCtx,              // Router context
+  TEnv, // Environment (Cloudflare bindings)
+  TCtx, // Router context
   TService extends BaseService<TEnv, TCtx, any, any>,
   TModel extends BaseModel<any, any, any>,
   TEntity,
-  TNewEntity
+  TNewEntity,
 > {
   protected request: Request;
   protected env: TEnv;
@@ -901,13 +881,13 @@ export class BaseController<
   protected service: TService;
 
   // Accessors
-  protected params!: Record<string, any>;        // All params
-  protected pathParams!: Record<string, string>;    // URL path params
-  protected queryParams!: Record<string, string>;  // Query string
-  protected headers!: Record<string, string>;        // Headers
-  protected cookies!: Record<string, string>;      // Parsed cookies
-  protected body!: any;                         // Parsed body
-  protected ip!: string;                       // Client IP
+  protected params!: Record<string, any>; // All params
+  protected pathParams!: Record<string, string>; // URL path params
+  protected queryParams!: Record<string, string>; // Query string
+  protected headers!: Record<string, string>; // Headers
+  protected cookies!: Record<string, string>; // Parsed cookies
+  protected body!: any; // Parsed body
+  protected ip!: string; // Client IP
 
   // Response helpers
   json(data: any, options?: { status?: number }): Response;
@@ -930,8 +910,8 @@ export class BaseController<
   internalServerError(message?: string): Response;
 
   // Lifecycle hooks
-  async beforeAction(): Promise<void>
-  async afterAction(result?: any): Promise<void>
+  async beforeAction(): Promise<void>;
+  async afterAction(result?: any): Promise<void>;
 }
 ```
 
@@ -951,9 +931,8 @@ export class BaseResourceController<
   TService extends BaseService<TEnv, TCtx, any, any>,
   TModel extends BaseModel<any, any, any>,
   TEntity,
-  TNewEntity
+  TNewEntity,
 > extends BaseController<TEnv, TCtx, TService, TModel, TEntity, TNewEntity> {
-
   // REFERENCE - the ONE service this controller manages (RCSM pattern)
   protected ordersService!: TService;
 
@@ -970,51 +949,51 @@ export class BaseResourceController<
   static beforeActions = [
     {
       normalize: BaseNormalizer,
-      only: ['create', 'update', 'patch']
+      only: ["create", "update", "patch"],
     },
     {
       validate: BaseValidator,
-      only: ['create', 'update', 'patch']
-    }
+      only: ["create", "update", "patch"],
+    },
   ];
 
   static afterActions = [
     {
       serialize: BaseSerializer,
-      only: ['index', 'show', 'create', 'update']
-    }
+      only: ["index", "show", "create", "update"],
+    },
   ];
 
   // Automatic REST Actions
-  async index(params?): Promise<Response>      // GET    - List all resources
-  async show(id): Promise<Response>           // GET    - Get single resource
-  async new(): Promise<Response>           // GET    - Form for new resource
-  async create(): Promise<Response>         // POST   - Create resource
-  async edit(id): Promise<Response>         // GET    - Form for editing
-  async update(id): Promise<Response>       // PUT/PATCH - Update resource
-  async destroy(id): Promise<Response>       // DELETE - Delete resource
+  async index(params?): Promise<Response>; // GET    - List all resources
+  async show(id): Promise<Response>; // GET    - Get single resource
+  async new(): Promise<Response>; // GET    - Form for new resource
+  async create(): Promise<Response>; // POST   - Create resource
+  async edit(id): Promise<Response>; // GET    - Form for editing
+  async update(id): Promise<Response>; // PUT/PATCH - Update resource
+  async destroy(id): Promise<Response>; // DELETE - Delete resource
 
   // Lifecycle Actions (soft/hard deletes, visibility, flags)
-  async trash(id)       // Soft delete - sets deleted_at timestamp
-  async restore(id)    // Restore from soft delete
-  async hide(id)        // Hide resource from lists
-  async unhide(id)      // Unhide resource
-  async flag(id)       // Flag for review
-  async unflag(id)     // Remove flag
-  async purge(id)      // Hard delete - permanent removal
-  async retire(id)    // Mark as retired
-  async unretire(id)  // Unretire
+  async trash(id); // Soft delete - sets deleted_at timestamp
+  async restore(id); // Restore from soft delete
+  async hide(id); // Hide resource from lists
+  async unhide(id); // Unhide resource
+  async flag(id); // Flag for review
+  async unflag(id); // Remove flag
+  async purge(id); // Hard delete - permanent removal
+  async retire(id); // Mark as retired
+  async unretire(id); // Unretire
 
   // Relationship Actions
-  async listChildIds(parentId: string): Promise<string[]>
-  async listParentIds(childId: string): Promise<string[]>
-  async listSiblingIds(id: string): Promise<string[]>
-  async listAncestorIds(id: string): Promise<string[]>
-  async listDescendantIds(id: string): Promise<string[]>
+  async listChildIds(parentId: string): Promise<string[]>;
+  async listParentIds(childId: string): Promise<string[]>;
+  async listSiblingIds(id: string): Promise<string[]>;
+  async listAncestorIds(id: string): Promise<string[]>;
+  async listDescendantIds(id: string): Promise<string[]>;
 
   // Eager Loading
-  async findAllWith(...relations: string[]): Promise<TEntity[]>
-  async findWith(id: string, ...relations: string[]): Promise<TEntity>
+  async findAllWith(...relations: string[]): Promise<TEntity[]>;
+  async findWith(id: string, ...relations: string[]): Promise<TEntity>;
 }
 ```
 
@@ -1023,12 +1002,7 @@ export class BaseResourceController<
 **The Worker** (S in RCSM).
 
 ```typescript
-export class BaseService<
-  TEnv,
-  TCtx,
-  TModel extends BaseModel<any, any, any>,
-  TEntity
-> {
+export class BaseService<TEnv, TCtx, TModel extends BaseModel<any, any, any>, TEntity> {
   protected req: Request;
   protected env: TEnv;
   protected ctx: TCtx;
@@ -1039,24 +1013,18 @@ export class BaseService<
   protected model!: TModel;
 
   // Lifecycle hooks
-  async beforeCreate(data: any): Promise<any>
-  async afterCreate(entity: TEntity): Promise<void>
-  async beforeUpdate(id: string, data: any): Promise<any>
-  async afterUpdate(entity: TEntity): Promise<void>
-  async beforeDelete(id: string): Promise<void>
-  async afterDelete(id: string): Promise<void>
+  async beforeCreate(data: any): Promise<any>;
+  async afterCreate(entity: TEntity): Promise<void>;
+  async beforeUpdate(id: string, data: any): Promise<any>;
+  async afterUpdate(entity: TEntity): Promise<void>;
+  async beforeDelete(id: string): Promise<void>;
+  async afterDelete(id: string): Promise<void>;
 
   // HTTP fetching
-  protected async fetch(
-    input: string | Request | URL,
-    init?: RequestInit
-  ): Promise<Response>
+  protected async fetch(input: string | Request | URL, init?: RequestInit): Promise<Response>;
 
   // Service context
-  protected createServiceContext(
-    serviceName: string,
-    metadata?: Record<string, any>
-  ): TCtx
+  protected createServiceContext(serviceName: string, metadata?: Record<string, any>): TCtx;
 }
 ```
 
@@ -1066,52 +1034,52 @@ export class BaseService<
 
 ```typescript
 export class BaseModel<
-  TTable,      // Drizzle table definition
-  TEntity,    // Select type
-  TNewEntity  // Insert type
+  TTable, // Drizzle table definition
+  TEntity, // Select type
+  TNewEntity, // Insert type
 > {
-  protected db: any;           // Database instance
-  protected table: TTable;     // Table definition
-  protected alias?: string;      // Table alias for joins
+  protected db: any; // Database instance
+  protected table: TTable; // Table definition
+  protected alias?: string; // Table alias for joins
 
   // Fluent Query API
-  query(): QueryBuilder<TTable, TEntity>
-  where(conditions: WhereConditions): QueryBuilder<TTable, TEntity>
-  whereId(id: string): QueryBuilder<TTable, TEntity>
-  select(...columns: string[]): QueryBuilder<TTable, TEntity>
-  orderBy(column: string, direction?: 'ASC' | 'DESC'): QueryBuilder<TTable, TEntity>
-  limit(n: number): QueryBuilder<TTable, TEntity>
-  offset(n: number): QueryBuilder<TTable, TEntity>
-  page(page: number, perPage: number): QueryBuilder<TTable, TEntity>
+  query(): QueryBuilder<TTable, TEntity>;
+  where(conditions: WhereConditions): QueryBuilder<TTable, TEntity>;
+  whereId(id: string): QueryBuilder<TTable, TEntity>;
+  select(...columns: string[]): QueryBuilder<TTable, TEntity>;
+  orderBy(column: string, direction?: "ASC" | "DESC"): QueryBuilder<TTable, TEntity>;
+  limit(n: number): QueryBuilder<TTable, TEntity>;
+  offset(n: number): QueryBuilder<TTable, TEntity>;
+  page(page: number, perPage: number): QueryBuilder<TTable, TEntity>;
 
   // Query Operators
   // { eq: 'value' }, { neq: 'value' }, { gt: n }, { gte: n }, { lt: n }, { lte: n }
   // { like: '%pattern%' }, { in: [a, b] }, { nin: [a, b] }, { null: true }
 
   // CRUD Methods
-  async create(data: TNewEntity): Promise<TEntity>
-  async findById(id: string): Promise<TEntity | null>
-  async findByIds(ids: string[]): Promise<TEntity[]>
-  async all(): Promise<TEntity[]>
-  async first(): Promise<TEntity | null>
-  async count(): Promise<number>
-  async exists(): Promise<boolean>
-  async update(id: string, data: Partial<TNewEntity>): Promise<TEntity>
-  async delete(id: string): Promise<void>
+  async create(data: TNewEntity): Promise<TEntity>;
+  async findById(id: string): Promise<TEntity | null>;
+  async findByIds(ids: string[]): Promise<TEntity[]>;
+  async all(): Promise<TEntity[]>;
+  async first(): Promise<TEntity | null>;
+  async count(): Promise<number>;
+  async exists(): Promise<boolean>;
+  async update(id: string, data: Partial<TNewEntity>): Promise<TEntity>;
+  async delete(id: string): Promise<void>;
 
   // Lifecycle Actions
-  async trash(id: string): Promise<void>     // Soft delete
-  async restore(id: string): Promise<void>   // Restore
-  async purge(id: string): Promise<void>   // Hard delete
+  async trash(id: string): Promise<void>; // Soft delete
+  async restore(id: string): Promise<void>; // Restore
+  async purge(id: string): Promise<void>; // Hard delete
 
   // Relationships
-  hasMany(name: string, config: RelationshipConfig): void
-  belongsTo(name: string, config: RelationshipConfig): void
-  hasOne(name: string, config: RelationshipConfig): void
+  hasMany(name: string, config: RelationshipConfig): void;
+  belongsTo(name: string, config: RelationshipConfig): void;
+  hasOne(name: string, config: RelationshipConfig): void;
 
   // Joins
-  join(table: TTable, on: string): QueryBuilder<TTable, TEntity>
-  leftJoin(table: TTable, on: string): QueryBuilder<TTable, TEntity>
+  join(table: TTable, on: string): QueryBuilder<TTable, TEntity>;
+  leftJoin(table: TTable, on: string): QueryBuilder<TTable, TEntity>;
 }
 ```
 
@@ -1122,10 +1090,7 @@ Consistency boundary for event sourcing.
 **Connection**: This layer → Event Store (only)
 
 ```typescript
-export class BaseAggregate<
-  TState,
-  TEvent
-> {
+export class BaseAggregate<TState, TEvent> {
   protected id!: string;
   protected version: number = 0;
   protected state!: TState;
@@ -1146,20 +1111,20 @@ export class BaseAggregate<
   static snapshotTriggers: Array<(version: number) => boolean> = [];
 
   // Command methods
-  apply(event: TEvent): void     // Apply event to state
-  commit(): TEvent[]             // Get committed events
+  apply(event: TEvent): void; // Apply event to state
+  commit(): TEvent[]; // Get committed events
 
   // Lifecycle
-  async afterCommand(): Promise<void>    // Save events to store
-  async applyEvent(event: TEvent): void  // Apply event to state
+  async afterCommand(): Promise<void>; // Save events to store
+  async applyEvent(event: TEvent): void; // Apply event to state
 
   // State rebuilding
-  static async load(id: string): Promise<BaseAggregate<TState, TEvent>>
-  static async loadFromSnapshot(id: string): Promise<BaseAggregate<TState, TEvent>>
+  static async load(id: string): Promise<BaseAggregate<TState, TEvent>>;
+  static async loadFromSnapshot(id: string): Promise<BaseAggregate<TState, TEvent>>;
 
   // Snapshot
-  async createSnapshot(): Promise<void>
-  static async fromSnapshot(snapshot: any): BaseAggregate<TState, TEvent>
+  async createSnapshot(): Promise<void>;
+  static async fromSnapshot(snapshot: any): BaseAggregate<TState, TEvent>;
 }
 ```
 
@@ -1172,11 +1137,7 @@ Optimized "fast-path" reads.
 **References**: RCSM pattern - calls ONE projection only.
 
 ```typescript
-export class BaseQueryController<
-  TEnv,
-  TCtx,
-  TProjection extends BaseQueryProjection<any>
-> {
+export class BaseQueryController<TEnv, TCtx, TProjection extends BaseQueryProjection<any>> {
   protected env: TEnv;
   protected ctx: TCtx;
   protected projection!: TProjection;
@@ -1200,14 +1161,14 @@ export class BaseQueryController<
   static outputFormats: Array<(result: any) => Promise<any>> = [];
 
   // Lifecycle
-  async beforeFetch(query: any): Promise<any>
-  async afterFetch(result: any): Promise<any>
+  async beforeFetch(query: any): Promise<any>;
+  async afterFetch(result: any): Promise<any>;
 
   // Query methods
-  async getById(id: string): Promise<any>
-  async getByIds(ids: string[]): Promise<any[]>
-  async list(params?: QueryParams): Promise<any[]>
-  async paginate(page: number, perPage: number): Promise<PaginatedResult>
+  async getById(id: string): Promise<any>;
+  async getByIds(ids: string[]): Promise<any[]>;
+  async list(params?: QueryParams): Promise<any[]>;
+  async paginate(page: number, perPage: number): Promise<PaginatedResult>;
 }
 ```
 
@@ -1218,9 +1179,7 @@ Hydrating view models from events.
 **Connection**: This layer → Persistence (only)
 
 ```typescript
-export class BaseQueryProjection<
-  TEntity
-> {
+export class BaseQueryProjection<TEntity> {
   protected db: any;
   protected tableName: string;
   protected req?: Request;
@@ -1240,21 +1199,21 @@ export class BaseQueryProjection<
   static rebuildTriggers: Array<(entityId: string) => Promise<void>> = [];
 
   // Event handling
-  async onEvent(event: any): Promise<void>   // Handle event
-  async rebuild(entityId: string): Promise<void>  // Rebuild from events
+  async onEvent(event: any): Promise<void>; // Handle event
+  async rebuild(entityId: string): Promise<void>; // Rebuild from events
 
   // Projection methods
-  async upsert(id: string, data: Partial<TEntity>): Promise<void>
-  async update(id: string, data: Partial<TEntity>): Promise<void>
-  async delete(id: string): Promise<void>
-  async findById(id: string): Promise<TEntity | null>
-  async findByIds(ids: string[]): Promise<TEntity[]>
-  async findAll(): Promise<TEntity[]>
-  async findWhere(conditions: Record<string, any>): Promise<TEntity[]>
+  async upsert(id: string, data: Partial<TEntity>): Promise<void>;
+  async update(id: string, data: Partial<TEntity>): Promise<void>;
+  async delete(id: string): Promise<void>;
+  async findById(id: string): Promise<TEntity | null>;
+  async findByIds(ids: string[]): Promise<TEntity[]>;
+  async findAll(): Promise<TEntity[]>;
+  async findWhere(conditions: Record<string, any>): Promise<TEntity[]>;
 
   // Materialized views
-  async materialize(): Promise<void>
-  async refresh(): Promise<void>
+  async materialize(): Promise<void>;
+  async refresh(): Promise<void>;
 }
 ```
 
@@ -1265,9 +1224,7 @@ Cross-context broadcast.
 **Connection**: This layer → Event Bus (only)
 
 ```typescript
-export class BaseIntegrationEvent<
-  T
-> {
+export class BaseIntegrationEvent<T> {
   static readonly name: string;
   static readonly version: number;
   protected eventBus: any;
@@ -1283,10 +1240,10 @@ export class BaseIntegrationEvent<
   static subscribers: Array<(event: T) => Promise<void>> = [];
 
   // Lifecycle
-  async onPublish(event: T): Promise<void>   // Publish event
-  async onReceive(payload: any): Promise<T>   // Receive event
-  async serialize(event: T): Promise<string> // Serialize for transport
-  async deserialize(data: string): Promise<T> // Deserialize
+  async onPublish(event: T): Promise<void>; // Publish event
+  async onReceive(payload: any): Promise<T>; // Receive event
+  async serialize(event: T): Promise<string>; // Serialize for transport
+  async deserialize(data: string): Promise<T>; // Deserialize
 
   // Subscribe - static pattern
   static subscribe(handler: (event: T) => Promise<void>): void;
@@ -1316,9 +1273,13 @@ export class BaseGlobalPlugin {
   static onShutdowns: Array<() => Promise<void>> = [];
 
   // Around hooks (wrap ALL executions)
-  static aroundFeatures: Array<(ctx: FeatureContext, next: () => Promise<any>) => Promise<any>> = [];
-  static aroundControllers: Array<(ctx: ControllerContext, next: () => Promise<any>) => Promise<any>> = [];
-  static aroundServices: Array<(ctx: ServiceContext, next: () => Promise<any>) => Promise<any>> = [];
+  static aroundFeatures: Array<(ctx: FeatureContext, next: () => Promise<any>) => Promise<any>> =
+    [];
+  static aroundControllers: Array<
+    (ctx: ControllerContext, next: () => Promise<any>) => Promise<any>
+  > = [];
+  static aroundServices: Array<(ctx: ServiceContext, next: () => Promise<any>) => Promise<any>> =
+    [];
   static aroundModels: Array<(ctx: ModelContext, next: () => Promise<any>) => Promise<any>> = [];
 
   // Before hooks
@@ -1334,8 +1295,8 @@ export class BaseGlobalPlugin {
   afterModelSaves: Array<(ctx: ModelContext, result: any) => Promise<void>> = [];
 
   // Lifecycle
-  async onInit(): Promise<void>        // Startup
-  async onShutdown(): Promise<void>    // Cleanup
+  async onInit(): Promise<void>; // Startup
+  async onShutdown(): Promise<void>; // Cleanup
 
   // Around hooks (wrap execution)
   async aroundFeature(ctx: FeatureContext, next: () => Promise<any>): Promise<any>;
@@ -1360,7 +1321,7 @@ export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, Place
 
   constructor(input: PlaceOrderInput, env: Env) {
     super(input, env);
-    
+
     // Initialize RPC references
     this.ordersRpc = new OrdersRpc(input);
     this.paymentsRpc = new PaymentsRpc(input);
@@ -1372,21 +1333,21 @@ export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, Place
 
   async prepare(input: PlaceOrderInput): Promise<PreparedData> {
     // Gather data using multiple RPC calls
-    const user = await this.usersRpc.dispatch('show', input.userId);
-    const products = await this.productsRpc.dispatch('findByIds', input.productIds);
+    const user = await this.usersRpc.dispatch("show", input.userId);
+    const products = await this.productsRpc.dispatch("findByIds", input.productIds);
     return { user, products };
   }
 
   async execute(prepared: PreparedData): PlaceOrderOutput {
     // Orchestrate multiple RCSM operations
-    const order = await this.ordersRpc.dispatch('create', prepared);
-    await this.paymentsRpc.dispatch('charge', { orderId: order.id, amount: order.total });
-    await this.inventoryRpc.dispatch('decrement', { products: prepared.products });
+    const order = await this.ordersRpc.dispatch("create", prepared);
+    await this.paymentsRpc.dispatch("charge", { orderId: order.id, amount: order.total });
+    await this.inventoryRpc.dispatch("decrement", { products: prepared.products });
     return order;
   }
 
   async finalize(output: PlaceOrderOutput): Promise<void> {
-    await this.notificationsRpc.dispatch('send', { orderId: output.id });
+    await this.notificationsRpc.dispatch("send", { orderId: output.id });
   }
 }
 ```
@@ -1433,9 +1394,7 @@ Port implementation (gateways).
 **Connection**: This layer → Port Interface (only)
 
 ```typescript
-export class BaseInfrastructureAdapter<
-  TPort
-> {
+export class BaseInfrastructureAdapter<TPort> {
   protected config: Record<string, any>;
   protected client?: any;
 
@@ -1450,14 +1409,14 @@ export class BaseInfrastructureAdapter<
   static circuitBreakers: CircuitBreakerConfig = {};
 
   // Lifecycle
-  async onConnect(): Promise<void>       // Initialize
-  async onDisconnect(): Promise<void>   // Cleanup
+  async onConnect(): Promise<void>; // Initialize
+  async onDisconnect(): Promise<void>; // Cleanup
 
   // Circuit breaker pattern
   protected async withCircuitBreaker(
     fn: () => Promise<any>,
-    options?: CircuitBreakerOptions
-  ): Promise<any>
+    options?: CircuitBreakerOptions,
+  ): Promise<any>;
 }
 ```
 
@@ -1483,18 +1442,18 @@ export class BasePersistence {
   static transactionLogs: Array<(fn: () => Promise<any>) => Promise<any>> = [];
 
   // Query lifecycle
-  async onQuery(sql: string, params: any[]): Promise<any>
-  async onTransaction(fn: () => Promise<any>): Promise<any>
+  async onQuery(sql: string, params: any[]): Promise<any>;
+  async onTransaction(fn: () => Promise<any>): Promise<any>;
 
   // Connection
-  async connect(): Promise<void>
-  async disconnect(): Promise<void>
+  async connect(): Promise<void>;
+  async disconnect(): Promise<void>;
 
   // Raw queries
-  async raw(sql: string, params?: any[]): Promise<any>
-  async all(sql: string, params?: any[]): Promise<any[]>
-  async get(sql: string, params?: any[]): Promise<any>
-  async run(sql: string, params?: any[]): Promise<{ changes: number }>
+  async raw(sql: string, params?: any[]): Promise<any>;
+  async all(sql: string, params?: any[]): Promise<any[]>;
+  async get(sql: string, params?: any[]): Promise<any>;
+  async run(sql: string, params?: any[]): Promise<{ changes: number }>;
 }
 ```
 
@@ -1505,9 +1464,7 @@ JSX view rendering.
 **Connection**: This layer → receives data, returns JSX
 
 ```typescript
-export class BaseView<
-  TProps
-> {
+export class BaseView<TProps> {
   protected props!: TProps;
 
   // Constructor (expected input)
@@ -1520,7 +1477,7 @@ export class BaseView<
   static afterRenders: Array<(jsx: JSX.Element) => Promise<JSX.Element>> = [];
 
   // Abstract - implement in subclass
-  render(): JSX.Element
+  render(): JSX.Element;
 
   // Static children (convention)
   protected static Header: JSX.Element;
@@ -1535,9 +1492,7 @@ HTML layout.
 **Connection**: This layer → wraps Views
 
 ```typescript
-export class BaseLayout<
-  TData
-> {
+export class BaseLayout<TData> {
   protected data!: TData;
 
   // Constructor (expected input)
@@ -1547,16 +1502,16 @@ export class BaseLayout<
 
   // Static plugin points
   static layouts: Record<string, any> = {};
-  static defaultLayout: string = 'default';
+  static defaultLayout: string = "default";
 
   // Core slots (convention)
-  protected head(): JSX.Element;        // <head> content
-  protected body(content: string): JSX.Element;  // <body> wrapper
-  protected scripts(): JSX.Element;    // <script> tags
-  protected styles(): JSX.Element;   // <style> tags
+  protected head(): JSX.Element; // <head> content
+  protected body(content: string): JSX.Element; // <body> wrapper
+  protected scripts(): JSX.Element; // <script> tags
+  protected styles(): JSX.Element; // <style> tags
 
   // Render
-  render(content: string, data: TData): JSX.Element
+  render(content: string, data: TData): JSX.Element;
 }
 ```
 
@@ -1571,46 +1526,46 @@ The language of the system (immutable types).
 export class BaseSharedKernel {
   // Money (immutable)
   static Money: {
-    create(amount: number, currency: string): Readonly<Money>
-    add(a: Money, b: Money): Money
-    subtract(a: Money, b: Money): Money
-    multiply(a: Money, factor: number): Money
-    divide(a: Money, factor: number): Money
-    zero(currency: string): Money
-    isZero(money: Money): boolean
-    equals(a: Money, b: Money): boolean
-    format(money: Money, locale?: string): string
-  }
+    create(amount: number, currency: string): Readonly<Money>;
+    add(a: Money, b: Money): Money;
+    subtract(a: Money, b: Money): Money;
+    multiply(a: Money, factor: number): Money;
+    divide(a: Money, factor: number): Money;
+    zero(currency: string): Money;
+    isZero(money: Money): boolean;
+    equals(a: Money, b: Money): boolean;
+    format(money: Money, locale?: string): string;
+  };
 
   // CustomerId (immutable)
   static CustomerId: {
-    generate(): string
-    validate(id: string): boolean
-    isValid(id: string): boolean
-  }
+    generate(): string;
+    validate(id: string): boolean;
+    isValid(id: string): boolean;
+  };
 
   // Address (immutable)
   static Address: {
-    create(data: AddressData): Readonly<Address>
-    format(address: Address): string
-    equals(a: Address, b: Address): boolean
-    isEmpty(address: Address): boolean
-  }
+    create(data: AddressData): Readonly<Address>;
+    format(address: Address): string;
+    equals(a: Address, b: Address): boolean;
+    isEmpty(address: Address): boolean;
+  };
 
   // DateRange (immutable)
   static DateRange: {
-    create(start: Date, end: Date): Readonly<DateRange>
-    contains(range: DateRange, date: Date): boolean
-    overlaps(a: DateRange, b: DateRange): boolean
-    duration(range: DateRange): number // milliseconds
-    isInverse(range: DateRange): boolean
-  }
+    create(start: Date, end: Date): Readonly<DateRange>;
+    contains(range: DateRange, date: Date): boolean;
+    overlaps(a: DateRange, b: DateRange): boolean;
+    duration(range: DateRange): number; // milliseconds
+    isInverse(range: DateRange): boolean;
+  };
 
   // Pagination
   static Pagination: {
-    create(page: number, perPage: number, total: number): Readonly<Pagination>
-    fromOffset(offset: number, limit: number): Readonly<Pagination>
-  }
+    create(page: number, perPage: number, total: number): Readonly<Pagination>;
+    fromOffset(offset: number, limit: number): Readonly<Pagination>;
+  };
 }
 ```
 
@@ -1624,11 +1579,11 @@ export class BaseSharedKernel {
 // app/contexts/sales/api/rpc/orders.rpc.ts
 export class OrdersRpcServer extends BaseRpcServer<Env, RouterContext> {
   async onInbound(input: PlaceOrderInput) {
-    return this.routeToFeature('place-order', input);
+    return this.routeToFeature("place-order", input);
   }
 
   async onInbound(input: GetOrderInput) {
-    return this.routeToFeature('get-order', input);
+    return this.routeToFeature("get-order", input);
   }
 }
 ```
@@ -1640,25 +1595,25 @@ export class OrdersRpcServer extends BaseRpcServer<Env, RouterContext> {
 export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, PlaceOrderOutput> {
   async validate(input: PlaceOrderInput): Promise<void> {
     if (!input.items?.length) {
-      throw new ValidationError('No items in order');
+      throw new ValidationError("No items in order");
     }
   }
 
   async prepare(input: PlaceOrderInput): Promise<PreparedData> {
     return {
       user: await userController.show(input.userId),
-      products: await productController.index(input.productIds)
+      products: await productController.index(input.productIds),
     };
   }
 
   async execute(prepared: PreparedData): PlaceOrderOutput {
-    const order = await this.internalRpc('orders.create', prepared);
-    await this.internalRpc('payments.charge', order);
+    const order = await this.internalRpc("orders.create", prepared);
+    await this.internalRpc("payments.charge", order);
     return order;
   }
 
   async finalize(output: PlaceOrderOutput): Promise<void> {
-    await this.events.emit('order.placed', output);
+    await this.events.emit("order.placed", output);
   }
 }
 ```
@@ -1689,7 +1644,7 @@ export class OrdersController extends BaseController {
 
   async create(params: CreateOrderParams) {
     const order = await this.service.create(params);
-    await this.runHook('afterAction', order);
+    await this.runHook("afterAction", order);
     return order;
   }
 }
@@ -1708,7 +1663,7 @@ export class OrdersService extends BaseService {
 
   async create(data: CreateOrderData) {
     const order = await this.model.create(data);
-    await this.runHook('afterCreate', order);
+    await this.runHook("afterCreate", order);
     return order;
   }
 }
@@ -1726,7 +1681,7 @@ export class OrderModel extends BaseModel<typeof orders> {
   }
 
   async afterCreate(order: Order) {
-    await this.events.emit('order.created', order);
+    await this.events.emit("order.created", order);
   }
 }
 ```
@@ -1759,7 +1714,7 @@ export class OrderListProjection extends BaseQueryProjection {
     await this.upsert({
       orderId: event.orderId,
       total: event.total,
-      status: 'placed'
+      status: "placed",
     });
   }
 }
@@ -1789,7 +1744,7 @@ Cross-context broadcast.
 ```typescript
 // app/contexts/sales/api/events/order-placed.ts
 export class OrderPlacedEvent extends BaseIntegrationEvent {
-  static readonly name = 'sales.order-placed';
+  static readonly name = "sales.order-placed";
 
   async onPublish(event: any) {
     await this.eventBus.publish(this.name, event);
@@ -1809,7 +1764,7 @@ Cross-cutting concerns.
 // app/plugins/global/auth-plugin.ts
 export class AuthPlugin extends BaseGlobalPlugin {
   async onInit() {
-    this.registerHook('aroundFeature', this.authenticateFeature);
+    this.registerHook("aroundFeature", this.authenticateFeature);
   }
 
   private async authenticateFeature(ctx: FeatureContext, next: () => Promise<any>) {
@@ -1896,18 +1851,18 @@ export class StripeAdapter extends BaseInfrastructureAdapter implements IPayment
 
 ### Hook Types
 
-| Hook | Layer | Purpose |
-|------|-------|---------|
-| `onInit` | Global | Startup initialization |
-| `aroundFeature` | Global | Wrap feature execution |
-| `beforeExecute` | Feature | Pre-execution logic |
-| `afterExecute` | Feature | Post-execution logic |
-| `beforeAction` | Controller | Pre-action logic |
-| `afterAction` | Controller | Post-action logic |
-| `beforeCreate` | Service | Pre-create logic |
-| `afterCreate` | Service | Post-create logic |
-| `beforeSave` | Model | Pre-save logic |
-| `afterCreate` | Model | Post-create logic |
+| Hook            | Layer      | Purpose                |
+| --------------- | ---------- | ---------------------- |
+| `onInit`        | Global     | Startup initialization |
+| `aroundFeature` | Global     | Wrap feature execution |
+| `beforeExecute` | Feature    | Pre-execution logic    |
+| `afterExecute`  | Feature    | Post-execution logic   |
+| `beforeAction`  | Controller | Pre-action logic       |
+| `afterAction`   | Controller | Post-action logic      |
+| `beforeCreate`  | Service    | Pre-create logic       |
+| `afterCreate`   | Service    | Post-create logic      |
+| `beforeSave`    | Model      | Pre-save logic         |
+| `afterCreate`   | Model      | Post-create logic      |
 
 ---
 
@@ -1916,12 +1871,14 @@ export class StripeAdapter extends BaseInfrastructureAdapter implements IPayment
 Nomo provides **Rails-like happiness** with **architectural escape hatches**:
 
 ### Core Features
+
 - **Double-Gate RPC**: Predictable security gates
 - **Standard Gauge**: Clear layer responsibilities
 - **Auto-routing**: Convention over configuration
 - **Auto-hooks**: Null implementation pattern
 
 ### Progression Path
+
 1. **Start simple**: Just handlers + validators
 2. **Add hooks when needed**: New requirement? Add a plugin
 3. **Add events sparingly**: Only when multiple features need to react
@@ -1929,6 +1886,7 @@ Nomo provides **Rails-like happiness** with **architectural escape hatches**:
 5. **Extract workers**: When a feature gets heavy, split into its own Worker
 
 This architecture handles every case:
+
 - Simple CRUD? Use RCSM directly
 - Complex workflow? Use Features
 - Need to scale one area? Extract a Context

@@ -28,11 +28,11 @@ npx flue run src/agents/assistant.ts -m "Say hello"
 
 ## Commands
 
-* [flue init \[directory\]](https://flueframework.com/docs/cli/init/) — scaffold a starter Flue project, prompting for the build target and server setup when flags are omitted.
-* [flue run <path>](https://flueframework.com/docs/cli/run/) — run one agent module locally without a server: submit one message, stream the turn, print the reply, exit.
-* [flue add \[kind\] \[name|url\]](https://flueframework.com/docs/cli/add/) — fetch a blueprint implementation guide for a coding agent to follow; with no arguments, list the available blueprints.
-* [flue update <kind> <name|url>](https://flueframework.com/docs/cli/update/) — fetch the same blueprint guide for updating an existing integration.
-* [flue docs \[read|search\]](https://flueframework.com/docs/cli/docs/) — list the bundled documentation pages, print one as markdown, or search them.
+- [flue init \[directory\]](https://flueframework.com/docs/cli/init/) — scaffold a starter Flue project, prompting for the build target and server setup when flags are omitted.
+- [flue run <path>](https://flueframework.com/docs/cli/run/) — run one agent module locally without a server: submit one message, stream the turn, print the reply, exit.
+- [flue add \[kind\] \[name|url\]](https://flueframework.com/docs/cli/add/) — fetch a blueprint implementation guide for a coding agent to follow; with no arguments, list the available blueprints.
+- [flue update <kind> <name|url>](https://flueframework.com/docs/cli/update/) — fetch the same blueprint guide for updating an existing integration.
+- [flue docs \[read|search\]](https://flueframework.com/docs/cli/docs/) — list the bundled documentation pages, print one as markdown, or search them.
 
 Each command page is the reference for that command’s arguments, flags, and output. Every command prints its primary payload to stdout and everything else — prompts, streaming output, errors — to stderr, so piping stdout is always safe.
 
@@ -51,17 +51,17 @@ Current page: [CLI](https://flueframework.com/docs/cli/overview/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### CLI
 
-* [Overview](https://flueframework.com/docs/cli/overview/)
-* [init](https://flueframework.com/docs/cli/init/)
-* [run](https://flueframework.com/docs/cli/run/)
-* [add](https://flueframework.com/docs/cli/add/)
-* [update](https://flueframework.com/docs/cli/update/)
-* [docs](https://flueframework.com/docs/cli/docs/)
+- [Overview](https://flueframework.com/docs/cli/overview/)
+- [init](https://flueframework.com/docs/cli/init/)
+- [run](https://flueframework.com/docs/cli/run/)
+- [add](https://flueframework.com/docs/cli/add/)
+- [update](https://flueframework.com/docs/cli/update/)
+- [docs](https://flueframework.com/docs/cli/docs/)

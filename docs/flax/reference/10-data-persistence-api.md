@@ -26,9 +26,9 @@ interface PersistenceAdapter {
 
 Adapter packages export a factory function returning this interface; users default-export the result from `db.ts`. The built-in reference implementation is `sqlite(path?: string)` from `@flue/runtime/node`.
 
-* `connect()` — open the database and return every store. Awaited once at startup, so async pool setup, remote handshakes, and — for adapters without `migrate` — the format-version check belong here. An unreachable database fails at boot, not inside the first request.
-* `migrate()` — bring the store to the current format version. Called once at startup, before `connect()`. Creates any missing schema, durably records the format version when the store is first created, and fails loudly when the store records an unknown or newer version. Adapters that create schema implicitly may omit it, but must uphold the versioning obligation in their store-creating paths.
-* `close()` — release resources (connection pools, file handles). Called on shutdown.
+- `connect()` — open the database and return every store. Awaited once at startup, so async pool setup, remote handshakes, and — for adapters without `migrate` — the format-version check belong here. An unreachable database fails at boot, not inside the first request.
+- `migrate()` — bring the store to the current format version. Called once at startup, before `connect()`. Creates any missing schema, durably records the format version when the store is first created, and fails loudly when the store records an unknown or newer version. Adapters that create schema implicitly may omit it, but must uphold the versioning obligation in their store-creating paths.
+- `close()` — release resources (connection pools, file handles). Called on shutdown.
 
 ## `PersistenceStores`
 
@@ -40,9 +40,9 @@ interface PersistenceStores {
 }
 ```
 
-* `submissionStore` — durable submission lifecycle storage.
-* `conversationStreamStore` — canonical per-agent-instance conversation streams.
-* `attachmentStore` — immutable attachment bytes referenced by canonical conversation records.
+- `submissionStore` — durable submission lifecycle storage.
+- `conversationStreamStore` — canonical per-agent-instance conversation streams.
+- `attachmentStore` — immutable attachment bytes referenced by canonical conversation records.
 
 ## `AgentSubmissionStore`
 
@@ -103,41 +103,41 @@ The supporting types — `AgentSubmission`, `SubmissionAttemptRef`, `SubmissionC
 
 Query methods:
 
-* `getSubmission` — the submission, or `null` when the id is unknown.
-* `hasUnsettledSubmissions` — `true` while any submission is queued, running, or joining/joined.
-* `listRunnableSubmissions` — queued submissions that are each the oldest unsettled submission of their session, in admission order; at most one runnable head exists per session.
-* `listUnreadySubmissions` — queued submissions without canonical readiness, in admission order.
-* `listRunningSubmissions` — all running submissions, in admission order.
-* `listPendingSubmissionSettlements` — settlement obligations reserved but not yet finalized.
-* `replaceSubmissionAttempt` — recovery handoff: atomically move a running submission to a new attempt id, increment `attemptCount`, and install the new lease when given; `null` without writing when the submission is not running under `attempt`.
+- `getSubmission` — the submission, or `null` when the id is unknown.
+- `hasUnsettledSubmissions` — `true` while any submission is queued, running, or joining/joined.
+- `listRunnableSubmissions` — queued submissions that are each the oldest unsettled submission of their session, in admission order; at most one runnable head exists per session.
+- `listUnreadySubmissions` — queued submissions without canonical readiness, in admission order.
+- `listRunningSubmissions` — all running submissions, in admission order.
+- `listPendingSubmissionSettlements` — settlement obligations reserved but not yet finalized.
+- `replaceSubmissionAttempt` — recovery handoff: atomically move a running submission to a new attempt id, increment `attemptCount`, and install the new lease when given; `null` without writing when the submission is not running under `attempt`.
 
 Admission methods:
 
-* `admitDispatch` — idempotent admission keyed by submission id: an exact replay returns the already-admitted submission, the same id with a different payload returns `{ kind: 'conflict' }`, and an id matching a retained receipt returns `{ kind: 'retained_receipt' }` without re-admitting.
-* `admitDirect` — admit a direct prompt as a queued submission; idempotent for an exact replay of the same submission id and payload.
-* `markSubmissionCanonicalReady` — mark a queued submission’s canonical conversation as materialized; idempotent while queued, `null` when missing or no longer queued.
+- `admitDispatch` — idempotent admission keyed by submission id: an exact replay returns the already-admitted submission, the same id with a different payload returns `{ kind: 'conflict' }`, and an id matching a retained receipt returns `{ kind: 'retained_receipt' }` without re-admitting.
+- `admitDirect` — admit a direct prompt as a queued submission; idempotent for an exact replay of the same submission id and payload.
+- `markSubmissionCanonicalReady` — mark a queued submission’s canonical conversation as materialized; idempotent while queued, `null` when missing or no longer queued.
 
 Lifecycle methods:
 
-* `claimSubmission` — atomic compare-and-set from queued to running, only when the submission is the runnable head of its session; records attempt, owner, lease, and start time. Two concurrent claims must never both succeed.
-* `markSubmissionInputApplied` — install the durability budget (or defaults) once, at first input application, stamping `inputAppliedAt` as the once-guard; gated on a running submission owned by `attempt`. The stamp is bookkeeping — the canonical stream, not this timestamp, is the truth about whether input was persisted.
-* `requestSessionAbort` — stamp `abortRequestedAt` (first request wins) on every unsettled submission in the session and return their ids. Never settles anything and never changes `status`; terminal settlement always happens through an attempt-based path.
-* `requeueSubmission` — return a running submission to queued for a clean first attempt, clearing attempt, owner, lease, and durability stamp; gated only on ownership.
-* `reserveSubmissionSettlement` — atomically reserve the exact canonical settlement record as an obligation (status becomes `terminalizing`); exact retries return the existing obligation, conflicting record identities or payloads return `null`.
-* `finalizeSubmissionSettlement` — finalize an owned terminalizing submission after its canonical record exists; the row’s error column mirrors the settlement outcome.
-* `completeSubmission` / `failSubmission` — settle an owned running submission; a stale attempt or an already-settled submission returns `false` and the first terminal state is preserved. Settling a host atomically settles every `joined` submission attached to it with the same outcome, and reverts any unconfirmed `joining` stragglers to `queued`.
+- `claimSubmission` — atomic compare-and-set from queued to running, only when the submission is the runnable head of its session; records attempt, owner, lease, and start time. Two concurrent claims must never both succeed.
+- `markSubmissionInputApplied` — install the durability budget (or defaults) once, at first input application, stamping `inputAppliedAt` as the once-guard; gated on a running submission owned by `attempt`. The stamp is bookkeeping — the canonical stream, not this timestamp, is the truth about whether input was persisted.
+- `requestSessionAbort` — stamp `abortRequestedAt` (first request wins) on every unsettled submission in the session and return their ids. Never settles anything and never changes `status`; terminal settlement always happens through an attempt-based path.
+- `requeueSubmission` — return a running submission to queued for a clean first attempt, clearing attempt, owner, lease, and durability stamp; gated only on ownership.
+- `reserveSubmissionSettlement` — atomically reserve the exact canonical settlement record as an obligation (status becomes `terminalizing`); exact retries return the existing obligation, conflicting record identities or payloads return `null`.
+- `finalizeSubmissionSettlement` — finalize an owned terminalizing submission after its canonical record exists; the row’s error column mirrors the settlement outcome.
+- `completeSubmission` / `failSubmission` — settle an owned running submission; a stale attempt or an already-settled submission returns `false` and the first terminal state is preserved. Settling a host atomically settles every `joined` submission attached to it with the same outcome, and reverts any unconfirmed `joining` stragglers to `queued`.
 
 Turn-boundary join methods (dispatch-while-busy):
 
-* `claimJoinableSubmissions` — atomically claim the contiguous prefix of the session’s queued submissions for absorption into the host’s live response (`queued → joining`, `joinedInto` set); gated on the host still running under its attempt, so a replaced attempt claims nothing.
-* `finalizeJoinedSubmission` — confirm a claimed join once the delivery’s canonical input record is durable (`joining → joined`).
-* `revertJoiningSubmission` — hand a claimed-but-unconfirmed join back to the queue (`joining → queued`); legal only while the delivery’s canonical input record does not exist.
-* `listJoinedSubmissions` — every unsettled join attached to the host, in admission order.
+- `claimJoinableSubmissions` — atomically claim the contiguous prefix of the session’s queued submissions for absorption into the host’s live response (`queued → joining`, `joinedInto` set); gated on the host still running under its attempt, so a replaced attempt claims nothing.
+- `finalizeJoinedSubmission` — confirm a claimed join once the delivery’s canonical input record is durable (`joining → joined`).
+- `revertJoiningSubmission` — hand a claimed-but-unconfirmed join back to the queue (`joining → queued`); legal only while the delivery’s canonical input record does not exist.
+- `listJoinedSubmissions` — every unsettled join attached to the host, in admission order.
 
 Lease methods:
 
-* `renewLeases` — extend the lease expiry (now + `LEASE_DURATION_MS`) for each listed submission that is running and owned by `ownerId`; others are silently skipped.
-* `listExpiredSubmissions` — running submissions whose lease has expired; queued and settled submissions are never returned.
+- `renewLeases` — extend the lease expiry (now + `LEASE_DURATION_MS`) for each listed submission that is running and owned by `ownerId`; others are silently skipped.
+- `listExpiredSubmissions` — running submissions whose lease has expired; queued and settled submissions are never returned.
 
 Exported constants: `DURABILITY_DEFAULT_MAX_ATTEMPTS` (`10`), `DURABILITY_DEFAULT_TIMEOUT_MS` (`3_600_000`), `LEASE_DURATION_MS` (`30_000`).
 
@@ -172,13 +172,13 @@ interface ConversationStreamStore {
 }
 ```
 
-* `createStream` — create the stream if absent, minting a fresh incarnation id. Racing creates with the same identity both succeed; a conflicting identity for an existing path throws.
-* `acquireProducer` — take exclusive producership: increments the producer epoch, resets the producer sequence, and returns a claim carrying the epoch, incarnation, and current head offset. Acquisition fences every prior producer.
-* `append` — append one batch of records under one offset. Requires a current producer id, epoch, and incarnation, and the next expected `producerSequence`. An exact retry of an already-appended sequence returns the original offset; a conflicting retry throws. Records carrying `submissionId`/`attemptId` require a `submission` authorization that owns them. Every record in the batch persists together, all-or-nothing — a partial write corrupts the conversation graph.
-* `read` — batches strictly after `options.offset` (default `'-1'`, the start). The sentinel `'now'` returns no batches and the current head as `nextOffset`. `limit` is clamped between `DEFAULT_READ_LIMIT` (`100`) and `MAX_READ_LIMIT` (`1000`). An offset beyond the head throws; an unknown path returns an empty, up-to-date result.
-* `getMeta` — the stream’s identity, incarnation, head offset, and producer state, or `null` for an unknown path.
-* `subscribe` — register a process-local change listener for a path; returns an unsubscribe function. Notification is best-effort in-process fan-out, not a durable or cross-process signal.
-* `putFoldCheckpoint` / `getFoldCheckpoint` — optional fold-checkpoint capability: one durable serialized-fold snapshot per path, superseded on each write, so loads fold only the suffix appended since it instead of replaying the stream from the origin. A checkpoint is a cache over the log, never authoritative — the runtime validates its format version, incarnation, and offset on load and silently rebuilds by replay when anything mismatches. Adapters without the pair stay fully functional; the runtime degrades to full replay and warns once per path. Implementations must be torn-write safe: a partially persisted checkpoint must read back as absent or fail the read, never as a plausible blob. `getFoldCheckpoint` with `atOrBefore` returns the checkpoint only when its offset is at or before the bound.
+- `createStream` — create the stream if absent, minting a fresh incarnation id. Racing creates with the same identity both succeed; a conflicting identity for an existing path throws.
+- `acquireProducer` — take exclusive producership: increments the producer epoch, resets the producer sequence, and returns a claim carrying the epoch, incarnation, and current head offset. Acquisition fences every prior producer.
+- `append` — append one batch of records under one offset. Requires a current producer id, epoch, and incarnation, and the next expected `producerSequence`. An exact retry of an already-appended sequence returns the original offset; a conflicting retry throws. Records carrying `submissionId`/`attemptId` require a `submission` authorization that owns them. Every record in the batch persists together, all-or-nothing — a partial write corrupts the conversation graph.
+- `read` — batches strictly after `options.offset` (default `'-1'`, the start). The sentinel `'now'` returns no batches and the current head as `nextOffset`. `limit` is clamped between `DEFAULT_READ_LIMIT` (`100`) and `MAX_READ_LIMIT` (`1000`). An offset beyond the head throws; an unknown path returns an empty, up-to-date result.
+- `getMeta` — the stream’s identity, incarnation, head offset, and producer state, or `null` for an unknown path.
+- `subscribe` — register a process-local change listener for a path; returns an unsubscribe function. Notification is best-effort in-process fan-out, not a durable or cross-process signal.
+- `putFoldCheckpoint` / `getFoldCheckpoint` — optional fold-checkpoint capability: one durable serialized-fold snapshot per path, superseded on each write, so loads fold only the suffix appended since it instead of replaying the stream from the origin. A checkpoint is a cache over the log, never authoritative — the runtime validates its format version, incarnation, and offset on load and silently rebuilds by replay when anything mismatches. Adapters without the pair stay fully functional; the runtime degrades to full replay and warns once per path. Implementations must be torn-write safe: a partially persisted checkpoint must read back as absent or fail the read, never as a plausible blob. `getFoldCheckpoint` with `atOrBefore` returns the checkpoint only when its offset is at or before the bound.
 
 Offsets are opaque strings ordered by the stream; `formatOffset` and `parseOffset` convert between offset strings and integer sequence numbers. `defineSqlConversationStreamStore(dialect: SqlConversationDialect)` builds a complete `ConversationStreamStore` over an async SQL backend — the Postgres, libSQL, and MySQL adapters share one fence implementation and differ only in dialect constants. `InMemoryConversationStreamStore` and `StreamListenerRegistry` are exported as reference building blocks.
 
@@ -193,8 +193,8 @@ interface AttachmentStore {
 }
 ```
 
-* `put` — store the bytes for an attachment id within a stream. Idempotent: an exact re-`put` (same ref, bytes, and conversation) succeeds, including concurrent exact puts. Reusing an id with different content, metadata, or ownership throws `AttachmentConflictError`. Bytes are verified against the ref’s `size` and `digest`; a mismatch throws `AttachmentIntegrityError`.
-* `get` — the stored attachment and bytes, or `null` when the id is unknown or the `conversationId` does not match. Integrity is verified on read.
+- `put` — store the bytes for an attachment id within a stream. Idempotent: an exact re-`put` (same ref, bytes, and conversation) succeeds, including concurrent exact puts. Reusing an id with different content, metadata, or ownership throws `AttachmentConflictError`. Bytes are verified against the ref’s `size` and `digest`; a mismatch throws `AttachmentIntegrityError`.
+- `get` — the stored attachment and bytes, or `null` when the id is unknown or the `conversationId` does not match. Integrity is verified on read.
 
 Helpers: `createAttachmentRef` builds a ref (computing the SHA-256 `digest`), `verifyAttachmentBytes` checks bytes against a ref, `sameAttachmentRef` compares refs ignoring `filename`, `attachmentBytesEqual` and `copyAttachmentBytes` operate on byte arrays, and `InMemoryAttachmentStore` is a complete reference implementation.
 
@@ -202,12 +202,12 @@ Helpers: `createAttachmentRef` builds a ref (computing the SHA-256 `digest`), `v
 
 Rules that hold across all three stores; the contract suites test each of them.
 
-* **Idempotent admission.** An exact replay of an admission, append, put, or settlement reservation returns the original result; the same identity with different content is a conflict, never a silent overwrite.
-* **Fenced producer claims.** Each conversation stream has at most one live producer. `acquireProducer` invalidates all prior claims; appends carrying a stale epoch or incarnation are rejected. Submission-owned appends additionally require the writing attempt to durably own the submission.
-* **Append-only streams.** Canonical records are never updated or rewritten. A batch is all-or-nothing under a single offset, and offsets are strictly ordered.
-* **First terminal state wins.** A settled submission’s outcome is never overridden — stale attempts observe `false` from the settle methods.
-* **Observable atomicity.** Where a method is described as atomic, concurrent callers must never both observe success; whether that is achieved with transactions, conditional updates, or unique indexes is the adapter’s choice.
-* **Format-version stamping.** An adapter durably records its format version when it first creates the store (current version: `FLUE_FORMAT_VERSION`, `1`) and throws `PersistedFormatVersionError` — before reading or writing any data — when opened against a store recorded with an unknown or newer version. `assertSupportedFlueFormatVersion(storedVersion)` performs the check. The format is reset-only: stores recorded with another version are cleared, never migrated in place. The built-in SQL adapters implement the stamp with a one-row `flue_meta` key/value table (key `'format_version'`); non-SQL adapters implement the same obligation natively.
+- **Idempotent admission.** An exact replay of an admission, append, put, or settlement reservation returns the original result; the same identity with different content is a conflict, never a silent overwrite.
+- **Fenced producer claims.** Each conversation stream has at most one live producer. `acquireProducer` invalidates all prior claims; appends carrying a stale epoch or incarnation are rejected. Submission-owned appends additionally require the writing attempt to durably own the submission.
+- **Append-only streams.** Canonical records are never updated or rewritten. A batch is all-or-nothing under a single offset, and offsets are strictly ordered.
+- **First terminal state wins.** A settled submission’s outcome is never overridden — stale attempts observe `false` from the settle methods.
+- **Observable atomicity.** Where a method is described as atomic, concurrent callers must never both observe success; whether that is achieved with transactions, conditional updates, or unique indexes is the adapter’s choice.
+- **Format-version stamping.** An adapter durably records its format version when it first creates the store (current version: `FLUE_FORMAT_VERSION`, `1`) and throws `PersistedFormatVersionError` — before reading or writing any data — when opened against a store recorded with an unknown or newer version. `assertSupportedFlueFormatVersion(storedVersion)` performs the check. The format is reset-only: stores recorded with another version are cleared, never migrated in place. The built-in SQL adapters implement the stamp with a one-row `flue_meta` key/value table (key `'format_version'`); non-SQL adapters implement the same obligation natively.
 
 ## Contract test suites
 
@@ -218,9 +218,9 @@ import {
   defineAttachmentStoreContractTests,
   defineConversationStreamStoreContractTests,
   defineStoreContractTests,
-} from '@flue/runtime/test-utils';
+} from "@flue/runtime/test-utils";
 
-defineStoreContractTests('My backend', {
+defineStoreContractTests("My backend", {
   async create() {
     return mySubmissionStore;
   },
@@ -230,21 +230,21 @@ defineStoreContractTests('My backend', {
 });
 ```
 
-* `defineStoreContractTests(label, backend)` — the `AgentSubmissionStore` suite: admission, canonical readiness, queue ordering, claims, lifecycle transitions, aborts, settlement obligations, durability stamping, attempt replacement, leases, and turn-boundary joins. `backend.create()` returns an `AgentSubmissionStore`. The optional `backend.formatVersion` group gives the suite raw access to the persisted format-version stamp (`open()` returns a fresh, un-migrated store handle with `migrate`, `readStamp`, `writeStamp`, and `deleteStamp`) and enables the format-version stamping tests.
-* `defineConversationStreamStoreContractTests(label, backend)` — the `ConversationStreamStore` suite: racing creates, ordered atomic batches, idempotent and conflicting retries, producer fencing, submission-owned append authorization, and reads. `backend.create()` returns `{ stream, submissionStore? }`; the submission store is required for the authorization tests. Also importable from `@flue/runtime/test-utils/conversation-stream`.
-* `defineAttachmentStoreContractTests(label, backend)` — the `AttachmentStore` suite: byte round-trips, idempotent and concurrent exact puts, conflict errors on identity reuse, and integrity errors. `backend.create()` returns an `AttachmentStore`. Also importable from `@flue/runtime/test-utils/attachment-store`.
+- `defineStoreContractTests(label, backend)` — the `AgentSubmissionStore` suite: admission, canonical readiness, queue ordering, claims, lifecycle transitions, aborts, settlement obligations, durability stamping, attempt replacement, leases, and turn-boundary joins. `backend.create()` returns an `AgentSubmissionStore`. The optional `backend.formatVersion` group gives the suite raw access to the persisted format-version stamp (`open()` returns a fresh, un-migrated store handle with `migrate`, `readStamp`, `writeStamp`, and `deleteStamp`) and enables the format-version stamping tests.
+- `defineConversationStreamStoreContractTests(label, backend)` — the `ConversationStreamStore` suite: racing creates, ordered atomic batches, idempotent and conflicting retries, producer fencing, submission-owned append authorization, and reads. `backend.create()` returns `{ stream, submissionStore? }`; the submission store is required for the authorization tests. Also importable from `@flue/runtime/test-utils/conversation-stream`.
+- `defineAttachmentStoreContractTests(label, backend)` — the `AttachmentStore` suite: byte round-trips, idempotent and concurrent exact puts, conflict errors on identity reuse, and integrity errors. `backend.create()` returns an `AttachmentStore`. Also importable from `@flue/runtime/test-utils/attachment-store`.
 
 ## Adapter helpers
 
 Pure helper functions exported from `@flue/runtime/adapter`, used by the built-in adapters and available to custom ones:
 
-* `admitSubmissionWithBackend(input, backend)` — the shared admission algorithm for row-oriented backends (receipt check, attachment preparation, insert-or-ignore, read-back, idempotent-replay-vs-conflict comparison, chunk adoption). The caller owns transaction scoping; when every `SubmissionAdmissionBackend` callback is synchronous the result is returned synchronously, fitting synchronous transaction wrappers.
-* `isSubmissionPayload(input, ctx)` — validate a parsed JSON payload against the stored submission metadata (`SubmissionPayloadContext`).
-* `parseAcceptedAt(value, label)` — parse an ISO timestamp to epoch milliseconds; throws on an invalid value.
-* `clampLimit(limit, defaultLimit, maxLimit)` — fall back to the default for invalid or non-positive limits, cap at the maximum.
-* `createSessionStorageKey(agentName, instanceId, harness, session)` / `parseSessionStorageKey(key)` — serialize and parse the session-lane identity that fences queue ordering, abort, and attempt ownership. External submissions always use `SUBMISSION_HARNESS_NAME` and `SUBMISSION_SESSION_NAME` (both `'default'`).
-* `createDispatchAgentSubmissionInput(input)` — convert a `DispatchInput` into the persisted `AgentSubmissionInput` shape.
-* `prepareSubmissionAttachments`, `hydratePersistedSubmissionAttachments`, `matchesPersistedSubmissionAttachments`, `sameSubmissionChunks` — attachment chunking for oversized-row-safe payload storage, keyed by submission id (`SubmissionChunkRow`, `SubmissionChunkStore`).
+- `admitSubmissionWithBackend(input, backend)` — the shared admission algorithm for row-oriented backends (receipt check, attachment preparation, insert-or-ignore, read-back, idempotent-replay-vs-conflict comparison, chunk adoption). The caller owns transaction scoping; when every `SubmissionAdmissionBackend` callback is synchronous the result is returned synchronously, fitting synchronous transaction wrappers.
+- `isSubmissionPayload(input, ctx)` — validate a parsed JSON payload against the stored submission metadata (`SubmissionPayloadContext`).
+- `parseAcceptedAt(value, label)` — parse an ISO timestamp to epoch milliseconds; throws on an invalid value.
+- `clampLimit(limit, defaultLimit, maxLimit)` — fall back to the default for invalid or non-positive limits, cap at the maximum.
+- `createSessionStorageKey(agentName, instanceId, harness, session)` / `parseSessionStorageKey(key)` — serialize and parse the session-lane identity that fences queue ordering, abort, and attempt ownership. External submissions always use `SUBMISSION_HARNESS_NAME` and `SUBMISSION_SESSION_NAME` (both `'default'`).
+- `createDispatchAgentSubmissionInput(input)` — convert a `DispatchInput` into the persisted `AgentSubmissionInput` shape.
+- `prepareSubmissionAttachments`, `hydratePersistedSubmissionAttachments`, `matchesPersistedSubmissionAttachments`, `sameSubmissionChunks` — attachment chunking for oversized-row-safe payload storage, keyed by submission id (`SubmissionChunkRow`, `SubmissionChunkStore`).
 
 The adapter surface is deliberately narrow: store interfaces, vocabulary types, and pure helpers — no runtime orchestration, provider plumbing, or generated-entry internals. The error classes (`ConversationStreamStoreError`, `AttachmentConflictError`, `AttachmentIntegrityError`, `PersistedFormatVersionError`) are documented in [Errors](https://flueframework.com/docs/reference/errors/).
 
@@ -254,24 +254,24 @@ Current page: [Data Persistence API](https://flueframework.com/docs/reference/da
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Runtime
 
-* [Configuration](https://flueframework.com/docs/reference/configuration/)
-* [Errors Reference](https://flueframework.com/docs/reference/errors/)
-* [Agent API](https://flueframework.com/docs/reference/agent-api/)
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
-* [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
-* [Provider API](https://flueframework.com/docs/reference/provider-api/)
-* [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
-* [Events Reference](https://flueframework.com/docs/reference/events/)
+- [Configuration](https://flueframework.com/docs/reference/configuration/)
+- [Errors Reference](https://flueframework.com/docs/reference/errors/)
+- [Agent API](https://flueframework.com/docs/reference/agent-api/)
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
+- [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
+- [Provider API](https://flueframework.com/docs/reference/provider-api/)
+- [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
+- [Events Reference](https://flueframework.com/docs/reference/events/)
 
 ### Advanced
 
-* [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
-* [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)
+- [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
+- [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)

@@ -1,6 +1,8 @@
 "use agent";
 
 import {
+  GeneralSubagent,
+  defineAgent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -11,7 +13,6 @@ import {
   usePersistentState,
   useResponseFinish,
   useResponseStart,
-  useSkill,
   useSubagent,
   useTool,
 } from "@nowarelabs/agents";
@@ -28,11 +29,7 @@ interface ReleaseState {
   rolloutPercent: number;
 }
 
-function RiskAuditor() {
-  return `You are a release-risk auditor. Given a planned release and its rollout plan, assess regression risk, dependency exposure, and rollback readiness. Return APPROVED or REVISE with the specific risks in order of severity. Be terse.`;
-}
-
-export function ReleaseManager() {
+const agent = defineAgent("release-manager", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -68,7 +65,7 @@ export function ReleaseManager() {
       (delivery.kind === "signal" ? delivery.attributes?.version : undefined) ||
       "";
     log.info("release.started", { version });
-    setRelease((prev) => ({ ...prev, status: "planning", version }));
+    setRelease({ ...release, status: "planning", version });
     writeRelease({
       status: "planning",
       version,
@@ -79,14 +76,18 @@ export function ReleaseManager() {
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("release.finished", { toolCalls: response.toolCalls.length });
-    setRelease((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("release.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setRelease({ ...release, status: "done" });
     writeRelease({
       status: "done",
       version: release.version,
@@ -95,15 +96,16 @@ export function ReleaseManager() {
     });
   });
 
-  useSubagent({
-    name: "risk-auditor",
-    description:
-      "Assesses a planned release for regression risk, dependency exposure, and rollback readiness before it is cut.",
-    agent: RiskAuditor,
-  });
+  useSubagent(
+    "risk-auditor",
+    "Assesses a planned release for regression risk, dependency exposure, and rollback readiness before it is cut.",
+    GeneralSubagent,
+  );
   useTool(changelogTool);
   useTool(featureFlagsTool);
   useTool(githubTool);
 
   return `You are the Release Manager agent. Derive versions semantically, sequence rollouts in phases, and assess release risk. Coordinate feature flags, changelogs, and rollback plans so every release is reversible.`;
-}
+});
+
+export default agent;

@@ -30,20 +30,20 @@ npm install -D @flue/cli
 ### 2\. Create your first agent
 
 ```typescript
-import { useModel, useSandbox } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+import { useModel, useSandbox } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
 
 export function Hello() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox(local());
-  return 'Greet the person the user names and share an interesting fact.';
+  return "Greet the person the user names and share an interesting fact.";
 }
 ```
 
 A few things to note:
 
-* This agent is never mounted over HTTP — it exists to be run from the CLI, which is perfect for CI. (The `'use agent'` directive matters only for building a deployable app with Vite; `flue run` takes the module path directly.)
-* **`local()`** — The `local()` sandbox runs the agent directly against the host filesystem and shell. In CI, that’s the checked-out repo plus whatever binaries are on `$PATH` (`glab`, `git`, `npm`, etc.). Skills and `AGENTS.md` are discovered automatically from the project root. By default only shell-essential env vars (`PATH`, `HOME`, locale, etc.) are inherited from `process.env` — pass `local({ env: { GITLAB_TOKEN: process.env.GITLAB_TOKEN } })` to expose more. Use `local()` only when the runner itself provides the isolation boundary.
+- This agent is never mounted over HTTP — it exists to be run from the CLI, which is perfect for CI. (The `'use agent'` directive matters only for building a deployable app with Vite; `flue run` takes the module path directly.)
+- **`local()`** — The `local()` sandbox runs the agent directly against the host filesystem and shell. In CI, that’s the checked-out repo plus whatever binaries are on `$PATH` (`glab`, `git`, `npm`, etc.). Skills and `AGENTS.md` are discovered automatically from the project root. By default only shell-essential env vars (`PATH`, `HOME`, locale, etc.) are inherited from `process.env` — pass `local({ env: { GITLAB_TOKEN: process.env.GITLAB_TOKEN } })` to expose more. Use `local()` only when the runner itself provides the isolation boundary.
 
 ### 3\. Test it locally
 
@@ -83,15 +83,15 @@ async function handleGitLabWebhook(event) {
   const { object_kind, object_attributes, issue } = event;
   let variables: Record<string, string> = {};
 
-  if (object_kind === 'issue') {
+  if (object_kind === "issue") {
     variables = {
       ISSUE_ACTION: object_attributes.action,
       ISSUE_IID: String(object_attributes.iid),
-      ISSUE_AUTHOR: object_attributes.author?.username ?? '',
+      ISSUE_AUTHOR: object_attributes.author?.username ?? "",
     };
-  } else if (object_kind === 'note' && issue) {
+  } else if (object_kind === "note" && issue) {
     variables = {
-      ISSUE_ACTION: 'note',
+      ISSUE_ACTION: "note",
       ISSUE_IID: String(issue.iid),
     };
   } else {
@@ -99,9 +99,9 @@ async function handleGitLabWebhook(event) {
   }
 
   await fetch(`${GITLAB_URL}/api/v4/projects/${PROJECT_ID}/trigger/pipeline`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: TRIGGER_TOKEN, ref: 'main', variables }),
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: TRIGGER_TOKEN, ref: "main", variables }),
   });
 }
 ```
@@ -116,13 +116,13 @@ Now let’s build something useful — an issue triage agent that analyzes an is
 
 An agent’s deterministic orchestration lives in [harness tools](https://flueframework.com/docs/guide/tools/#harness-tools) — finite, schema-validated jobs the model calls — and [skills](https://flueframework.com/docs/guide/skills/), reusable instruction files. Inside either, the harness gives you two core methods:
 
-* **`harness.sandbox.exec(cmd)`** — Run a shell command in the sandbox. Returns `{ stdout, stderr, exitCode }`.
-* **`harness.prompt(text, opts)`** — Send a prompt to the agent and get back a result. `harness.prompt(...)` runs in the same conversation context as the agent’s own turns, so naming a mounted skill in the instruction is enough to direct the model to apply it.
+- **`harness.sandbox.exec(cmd)`** — Run a shell command in the sandbox. Returns `{ stdout, stderr, exitCode }`.
+- **`harness.prompt(text, opts)`** — Send a prompt to the agent and get back a result. `harness.prompt(...)` runs in the same conversation context as the agent’s own turns, so naming a mounted skill in the instruction is enough to direct the model to apply it.
 
 `prompt()` accepts a `result` option — a [Valibot](https://valibot.dev) schema that defines the expected output shape. Flue parses the agent’s response and returns it on `response.data`, fully typed:
 
 ```typescript
-import * as v from 'valibot';
+import * as v from "valibot";
 
 // summary: string
 const { data: summary } = await harness.prompt(`Summarize this diff:\n${diff}`, {
@@ -148,17 +148,17 @@ Your agent often needs to interact with external tools. With `local()`, the agen
 In GitLab CI, this means you set the secrets you want the agent’s CLIs to see in the job’s `variables:` block (or as masked CI/CD variables), then forward them explicitly into the sandbox. The runner is your isolation boundary; flue makes the inner boundary (host → spawned shell) explicit.
 
 ```typescript
-import { useModel, useSandbox } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+import { useModel, useSandbox } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
 
 export function Triage() {
-  useModel('anthropic/claude-opus-4-7');
+  useModel("anthropic/claude-opus-4-7");
   useSandbox(
     local({
       env: { GITLAB_TOKEN: process.env.GITLAB_TOKEN },
     }),
   );
-  return 'When given an issue IID, run the `triage` skill on it and report severity, reproducibility, and a summary.';
+  return "When given an issue IID, run the `triage` skill on it and report severity, reproducibility, and a summary.";
 }
 ```
 
@@ -169,20 +169,20 @@ If you want a tighter boundary — the agent can call a specific operation but n
 Named subagents can run focused detached tasks. `useSubagent(...)` declares one, backed by its own agent function:
 
 ```typescript
-'use agent';
-import { useModel, useSubagent } from '@flue/runtime';
+"use agent";
+import { useModel, useSubagent } from "@flue/runtime";
 
 function Reviewer() {
-  return 'Focus on correctness, security, and project standards.';
+  return "Focus on correctness, security, and project standards.";
 }
 
 export function Triage() {
   useSubagent({
-    name: 'reviewer',
-    description: 'Reviews a merge request for correctness, security, and project standards.',
+    name: "reviewer",
+    description: "Reviews a merge request for correctness, security, and project standards.",
     agent: Reviewer,
   });
-  return 'Delegate MR reviews to the `reviewer` subagent via a task.';
+  return "Delegate MR reviews to the `reviewer` subagent via a task.";
 }
 ```
 
@@ -245,27 +245,27 @@ triage:
 
 Add these as CI/CD variables (**Settings > CI/CD > Variables**, masked):
 
-| Variable            | Description                                     |
-| ------------------- | ----------------------------------------------- |
-| ANTHROPIC\_API\_KEY | API key for your LLM provider                   |
-| GITLAB\_API\_TOKEN  | Project or personal access token with api scope |
+| Variable          | Description                                     |
+| ----------------- | ----------------------------------------------- |
+| ANTHROPIC_API_KEY | API key for your LLM provider                   |
+| GITLAB_API_TOKEN  | Project or personal access token with api scope |
 
 ## Typed results and orchestration
 
 Result schemas aren’t just for type safety — they’re how you orchestrate multi-step work. Wrap the orchestration in a harness-connected tool (`useTool({ harness: true })`): you get typed data back from `prompt()` and can branch on it in plain code, all inside one durable conversation:
 
 ```typescript
-'use agent';
-import { useModel, useSandbox, useTool } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
-import * as v from 'valibot';
+"use agent";
+import { useModel, useSandbox, useTool } from "@flue/runtime";
+import { local } from "@flue/runtime/node";
+import * as v from "valibot";
 
 export function AutoTriage() {
-  useModel('anthropic/claude-sonnet-4-6');
+  useModel("anthropic/claude-sonnet-4-6");
   useSandbox(local());
   useTool({
-    name: 'triage-issue',
-    description: 'Triage one GitLab issue and auto-fix critical reproducible ones.',
+    name: "triage-issue",
+    description: "Triage one GitLab issue and auto-fix critical reproducible ones.",
     input: v.object({ issueIid: v.number() }),
     harness: true,
     async run({ harness, data }) {
@@ -273,14 +273,14 @@ export function AutoTriage() {
         `Apply the triage skill to issue !${data.issueIid}.`,
         {
           result: v.object({
-            severity: v.picklist(['low', 'medium', 'high', 'critical']),
+            severity: v.picklist(["low", "medium", "high", "critical"]),
             reproducible: v.boolean(),
             summary: v.string(),
           }),
         },
       );
 
-      if (triage.severity === 'critical' && triage.reproducible) {
+      if (triage.severity === "critical" && triage.reproducible) {
         await harness.prompt(`Apply the auto-fix skill to issue !${data.issueIid}.`, {
           result: v.object({ fix_applied: v.boolean(), branch: v.optional(v.string()) }),
         });
@@ -288,7 +288,7 @@ export function AutoTriage() {
       return { output: triage };
     },
   });
-  return 'When given an issue IID, call the `triage-issue` tool and report its result.';
+  return "When given an issue IID, call the `triage-issue` tool and report its result.";
 }
 ```
 
@@ -317,75 +317,75 @@ Current page: [Build Agents for GitLab CI/CD](https://flueframework.com/docs/eco
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
-* [Overview](https://flueframework.com/docs/ecosystem/)
+- [Overview](https://flueframework.com/docs/ecosystem/)
 
 ### Channels
 
-* [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
-* [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
-* [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
-* [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
-* [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
-* [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
-* [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
-* [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
-* [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
-* [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
-* [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
-* [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
-* [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
-* [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
-* [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
-* [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
-* [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
+- [Discord](https://flueframework.com/docs/ecosystem/channels/discord/)
+- [Facebook](https://flueframework.com/docs/ecosystem/channels/messenger/)
+- [GitHub](https://flueframework.com/docs/ecosystem/channels/github/)
+- [Google Chat](https://flueframework.com/docs/ecosystem/channels/google-chat/)
+- [Intercom](https://flueframework.com/docs/ecosystem/channels/intercom/)
+- [Linear](https://flueframework.com/docs/ecosystem/channels/linear/)
+- [Microsoft Teams](https://flueframework.com/docs/ecosystem/channels/teams/)
+- [Notion](https://flueframework.com/docs/ecosystem/channels/notion/)
+- [Resend](https://flueframework.com/docs/ecosystem/channels/resend/)
+- [Salesforce](https://flueframework.com/docs/ecosystem/channels/salesforce-marketing-cloud/)
+- [Shopify](https://flueframework.com/docs/ecosystem/channels/shopify/)
+- [Slack](https://flueframework.com/docs/ecosystem/channels/slack/)
+- [Stripe](https://flueframework.com/docs/ecosystem/channels/stripe/)
+- [Telegram](https://flueframework.com/docs/ecosystem/channels/telegram/)
+- [Twilio](https://flueframework.com/docs/ecosystem/channels/twilio/)
+- [WhatsApp](https://flueframework.com/docs/ecosystem/channels/whatsapp/)
+- [Zendesk](https://flueframework.com/docs/ecosystem/channels/zendesk/)
 
 ### Sandboxes
 
-* [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
-* [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
-* [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
-* [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
-* [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
-* [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
-* [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
-* [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
-* [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
-* [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
+- [boxd](https://flueframework.com/docs/ecosystem/sandboxes/boxd/)
+- [Cloudflare Computer](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare-computer/)
+- [Cloudflare Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/cloudflare/)
+- [Daytona](https://flueframework.com/docs/ecosystem/sandboxes/daytona/)
+- [E2B](https://flueframework.com/docs/ecosystem/sandboxes/e2b/)
+- [exe.dev](https://flueframework.com/docs/ecosystem/sandboxes/exedev/)
+- [islo](https://flueframework.com/docs/ecosystem/sandboxes/islo/)
+- [Mirage](https://flueframework.com/docs/ecosystem/sandboxes/mirage/)
+- [Modal](https://flueframework.com/docs/ecosystem/sandboxes/modal/)
+- [Vercel Sandbox](https://flueframework.com/docs/ecosystem/sandboxes/vercel/)
 
 ### Deploy
 
-* [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
-* [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
-* [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
-* [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
-* [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
-* [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
-* [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
-* [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
-* [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
-* [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
+- [AWS](https://flueframework.com/docs/ecosystem/deploy/aws/)
+- [Cloudflare](https://flueframework.com/docs/ecosystem/deploy/cloudflare/)
+- [Docker](https://flueframework.com/docs/ecosystem/deploy/docker/)
+- [Fly.io](https://flueframework.com/docs/ecosystem/deploy/fly/)
+- [GitHub Actions](https://flueframework.com/docs/ecosystem/deploy/github-actions/)
+- [GitLab CI/CD](https://flueframework.com/docs/ecosystem/deploy/gitlab-ci/)
+- [Node.js](https://flueframework.com/docs/ecosystem/deploy/node/)
+- [Railway](https://flueframework.com/docs/ecosystem/deploy/railway/)
+- [Render](https://flueframework.com/docs/ecosystem/deploy/render/)
+- [SST](https://flueframework.com/docs/ecosystem/deploy/sst/)
 
 ### Databases
 
-* [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
-* [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
-* [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
-* [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
-* [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
-* [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
-* [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
-* [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
+- [libSQL](https://flueframework.com/docs/ecosystem/databases/libsql/)
+- [MongoDB](https://flueframework.com/docs/ecosystem/databases/mongodb/)
+- [MySQL](https://flueframework.com/docs/ecosystem/databases/mysql/)
+- [Postgres](https://flueframework.com/docs/ecosystem/databases/postgres/)
+- [Redis](https://flueframework.com/docs/ecosystem/databases/redis/)
+- [Supabase](https://flueframework.com/docs/ecosystem/databases/supabase/)
+- [Turso](https://flueframework.com/docs/ecosystem/databases/turso/)
+- [Valkey](https://flueframework.com/docs/ecosystem/databases/valkey/)
 
 ### Tooling
 
-* [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
-* [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
-* [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
-* [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
-* [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)
+- [Braintrust](https://flueframework.com/docs/ecosystem/tooling/braintrust/)
+- [Jetty](https://flueframework.com/docs/ecosystem/tooling/jetty/)
+- [OpenTelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/)
+- [Sentry](https://flueframework.com/docs/ecosystem/tooling/sentry/)
+- [Vitest Evals](https://flueframework.com/docs/ecosystem/tooling/vitest-evals/)

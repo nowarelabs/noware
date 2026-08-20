@@ -20,6 +20,8 @@ import type {
   SkillDefinition,
   SubagentDefinition,
   ToolDefinition,
+  ToolInput,
+  ToolOutput,
 } from "./types.js";
 
 // ----------------------------------------------------------------
@@ -100,9 +102,12 @@ export function useInstruction(text: string): void {
 /**
  * Mounts a tool on the agent.
  */
-export function useTool(tool: ToolDefinition): void {
+export function useTool<
+  TInput extends ToolInput = ToolInput,
+  TOutput extends ToolOutput = ToolOutput,
+>(tool: ToolDefinition<TInput, TOutput>): void {
   const ctx = getCurrentContext();
-  ctx.tools.push(tool);
+  ctx.tools.push(tool as unknown as ToolDefinition<ToolInput, ToolOutput>);
 }
 
 /**

@@ -1,6 +1,8 @@
 "use agent";
 
 import {
+  GeneralSubagent,
+  defineAgent,
   useAgentFinish,
   useAgentStart,
   useDataWriter,
@@ -12,7 +14,6 @@ import {
   useResponseFinish,
   useResponseStart,
   useSandbox,
-  useSkill,
   useSubagent,
   useTool,
   bash,
@@ -29,11 +30,7 @@ interface TestRunState {
   suite: string;
 }
 
-function TestCaseDesigner() {
-  return `You are a test-case designer. Given a behavior and its edge cases, produce a focused set of test cases covering happy path, failure path, boundaries, and state transitions. Return each case as a one-line name plus its assertions. Be terse.`;
-}
-
-export function QaTest() {
+const agent = defineAgent("qa-test", () => {
   useModel("cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct", {
     thinkingLevel: "medium",
     compaction: { keepRecentTokens: 16000 },
@@ -68,34 +65,39 @@ export function QaTest() {
       (delivery.kind === "signal" ? delivery.attributes?.suite : undefined) ||
       "unit";
     log.info("qa.started", { suite });
-    setTestRun((prev) => ({ ...prev, status: "designing", suite }));
+    setTestRun({ ...testRun, status: "designing", suite });
     writeQa({ status: "designing", suite, passed: 0, failed: 0 });
   });
 
   useResponseStart(() => ({ startedAt: Date.now() }));
 
-  useResponseFinish(({ metadata, response }) => ({
-    elapsedMs: Date.now() - (metadata.startedAt as number),
-    toolCalls: response.toolCalls.length,
-  }));
+  useResponseFinish(({ metadata, response }) => {
+    const r = response as { toolCalls?: unknown[] };
+    return {
+      elapsedMs: Date.now() - (metadata.startedAt as number),
+      toolCalls: r.toolCalls?.length ?? 0,
+    };
+  });
 
   useAgentFinish(({ log, response }) => {
-    log.info("qa.finished", { toolCalls: response.toolCalls.length });
-    setTestRun((prev) => ({ ...prev, status: "done" }));
+    const r = response as { toolCalls?: unknown[] };
+    log.info("qa.finished", { toolCalls: r.toolCalls?.length ?? 0 });
+    setTestRun({ ...testRun, status: "done" });
     writeQa({ status: "done", suite: testRun.suite, passed: 0, failed: 0 });
   });
 
   useSandbox(bash(() => new Bash({ fs: new InMemoryFs({}) })));
 
-  useSubagent({
-    name: "test-case-designer",
-    description:
-      "Produces a focused set of test cases for a behavior, covering happy path, failure path, boundaries, and transitions.",
-    agent: TestCaseDesigner,
-  });
+  useSubagent(
+    "test-case-designer",
+    "Produces a focused set of test cases for a behavior, covering happy path, failure path, boundaries, and transitions.",
+    GeneralSubagent,
+  );
   useTool(ciStatusTool);
   useTool(coverageTool);
   useTool(testRunnerTool);
 
   return `You are the QA/Test agent. Design tests that express behavior first, cover happy paths and failure paths, and mock at the right boundaries. Keep suites fast, deterministic, and focused on risk.`;
-}
+});
+
+export default agent;

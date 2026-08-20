@@ -80,8 +80,8 @@ export default defineConfig({
   `crypto.subtle.digest()` (available on Workers and Node ≥ 19). `crypto.subtle.digest` is
   async — design for that.
 - Node-only adapters go behind a subpath export, e.g. `@nowarelabs/gen-diesel/node`. The main
-  entry stays pure. `@types/node` remains a devDep so explicit `node:*` imports in *tests* and
-  *adapter subpaths* typecheck even when `"node"` is not in `types` (types array only controls
+  entry stays pure. `@types/node` remains a devDep so explicit `node:*` imports in _tests_ and
+  _adapter subpaths_ typecheck even when `"node"` is not in `types` (types array only controls
   ambient globals; explicit imports still resolve).
 - Verify with: `grep -rn "node:" <pkg>/src` must be empty, plus `vp check`.
 

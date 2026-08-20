@@ -15,10 +15,10 @@ API of the previous phase is unchanged.
 - **Proposal TTL** (03.2.2). `C4RelationshipProposal` gained `createdAt`.
   `setProposalTtl(ms, workspaceName?)` sets the instance default and supports a
   per-workspace override (mirroring claims). `expireStaleProposals(workspaceName?,
-  maxAgeMs?)` deletes stale proposals and returns their ids.
+maxAgeMs?)` deletes stale proposals and returns their ids.
 - **Structured conflict resolution** (03.2.3). `C4MergeResolution` is a new
   exported `{ id: string; take: "branch" | "target" }`. `resolveMerge(plan,
-  resolutions)` returns a copy of the plan with `conflicts: []` and
+resolutions)` returns a copy of the plan with `conflicts: []` and
   `resolutions` embedded; `applyMerge` then filters the effective diff through
   the resolutions (ids resolved `take: "target"` are dropped). Throws on a
   conflict left unresolved (`no resolution`) and on an id that is not a

@@ -69,17 +69,17 @@ See the [flue run reference](https://flueframework.com/docs/cli/run/) for agent 
 When your workflow needs more than what `flue run` can offer — loops, error handling, or data structures — write a Node.js script instead. [start()](https://flueframework.com/docs/guide/building-agents/#standalone-scripts) boots the Flue runtime inside your own process, with no server and no `app.ts`, and [init()](https://flueframework.com/docs/reference/agent-api/#init) returns a handle to an agent conversation. The handle’s `dispatch()` submits a message and resolves with its durable receipt; `read()` awaits the settled reply:
 
 ```ts
-import { init } from '@flue/runtime';
-import { sqlite, start } from '@flue/runtime/node';
-import { Reporter } from '../src/agents/reporter.ts';
+import { init } from "@flue/runtime";
+import { sqlite, start } from "@flue/runtime/node";
+import { Reporter } from "../src/agents/reporter.ts";
 
 await using flue = await start({
   agents: [Reporter],
-  db: sqlite('./nightly.db'),
+  db: sqlite("./nightly.db"),
 });
 
-const reporter = init(Reporter, { id: 'nightly-2026-07-17' });
-const receipt = await reporter.dispatch('Produce the nightly report.');
+const reporter = init(Reporter, { id: "nightly-2026-07-17" });
+const receipt = await reporter.dispatch("Produce the nightly report.");
 const reply = await reporter.read(receipt);
 console.log(reply.text);
 ```
@@ -93,7 +93,7 @@ See the [init() reference](https://flueframework.com/docs/reference/agent-api/#i
 The Flue Agent SDK connects to a deployed agent over HTTP, sending messages and streaming back responses. A client wraps one conversation URL:
 
 ```ts
-import { createFlueClient } from '@flue/sdk';
+import { createFlueClient } from "@flue/sdk";
 
 const conversation = createFlueClient({
   url: `https://example.com/agents/release-auditor/release-${version}`,
@@ -101,7 +101,7 @@ const conversation = createFlueClient({
 });
 
 const admission = await conversation.send({
-  message: { kind: 'user', body: `Audit the ${version} rollout.` },
+  message: { kind: "user", body: `Audit the ${version} rollout.` },
 });
 const reply = await conversation.read(admission);
 console.log(reply.text);
@@ -124,29 +124,29 @@ The split also splits any per-step time bound: a 20-minute step timeout becomes 
 On Cloudflare, write the Workflow in the same Worker as your Flue application and call the `init()` handle from steps:
 
 ```ts
-import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
-import { init } from '@flue/runtime';
-import { Reviewer } from './agents/reviewer.ts';
-import { collectFindings, fileReport } from './shared/nightly.ts';
+import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
+import { init } from "@flue/runtime";
+import { Reviewer } from "./agents/reviewer.ts";
+import { collectFindings, fileReport } from "./shared/nightly.ts";
 
 type Params = { date: string };
 
 export class NightlyReview extends WorkflowEntrypoint {
   async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
-    const findings = await step.do('collect findings', () => collectFindings(event.payload.date));
+    const findings = await step.do("collect findings", () => collectFindings(event.payload.date));
 
     const agent = init(Reviewer, { id: `nightly-${event.payload.date}` });
 
-    const receipt = await step.do('dispatch review', () =>
+    const receipt = await step.do("dispatch review", () =>
       agent.dispatch(`Review these findings:\n${findings}`),
     );
 
-    const review = await step.do('read review', async () => {
+    const review = await step.do("read review", async () => {
       const reply = await agent.read(receipt);
       return { text: reply.text, data: reply.data };
     });
 
-    await step.do('file report', () => fileReport(review));
+    await step.do("file report", () => fileReport(review));
   }
 }
 ```
@@ -158,27 +158,27 @@ The class is exported from [src/cloudflare.ts](https://flueframework.com/docs/gu
 In Inngest, the send goes inside a `step.run`. Call `init()` when the function runs inside your Flue application’s process, or use the [Agent SDK](#the-flue-agent-sdk) when it runs as a separate service:
 
 ```ts
-import { init } from '@flue/runtime';
-import { inngest } from './client.ts';
-import { Reviewer } from '../agents/reviewer.ts';
-import { fileReport } from '../shared/nightly.ts';
+import { init } from "@flue/runtime";
+import { inngest } from "./client.ts";
+import { Reviewer } from "../agents/reviewer.ts";
+import { fileReport } from "../shared/nightly.ts";
 
 export const nightlyReview = inngest.createFunction(
-  { id: 'nightly-review' },
-  { event: 'reports/nightly.requested' },
+  { id: "nightly-review" },
+  { event: "reports/nightly.requested" },
   async ({ event, step }) => {
     const agent = init(Reviewer, { id: `nightly-${event.data.date}` });
 
-    const receipt = await step.run('dispatch review', () =>
-      agent.dispatch('Review the nightly findings.'),
+    const receipt = await step.run("dispatch review", () =>
+      agent.dispatch("Review the nightly findings."),
     );
 
-    const review = await step.run('read review', async () => {
+    const review = await step.run("read review", async () => {
       const reply = await agent.read(receipt);
       return { text: reply.text, data: reply.data };
     });
 
-    await step.run('file report', () => fileReport(review));
+    await step.run("file report", () => fileReport(review));
   },
 );
 ```
@@ -191,16 +191,16 @@ The same pattern applies to any other durable workflow engine: in Temporal, the 
 
 The one crash window left is inside the dispatch step itself: the send was admitted, but the step died before checkpointing the receipt. The engine re-runs the step, which sends again — and the instance’s send condition decides what that means:
 
-* An unconditional send (no `uid`) delivers the duplicate, which joins the live response at a turn boundary; both submissions settle with the same coalesced reply, so the retry’s fresh receipt reads the same answer.
-* A create-only send (`uid: null`) rejects the duplicate at admission with `AgentInstanceExistsError` — nothing reaches the agent twice, and the rejection is the workflow’s signal to fail the run or fall back.
+- An unconditional send (no `uid`) delivers the duplicate, which joins the live response at a turn boundary; both submissions settle with the same coalesced reply, so the retry’s fresh receipt reads the same answer.
+- A create-only send (`uid: null`) rejects the duplicate at admission with `AgentInstanceExistsError` — nothing reaches the agent twice, and the rejection is the workflow’s signal to fail the run or fall back.
 
 ## Next steps
 
-* [Durability](https://flueframework.com/docs/guide/durability/) — the accepted-work contract behind every send.
-* [Schedules](https://flueframework.com/docs/guide/schedules/) — time-triggered dispatch, in-app and external.
-* [flue run](https://flueframework.com/docs/cli/run/) — the full CLI reference.
-* [SDK overview](https://flueframework.com/docs/sdk/overview/) — the conversation client for deployed applications.
-* [Deploy](https://flueframework.com/docs/guide/deploy/) — hosting the application these workflows drive.
+- [Durability](https://flueframework.com/docs/guide/durability/) — the accepted-work contract behind every send.
+- [Schedules](https://flueframework.com/docs/guide/schedules/) — time-triggered dispatch, in-app and external.
+- [flue run](https://flueframework.com/docs/cli/run/) — the full CLI reference.
+- [SDK overview](https://flueframework.com/docs/sdk/overview/) — the conversation client for deployed applications.
+- [Deploy](https://flueframework.com/docs/guide/deploy/) — hosting the application these workflows drive.
 
 ## Docs Navigation
 
@@ -208,48 +208,48 @@ Current page: [Workflows](https://flueframework.com/docs/guide/workflows/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

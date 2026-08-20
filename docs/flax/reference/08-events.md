@@ -27,10 +27,10 @@ type FlueObservationSubscriber = (
 
 Registers a global subscriber for every runtime event emitted in the current process. The subscription covers all agents, harnesses, sessions, and task sessions that emit in this isolate. The returned function unsubscribes the listener.
 
-* **Scope** — isolate-global and live-only. The subscription sees events emitted after registration; there is no durable replay, no history access, and no aggregation across processes. On Node.js one process hosts all agents, so one registration sees everything. On [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/), each agent conversation runs in its own Durable Object isolate; a subscriber registered at module top level runs in each isolate and sees that isolate’s activity only. [flue run](https://flueframework.com/docs/cli/run/) loads only the agent module, never `app.ts` — a subscriber that must run under the CLI has to be registered in the agent module.
-* **Delivery** — subscribers are invoked synchronously on the event emission path, after the runtime’s own per-context consumers. Each emission constructs one `FlueObservation` — a deep clone of the event plus observation detail, with reference cycles preserved — deep-freezes it, and delivers that same frozen object to every subscriber.
-* **Failure containment** — a subscriber that throws is caught and logged (`console.error` with the `[flue:observe]` prefix); remaining subscribers still run and the originating agent work is unaffected. A returned promise is observed for rejection (logged the same way) but never awaited.
-* **Ordering** — events from one emitting context arrive in `eventIndex` order. There is no ordering guarantee across contexts.
+- **Scope** — isolate-global and live-only. The subscription sees events emitted after registration; there is no durable replay, no history access, and no aggregation across processes. On Node.js one process hosts all agents, so one registration sees everything. On [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/), each agent conversation runs in its own Durable Object isolate; a subscriber registered at module top level runs in each isolate and sees that isolate’s activity only. [flue run](https://flueframework.com/docs/cli/run/) loads only the agent module, never `app.ts` — a subscriber that must run under the CLI has to be registered in the agent module.
+- **Delivery** — subscribers are invoked synchronously on the event emission path, after the runtime’s own per-context consumers. Each emission constructs one `FlueObservation` — a deep clone of the event plus observation detail, with reference cycles preserved — deep-freezes it, and delivers that same frozen object to every subscriber.
+- **Failure containment** — a subscriber that throws is caught and logged (`console.error` with the `[flue:observe]` prefix); remaining subscribers still run and the originating agent work is unaffected. A returned promise is observed for rejection (logged the same way) but never awaited.
+- **Ordering** — events from one emitting context arrive in `eventIndex` order. There is no ordering guarantee across contexts.
 
 The API deliberately does not provide type filtering, backpressure, replay, or any way to mutate or veto an event — subscribers branch on `event.type` and must stay cheap because they run on the emission path.
 
@@ -54,11 +54,11 @@ interface FlueLogger {
 
 The second subscriber argument: the runtime context of the agent interaction that emitted the event.
 
-* `id` — the agent instance id; equals the `instanceId` stamped on the context’s events.
-* `agentName` — the registered agent name, when known.
-* `env` — platform bindings: `process.env` on Node, the Workers env object on Cloudflare.
-* `req` — the invocation’s Fetch `Request`, or `undefined` outside an HTTP context. Durable or recovered processing may carry a synthetic internal request instead of the original caller request.
-* `log` — emits [log events](#log) into this context’s event stream. Calling it from inside a subscriber emits further events; guard against loops.
+- `id` — the agent instance id; equals the `instanceId` stamped on the context’s events.
+- `agentName` — the registered agent name, when known.
+- `env` — platform bindings: `process.env` on Node, the Workers env object on Cloudflare.
+- `req` — the invocation’s Fetch `Request`, or `undefined` outside an HTTP context. Durable or recovered processing may carry a synthetic internal request instead of the original caller request.
+- `log` — emits [log events](#log) into this context’s event stream. Calling it from inside a subscriber emits further events; guard against loops.
 
 ## `FlueEvent`
 
@@ -90,20 +90,20 @@ Every delivered event is one [event-type payload](#event-types) plus the envelop
 
 Envelope fields, present on every event:
 
-* `v` — the durable event-format version, the literal `3`. Readers branch on this field when the format changes.
-* `eventIndex` — a per-context counter, monotonically increasing within the emitting context. It provides ordering, not durable identity.
-* `timestamp` — ISO 8601 string, stamped when the event is decorated for delivery.
+- `v` — the durable event-format version, the literal `3`. Readers branch on this field when the format changes.
+- `eventIndex` — a per-context counter, monotonically increasing within the emitting context. It provides ordering, not durable identity.
+- `timestamp` — ISO 8601 string, stamped when the event is decorated for delivery.
 
 Correlation fields, present when they apply:
 
-* `instanceId` — the agent instance id. Present on direct and dispatched agent activity.
-* `submissionId` — present while a durable submission is being processed, for dispatched and direct activity alike.
-* `agentName` — the registered agent name, when known.
-* `conversationId`, `session` — present on session-scoped events (turns, messages, tools, operations, compaction, session logs).
-* `harness` — the emitting harness name; `"default"` for the root agent harness, the hook’s name for lifecycle-hook harnesses.
-* `parentSession`, `taskId` — present on events emitted inside a delegated task session.
-* `operationId` — present on events emitted inside a running operation.
-* `turnId` — present on events emitted during a model turn (in addition to the `turnId` payload field on the turn events themselves).
+- `instanceId` — the agent instance id. Present on direct and dispatched agent activity.
+- `submissionId` — present while a durable submission is being processed, for dispatched and direct activity alike.
+- `agentName` — the registered agent name, when known.
+- `conversationId`, `session` — present on session-scoped events (turns, messages, tools, operations, compaction, session logs).
+- `harness` — the emitting harness name; `"default"` for the root agent harness, the hook’s name for lifecycle-hook harnesses.
+- `parentSession`, `taskId` — present on events emitted inside a delegated task session.
+- `operationId` — present on events emitted inside a running operation.
+- `turnId` — present on events emitted during a model turn (in addition to the `turnId` payload field on the turn events themselves).
 
 Ids are opaque generated strings; correlate by equality only.
 
@@ -111,23 +111,23 @@ Ids are opaque generated strings; correlate by equality only.
 
 Two content guarantees hold for every event surface:
 
-* **No raw image bytes.** Recognized image content blocks in event payloads carry the [IMAGE\_DATA\_OMITTED](#image%5Fdata%5Fomitted) sentinel in place of their base64 data. Session history (model context) keeps the real bytes.
-* **No throw-site stacks on durable-shaped error fields.** Errors serialized onto `operation`, `compaction`, `log`, `submission_recovery`, and `submission_settled` payloads never include stacks. The classified error shape with an optional `stack` appears in two live-only places: `turn.response.error` and the observation’s [errorInfo](#flueobservation).
+- **No raw image bytes.** Recognized image content blocks in event payloads carry the [IMAGE_DATA_OMITTED](#image%5Fdata%5Fomitted) sentinel in place of their base64 data. Session history (model context) keeps the real bytes.
+- **No throw-site stacks on durable-shaped error fields.** Errors serialized onto `operation`, `compaction`, `log`, `submission_recovery`, and `submission_settled` payloads never include stacks. The classified error shape with an optional `stack` appears in two live-only places: `turn.response.error` and the observation’s [errorInfo](#flueobservation).
 
 ## Event types
 
 The v3 vocabulary contains 27 event types:
 
-* Agent lifecycle — [agent\_start, agent\_end, idle](#agent%5Fstart-agent%5Fend-idle)
-* Submission lifecycle — [submission\_queued, submission\_running](#submission%5Fqueued-submission%5Frunning), [submission\_settled](#submission%5Fsettled)
-* Recovery — [submission\_recovery](#submission%5Frecovery)
-* Operations — [operation\_start, operation](#operation%5Fstart-operation)
-* Model turns — [turn\_start, turn\_request, turn, turn\_messages](#turn%5Fstart-turn%5Frequest-turn-turn%5Fmessages)
-* Messages and deltas — [message\_start, message\_end, text\_delta, thinking\_start, thinking\_delta, thinking\_end, toolcall\_delta](#message-and-delta-events)
-* Tools — [tool\_start, tool](#tool%5Fstart-tool)
-* Tasks — [task\_start, task](#task%5Fstart-task)
-* Compaction — [compaction\_start, compaction](#compaction%5Fstart-compaction)
-* Logs — [log](#log)
+- Agent lifecycle — [agent_start, agent_end, idle](#agent%5Fstart-agent%5Fend-idle)
+- Submission lifecycle — [submission_queued, submission_running](#submission%5Fqueued-submission%5Frunning), [submission_settled](#submission%5Fsettled)
+- Recovery — [submission_recovery](#submission%5Frecovery)
+- Operations — [operation_start, operation](#operation%5Fstart-operation)
+- Model turns — [turn_start, turn_request, turn, turn_messages](#turn%5Fstart-turn%5Frequest-turn-turn%5Fmessages)
+- Messages and deltas — [message_start, message_end, text_delta, thinking_start, thinking_delta, thinking_end, toolcall_delta](#message-and-delta-events)
+- Tools — [tool_start, tool](#tool%5Fstart-tool)
+- Tasks — [task_start, task](#task%5Fstart-task)
+- Compaction — [compaction_start, compaction](#compaction%5Fstart-compaction)
+- Logs — [log](#log)
 
 Nested errors do not necessarily fail the work that contains them: an agent can recover from a failed turn or tool call. `submission_settled` is the reliable terminal signal; `isError` on nested events is diagnostic context.
 
@@ -139,31 +139,31 @@ Nested errors do not necessarily fail the work that contains them: an agent can 
 { type: 'idle' }
 ```
 
-* `agent_start` — an agent loop run began inside an operation.
-* `agent_end` — the loop run ended. `messages` contains the messages that run produced (not the whole transcript). `AgentMessage` is the harness-level message shape (roles `user`, `assistant`, `toolResult`, plus Flue’s internal `signal` messages); it is not exported from `@flue/runtime` and is not a stable payload contract — see [Stability](#stable-contract-versus-internal-shapes).
-* `idle` — the session finished an operation and returned to idle. Emitted after every terminal `operation` event, on success and failure alike. No payload fields.
+- `agent_start` — an agent loop run began inside an operation.
+- `agent_end` — the loop run ended. `messages` contains the messages that run produced (not the whole transcript). `AgentMessage` is the harness-level message shape (roles `user`, `assistant`, `toolResult`, plus Flue’s internal `signal` messages); it is not exported from `@flue/runtime` and is not a stable payload contract — see [Stability](#stable-contract-versus-internal-shapes).
+- `idle` — the session finished an operation and returned to idle. Emitted after every terminal `operation` event, on success and failure alike. No payload fields.
 
 ### `submission_queued`, `submission_running`
 
 ```ts
 {
-  type: 'submission_queued';
+  type: "submission_queued";
   submissionId: string;
-  kind: 'dispatch' | 'direct';
+  kind: "dispatch" | "direct";
 }
 {
-  type: 'submission_running';
+  type: "submission_running";
   submissionId: string;
-  kind: 'dispatch' | 'direct';
+  kind: "dispatch" | "direct";
   attemptCount: number;
   maxAttempts: number;
 }
 ```
 
-The queue-lifecycle vocabulary, completed by [submission\_settled](#submission%5Fsettled): `queued → running → settled`. `kind` records how the submission arrived — `dispatch` via `dispatch()`, `direct` via the agent HTTP route.
+The queue-lifecycle vocabulary, completed by [submission_settled](#submission%5Fsettled): `queued → running → settled`. `kind` records how the submission arrived — `dispatch` via `dispatch()`, `direct` via the agent HTTP route.
 
-* `submission_queued` — a durable submission was admitted. Emitted immediately after durable admission, before any attempt, execution context, or render exists. Delivery is **at-least-once**: admission cannot distinguish an idempotent replay, so replays — including `idempotencyKey`\-deduplicated retries — re-emit it for the same `submissionId`.
-* `submission_running` — an attempt began processing a claimed submission, before any model work. Emitted on **every** attempt: a recovery replacement re-emits it with the incremented `attemptCount`. That re-emission is deliberate — it is what lets a fresh process or Durable Object isolate re-learn the busy set (see the derivation below) without any durable observer state.
+- `submission_queued` — a durable submission was admitted. Emitted immediately after durable admission, before any attempt, execution context, or render exists. Delivery is **at-least-once**: admission cannot distinguish an idempotent replay, so replays — including `idempotencyKey`\-deduplicated retries — re-emit it for the same `submissionId`.
+- `submission_running` — an attempt began processing a claimed submission, before any model work. Emitted on **every** attempt: a recovery replacement re-emits it with the incremented `attemptCount`. That re-emission is deliberate — it is what lets a fresh process or Durable Object isolate re-learn the busy set (see the derivation below) without any durable observer state.
 
 A delivery that joins an already-busy conversation (dispatch-while-busy) emits `submission_queued` at admission and `submission_settled` when its host response settles — but never `submission_running`, because it never runs an attempt of its own.
 
@@ -174,18 +174,18 @@ A delivery that joins an already-busy conversation (dispatch-while-busy) emits `
 This derivation is a stable, supported pattern: mark an instance busy on `submission_queued` or `submission_running`, and clear that submission on `submission_settled`, keyed by `submissionId`.
 
 ```ts
-import { observe } from '@flue/runtime';
+import { observe } from "@flue/runtime";
 
 // instanceId → the submissions currently keeping it busy.
 const busy = new Map<string, Set<string>>();
 
 observe((event) => {
   if (event.instanceId === undefined || event.submissionId === undefined) return;
-  if (event.type === 'submission_queued' || event.type === 'submission_running') {
+  if (event.type === "submission_queued" || event.type === "submission_running") {
     let active = busy.get(event.instanceId);
     if (!active) busy.set(event.instanceId, (active = new Set()));
     active.add(event.submissionId);
-  } else if (event.type === 'submission_settled') {
+  } else if (event.type === "submission_settled") {
     const active = busy.get(event.instanceId);
     active?.delete(event.submissionId);
     if (active?.size === 0) busy.delete(event.instanceId); // instance went idle
@@ -226,9 +226,9 @@ The pattern converges across process restarts and Durable Object eviction: a fre
 
 A coordinator recovery or reconciliation step failed (or skipped work) and was contained instead of terminalizing the submission. These are the failures that never reach `submission_settled` — a submission stuck in a retry loop is visible here and nowhere else on the stream, which makes this event the alerting companion to `submission_settled`.
 
-* `operation` — the recovery step: `materialize_submission` (admission-side materialization of a queued row), `finalize_settlement` (finalizing a settlement reserved by a process that died), `reconcile_submission` (classifying an interrupted attempt), `start_submission` (starting a claimed attempt), `process_submission` (the processing/settlement machinery around an attempt), `reconcile_pass` (a whole reconcile or claim pass — no single submission, so `submissionId` is absent), `enforce_deadline` (a live attempt passed its durability deadline or an unhonored abort intent: its abort signal was fired, and `deferred` marks the settle-grace window before the coordinator settles over a hung fiber).
-* `outcome` — `deferred` (the work will be retried on the next scheduled wake), `agent_unavailable` (a queued row targets an agent that is no longer registered — retried until the agent is restored, the instance is aborted, or the unready auto-fail bound settles it failed), `attempt_cap_deferred` (retained for compatibility; no longer emitted — bounded supervisor passes throttle reclaim cycles at wake cadence instead of an in-pass cap), or `terminated` (the failure was swallowed so a durable give-up could proceed — “gave up durably”, as opposed to “will retry”). A queued submission whose materialization keeps failing is not retried forever: past its admission time plus the agent’s `durability.timeoutMs` (default one hour) the coordinator settles it failed, emitting `submission_settled` plus a `terminated` recovery event — and a durable abort settles an unready row immediately.
-* `error` — the same durable-shaped, stackless serialization as [submission\_settled.error](#submission%5Fsettled). The live observation additionally carries the classified [errorInfo](#flueobservation) with the throw-site stack.
+- `operation` — the recovery step: `materialize_submission` (admission-side materialization of a queued row), `finalize_settlement` (finalizing a settlement reserved by a process that died), `reconcile_submission` (classifying an interrupted attempt), `start_submission` (starting a claimed attempt), `process_submission` (the processing/settlement machinery around an attempt), `reconcile_pass` (a whole reconcile or claim pass — no single submission, so `submissionId` is absent), `enforce_deadline` (a live attempt passed its durability deadline or an unhonored abort intent: its abort signal was fired, and `deferred` marks the settle-grace window before the coordinator settles over a hung fiber).
+- `outcome` — `deferred` (the work will be retried on the next scheduled wake), `agent_unavailable` (a queued row targets an agent that is no longer registered — retried until the agent is restored, the instance is aborted, or the unready auto-fail bound settles it failed), `attempt_cap_deferred` (retained for compatibility; no longer emitted — bounded supervisor passes throttle reclaim cycles at wake cadence instead of an in-pass cap), or `terminated` (the failure was swallowed so a durable give-up could proceed — “gave up durably”, as opposed to “will retry”). A queued submission whose materialization keeps failing is not retried forever: past its admission time plus the agent’s `durability.timeoutMs` (default one hour) the coordinator settles it failed, emitting `submission_settled` plus a `terminated` recovery event — and a durable abort settles an unready row immediately.
+- `error` — the same durable-shaped, stackless serialization as [submission_settled.error](#submission%5Fsettled). The live observation additionally carries the classified [errorInfo](#flueobservation) with the throw-site stack.
 
 A persistent condition **re-emits on every failed wake** (roughly every 30 seconds once a coordinator falls back to its scheduled backstop). That repetition is the alerting signal — a missed emission is re-signaled on the next wake, so alert on recurrence and deduplicate by (`submissionId`, `operation`). Every emitting site also still writes its structured `console.error` line; platform logs remain the zero-config trace.
 
@@ -236,9 +236,9 @@ A persistent condition **re-emits on every failed wake** (roughly every 30 secon
 
 These guarantees hold for the submission-lifecycle and recovery events (and restate the general [observe()](#observe) contract where it matters most):
 
-* **A throwing observer cannot break coordination** — guaranteed twice over: every global subscriber is individually contained by the dispatch path, and the coordinator’s emitter is itself infallible by construction. A failure signal can never worsen the failure it reports.
-* **Ordering is per-emitting-context only**, exactly as for every other event. Within one isolate’s live view a submission’s events are causally ordered — `submission_queued` (where observed) precedes `submission_running` precedes `submission_settled` — but there is no cross-submission or cross-isolate ordering.
-* **Delivery is live-only and best-effort**: at-most-once per emission occurrence, no durable replay. Three properties make this workable: recovery re-emits `submission_running` on every replacement attempt (busy derivation converges), `submission_recovery` re-fires on every failed wake while a condition persists, and the durable truths remain the submission row and the canonical settlement record. The stream is a signal, never the ledger — an application that needs guaranteed processing polls submission state or reads the conversation, not events.
+- **A throwing observer cannot break coordination** — guaranteed twice over: every global subscriber is individually contained by the dispatch path, and the coordinator’s emitter is itself infallible by construction. A failure signal can never worsen the failure it reports.
+- **Ordering is per-emitting-context only**, exactly as for every other event. Within one isolate’s live view a submission’s events are causally ordered — `submission_queued` (where observed) precedes `submission_running` precedes `submission_settled` — but there is no cross-submission or cross-isolate ordering.
+- **Delivery is live-only and best-effort**: at-most-once per emission occurrence, no durable replay. Three properties make this workable: recovery re-emits `submission_running` on every replacement attempt (busy derivation converges), `submission_recovery` re-fires on every failed wake while a condition persists, and the durable truths remain the submission row and the canonical settlement record. The stream is a signal, never the ledger — an application that needs guaranteed processing polls submission state or reads the conversation, not events.
 
 ### `submission_settled`
 
@@ -258,11 +258,11 @@ These guarantees hold for the submission-lifecycle and recovery events (and rest
 }
 ```
 
-A durable submission reached a terminal state. Emitted on every terminal path — normal completion, failure, abort, and recovery of an interrupted submission, including a settlement reserved by a process that died before finalizing it. This is the event to alert on for terminal failures; pair it with [submission\_recovery](#submission%5Frecovery) for failures that never terminalize.
+A durable submission reached a terminal state. Emitted on every terminal path — normal completion, failure, abort, and recovery of an interrupted submission, including a settlement reserved by a process that died before finalizing it. This is the event to alert on for terminal failures; pair it with [submission_recovery](#submission%5Frecovery) for failures that never terminalize.
 
-* `submissionId` — the settled submission. Also stamped as the envelope correlation field.
-* `outcome` — `completed`, `failed`, or `aborted`.
-* `error` — present unless `outcome` is `completed`. A [FlueError](https://flueframework.com/docs/reference/errors/) keeps its `name`, `message`, `type`, `details`, and `meta`; any other failure is replaced wholesale by a generic `internal_error` payload — internal error messages never ride this field. The live observation additionally carries the classified [errorInfo](#flueobservation), including the throw-site stack.
+- `submissionId` — the settled submission. Also stamped as the envelope correlation field.
+- `outcome` — `completed`, `failed`, or `aborted`.
+- `error` — present unless `outcome` is `completed`. A [FlueError](https://flueframework.com/docs/reference/errors/) keeps its `name`, `message`, `type`, `details`, and `meta`; any other failure is replaced wholesale by a generic `internal_error` payload — internal error messages never ride this field. The live observation additionally carries the classified [errorInfo](#flueobservation), including the throw-site stack.
 
 `submission_settled` is emitted at settlement, outside session scope: it carries the envelope and submission-level correlation fields but no `conversationId`/`session`. Settlement is also recorded durably — a settlement record is appended to the canonical conversation stream (see the [Streaming Protocol Reference](https://flueframework.com/docs/reference/streaming-protocol/)); the runtime event itself is live-only like every other event.
 
@@ -288,11 +288,11 @@ A durable submission reached a terminal state. Emitted on every terminal path �
 
 Bounds of one session operation — a `prompt()`, `skill()`, `task()`, `shell()`, or `compact()` call on a session or harness (see the [Agent API Reference](https://flueframework.com/docs/reference/agent-api/)). Every started operation emits exactly one terminal `operation` event.
 
-* `operationId` — generated per operation; every event emitted inside the operation carries it as a correlation field.
-* `durationMs` — wall-clock duration of the operation.
-* `isError` / `error` — `error` is present on failure, serialized without stacks: a `FlueError` becomes `{ name, message, type, details?, meta? }`, a plain `Error` becomes `{ name, message }`, and a non-`Error` thrown value passes through as-is.
-* `result` — the operation’s return value on success (for example a `PromptResponse`). Payloads can be large; exporters should project what they need.
-* `usage` — the operation result’s aggregated `PromptUsage`, present when the result carries one (`prompt`, `skill`, `task`). Roll-up semantics: `usage` here already includes the operation’s `turn`\-level usage — sum one level only.
+- `operationId` — generated per operation; every event emitted inside the operation carries it as a correlation field.
+- `durationMs` — wall-clock duration of the operation.
+- `isError` / `error` — `error` is present on failure, serialized without stacks: a `FlueError` becomes `{ name, message, type, details?, meta? }`, a plain `Error` becomes `{ name, message }`, and a non-`Error` thrown value passes through as-is.
+- `result` — the operation’s return value on success (for example a `PromptResponse`). Payloads can be large; exporters should project what they need.
+- `usage` — the operation result’s aggregated `PromptUsage`, present when the result carries one (`prompt`, `skill`, `task`). Roll-up semantics: `usage` here already includes the operation’s `turn`\-level usage — sum one level only.
 
 ### `turn_start`, `turn_request`, `turn`, `turn_messages`
 
@@ -326,11 +326,11 @@ type LlmTurnPurpose = 'agent' | 'compaction' | 'compaction_prefix';
 
 One model call is one turn, correlated by `turnId`.
 
-* `turn_start` — a model turn began. Emitted for agent-purpose turns only; compaction turns emit `turn_request` and `turn` without a `turn_start`.
-* `turn_request` — the full model-visible request, emitted before the provider call. **In-process only:** delivered to `observe()` subscribers but never persisted and never served over any transport. It is the only event that carries the system prompt, the complete message context, and the tool list.
-* `turn` — the completed model call: request summary, normalized response, duration, and error status. `isError` is true when the call threw or the response finished with reason `error` or `aborted`.
-* `turn_messages` — the turn boundary: the assistant `message` and the `toolResults` its tool calls produced, emitted after any tool batch has durably committed. `toolResults` is empty for a turn without tool calls. Agent-purpose turns only.
-* `purpose` — `agent` for conversation turns; `compaction` for a summarization call; `compaction_prefix` for the extra prefix-summarization call a split-turn compaction dispatches.
+- `turn_start` — a model turn began. Emitted for agent-purpose turns only; compaction turns emit `turn_request` and `turn` without a `turn_start`.
+- `turn_request` — the full model-visible request, emitted before the provider call. **In-process only:** delivered to `observe()` subscribers but never persisted and never served over any transport. It is the only event that carries the system prompt, the complete message context, and the tool list.
+- `turn` — the completed model call: request summary, normalized response, duration, and error status. `isError` is true when the call threw or the response finished with reason `error` or `aborted`.
+- `turn_messages` — the turn boundary: the assistant `message` and the `toolResults` its tool calls produced, emitted after any tool batch has durably committed. `toolResults` is empty for a turn without tool calls. Agent-purpose turns only.
+- `purpose` — `agent` for conversation turns; `compaction` for a summarization call; `compaction_prefix` for the extra prefix-summarization call a split-turn compaction dispatches.
 
 The normalized `turn` events and the detailed `turn_messages`/`message_*` family describe the same model activity; meter from one family or the other, not both.
 
@@ -361,15 +361,15 @@ interface ModelRequestInfo {
 }
 ```
 
-* `providerId` — the registration key from the model specifier.
-* `providerName` — the semantic provider identity; differs from `providerId` when a gateway or custom registration fronts the model.
-* `requestedModel` — the model id Flue asked for.
-* `api` — the wire API the provider speaks.
-* `serverAddress`, `serverPort` — parsed from the provider endpoint when available.
-* `reasoningLevel`, `maxTokens`, `temperature` — per-call settings, present when set.
-* `contextCompacted` — declared in the format for turns whose context was compacted; the current runtime does not populate it.
+- `providerId` — the registration key from the model specifier.
+- `providerName` — the semantic provider identity; differs from `providerId` when a gateway or custom registration fronts the model.
+- `requestedModel` — the model id Flue asked for.
+- `api` — the wire API the provider speaks.
+- `serverAddress`, `serverPort` — parsed from the provider endpoint when available.
+- `reasoningLevel`, `maxTokens`, `temperature` — per-call settings, present when set.
+- `contextCompacted` — declared in the format for turns whose context was compacted; the current runtime does not populate it.
 
-`LlmMessage` (union of `LlmUserMessage`, `LlmAssistantMessage`, `LlmToolResultMessage`, built from `LlmTextContent`, `LlmThinkingContent`, `LlmImageContent`, `LlmToolCall`) and `LlmTool` are exported from `@flue/runtime`. Image blocks in `turn_request` messages carry [IMAGE\_DATA\_OMITTED](#image%5Fdata%5Fomitted) instead of bytes. Internal `signal` messages are rendered into user-role text before they appear in `turn_request` input.
+`LlmMessage` (union of `LlmUserMessage`, `LlmAssistantMessage`, `LlmToolResultMessage`, built from `LlmTextContent`, `LlmThinkingContent`, `LlmImageContent`, `LlmToolCall`) and `LlmTool` are exported from `@flue/runtime`. Image blocks in `turn_request` messages carry [IMAGE_DATA_OMITTED](#image%5Fdata%5Fomitted) instead of bytes. Internal `signal` messages are rendered into user-role text before they appear in `turn_request` input.
 
 #### `ModelResponse`
 
@@ -386,13 +386,13 @@ interface ModelResponse {
 }
 ```
 
-* `responseId`, `responseModel` — provider-reported identity of the response, when reported.
-* `output` — the assistant message the call produced, in the exported `Llm` shape.
-* `usage` — provider-reported token and cost usage for this single call; absent when the provider reported none. Turn usage is the leaf level — `operation` and `compaction` roll-ups already include it.
-* `finishReason` — Flue’s normalized finish vocabulary.
-* `providerFinishReason` — the provider’s exact finish value before normalization. Telemetry only; never part of replay or execution identity. Attached when the provider records it (the Workers AI provider does).
-* `gatewayLogId` — the response’s own Cloudflare AI Gateway log id (`cf-aig-log-id`), read from that response’s headers. Telemetry only.
-* `error` — the classified error for a failed call, in the same shape as the observation’s [errorInfo](#flueobservation), including the throw-site `stack` when the failure was observed live from a thrown `Error`.
+- `responseId`, `responseModel` — provider-reported identity of the response, when reported.
+- `output` — the assistant message the call produced, in the exported `Llm` shape.
+- `usage` — provider-reported token and cost usage for this single call; absent when the provider reported none. Turn usage is the leaf level — `operation` and `compaction` roll-ups already include it.
+- `finishReason` — Flue’s normalized finish vocabulary.
+- `providerFinishReason` — the provider’s exact finish value before normalization. Telemetry only; never part of replay or execution identity. Attached when the provider records it (the Workers AI provider does).
+- `gatewayLogId` — the response’s own Cloudflare AI Gateway log id (`cf-aig-log-id`), read from that response’s headers. Telemetry only.
+- `error` — the classified error for a failed call, in the same shape as the observation’s [errorInfo](#flueobservation), including the throw-site `stack` when the failure was observed live from a thrown `Error`.
 
 #### `PromptUsage`
 
@@ -432,10 +432,10 @@ Token counts per component plus cost computed from the model catalog’s per-mil
 }
 ```
 
-* `message_start` / `message_end` — bound every message the agent loop materializes: the user prompt, each assistant message (started with the partial message, ended with the final one), and each tool-result message. For assistant messages, `message_end` carries the authoritative completed message; deltas are best-effort live progress, and a subscriber registered mid-generation misses the deltas emitted before it attached.
-* `text_delta` — a streamed fragment of assistant text.
-* `thinking_start` / `thinking_delta` / `thinking_end` — bound one streamed reasoning block; `thinking_end.content` is the complete block. `contentIndex` is the zero-based index of the block within the assistant message’s content array, when known; correlate thinking events within a turn by `contentIndex`.
-* `toolcall_delta` — a streamed fragment of one tool call’s JSON-arguments text, for live previews of in-flight calls. Emitted only once the streaming block knows its `toolCallId` and `toolName`. Live-preview only: never persisted, never replayed; the canonical record and the `tool_start` observation remain the source of truth for complete arguments.
+- `message_start` / `message_end` — bound every message the agent loop materializes: the user prompt, each assistant message (started with the partial message, ended with the final one), and each tool-result message. For assistant messages, `message_end` carries the authoritative completed message; deltas are best-effort live progress, and a subscriber registered mid-generation misses the deltas emitted before it attached.
+- `text_delta` — a streamed fragment of assistant text.
+- `thinking_start` / `thinking_delta` / `thinking_end` — bound one streamed reasoning block; `thinking_end.content` is the complete block. `contentIndex` is the zero-based index of the block within the assistant message’s content array, when known; correlate thinking events within a turn by `contentIndex`.
+- `toolcall_delta` — a streamed fragment of one tool call’s JSON-arguments text, for live previews of in-flight calls. Emitted only once the streaming block knows its `toolCallId` and `toolName`. Live-preview only: never persisted, never replayed; the canonical record and the `tool_start` observation remain the source of truth for complete arguments.
 
 Delta events carry no `turnId` payload field; correlate them through the envelope’s `turnId` correlation field.
 
@@ -455,10 +455,10 @@ Delta events carry no `turnId` payload field; correlate them through the envelop
 
 Bounds of one tool execution, correlated by `toolCallId`. Emitted for model-invoked tool calls and for programmatic `shell()` calls alike (`shell()` appears as `toolName: 'bash'` with observation `origin: 'caller'`).
 
-* `args` — declared in the format but not populated by the current runtime; the normalized arguments are delivered on the live observation’s `args` field instead, and the canonical conversation record carries them durably.
-* `isError` — true when the tool threw. Tools signal errors by throwing; there is no error flag on a successful result value.
-* `result` — the tool’s result value. For model tools this is the harness-level result shape (`content` blocks plus a tool-specific `details` payload) — an internal shape, not a stable contract. Image blocks in `result.content` carry [IMAGE\_DATA\_OMITTED](#image%5Fdata%5Fomitted).
-* `durationMs` — measured once and shared with the durable record, so the two cannot disagree.
+- `args` — declared in the format but not populated by the current runtime; the normalized arguments are delivered on the live observation’s `args` field instead, and the canonical conversation record carries them durably.
+- `isError` — true when the tool threw. Tools signal errors by throwing; there is no error flag on a successful result value.
+- `result` — the tool’s result value. For model tools this is the harness-level result shape (`content` blocks plus a tool-specific `details` payload) — an internal shape, not a stable contract. Image blocks in `result.content` carry [IMAGE_DATA_OMITTED](#image%5Fdata%5Fomitted).
+- `durationMs` — measured once and shared with the durable record, so the two cannot disagree.
 
 For model-invoked calls the terminal `tool` event is published when the turn’s tool batch durably commits, not the instant execution finishes — a tool whose batch is interrupted before commit never publishes its terminal event, matching the durable outcome. `shell()` publishes immediately. `shell()` per-call `env` values are redacted to `<redacted>` in the recorded arguments (keys stay visible); a failed `shell()` carries an error-shaped result whose `details.exitCode` is `-1`.
 
@@ -484,10 +484,10 @@ For model-invoked calls the terminal `tool` event is published when the turn’s
 
 Bounds of one delegated task (a `session.task()` call or the model-facing `task` tool), correlated by `taskId`.
 
-* `prompt` — the delegated instruction text.
-* `agent` — the named subagent selected for the task, when one was.
-* `cwd` — the task session’s working directory override, when set.
-* `result` — the task’s assistant text on success; the error message on failure.
+- `prompt` — the delegated instruction text.
+- `agent` — the named subagent selected for the task, when one was.
+- `cwd` — the task session’s working directory override, when set.
+- `result` — the task’s assistant text on success; the error message on failure.
 
 Both events additionally carry `parentSession`, and the child’s `session` and `conversationId`, as correlation fields. Events emitted inside the task session carry `taskId` and `parentSession` themselves.
 
@@ -512,11 +512,11 @@ Both events additionally carry `parentSession`, and the child’s `session` and 
 
 Bounds of one context compaction. Every `compaction_start` is followed by exactly one terminal `compaction` event.
 
-* `reason` — `threshold` (automatic, the configured window threshold was crossed), `overflow` (automatic recovery from a context-overflow failure), or `manual` (an explicit `compact()` call).
-* `estimatedTokens` — the estimated token size of the context being summarized.
-* `messagesBefore` / `messagesAfter` — live message counts around the compaction.
-* `error` — present on failure, in the same serialized shape as [operation.error](#operation%5Fstart-operation). A failed manual compaction also rejects the `compact()` call; failed automatic compaction is best-effort and only observable here.
-* `usage` — aggregated usage of the summarization call(s) the compaction dispatched. Those calls also emit their own `turn_request`/`turn` events with purpose `compaction` or `compaction_prefix`; this roll-up includes them.
+- `reason` — `threshold` (automatic, the configured window threshold was crossed), `overflow` (automatic recovery from a context-overflow failure), or `manual` (an explicit `compact()` call).
+- `estimatedTokens` — the estimated token size of the context being summarized.
+- `messagesBefore` / `messagesAfter` — live message counts around the compaction.
+- `error` — present on failure, in the same serialized shape as [operation.error](#operation%5Fstart-operation). A failed manual compaction also rejects the `compact()` call; failed automatic compaction is best-effort and only observable here.
+- `usage` — aggregated usage of the summarization call(s) the compaction dispatched. Those calls also emit their own `turn_request`/`turn` events with purpose `compaction` or `compaction_prefix`; this roll-up includes them.
 
 A compaction that finds nothing to compact emits no events.
 
@@ -533,7 +533,7 @@ A compaction that finds nothing to compact emits no events.
 
 A structured log line, emitted by `ctx.log` on [FlueEventContext](#flueeventcontext), the `log` on a tool’s run context, the `log` on lifecycle-hook contexts, and the runtime’s own diagnostics (prefixed `[flue:...]` in `message`).
 
-* `attributes` — caller-supplied structured data, with two normalizations: an `Error` instance under `attributes.error` is serialized to the stackless event-error shape, and the runtime stamps provenance keys — tool logs carry `tool` and `toolCallId`, hook logs carry `hook` and `hookIndex`.
+- `attributes` — caller-supplied structured data, with two normalizations: an `Error` instance under `attributes.error` is serialized to the stackless event-error shape, and the runtime stamps provenance keys — tool logs carry `tool` and `toolCallId`, hook logs carry `hook` and `hookIndex`.
 
 Log events are runtime events only: the model never sees them and they never appear in the conversation a client renders.
 
@@ -562,8 +562,9 @@ The sequence describes the uncontended path. A delivery that joins an already-bu
 type FlueObservation = FlueEvent & {
   agentInput?: { text: string; images?: Array<{ mimeType: string }> };
   agentOutput?:
-    { type: 'text'; text: string; finishReason: string } | { type: 'data'; data: unknown };
-  origin?: 'model' | 'caller' | 'framework' | 'adapter';
+    | { type: "text"; text: string; finishReason: string }
+    | { type: "data"; data: unknown };
+  origin?: "model" | "caller" | "framework" | "adapter";
   description?: string;
   args?: unknown;
   effectiveResult?: unknown;
@@ -581,14 +582,14 @@ type FlueObservation = FlueEvent & {
 
 The shape `observe()` delivers: the event plus exporter-oriented detail fields. Every detail field is **live-only** — never persisted, never replayed, and never present on any transported event. The detail fields:
 
-* `agentInput` — the invocation’s prompt text and image manifest (MIME types only, no bytes). On the terminal `operation` event for `prompt` and `skill` operations, and on `task_start`.
-* `agentOutput` — the invocation’s outcome: freeform text with its finish reason, or the validated structured data of a `result:`\-schema call. On successful `operation` (`prompt`/`skill`) and `task` events.
-* `origin` — who initiated a tool call: `model` (model-invoked, including custom tools), `adapter` (sandbox-adapter tools), `framework` (framework-added tools such as `task` and result extraction), or `caller` (programmatic `shell()`). On `tool_start` and `tool`.
-* `description` — the tool’s description text. On `tool_start` and `tool` for model-invoked calls.
-* `args` — the tool call’s normalized arguments. On `tool_start`.
-* `effectiveResult` — the tool’s effective result as the model sees it (single text blocks collapsed to their string). On successful `tool` events. Image content is replaced with [IMAGE\_DATA\_OMITTED](#image%5Fdata%5Fomitted).
-* `toolCallId` — on `task_start` when the task was raised by a model `task` tool call, linking the task to that call.
-* `errorInfo` — the classified error for a failed activity (`operation`, `tool`, `task`, `compaction`, `submission_recovery`, `submission_settled`; failed turns carry the same shape as `turn.response.error` instead). `type` is the stable machine-readable category (a [FlueError](https://flueframework.com/docs/reference/errors/)’s `type`, else the error’s `code`, `name`, or `_OTHER`); `meta` is framework-owned structured metadata (for example validation issues); `stack` is the throw-site stack, present only when the failure was observed live from a thrown `Error`. Stacks expose filesystem paths and deployment layout, which is why this projection exists only in process.
+- `agentInput` — the invocation’s prompt text and image manifest (MIME types only, no bytes). On the terminal `operation` event for `prompt` and `skill` operations, and on `task_start`.
+- `agentOutput` — the invocation’s outcome: freeform text with its finish reason, or the validated structured data of a `result:`\-schema call. On successful `operation` (`prompt`/`skill`) and `task` events.
+- `origin` — who initiated a tool call: `model` (model-invoked, including custom tools), `adapter` (sandbox-adapter tools), `framework` (framework-added tools such as `task` and result extraction), or `caller` (programmatic `shell()`). On `tool_start` and `tool`.
+- `description` — the tool’s description text. On `tool_start` and `tool` for model-invoked calls.
+- `args` — the tool call’s normalized arguments. On `tool_start`.
+- `effectiveResult` — the tool’s effective result as the model sees it (single text blocks collapsed to their string). On successful `tool` events. Image content is replaced with [IMAGE_DATA_OMITTED](#image%5Fdata%5Fomitted).
+- `toolCallId` — on `task_start` when the task was raised by a model `task` tool call, linking the task to that call.
+- `errorInfo` — the classified error for a failed activity (`operation`, `tool`, `task`, `compaction`, `submission_recovery`, `submission_settled`; failed turns carry the same shape as `turn.response.error` instead). `type` is the stable machine-readable category (a [FlueError](https://flueframework.com/docs/reference/errors/)’s `type`, else the error’s `code`, `name`, or `_OTHER`); `meta` is framework-owned structured metadata (for example validation issues); `stack` is the throw-site stack, present only when the failure was observed live from a thrown `Error`. Stacks expose filesystem paths and deployment layout, which is why this projection exists only in process.
 
 Observations are deep-frozen; treat them as read-only.
 
@@ -597,7 +598,7 @@ Observations are deep-frozen; treat them as read-only.
 ## `IMAGE_DATA_OMITTED`
 
 ```ts
-const IMAGE_DATA_OMITTED = '[image data omitted from event]';
+const IMAGE_DATA_OMITTED = "[image data omitted from event]";
 ```
 
 The sentinel that replaces raw base64 image bytes in every event payload: message-bearing fields on `message_start`, `message_end`, `turn_messages`, and `agent_end`; `tool` results; `turn_request`/`turn` message content; and the observation’s `effectiveResult`. Events keep an image’s presence and `mimeType` visible without carrying the payload. Session history and canonical attachments retain the real bytes for model context; only events are redacted. The constant is exported from both `@flue/runtime` and `@flue/sdk`.
@@ -617,10 +618,10 @@ interface FlueInstrumentation {
 
 Installs an instrumentation bundle: an event subscriber (registered exactly as `observe()` would) paired with an [execution interceptor](#flueexecutioninterceptor) that wraps live agent, model, tool, and task execution — the registration used by tracing adapters such as [@flue/opentelemetry](https://flueframework.com/docs/ecosystem/tooling/opentelemetry/). Returns a dispose function.
 
-* `key` — optional identity symbol. While an instrumentation with a given key is installed, installing another with the same key throws `InstrumentationAlreadyInstalledError` (a `FlueError` with `type: 'instrumentation_already_installed'`) in production; in dev the newest install wins and the prior one is disposed, which is what makes module-scope installations safe across dev-server reloads. Adapters use this to prevent double installation.
-* `observe` — receives every event, with the same delivery, containment, and ordering contract as [observe()](#observe).
-* `interceptor` — joins the process-wide interceptor chain for the duration of the installation.
-* `dispose` — the bundle’s own teardown (flush exporters, shut down providers). Called by the returned dispose function after the subscriber and interceptor are unregistered.
+- `key` — optional identity symbol. While an instrumentation with a given key is installed, installing another with the same key throws `InstrumentationAlreadyInstalledError` (a `FlueError` with `type: 'instrumentation_already_installed'`) in production; in dev the newest install wins and the prior one is disposed, which is what makes module-scope installations safe across dev-server reloads. Adapters use this to prevent double installation.
+- `observe` — receives every event, with the same delivery, containment, and ordering contract as [observe()](#observe).
+- `interceptor` — joins the process-wide interceptor chain for the duration of the installation.
+- `dispose` — the bundle’s own teardown (flush exporters, shut down providers). Called by the returned dispose function after the subscriber and interceptor are unregistered.
 
 The returned dispose function is memoized and idempotent: calling `instrument()` again with the same object returns the same function without reinstalling, and repeated calls to the function share one disposal. On the Node target, a module-scope installation is not disposed at server shutdown — an integration that must flush on exit should register its own signal handling — and survives dev-server reloads through key replacement, not disposal by the server. On Cloudflare, installations live and die with their isolate. A manually retained dispose function is only needed for dynamic wiring.
 
@@ -634,10 +635,10 @@ type FlueExecutionInterceptor = <T>(
 ) => Promise<T>;
 
 type FlueExecutionOperation =
-  | { type: 'agent'; operationId: string; operationKind: 'prompt' | 'skill' | 'task' }
-  | { type: 'model'; turnId: string }
-  | { type: 'tool'; toolCallId: string; toolName: string }
-  | { type: 'task'; taskId: string };
+  | { type: "agent"; operationId: string; operationKind: "prompt" | "skill" | "task" }
+  | { type: "model"; turnId: string }
+  | { type: "tool"; toolCallId: string; toolName: string }
+  | { type: "task"; taskId: string };
 
 interface FlueExecutionContext {
   eventContext?: FlueEventContext;
@@ -656,9 +657,9 @@ interface FlueExecutionContext {
 
 Middleware around live execution, registered through [instrument()](#instrument). Registered interceptors compose in registration order; each receives a `next` continuation for the rest of the chain and the wrapped work itself.
 
-* **Wrapped operations** — `agent` wraps a submission run and each `prompt`/`skill` session operation (`operationId` is the submission id at submission scope with `operationKind: 'prompt'`, the operation id at session scope; the declared `operationKind: 'task'` is not raised by the current runtime, which represents delegation with the `task` operation type); `model` wraps each provider call, correlated to the `turn` events by `turnId`; `tool` wraps each tool execution; `task` wraps each delegated task. Scopes nest: a `model` interception runs inside its enclosing `agent` interception’s async context, which is what lets a tracer parent spans without any Flue-specific propagation.
-* **`next` is exactly-once** — calling it a second time rejects with an `Error` (`"Flue execution next() called more than once."`). Not calling it skips the wrapped work and the rest of the chain; the interceptor’s return value becomes the operation’s result.
-* **`ctx` fields** — populated when known at the interception point: submission scope carries `instanceId`, `submissionId`, `agentName`, and `traceCarrier`; session scope carries `instanceId`, `harness`, `conversationId`, `session`, `operationId`, and, when active, `turnId` and `taskId`. `traceCarrier` is the validated W3C `traceparent`/`tracestate` pair extracted from the originating HTTP request, when one carried it. `eventContext` is declared in the type but not populated by the current runtime.
+- **Wrapped operations** — `agent` wraps a submission run and each `prompt`/`skill` session operation (`operationId` is the submission id at submission scope with `operationKind: 'prompt'`, the operation id at session scope; the declared `operationKind: 'task'` is not raised by the current runtime, which represents delegation with the `task` operation type); `model` wraps each provider call, correlated to the `turn` events by `turnId`; `tool` wraps each tool execution; `task` wraps each delegated task. Scopes nest: a `model` interception runs inside its enclosing `agent` interception’s async context, which is what lets a tracer parent spans without any Flue-specific propagation.
+- **`next` is exactly-once** — calling it a second time rejects with an `Error` (`"Flue execution next() called more than once."`). Not calling it skips the wrapped work and the rest of the chain; the interceptor’s return value becomes the operation’s result.
+- **`ctx` fields** — populated when known at the interception point: submission scope carries `instanceId`, `submissionId`, `agentName`, and `traceCarrier`; session scope carries `instanceId`, `harness`, `conversationId`, `session`, `operationId`, and, when active, `turnId` and `taskId`. `traceCarrier` is the validated W3C `traceparent`/`tracestate` pair extracted from the originating HTTP request, when one carried it. `eventContext` is declared in the type but not populated by the current runtime.
 
 Interceptors run on the execution path: a slow interceptor slows the agent, and a throwing interceptor fails the wrapped operation.
 
@@ -676,16 +677,16 @@ A `FlueEvent` from a direct attached-agent interaction, with `instanceId` requir
 
 Stable, exported from `@flue/runtime`:
 
-* The event envelope (`v`, `eventIndex`, `timestamp`) and correlation fields.
-* The event type names and the payload fields shown on this page.
-* `ModelRequest`, `ModelRequestInput`, `ModelRequestInfo`, `ModelResponse`, `PromptUsage`, `LlmTurnPurpose`, and the `Llm*` message and tool types — the model-turn payloads are fully typed by exported symbols.
-* `IMAGE_DATA_OMITTED`.
+- The event envelope (`v`, `eventIndex`, `timestamp`) and correlation fields.
+- The event type names and the payload fields shown on this page.
+- `ModelRequest`, `ModelRequestInput`, `ModelRequestInfo`, `ModelResponse`, `PromptUsage`, `LlmTurnPurpose`, and the `Llm*` message and tool types — the model-turn payloads are fully typed by exported symbols.
+- `IMAGE_DATA_OMITTED`.
 
 Internal shapes that ride event payloads without a stability guarantee:
 
-* `AgentMessage` values on `message_start`, `message_end`, `turn_messages`, and `agent_end` — the harness-level message representation, including internal roles. Consume completed model output through `turn.response.output` (typed by `LlmAssistantMessage`) instead where possible.
-* `tool.result` and the observation’s `effectiveResult` — tool-shaped values whose `details` payload is tool-specific by design.
-* `operation.result` — the operation’s return value, whose shape follows the operation.
+- `AgentMessage` values on `message_start`, `message_end`, `turn_messages`, and `agent_end` — the harness-level message representation, including internal roles. Consume completed model output through `turn.response.output` (typed by `LlmAssistantMessage`) instead where possible.
+- `tool.result` and the observation’s `effectiveResult` — tool-shaped values whose `details` payload is tool-specific by design.
+- `operation.result` — the operation’s return value, whose shape follows the operation.
 
 Format changes that break the stable surface bump `v`; additive optional fields do not.
 
@@ -695,24 +696,24 @@ Current page: [Events Reference](https://flueframework.com/docs/reference/events
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Runtime
 
-* [Configuration](https://flueframework.com/docs/reference/configuration/)
-* [Errors Reference](https://flueframework.com/docs/reference/errors/)
-* [Agent API](https://flueframework.com/docs/reference/agent-api/)
-* [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
-* [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
-* [Provider API](https://flueframework.com/docs/reference/provider-api/)
-* [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
-* [Events Reference](https://flueframework.com/docs/reference/events/)
+- [Configuration](https://flueframework.com/docs/reference/configuration/)
+- [Errors Reference](https://flueframework.com/docs/reference/errors/)
+- [Agent API](https://flueframework.com/docs/reference/agent-api/)
+- [Agent Hooks API](https://flueframework.com/docs/reference/agent-hooks-api/)
+- [Agent Behavior](https://flueframework.com/docs/reference/agent-behavior/)
+- [Provider API](https://flueframework.com/docs/reference/provider-api/)
+- [Streaming Protocol](https://flueframework.com/docs/reference/streaming-protocol/)
+- [Events Reference](https://flueframework.com/docs/reference/events/)
 
 ### Advanced
 
-* [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
-* [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)
+- [Sandbox Adapter API](https://flueframework.com/docs/reference/sandbox-api/)
+- [Data Persistence API](https://flueframework.com/docs/reference/data-persistence-api/)

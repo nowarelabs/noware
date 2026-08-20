@@ -58,7 +58,7 @@ const ws = await extractWorkspace(fs, createStubExtractor(), {
 ```ts
 const report = await diesel.reportDrift(fs, manifest);
 console.log(report.driftedFiles); // Map<elementId, filePath[]>
-console.log(report.modelDiff);    // C4WorkspaceDiff
+console.log(report.modelDiff); // C4WorkspaceDiff
 ```
 
 ### Render diagrams
@@ -82,30 +82,30 @@ createReactNodePack().register(diesel);
 
 ## Exports
 
-| Export | Description |
-|---|---|
-| `createDiesel(cfour)` | Binds the pipeline to a cfour model instance |
-| `defaultDiesel` | Diesel bound to cfour's shared default instance |
-| `planAndApply(cfour, fs, manifest, opts?)` | Full validate → diff → generate → commit pipeline |
-| `topoOrderForApply(cfour, diff, workspace?)` | Touched nodes in dependency order |
-| `registerGenerator(key, gen)` | Register a generator for a C4 element kind |
-| `resolveGenerator(node)` | Resolve the most specific generator for a node |
-| `deriveRelationshipId(src, dst, label)` | Stable, injective relationship id (async sha256) |
-| `detectDrift(fs, entry)` | Paths whose on-disk hash drifted from manifest |
-| `reportDrift(cfour, fs, manifest)` | Structured drift report (files + model diff) |
-| `hashFile(fs, path)` | SHA-256 hex digest of a file |
-| `unlinkIfExists(fs, path)` | Best-effort file delete |
-| `extractWorkspace(fs, extractor, opts?)` | Reverse: source tree → C4 workspace |
-| `createStubExtractor()` | Heuristic stub extractor for demos/testing |
-| `renderMermaid(workspace)` | Mermaid C4 diagram markup string |
-| `renderPlantUml(workspace)` | PlantUML component diagram markup string |
-| `writeDiagram(content, path, fs)` | Write diagram string to disk |
-| `createReactNodePack()` | Minimal React + Node template pack |
-| `register(cfour, config, className?)` | DSL: register a component/code element |
-| `addBuildingBlock(cfour, id, name, ...)` | DSL: register a framework building block |
-| `resetGenerators()` | Clear the shared generator registry (test helper) |
-| `assertGeneratorIsPure(fs, gen, ctx)` | Verify a generator satisfies the purity contract |
-| `createNodeCodebaseFs(root?)` | Node adapter for `CodebaseFs` (subpath `gen-diesel/node`) |
+| Export                                       | Description                                               |
+| -------------------------------------------- | --------------------------------------------------------- |
+| `createDiesel(cfour)`                        | Binds the pipeline to a cfour model instance              |
+| `defaultDiesel`                              | Diesel bound to cfour's shared default instance           |
+| `planAndApply(cfour, fs, manifest, opts?)`   | Full validate → diff → generate → commit pipeline         |
+| `topoOrderForApply(cfour, diff, workspace?)` | Touched nodes in dependency order                         |
+| `registerGenerator(key, gen)`                | Register a generator for a C4 element kind                |
+| `resolveGenerator(node)`                     | Resolve the most specific generator for a node            |
+| `deriveRelationshipId(src, dst, label)`      | Stable, injective relationship id (async sha256)          |
+| `detectDrift(fs, entry)`                     | Paths whose on-disk hash drifted from manifest            |
+| `reportDrift(cfour, fs, manifest)`           | Structured drift report (files + model diff)              |
+| `hashFile(fs, path)`                         | SHA-256 hex digest of a file                              |
+| `unlinkIfExists(fs, path)`                   | Best-effort file delete                                   |
+| `extractWorkspace(fs, extractor, opts?)`     | Reverse: source tree → C4 workspace                       |
+| `createStubExtractor()`                      | Heuristic stub extractor for demos/testing                |
+| `renderMermaid(workspace)`                   | Mermaid C4 diagram markup string                          |
+| `renderPlantUml(workspace)`                  | PlantUML component diagram markup string                  |
+| `writeDiagram(content, path, fs)`            | Write diagram string to disk                              |
+| `createReactNodePack()`                      | Minimal React + Node template pack                        |
+| `register(cfour, config, className?)`        | DSL: register a component/code element                    |
+| `addBuildingBlock(cfour, id, name, ...)`     | DSL: register a framework building block                  |
+| `resetGenerators()`                          | Clear the shared generator registry (test helper)         |
+| `assertGeneratorIsPure(fs, gen, ctx)`        | Verify a generator satisfies the purity contract          |
+| `createNodeCodebaseFs(root?)`                | Node adapter for `CodebaseFs` (subpath `gen-diesel/node`) |
 
 ## Development
 

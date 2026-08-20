@@ -53,12 +53,12 @@ The timeout is enforced preemptively, not just between attempts. The coordinator
 The defaults are 10 attempts and one hour per submission. Override them per agent with the `durability` static:
 
 ```ts
-'use agent';
-import { useModel } from '@flue/runtime';
+"use agent";
+import { useModel } from "@flue/runtime";
 
 export function IssueTriage() {
-  useModel('anthropic/claude-opus-4-6');
-  return 'Triage the bound issue end-to-end.';
+  useModel("anthropic/claude-opus-4-6");
+  return "Triage the bound issue end-to-end.";
 }
 
 IssueTriage.durability = { maxAttempts: 5, timeoutMs: 7_200_000 };
@@ -71,17 +71,17 @@ The static is applied by the platform while the agent function is _not_ running,
 An ordinary tool call interrupted mid-flight settles with an unknown-outcome error on recovery. For work that must complete — a payment, a provisioning job, a multi-step sync — declare the tool `durable: true`: its `run` receives `step`, every side effect goes through `step.do(name, fn)`, and recovery re-executes the call instead of marking it interrupted:
 
 ```ts
-import { defineTool } from '@flue/runtime';
-import * as v from 'valibot';
-import { billing, projects, DEFAULT_PROJECTS } from '../shared/provisioning.ts';
+import { defineTool } from "@flue/runtime";
+import * as v from "valibot";
+import { billing, projects, DEFAULT_PROJECTS } from "../shared/provisioning.ts";
 
 export const provisionWorkspace = defineTool({
-  name: 'provision_workspace',
-  description: 'Create the customer tenant, then seed each default project.',
+  name: "provision_workspace",
+  description: "Create the customer tenant, then seed each default project.",
   input: v.object({ customerId: v.string() }),
   durable: true,
   async run({ data, step }) {
-    const tenant = await step.do('create-tenant', () => billing.createTenant(data.customerId));
+    const tenant = await step.do("create-tenant", () => billing.createTenant(data.customerId));
     for (const project of DEFAULT_PROJECTS) {
       await step.do(`seed:${project.name}`, () => projects.seed(tenant.id, project));
     }
@@ -94,8 +94,8 @@ Each completed `step.do` durably records its returned value before resolving. On
 
 Two boundaries of this contract:
 
-* **Steps are exactly-once-recorded, at-least-once-executed.** A crash in the window between a step’s function finishing and its record landing re-runs that one step, so steps around external effects should be individually idempotent.
-* **A redeploy can withdraw the contract.** If recovery finds the current render no longer declares the tool — or no longer marks it `durable` — the call falls back to the ordinary interrupted-marker path rather than guessing.
+- **Steps are exactly-once-recorded, at-least-once-executed.** A crash in the window between a step’s function finishing and its record landing re-runs that one step, so steps around external effects should be individually idempotent.
+- **A redeploy can withdraw the contract.** If recovery finds the current render no longer declares the tool — or no longer marks it `durable` — the call falls back to the ordinary interrupted-marker path rather than guessing.
 
 The [Tools guide](https://flueframework.com/docs/guide/tools/#durable-tools) walks through writing durable tools; [defineTool(...)](https://flueframework.com/docs/reference/agent-api/#definetool) documents the full contract.
 
@@ -107,8 +107,8 @@ A delegate has no durability configuration of its own: resumed child work runs i
 
 Two edge cases:
 
-* **A delegate removed by a redeploy.** If the subagent is no longer declared when recovery runs, that one call settles with an error outcome and the parent continues; a renamed or removed delegate cannot be resumed under any retry.
-* **Terminal settlement.** When a submission exhausts its budget with a task still unresolved, the interrupted marker written for that call carries the child’s conversation id, so the child’s durable transcript remains inspectable.
+- **A delegate removed by a redeploy.** If the subagent is no longer declared when recovery runs, that one call settles with an error outcome and the parent continues; a renamed or removed delegate cannot be resumed under any retry.
+- **Terminal settlement.** When a submission exhausts its budget with a task still unresolved, the interrupted marker written for that call carries the child’s conversation id, so the child’s durable transcript remains inspectable.
 
 ## Persisted state
 
@@ -124,15 +124,15 @@ The durable records and the recovery decisions are identical on both targets. Wh
 
 On Node, a coordinator inside your server process owns submission processing. Ownership is lease-based: each running submission carries a short lease that the owning process heartbeats while working. Recovery has two triggers:
 
-* **Startup reconciliation.** A replacement process scans for interrupted work when it boots and requeues it, then begins serving immediately while that work settles in the background. Ordering is preserved per conversation — recovered work runs ahead of newly delivered work, so a restart never reorders a conversation’s timeline.
-* **Periodic lease scans.** While running, the coordinator scans for expired leases, so work stranded by a fast restart — where the new process boots before the old lease expires — is reclaimed within seconds rather than waiting for another restart.
+- **Startup reconciliation.** A replacement process scans for interrupted work when it boots and requeues it, then begins serving immediately while that work settles in the background. Ordering is preserved per conversation — recovered work runs ahead of newly delivered work, so a restart never reorders a conversation’s timeline.
+- **Periodic lease scans.** While running, the coordinator scans for expired leases, so work stranded by a fast restart — where the new process boots before the old lease expires — is reclaimed within seconds rather than waiting for another restart.
 
 Graceful shutdown aborts active submissions at the turn boundary and waits for them to settle; work that does not settle in time is left running with its lease intact, and the next startup reclaims it after expiry.
 
 Two consequences for deployment:
 
-* **Recovery is only as durable as the database.** With the in-memory default, accepted work survives interruptions within the process lifetime but a restart loses everything; cross-restart recovery requires a durable adapter in [db.ts](https://flueframework.com/docs/guide/database/).
-* **One live owner per conversation.** A shared database lets a _replacement_ process recover accepted work, but it does not make two concurrent owners of the same conversation safe. Multi-replica deployments must route each conversation to one owner and avoid overlapping owners during replacement.
+- **Recovery is only as durable as the database.** With the in-memory default, accepted work survives interruptions within the process lifetime but a restart loses everything; cross-restart recovery requires a durable adapter in [db.ts](https://flueframework.com/docs/guide/database/).
+- **One live owner per conversation.** A shared database lets a _replacement_ process recover accepted work, but it does not make two concurrent owners of the same conversation safe. Multi-replica deployments must route each conversation to one owner and avoid overlapping owners during replacement.
 
 See the [Node.js target guide](https://flueframework.com/docs/guide/node-target/#state-and-durability) for the rest of the target’s behavior.
 
@@ -140,8 +140,8 @@ See the [Node.js target guide](https://flueframework.com/docs/guide/node-target/
 
 On Cloudflare, every agent conversation is a Durable Object with its own SQLite storage, so ownership is structural — the platform guarantees one live instance per conversation, and there is no lease protocol to operate. Recovery is wake-driven:
 
-* **Wake on start.** Whenever the Durable Object starts — after an eviction, a code deploy, or a platform reset — Flue immediately flags any attempt that was running when the previous instance died and reconciles it before serving new work. The platform’s fiber-recovery callback triggers the same reconciliation path.
-* **A durable wake schedule.** While unsettled work exists, the object keeps a short self-renewing wake scheduled, so an interrupted submission recovers promptly even if no external request ever arrives to wake the object. Each wake runs a bounded supervision pass — reconcile, enforce deadlines, start work — and re-arms its successor before doing anything that can fail, so a hung attempt or a failed pass can delay supervision by at most one wake, never break it. Attempt execution runs detached from the wake that started it.
+- **Wake on start.** Whenever the Durable Object starts — after an eviction, a code deploy, or a platform reset — Flue immediately flags any attempt that was running when the previous instance died and reconciles it before serving new work. The platform’s fiber-recovery callback triggers the same reconciliation path.
+- **A durable wake schedule.** While unsettled work exists, the object keeps a short self-renewing wake scheduled, so an interrupted submission recovers promptly even if no external request ever arrives to wake the object. Each wake runs a bounded supervision pass — reconcile, enforce deadlines, start work — and re-arms its successor before doing anything that can fail, so a hung attempt or a failed pass can delay supervision by at most one wake, never break it. Attempt execution runs detached from the wake that started it.
 
 Abort intents, attempt bookkeeping, and settlement records all live in the object’s own storage, so an abort requested while the object was evicted is honored on the next wake. See the [Cloudflare target guide](https://flueframework.com/docs/guide/cloudflare-target/#durable-agent-execution) for the target’s execution model.
 
@@ -167,12 +167,12 @@ Flue records that a tool ran and what it returned — never the effect itself. A
 
 ## Next steps
 
-* [Database](https://flueframework.com/docs/guide/database/) — configure the durable store recovery depends on.
-* [Tools](https://flueframework.com/docs/guide/tools/#durable-tools) — the durable-tool walkthrough and the full `step.do` rules.
-* [Subagents](https://flueframework.com/docs/guide/subagents/) — delegated tasks and what a child session inherits.
-* [Agent API](https://flueframework.com/docs/reference/agent-api/#durabilityconfig) — `DurabilityConfig`, agent statics, and the event-hook contracts.
-* [Node.js](https://flueframework.com/docs/guide/node-target/) and [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/) — target-specific runtime behavior.
-* [Observability](https://flueframework.com/docs/guide/observability/) — watch submissions, settlements, and recovery as they happen.
+- [Database](https://flueframework.com/docs/guide/database/) — configure the durable store recovery depends on.
+- [Tools](https://flueframework.com/docs/guide/tools/#durable-tools) — the durable-tool walkthrough and the full `step.do` rules.
+- [Subagents](https://flueframework.com/docs/guide/subagents/) — delegated tasks and what a child session inherits.
+- [Agent API](https://flueframework.com/docs/reference/agent-api/#durabilityconfig) — `DurabilityConfig`, agent statics, and the event-hook contracts.
+- [Node.js](https://flueframework.com/docs/guide/node-target/) and [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/) — target-specific runtime behavior.
+- [Observability](https://flueframework.com/docs/guide/observability/) — watch submissions, settlements, and recovery as they happen.
 
 ## Docs Navigation
 
@@ -180,48 +180,48 @@ Current page: [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Sections
 
-* [Guide](https://flueframework.com/docs/guide/getting-started/)
-* [Reference](https://flueframework.com/docs/reference/agent-api/)
-* [CLI](https://flueframework.com/docs/cli/overview/)
-* [Agent SDK](https://flueframework.com/docs/sdk/overview/)
-* [Ecosystem](https://flueframework.com/docs/ecosystem/)
+- [Guide](https://flueframework.com/docs/guide/getting-started/)
+- [Reference](https://flueframework.com/docs/reference/agent-api/)
+- [CLI](https://flueframework.com/docs/cli/overview/)
+- [Agent SDK](https://flueframework.com/docs/sdk/overview/)
+- [Ecosystem](https://flueframework.com/docs/ecosystem/)
 
 ### Introduction
 
-* [Getting Started](https://flueframework.com/docs/guide/getting-started/)
-* [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
-* [Migration Guide](https://flueframework.com/docs/guide/migration/)
-* [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
+- [Getting Started](https://flueframework.com/docs/guide/getting-started/)
+- [Why Flue?](https://flueframework.com/docs/guide/why-flue/)
+- [Migration Guide](https://flueframework.com/docs/guide/migration/)
+- [Changelog](https://github.com/withastro/flue/blob/main/CHANGELOG.md)
 
 ### Guides
 
-* [Project Layout](https://flueframework.com/docs/guide/project-layout/)
-* [Agents](https://flueframework.com/docs/guide/building-agents/)
-* [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
-* [Models](https://flueframework.com/docs/guide/models/)
-* [Tools](https://flueframework.com/docs/guide/tools/)
-* [MCP](https://flueframework.com/docs/guide/mcp/)
-* [Skills](https://flueframework.com/docs/guide/skills/)
-* [Subagents](https://flueframework.com/docs/guide/subagents/)
-* [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
-* [Routing](https://flueframework.com/docs/guide/routing/)
-* [Database](https://flueframework.com/docs/guide/database/)
+- [Project Layout](https://flueframework.com/docs/guide/project-layout/)
+- [Agents](https://flueframework.com/docs/guide/building-agents/)
+- [Agent Hooks](https://flueframework.com/docs/guide/agent-hooks/)
+- [Models](https://flueframework.com/docs/guide/models/)
+- [Tools](https://flueframework.com/docs/guide/tools/)
+- [MCP](https://flueframework.com/docs/guide/mcp/)
+- [Skills](https://flueframework.com/docs/guide/skills/)
+- [Subagents](https://flueframework.com/docs/guide/subagents/)
+- [Sandboxes](https://flueframework.com/docs/guide/sandboxes/)
+- [Routing](https://flueframework.com/docs/guide/routing/)
+- [Database](https://flueframework.com/docs/guide/database/)
 
 ### Advanced
 
-* [Deploy](https://flueframework.com/docs/guide/deploy/)
-* [Workflows](https://flueframework.com/docs/guide/workflows/)
-* [Schedules](https://flueframework.com/docs/guide/schedules/)
-* [Channels](https://flueframework.com/docs/guide/channels/)
-* [Evals](https://flueframework.com/docs/guide/evals/)
-* [Observability](https://flueframework.com/docs/guide/observability/)
-* [Durability](https://flueframework.com/docs/guide/durability/)
+- [Deploy](https://flueframework.com/docs/guide/deploy/)
+- [Workflows](https://flueframework.com/docs/guide/workflows/)
+- [Schedules](https://flueframework.com/docs/guide/schedules/)
+- [Channels](https://flueframework.com/docs/guide/channels/)
+- [Evals](https://flueframework.com/docs/guide/evals/)
+- [Observability](https://flueframework.com/docs/guide/observability/)
+- [Durability](https://flueframework.com/docs/guide/durability/)
 
 ### Frontend
 
-* [React](https://flueframework.com/docs/guide/react/)
+- [React](https://flueframework.com/docs/guide/react/)
 
 ### Targets
 
-* [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
-* [Node.js](https://flueframework.com/docs/guide/node-target/)
+- [Cloudflare](https://flueframework.com/docs/guide/cloudflare-target/)
+- [Node.js](https://flueframework.com/docs/guide/node-target/)

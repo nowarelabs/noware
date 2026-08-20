@@ -46,7 +46,6 @@ function renderInline(text: string): ReactNode[] {
 function TextBlock({ text, streaming }: { text: string; streaming?: boolean }) {
   const lines = text.split("\n");
   const blocks: ReactNode[] = [];
-  let i = 0;
   let list: ReactNode[] = [];
   const flushList = () => {
     if (list.length > 0) {

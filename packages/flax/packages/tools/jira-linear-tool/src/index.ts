@@ -68,7 +68,7 @@ async function jiraFetch(env: Env, path: string, init: RequestInit = {}): Promis
   const base = requireSecret(env, "JIRA_BASE_URL").replace(/\/$/, "");
   const res = await fetch(`${base}${path}`, {
     ...init,
-    headers: { ...jiraHeaders(env), ...((init.headers as Record<string, string>) ?? {}) },
+    headers: { ...jiraHeaders(env), ...(init.headers as Record<string, string>) },
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Jira API ${res.status} on ${path}: ${text.slice(0, 300)}`);

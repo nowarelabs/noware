@@ -21,9 +21,9 @@ All additions delegate to cfour inside `runForWorkspace` and persist naturally.
 ### 3.1 Views persistence (fixes: layouts lost on restart)
 
 - `SCHEMA` + `views` table: `(workspace_name, view_id, kind, title, description, scope_id,
-  data TEXT, updated_at, PK(workspace_name, view_id))`.
+data TEXT, updated_at, PK(workspace_name, view_id))`.
 - `persist()`: handle the cfour 2.5 view events (`op: "add"|"update"`, `elementKind:
-  "View"`, `after` = view) → upsert.
+"View"`, `after` = view) → upsert.
 - `hydrate()`: load views → cfour `restoreViews(views, workspaceName)` (add this small
   cfour helper, mirroring `restoreClaims`).
 - RPCs (delegate + hydrate-first): `getSystemContextView`, `getContainerView`,
@@ -35,7 +35,7 @@ All additions delegate to cfour inside `runForWorkspace` and persist naturally.
 ### 3.2 Durable event log (fixes: history is ephemeral; enables CI + audit + replay)
 
 - `SCHEMA` + `events` table: `(seq INTEGER PRIMARY KEY AUTOINCREMENT, workspace_name, op,
-  element_id, element_kind, payload TEXT, timestamp INTEGER)`; index on
+element_id, element_kind, payload TEXT, timestamp INTEGER)`; index on
   `(workspace_name, op, timestamp)`.
 - `persist()` appends **every** event (including view + proposal events) with the full
   payload JSON.
@@ -68,6 +68,7 @@ All additions delegate to cfour inside `runForWorkspace` and persist naturally.
 
 Control messages: `{ type: "subscribe", workspaceName?, since? }`,
 `{ type: "unsubscribe" }`. Per-socket subscription set:
+
 - `subscribe` with `since` → reply `{ type: "replay", events }` from the events table,
   then stream live events.
 - `subscribe` without `since` → reply `{ type: "snapshot", workspaceName, workspace }`
@@ -81,8 +82,8 @@ Control messages: `{ type: "subscribe", workspaceName?, since? }`,
 
 - cfour (Phase 2) exports an opcode union type:
   `CfourOperation` = `{ op: "addPerson" | "addSoftwareSystem" | "addContainer" |
-  "addComponent" | "addCodeElement" | "addRelationship" | "updateElement" |
-  "updateRelationship" | "removeElement" | "removeRelationship"; args: [...] }` — a typed
+"addComponent" | "addCodeElement" | "addRelationship" | "updateElement" |
+"updateRelationship" | "removeElement" | "removeRelationship"; args: [...] }` — a typed
   discriminated union, not `unknown[]`.
 - workspace-do `applyBatch(workspaceName, editorId, ops)` → runs inside
   `runForWorkspace` + `cfour.batch(...)`: atomic, claim-enforced, rolled back on any error.
@@ -93,7 +94,7 @@ Control messages: `{ type: "subscribe", workspaceName?, since? }`,
 ### 3.7 Thin RPC exposures (query surface for agents/reviews)
 
 - Collaboration: `releaseAllClaimsFor(editorId, workspaceName?)`, `getClaimFor(elementId,
-  workspaceName?)` — release events persist naturally.
+workspaceName?)` — release events persist naturally.
 - Queries: `findNodes`, `findRelationships`, `getSelection`, `getSubtree`, `getAncestors`,
   `getDescendants` (hydrate-first delegates).
 - Analysis: `lint`, `validate`, `diff(wsA, wsB)`.

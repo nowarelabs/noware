@@ -32,10 +32,14 @@ Each gate returns `{ pass: boolean; report }`. A review **fails fast** when any 
 
 ```ts
 interface Review {
-  id: string; projectId: string; branchName: string; status: "open" | "approved" | "rejected";
-  comments: ReviewComment[];        // from humans and agents
+  id: string;
+  projectId: string;
+  branchName: string;
+  status: "open" | "approved" | "rejected";
+  comments: ReviewComment[]; // from humans and agents
   votes: Record<editorId, "approve" | "reject">;
-  gates: GateResult[]; createdAt: string;
+  gates: GateResult[];
+  createdAt: string;
 }
 ```
 
@@ -48,6 +52,7 @@ interface Review {
 
 `MergePolicy { minApprovals: number; required: editorId[]; blockOnOpenClaims: boolean;
 autoMergeWhenGreen: boolean }`:
+
 - Check: approvals ≥ minApprovals, required reviewers approved, no open `claimBlockers`,
   all gates green.
 - On pass → `applyMerge` (claim-enforced; atomic). On failure → review stays open, report

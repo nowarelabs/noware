@@ -4,8 +4,8 @@ Noware is a modular monorepo with packages for building serverless applications 
 
 ## Core Packages
 
-| Package            | Description                                 |
-| ------------------ | ------------------------------------------- |
+| Package              | Description                                 |
+| -------------------- | ------------------------------------------- |
 | `noware/controllers` | Rails-like controllers for request handling |
 | `noware/router`      | Request routing with trie-based matching    |
 | `noware/services`    | Service layer base classes                  |
@@ -15,8 +15,8 @@ Noware is a modular monorepo with packages for building serverless applications 
 
 ## Infrastructure Packages
 
-| Package                | Description                |
-| ---------------------- | -------------------------- |
+| Package                  | Description                |
+| ------------------------ | -------------------------- |
 | `noware/entrypoints`     | HTTP entry point utilities |
 | `noware/durable-objects` | Durable Object helpers     |
 | `noware/jobs`            | Background job processing  |
@@ -25,8 +25,8 @@ Noware is a modular monorepo with packages for building serverless applications 
 
 ## Utility Packages
 
-| Package            | Description        |
-| ------------------ | ------------------ |
+| Package              | Description        |
+| -------------------- | ------------------ |
 | `noware/validators`  | Input validation   |
 | `noware/normalizers` | Data normalization |
 | `noware/formatters`  | Output formatting  |

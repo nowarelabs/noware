@@ -166,14 +166,14 @@ import {
 
 Each factory creates a context matching the layer's interface with sensible defaults. These are the primary way to create contexts outside Cloudflare.
 
-| Factory | Returns | Defaults |
-|---|---|---|
-| `createContext()` | `ContextLike` | noop `waitUntil` / `passThroughOnException` |
-| `createControllerContext()` | `ControllerContext` | `currentUser: undefined`, `session: {}` |
-| `createServiceContext()` | `ServiceContext` | `transactionId: crypto.randomUUID()`, `logger: undefined` |
-| `createModelContext()` | `ModelContext` | `logger: undefined`, `transaction: undefined` |
-| `createViewContext()` | `ViewContext` | `currentUser: undefined`, `flash: {}` |
-| `createRouterContext()` | `RouterContext` | `params: {}` |
+| Factory                     | Returns             | Defaults                                                  |
+| --------------------------- | ------------------- | --------------------------------------------------------- |
+| `createContext()`           | `ContextLike`       | noop `waitUntil` / `passThroughOnException`               |
+| `createControllerContext()` | `ControllerContext` | `currentUser: undefined`, `session: {}`                   |
+| `createServiceContext()`    | `ServiceContext`    | `transactionId: crypto.randomUUID()`, `logger: undefined` |
+| `createModelContext()`      | `ModelContext`      | `logger: undefined`, `transaction: undefined`             |
+| `createViewContext()`       | `ViewContext`       | `currentUser: undefined`, `flash: {}`                     |
+| `createRouterContext()`     | `RouterContext`     | `params: {}`                                              |
 
 Each factory also has an `enhance*` variant that takes an existing `ContextLike` and overlays additional properties:
 
@@ -195,15 +195,15 @@ await handle(request, env, ctx);
 
 ### Converter Functions
 
-| Function | Input | Output | Use Case |
-|---|---|---|---|
-| `fromCloudflareRequest` | Cloudflare `Request` | `RequestLike` | Casts native CF request (identity cast) |
-| `fromCloudflareContext` | Cloudflare `ExecutionContext` | `ContextLike` | Extracts context (identity cast) |
-| `fromCloudflareEnv` | Cloudflare env bindings | `EnvLike` | Casts env (identity cast) |
-| `fromWebRequest` | Standard `Request` | `RequestLike` | Casts Web API Request (identity cast) |
-| `fromWebContext` | — | `ContextLike` | Creates noop context |
-| `fromWebEnv` | Plain object | `EnvLike` | Wraps an object as env (identity cast) |
-| `fromNodeIncomingMessage` | `http.IncomingMessage` | `RequestLike` | Converts Node's request to `RequestLike` |
+| Function                  | Input                         | Output        | Use Case                                 |
+| ------------------------- | ----------------------------- | ------------- | ---------------------------------------- |
+| `fromCloudflareRequest`   | Cloudflare `Request`          | `RequestLike` | Casts native CF request (identity cast)  |
+| `fromCloudflareContext`   | Cloudflare `ExecutionContext` | `ContextLike` | Extracts context (identity cast)         |
+| `fromCloudflareEnv`       | Cloudflare env bindings       | `EnvLike`     | Casts env (identity cast)                |
+| `fromWebRequest`          | Standard `Request`            | `RequestLike` | Casts Web API Request (identity cast)    |
+| `fromWebContext`          | —                             | `ContextLike` | Creates noop context                     |
+| `fromWebEnv`              | Plain object                  | `EnvLike`     | Wraps an object as env (identity cast)   |
+| `fromNodeIncomingMessage` | `http.IncomingMessage`        | `RequestLike` | Converts Node's request to `RequestLike` |
 
 ### Usage Examples
 
@@ -289,7 +289,7 @@ On other runtimes, use the layer context factories instead of `createContext()`:
 
 ```typescript
 // ✅ Bun/Deno: use layer-specific factory
-const ctx = createControllerContext();  // has currentUser, session, waitUntil
+const ctx = createControllerContext(); // has currentUser, session, waitUntil
 const env = fromWebEnv({ DB: "..." });
 const req = fromWebRequest(request);
 ```
@@ -297,7 +297,7 @@ const req = fromWebRequest(request);
 ```typescript
 // ✅ Node.js: convert request, use service context
 const req = fromNodeIncomingMessage(nodeReq, body);
-const ctx = createServiceContext();  // has transactionId, logger
+const ctx = createServiceContext(); // has transactionId, logger
 ```
 
 ```typescript

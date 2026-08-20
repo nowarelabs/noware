@@ -46,8 +46,6 @@ export function App() {
   }, [loadGithub]);
 
   const needsSetup = github !== null && !github.configured;
-  const onInbox = route.path === "/" || route.path === "";
-
   // Route: setup screen, conversation detail, else inbox (setup-gated).
   let screen: React.ReactNode;
   if (route.path === "/setup") {

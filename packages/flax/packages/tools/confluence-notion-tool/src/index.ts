@@ -31,7 +31,7 @@ async function notionFetch(env: Env, path: string, init: RequestInit = {}): Prom
       Authorization: `Bearer ${requireSecret(env, "NOTION_TOKEN")}`,
       "Notion-Version": secret(env, "NOTION_VERSION") ?? "2022-06-28",
       "Content-Type": "application/json",
-      ...((init.headers as Record<string, string>) ?? {}),
+      ...(init.headers as Record<string, string>),
     },
   });
   const text = await res.text();
@@ -67,7 +67,7 @@ async function confluenceFetch(env: Env, path: string, init: RequestInit = {}): 
   const base = requireSecret(env, "CONFLUENCE_BASE_URL").replace(/\/$/, "");
   const res = await fetch(`${base}/rest/api/v2${path}`, {
     ...init,
-    headers: { ...confluenceHeaders(env), ...((init.headers as Record<string, string>) ?? {}) },
+    headers: { ...confluenceHeaders(env), ...(init.headers as Record<string, string>) },
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Confluence API ${res.status} on ${path}: ${text.slice(0, 300)}`);
