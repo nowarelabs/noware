@@ -19,9 +19,9 @@ integrations. Not an LLM wrapper. A real, operational system built from a though
 | Directory                            | What it is                                                       | Status                   |
 | ------------------------------------ | ---------------------------------------------------------------- | ------------------------ |
 | `01-project-gen-diesel/`             | cfour extraction, workspace-do, agents, merge-review, gen-diesel | ✅ Complete (Phases 1-7) |
-| `02-project-orchestrator-migration/` | Migrate orchestrator to full @nowarelabs stack                   | 📋 Planned               |
-| `03-project-entropy-gate/`           | Validation layer between agents (anti-hallucination)             | 📋 Planned               |
-| `04-project-stigmergic-agents/`      | Stigmergic architecture: atom DOs, agent DOs, pheromone signals  | 📋 Planned               |
+| `02-project-orchestrator-migration/` | Migrate orchestrator to full @nowarelabs stack                   | ✅ Complete              |
+| `03-project-entropy-gate/`           | Validation layer between agents (anti-hallucination)             | ✅ Complete              |
+| `04-project-stigmergic-agents/`      | Stigmergic architecture: atom DOs, agent DOs, pheromone signals  | ✅ Complete              |
 | `05-project-company-builder/`        | North star: describe company → system builds everything          | 🌟 Vision                |
 
 ## Index (01-project-gen-diesel)

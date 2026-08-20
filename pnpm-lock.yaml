@@ -2087,6 +2087,27 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^5.20260804.1
         version: 5.20260818.1
+      '@nowarelabs/agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
+      '@nowarelabs/cfour':
+        specifier: workspace:*
+        version: link:../cfour
+      '@nowarelabs/durable-objects':
+        specifier: workspace:*
+        version: link:../durable_objects
+      '@nowarelabs/entropy-gate':
+        specifier: workspace:*
+        version: link:../entropy-gate
+      '@nowarelabs/events':
+        specifier: workspace:*
+        version: link:../events
+      '@nowarelabs/merge-review':
+        specifier: workspace:*
+        version: link:../merge-review
+      '@nowarelabs/validators':
+        specifier: workspace:*
+        version: link:../validators
       typescript:
         specifier: ^7.0.2
         version: 7.0.2

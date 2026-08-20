@@ -164,7 +164,13 @@ export class EntropyGate {
       gates.push(result);
       if (!result.pass) {
         this.recordFailure();
-        return { allowed: false, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+        return {
+          allowed: false,
+          gates,
+          timestamp,
+          sourceAgent: context.sourceAgent,
+          targetAgent: context.targetAgent,
+        };
       }
     }
 
@@ -173,7 +179,13 @@ export class EntropyGate {
       gates.push(result);
       if (!result.pass) {
         this.recordFailure();
-        return { allowed: false, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+        return {
+          allowed: false,
+          gates,
+          timestamp,
+          sourceAgent: context.sourceAgent,
+          targetAgent: context.targetAgent,
+        };
       }
     }
 
@@ -182,12 +194,24 @@ export class EntropyGate {
       gates.push(result);
       if (!result.pass) {
         this.recordFailure();
-        return { allowed: false, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+        return {
+          allowed: false,
+          gates,
+          timestamp,
+          sourceAgent: context.sourceAgent,
+          targetAgent: context.targetAgent,
+        };
       }
     }
 
     this.failureCount = 0;
-    return { allowed: true, gates, timestamp, sourceAgent: context.sourceAgent, targetAgent: context.targetAgent };
+    return {
+      allowed: true,
+      gates,
+      timestamp,
+      sourceAgent: context.sourceAgent,
+      targetAgent: context.targetAgent,
+    };
   }
 }
 

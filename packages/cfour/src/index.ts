@@ -4292,31 +4292,41 @@ export class CfourStigmergicAdapter {
     const ws = this.cfour.getWorkspace?.(modelId);
     if (!ws) return [];
     return (ws.softwareSystems ?? []).map((ss: any) => ({
-      id: ss.id, name: ss.name, description: ss.description ?? "",
+      id: ss.id,
+      name: ss.name,
+      description: ss.description ?? "",
     }));
   }
 
-  getContainers(ssId: string): Array<{ id: string; name: string; description: string }> {
+  getContainers(_ssId: string): Array<{ id: string; name: string; description: string }> {
     return [];
   }
 
-  getComponents(containerId: string): Array<{ id: string; name: string; description: string }> {
+  getComponents(_containerId: string): Array<{ id: string; name: string; description: string }> {
     return [];
   }
 
-  getCodeElements(componentId: string): Array<{ id: string; name: string; description: string }> {
+  getCodeElements(_componentId: string): Array<{ id: string; name: string; description: string }> {
     return [];
   }
 
-  getRelationships(modelId: string): Array<{ id: string; source: string; target: string; label: string }> {
+  getRelationships(
+    modelId: string,
+  ): Array<{ id: string; source: string; target: string; label: string }> {
     const ws = this.cfour.getWorkspace?.(modelId);
     if (!ws) return [];
     return (ws.relationships ?? []).map((r: any) => ({
-      id: r.id, source: r.sourceId, target: r.targetId, label: r.label ?? "",
+      id: r.id,
+      source: r.sourceId,
+      target: r.targetId,
+      label: r.label ?? "",
     }));
   }
 
-  getDiff(oldModel: Record<string, unknown>, newModel: Record<string, unknown>): { changes: string[] } {
+  getDiff(
+    oldModel: Record<string, unknown>,
+    newModel: Record<string, unknown>,
+  ): { changes: string[] } {
     const changes: string[] = [];
     for (const key of Object.keys(newModel)) {
       if (JSON.stringify(oldModel[key]) !== JSON.stringify(newModel[key])) {

@@ -1,24 +1,51 @@
 import { describe, expect, test } from "vite-plus/test";
-import { OrchestratorDO, AtomDO, AgentDO } from "@nowarelabs/durable_objects";
+import { OrchestratorDO, AtomDO } from "@nowarelabs/durable-objects";
 import { ClaimDO, BranchDO, ComponentRegistry } from "@nowarelabs/cfour";
-import { AtomMergeResolver } from "@nowarelabs/merge-review";
 import { PheromoneSignalEmitter } from "@nowarelabs/events";
 import { AuctionMechanism, CapabilityEnforcer, SystemManager } from "@nowarelabs/agent-runtime";
 import { InvariantChecker } from "@nowarelabs/validators";
 import { EntropyGate, defaultConfig } from "@nowarelabs/entropy-gate";
-import type { CfourDiff, Capability } from "@nowarelabs/shared";
+import type { CfourDiff } from "@nowarelabs/shared";
 
 describe("Stigmergic integration", () => {
   test("full hierarchy signal propagation", () => {
-    const root = new OrchestratorDO({ id: "root", level: "root", elementId: "company", childOrchestratorIds: ["ss-1"] });
-    const ss = new OrchestratorDO({ id: "ss-1", level: "ss", elementId: "payment-api", parentId: "root", childOrchestratorIds: ["container-1"] });
-    const container = new OrchestratorDO({ id: "container-1", level: "container", elementId: "gateway", parentId: "ss-1", childOrchestratorIds: ["component-1"] });
-    const component = new OrchestratorDO({ id: "component-1", level: "component", elementId: "auth", parentId: "container-1", childOrchestratorIds: [] });
+    const root = new OrchestratorDO({
+      id: "root",
+      level: "root",
+      elementId: "company",
+      childOrchestratorIds: ["ss-1"],
+    });
+    const ss = new OrchestratorDO({
+      id: "ss-1",
+      level: "ss",
+      elementId: "payment-api",
+      parentId: "root",
+      childOrchestratorIds: ["container-1"],
+    });
+    const container = new OrchestratorDO({
+      id: "container-1",
+      level: "container",
+      elementId: "gateway",
+      parentId: "ss-1",
+      childOrchestratorIds: ["component-1"],
+    });
+    const component = new OrchestratorDO({
+      id: "component-1",
+      level: "component",
+      elementId: "auth",
+      parentId: "container-1",
+      childOrchestratorIds: [],
+    });
 
     const diff: CfourDiff = {
-      id: "diff-1", level: "ss", elementId: "payment-api",
-      changeType: "description", oldValue: "mpesa api", newValue: "flutterwave api",
-      timestamp: Date.now(), sourceOrchestratorId: "root",
+      id: "diff-1",
+      level: "ss",
+      elementId: "payment-api",
+      changeType: "description",
+      oldValue: "mpesa api",
+      newValue: "flutterwave api",
+      timestamp: Date.now(),
+      sourceOrchestratorId: "root",
     };
 
     root.receiveDiffs([diff]);
@@ -27,15 +54,22 @@ describe("Stigmergic integration", () => {
     const rootDiffs = root.processDiffs({});
     expect(rootDiffs.length).toBe(1);
 
+    // Cascade root → ss (diff promoted to "container" level)
     const cascadedToSS = root.cascadeToChildren(rootDiffs);
     ss.receiveDiffs(cascadedToSS);
     expect(ss.pendingDiffCount).toBe(1);
 
     const ssDiffs = ss.processDiffs({});
+    expect(ssDiffs.length).toBe(1);
+
+    // Cascade ss → container (diff promoted to "component" level)
     const cascadedToContainer = ss.cascadeToChildren(ssDiffs);
     container.receiveDiffs(cascadedToContainer);
 
     const containerDiffs = container.processDiffs({});
+    expect(containerDiffs.length).toBe(1);
+
+    // Cascade container → component (diff promoted to "code" level)
     const cascadedToComponent = container.cascadeToChildren(containerDiffs);
     component.receiveDiffs(cascadedToComponent);
 
@@ -59,7 +93,13 @@ describe("Stigmergic integration", () => {
   });
 
   test("branch and merge flow", () => {
-    const branch = new BranchDO({ id: "b1", atomId: "atom-1", agentDoId: "agent-1", content: "original", baseVersionId: "v1" });
+    const branch = new BranchDO({
+      id: "b1",
+      atomId: "atom-1",
+      agentDoId: "agent-1",
+      content: "original",
+      baseVersionId: "v1",
+    });
     branch.update("modified", "agent-1");
     expect(branch.state.content).toBe("modified");
     expect(branch.state.versions.length).toBe(2);
@@ -88,7 +128,11 @@ describe("Stigmergic integration", () => {
   test("entropy gate integration", () => {
     const gate = new EntropyGate(defaultConfig);
 
-    const validInput = { agent: "coding", conversationId: "550e8400-e29b-41d4-a716-446655440000", task: "Implement the login page" };
+    const validInput = {
+      agent: "coding",
+      conversationId: "550e8400-e29b-41d4-a716-446655440000",
+      task: "Implement the login page",
+    };
     const result = gate.evaluateSync(validInput, { sourceAgent: "orchestrator" });
     expect(result.allowed).toBe(true);
   });
@@ -122,14 +166,23 @@ describe("Stigmergic integration", () => {
     manager.deploy({ name: "healer", description: "Heals entities", capabilities: [], bids: [] });
     expect(manager.isRunning("healer")).toBe(true);
 
-    manager.hotSwap("healer", { name: "healer", description: "Improved healer", capabilities: [], bids: [] });
+    manager.hotSwap("healer", {
+      name: "healer",
+      description: "Improved healer",
+      capabilities: [],
+      bids: [],
+    });
     expect(manager.isRunning("healer")).toBe(true);
     expect(manager.getSystem("healer")?.description).toBe("Improved healer");
   });
 
   test("dynamic component definitions", () => {
     const registry = new ComponentRegistry();
-    registry.define("game::Health", { type: "object", properties: { current: { type: "number" } }, required: ["current"] });
+    registry.define("game::Health", {
+      type: "object",
+      properties: { current: { type: "number" } },
+      required: ["current"],
+    });
     expect(registry.validate("game::Health", { current: 100 })).toBe(true);
     expect(registry.validate("game::Health", {})).toBe(false);
 
@@ -150,13 +203,32 @@ describe("Stigmergic integration", () => {
 
   test("atom version history and merge resolution", () => {
     const atom = new AtomDO({
-      id: "atom-1", cfourElementId: "code-1", atomType: "function",
-      content: "function hello() {}", language: "typescript",
-      filePath: "src/hello.ts", parentComponentId: "comp-1", agentDoId: "agent-1",
+      id: "atom-1",
+      cfourElementId: "code-1",
+      atomType: "function",
+      content: "function hello() {}",
+      language: "typescript",
+      filePath: "src/hello.ts",
+      parentComponentId: "comp-1",
+      agentDoId: "agent-1",
     });
 
-    atom.addVersion({ content: "v1", agentDoId: "agent-1", timestamp: Date.now(), pheromoneEvents: [], cfourValidation: { valid: true, errors: [] }, patternCompliance: { compliant: true, violations: [] } });
-    atom.addVersion({ content: "v2", agentDoId: "agent-1", timestamp: Date.now(), pheromoneEvents: [], cfourValidation: { valid: true, errors: [] }, patternCompliance: { compliant: true, violations: [] } });
+    atom.addVersion({
+      content: "v1",
+      agentDoId: "agent-1",
+      timestamp: Date.now(),
+      pheromoneEvents: [],
+      cfourValidation: { valid: true, errors: [] },
+      patternCompliance: { compliant: true, violations: [] },
+    });
+    atom.addVersion({
+      content: "v2",
+      agentDoId: "agent-1",
+      timestamp: Date.now(),
+      pheromoneEvents: [],
+      cfourValidation: { valid: true, errors: [] },
+      patternCompliance: { compliant: true, violations: [] },
+    });
 
     expect(atom.versionCount).toBe(2);
     expect(atom.currentVersion?.content).toBe("v2");

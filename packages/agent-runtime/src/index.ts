@@ -74,13 +74,20 @@ export class AuctionMechanism {
       const data = component.data as Record<string, unknown>;
       const fieldVal = data[cond.field];
       switch (cond.operator) {
-        case "==": return fieldVal === cond.value;
-        case "!=": return fieldVal !== cond.value;
-        case "<": return (fieldVal as number) < (cond.value as number);
-        case ">": return (fieldVal as number) > (cond.value as number);
-        case "<=": return (fieldVal as number) <= (cond.value as number);
-        case ">=": return (fieldVal as number) >= (cond.value as number);
-        default: return false;
+        case "==":
+          return fieldVal === cond.value;
+        case "!=":
+          return fieldVal !== cond.value;
+        case "<":
+          return (fieldVal as number) < (cond.value as number);
+        case ">":
+          return (fieldVal as number) > (cond.value as number);
+        case "<=":
+          return (fieldVal as number) <= (cond.value as number);
+        case ">=":
+          return (fieldVal as number) >= (cond.value as number);
+        default:
+          return false;
       }
     });
   }
@@ -119,15 +126,23 @@ export class CapabilityEnforcer {
     this.capabilities.set(systemId, caps);
   }
 
-  checkCapability(systemId: string, componentName: string, requiredAccess: "read" | "write" | "execute"): boolean {
+  checkCapability(
+    systemId: string,
+    componentName: string,
+    requiredAccess: "read" | "write" | "execute",
+  ): boolean {
     const caps = this.capabilities.get(systemId) ?? [];
     const cap = caps.find((c) => c.component === componentName);
     if (!cap) return false;
     switch (requiredAccess) {
-      case "read": return cap.access.includes("read");
-      case "write": return cap.access.includes("write");
-      case "execute": return cap.access.includes("execute");
-      default: return false;
+      case "read":
+        return cap.access.includes("read");
+      case "write":
+        return cap.access.includes("write");
+      case "execute":
+        return cap.access.includes("execute");
+      default:
+        return false;
     }
   }
 
@@ -213,10 +228,7 @@ export function propagateDiff(
   return [{ targetId: rootId, diff }];
 }
 
-export function processDiffAtLevel(
-  diff: CfourDiff,
-  level: string,
-): CfourDiff[] {
+export function processDiffAtLevel(diff: CfourDiff, level: string): CfourDiff[] {
   if (diff.level === level) {
     return [diff];
   }
@@ -233,7 +245,9 @@ export function shouldCascadeToChildren(diff: CfourDiff, level: string): boolean
   return cascadeMap[level]?.includes(diff.level) ?? false;
 }
 
-export function createPheromoneFromDiff(diff: CfourDiff): Omit<PheromoneEvent, "id" | "timestamp" | "consumedBy"> {
+export function createPheromoneFromDiff(
+  diff: CfourDiff,
+): Omit<PheromoneEvent, "id" | "timestamp" | "consumedBy"> {
   return {
     type: "description-changed",
     elementId: diff.elementId,

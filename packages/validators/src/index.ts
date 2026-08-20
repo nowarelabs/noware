@@ -100,9 +100,7 @@ export class InvariantChecker {
   }
 
   checkAll(state?: Record<string, unknown>): InvariantResult[] {
-    return [...this.invariants.values()]
-      .filter((i) => i.enabled)
-      .map((i) => this.check(i, state));
+    return [...this.invariants.values()].filter((i) => i.enabled).map((i) => this.check(i, state));
   }
 
   private evaluate(expression: string, state?: Record<string, unknown>): boolean {

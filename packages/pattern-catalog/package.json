@@ -14,14 +14,14 @@
     "@nowarelabs/shared": "workspace:*"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
     "@nowarelabs/agent-runtime": "workspace:*",
     "@nowarelabs/cfour": "workspace:*",
-    "@nowarelabs/durable_objects": "workspace:*",
+    "@nowarelabs/durable-objects": "workspace:*",
     "@nowarelabs/entropy-gate": "workspace:*",
     "@nowarelabs/events": "workspace:*",
     "@nowarelabs/merge-review": "workspace:*",
     "@nowarelabs/validators": "workspace:*",
-    "@cloudflare/workers-types": "^5.20260804.1",
     "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vite-plus": "^0.1.14"

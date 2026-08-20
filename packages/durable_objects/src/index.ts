@@ -147,10 +147,17 @@ export class OrchestratorDO {
   }
 
   cascadeToChildren(diffs: CfourDiff[]): CfourDiff[] {
+    const childLevelMap: Record<string, string> = {
+      root: "container",
+      ss: "component",
+      container: "code",
+    };
+    const childLevel = childLevelMap[this.state.level] ?? this.state.level;
     return diffs.map((d) => ({
       ...d,
       id: `${d.id}-cascaded`,
       sourceOrchestratorId: this.state.id,
+      level: childLevel,
     }));
   }
 
