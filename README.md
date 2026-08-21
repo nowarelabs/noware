@@ -1,4 +1,4 @@
-# nomo
+# nowarelabs
 
 A fullstack typescript framework built for convention over configuration on Cloudflare Workers.
 

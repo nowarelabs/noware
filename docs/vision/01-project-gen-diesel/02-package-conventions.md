@@ -69,7 +69,7 @@ export default defineConfig({
 - `tests/index.test.ts`, imports from `"vite-plus/test"` and `"../src/index.ts"`.
 - Helpers live in the same file (workspace-do merged `helpers.ts` into its test file).
 - Run with the package's own binary, from the package dir:
-  `/Users/vanceworks/Code/nomo/packages/<name>/node_modules/.bin/vp check|test|fmt|pack`.
+  `~/Code/nowarelabs/packages/<name>/node_modules/.bin/vp check|test|fmt|pack`.
 - Do NOT run `vp fmt`/`vp test` from the monorepo root with another package's binary — it
   reformats the whole workspace (collateral churn).
 

@@ -137,7 +137,10 @@ export function useSubagent(
  * Note: In the hook definition context, this registers the state key.
  * The actual state management happens at runtime in the DO.
  */
-export function usePersistentState<T>(_key: string, defaultValue: T): [T, (value: T) => void] {
+export function usePersistentState<T>(
+  _key: string,
+  defaultValue: T,
+): [T, (value: T) => void] {
   const ctx = getCurrentContext();
   ctx.persistentState.push({ key: _key, defaultValue });
   // Return a no-op setter for the definition context.
@@ -149,7 +152,10 @@ export function usePersistentState<T>(_key: string, defaultValue: T): [T, (value
  * Returns a writer function that emits named, schema-validated data parts
  * into the conversation stream.
  */
-export function useDataWriter(name: string, opts?: { schema?: unknown }): (data: unknown) => void {
+export function useDataWriter(
+  name: string,
+  opts?: { schema?: unknown },
+): (data: unknown) => void {
   const ctx = getCurrentContext();
   ctx.dataWriters.push({ name, schema: opts?.schema });
   // Return a no-op writer for the definition context.
@@ -177,7 +183,11 @@ export function useInitialData<T>(): T | undefined {
  */
 export function useAgentStart(
   fn: (ctx: {
-    log: { info: typeof console.log; warn: typeof console.warn; error: typeof console.error };
+    log: {
+      info: typeof console.log;
+      warn: typeof console.warn;
+      error: typeof console.error;
+    };
   }) => void,
 ): void {
   const ctx = getCurrentContext();
@@ -189,7 +199,11 @@ export function useAgentStart(
  */
 export function useAgentFinish(
   fn: (ctx: {
-    log: { info: typeof console.log; warn: typeof console.warn; error: typeof console.error };
+    log: {
+      info: typeof console.log;
+      warn: typeof console.warn;
+      error: typeof console.error;
+    };
     response: unknown;
   }) => void,
 ): void {
@@ -209,7 +223,10 @@ export function useResponseStart(fn: () => Record<string, unknown>): void {
  * Lifecycle hook: runs after a model response is complete.
  */
 export function useResponseFinish(
-  fn: (ctx: { metadata: Record<string, unknown>; response: unknown }) => Record<string, unknown>,
+  fn: (ctx: {
+    metadata: Record<string, unknown>;
+    response: unknown;
+  }) => Record<string, unknown>,
 ): void {
   const ctx = getCurrentContext();
   ctx.lifecycle.responseFinish = fn;
@@ -243,7 +260,7 @@ export function bash(create: () => unknown): SandboxFactory {
  */
 export const GeneralSubagent: AgentDefinition = {
   name: "general",
-  className: "NomoGeneralAgent",
+  className: "NowarelabsGeneralAgent",
   instructions: "",
   tools: [],
   skills: [],

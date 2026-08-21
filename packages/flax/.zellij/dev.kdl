@@ -32,7 +32,7 @@
 //     the live logs of every process.
 
 layout {
-    cwd "/Users/vanceworks/Code/flax"
+    cwd "~/Code/flax"
 
     default_tab_template {
         pane size=1 borderless=true {

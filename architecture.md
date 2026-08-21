@@ -1,10 +1,10 @@
-# Nomo Architecture
+# Nowarelabs Architecture
 
-Nomo is a Rails-like TypeScript framework for building serverless applications on Cloudflare Workers. It combines convention over configuration with pluggable evolution points, enabling developers to build fast while maintaining architectural escape hatches.
+Nowarelabs is a Rails-like TypeScript framework for building serverless applications on Cloudflare Workers. It combines convention over configuration with pluggable evolution points, enabling developers to build fast while maintaining architectural escape hatches.
 
 ## Core Philosophy
 
-Nomo follows the **Standard Gauge** - a convention-driven architecture where every layer has a predictable responsibility, lifecycle hooks, and plugin points. The key insight: organize around **what your system does** (business tasks), not **how it's built** (technical layers).
+Nowarelabs follows the **Standard Gauge** - a convention-driven architecture where every layer has a predictable responsibility, lifecycle hooks, and plugin points. The key insight: organize around **what your system does** (business tasks), not **how it's built** (technical layers).
 
 The system follows a **Double-Gate RPC** architecture:
 
@@ -13,16 +13,16 @@ The system follows a **Double-Gate RPC** architecture:
 
 ### Why Two-Tier?
 
-| Aspect              | Group by Data (Layered)   | Group by Task (Nomo Two-Tier) |
-| ------------------- | ------------------------- | ----------------------------- |
-| Organization        | Technical layers          | Business capabilities         |
-| File navigation     | Jump between folders      | Everything in feature place   |
-| Code reuse          | Easy to share models      | Explicit interfaces           |
-| Feature development | Touch multiple layers     | Contained changes             |
-| Testing             | Easy to mock layers       | Easy to test scenarios        |
-| Team scaling        | Teams step on each other  | Teams own modules             |
-| Coupling            | High (shared models)      | Low (modules + events)        |
-| Bug isolation       | Hard (layer interactions) | Easy (within boundaries)      |
+| Aspect              | Group by Data (Layered)   | Group by Task (Nowarelabs Two-Tier) |
+| ------------------- | ------------------------- | ----------------------------------- |
+| Organization        | Technical layers          | Business capabilities               |
+| File navigation     | Jump between folders      | Everything in feature place         |
+| Code reuse          | Easy to share models      | Explicit interfaces                 |
+| Feature development | Touch multiple layers     | Contained changes                   |
+| Testing             | Easy to mock layers       | Easy to test scenarios              |
+| Team scaling        | Teams step on each other  | Teams own modules                   |
+| Coupling            | High (shared models)      | Low (modules + events)              |
+| Bug isolation       | Hard (layer interactions) | Easy (within boundaries)            |
 
 This architecture handles every case:
 
@@ -218,7 +218,7 @@ Events fire: BaseIntegrationEvent notifies other contexts
 
 ## Base + Resource Pattern
 
-Nomo uses a **Base + Resource** inheritance hierarchy with strong generics. The Base provides core functionality, while Resource extends with domain-specific capabilities.
+Nowarelabs uses a **Base + Resource** inheritance hierarchy with strong generics. The Base provides core functionality, while Resource extends with domain-specific capabilities.
 
 ### Connection Flow Rules
 
@@ -294,7 +294,10 @@ export class BaseController<
     only?: string[];
     except?: string[];
   }> = [];
-  static afterActions: Array<{ after?: (result: any) => Promise<any>; only?: string[] }> = [];
+  static afterActions: Array<{
+    after?: (result: any) => Promise<any>;
+    only?: string[];
+  }> = [];
 
   // Lifecycle hooks
   async beforeAction() {} // Called before any action
@@ -365,7 +368,12 @@ The service layer with database access.
 **References**: RCSM pattern - Service calls ONE model only.
 
 ```typescript
-export class BaseService<TEnv, TCtx, TModel extends BaseModel<any, any, any>, TEntity> {
+export class BaseService<
+  TEnv,
+  TCtx,
+  TModel extends BaseModel<any, any, any>,
+  TEntity,
+> {
   protected req: Request;
   protected env: TEnv;
   protected ctx: TCtx;
@@ -401,26 +409,40 @@ export class BaseService<TEnv, TCtx, TModel extends BaseModel<any, any, any>, TE
   // Lifecycle hooks
   async beforeCreate(data: any): Promise<any>;
   async afterCreate(entity: TEntity): Promise<void>;
-  async beforeUpdate(id: string, data: Partial<TEntity>): Promise<Partial<TEntity>>;
+  async beforeUpdate(
+    id: string,
+    data: Partial<TEntity>,
+  ): Promise<Partial<TEntity>>;
   async afterUpdate(entity: TEntity): Promise<void>;
   async beforeDelete(id: string): Promise<void>;
   async afterDelete(id: string): Promise<void>;
 
   // HTTP fetching (external calls)
-  protected async fetch(input: string | Request | URL, init?: RequestInit): Promise<Response>;
+  protected async fetch(
+    input: string | Request | URL,
+    init?: RequestInit,
+  ): Promise<Response>;
 
   // Create child context for nested operations
-  protected createServiceContext(serviceName: string, metadata?: Record<string, any>): TCtx;
+  protected createServiceContext(
+    serviceName: string,
+    metadata?: Record<string, any>,
+  ): TCtx;
 }
 ```
 
 **Real-World Usage**:
 
 ```typescript
-import { BaseService } from "nomo/services";
+import { BaseService } from "nowarelabs/services";
 import { PostModel } from "../models/post";
 
-export class BlogService extends BaseService<Env, RouterContext, PostModel, Post> {
+export class BlogService extends BaseService<
+  Env,
+  RouterContext,
+  PostModel,
+  Post
+> {
   public posts: PostModel;
 
   constructor(req: Request, env: Env, ctx: RouterContext) {
@@ -479,7 +501,10 @@ export class BaseModel<
   where(conditions: WhereConditions): QueryBuilder<TTable, TEntity>;
   whereId(id: string): QueryBuilder<TTable, TEntity>;
   select(...columns: string[]): QueryBuilder<TTable, TEntity>;
-  orderBy(column: string, direction?: "ASC" | "DESC"): QueryBuilder<TTable, TEntity>;
+  orderBy(
+    column: string,
+    direction?: "ASC" | "DESC",
+  ): QueryBuilder<TTable, TEntity>;
   limit(n: number): QueryBuilder<TTable, TEntity>;
   offset(n: number): QueryBuilder<TTable, TEntity>;
   page(page: number, perPage: number): QueryBuilder<TTable, TEntity>;
@@ -518,7 +543,7 @@ export class BaseModel<
 **Real-World Usage**:
 
 ```typescript
-import { BaseModel } from "nomo/models";
+import { BaseModel } from "nowarelabs/models";
 import { posts } from "../db/schema/schema";
 
 export class PostModel extends BaseModel<typeof posts, Post, NewPost> {
@@ -623,7 +648,10 @@ export class BaseModule {
   async onUnload(): Promise<void>; // Cleanup registrations
 
   // Feature registration
-  registerFeature<T extends FeatureHandler>(name: string, handler: new (...args: any[]) => T): void;
+  registerFeature<T extends FeatureHandler>(
+    name: string,
+    handler: new (...args: any[]) => T,
+  ): void;
   getFeature<T extends FeatureHandler>(name: string): T | undefined;
   getFeatureNames(): string[];
 
@@ -652,7 +680,10 @@ export class BaseRpcServer<
   protected routes: Map<string, FeatureHandler> = new Map();
 
   // REFERENCES - features this RPC server can route to
-  protected placeOrderFeature!: BaseFeatureHandler<PlaceOrderInput, PlaceOrderOutput>;
+  protected placeOrderFeature!: BaseFeatureHandler<
+    PlaceOrderInput,
+    PlaceOrderOutput
+  >;
   protected cancelOrderFeature!: BaseFeatureHandler<CancelOrderInput, void>;
   protected getOrderFeature!: BaseFeatureHandler<GetOrderInput, Order>;
   protected listOrdersFeature!: BaseFeatureHandler<ListOrdersInput, Order[]>;
@@ -684,7 +715,10 @@ export class BaseRpcServer<
 
   // Routing lookup
   protected getRoute(method: string, path: string): FeatureHandler | undefined;
-  protected resolveHandler(method: string, path: string): BaseFeatureHandler<any, any> | undefined;
+  protected resolveHandler(
+    method: string,
+    path: string,
+  ): BaseFeatureHandler<any, any> | undefined;
 
   // Global hooks
   async beforeRoute(input: any): Promise<void>; // Rate limiting, auth
@@ -724,7 +758,9 @@ export class BaseRpc<TInput, TOutput> {
   async afterDispatch(output: TOutput): Promise<void>; // Audit logs
 
   // Dispatch to controller
-  async dispatch<TController extends BaseController<any, any, any, any, any, any>>(
+  async dispatch<
+    TController extends BaseController<any, any, any, any, any, any>,
+  >(
     controller: new (...args: any[]) => TController,
     action: string,
     params: any,
@@ -750,7 +786,9 @@ export class BaseRpc<TInput, TOutput> {
   async afterDispatch(output: TOutput): Promise<void>; // Audit logs
 
   // Dispatch to controller
-  async dispatch<TController extends BaseController<any, any, any, any, any, any>>(
+  async dispatch<
+    TController extends BaseController<any, any, any, any, any, any>,
+  >(
     controller: new (...args: any[]) => TController,
     action: string,
     params: any,
@@ -842,7 +880,7 @@ export class BaseFeatureHandler<TInput, TOutput> {
 **Real-World Usage**:
 
 ```typescript
-import { BaseResourceController } from 'nomo/controllers';
+import { BaseResourceController } from 'nowarelabs/controllers';
 import { PostsValidator } from '../validators/posts';
 import { PostsNormalizer } from '../normalizers/posts';
 
@@ -1002,7 +1040,12 @@ export class BaseResourceController<
 **The Worker** (S in RCSM).
 
 ```typescript
-export class BaseService<TEnv, TCtx, TModel extends BaseModel<any, any, any>, TEntity> {
+export class BaseService<
+  TEnv,
+  TCtx,
+  TModel extends BaseModel<any, any, any>,
+  TEntity,
+> {
   protected req: Request;
   protected env: TEnv;
   protected ctx: TCtx;
@@ -1021,10 +1064,16 @@ export class BaseService<TEnv, TCtx, TModel extends BaseModel<any, any, any>, TE
   async afterDelete(id: string): Promise<void>;
 
   // HTTP fetching
-  protected async fetch(input: string | Request | URL, init?: RequestInit): Promise<Response>;
+  protected async fetch(
+    input: string | Request | URL,
+    init?: RequestInit,
+  ): Promise<Response>;
 
   // Service context
-  protected createServiceContext(serviceName: string, metadata?: Record<string, any>): TCtx;
+  protected createServiceContext(
+    serviceName: string,
+    metadata?: Record<string, any>,
+  ): TCtx;
 }
 ```
 
@@ -1047,7 +1096,10 @@ export class BaseModel<
   where(conditions: WhereConditions): QueryBuilder<TTable, TEntity>;
   whereId(id: string): QueryBuilder<TTable, TEntity>;
   select(...columns: string[]): QueryBuilder<TTable, TEntity>;
-  orderBy(column: string, direction?: "ASC" | "DESC"): QueryBuilder<TTable, TEntity>;
+  orderBy(
+    column: string,
+    direction?: "ASC" | "DESC",
+  ): QueryBuilder<TTable, TEntity>;
   limit(n: number): QueryBuilder<TTable, TEntity>;
   offset(n: number): QueryBuilder<TTable, TEntity>;
   page(page: number, perPage: number): QueryBuilder<TTable, TEntity>;
@@ -1106,7 +1158,9 @@ export class BaseAggregate<TState, TEvent> {
   }
 
   // Static plugin points
-  static commandHandlers: Array<(aggregate: any, command: any) => Promise<any>> = [];
+  static commandHandlers: Array<
+    (aggregate: any, command: any) => Promise<any>
+  > = [];
   static eventAppliers: Array<(event: TEvent) => Promise<void>> = [];
   static snapshotTriggers: Array<(version: number) => boolean> = [];
 
@@ -1120,7 +1174,9 @@ export class BaseAggregate<TState, TEvent> {
 
   // State rebuilding
   static async load(id: string): Promise<BaseAggregate<TState, TEvent>>;
-  static async loadFromSnapshot(id: string): Promise<BaseAggregate<TState, TEvent>>;
+  static async loadFromSnapshot(
+    id: string,
+  ): Promise<BaseAggregate<TState, TEvent>>;
 
   // Snapshot
   async createSnapshot(): Promise<void>;
@@ -1137,7 +1193,11 @@ Optimized "fast-path" reads.
 **References**: RCSM pattern - calls ONE projection only.
 
 ```typescript
-export class BaseQueryController<TEnv, TCtx, TProjection extends BaseQueryProjection<any>> {
+export class BaseQueryController<
+  TEnv,
+  TCtx,
+  TProjection extends BaseQueryProjection<any>,
+> {
   protected env: TEnv;
   protected ctx: TCtx;
   protected projection!: TProjection;
@@ -1273,35 +1333,56 @@ export class BaseGlobalPlugin {
   static onShutdowns: Array<() => Promise<void>> = [];
 
   // Around hooks (wrap ALL executions)
-  static aroundFeatures: Array<(ctx: FeatureContext, next: () => Promise<any>) => Promise<any>> =
-    [];
+  static aroundFeatures: Array<
+    (ctx: FeatureContext, next: () => Promise<any>) => Promise<any>
+  > = [];
   static aroundControllers: Array<
     (ctx: ControllerContext, next: () => Promise<any>) => Promise<any>
   > = [];
-  static aroundServices: Array<(ctx: ServiceContext, next: () => Promise<any>) => Promise<any>> =
-    [];
-  static aroundModels: Array<(ctx: ModelContext, next: () => Promise<any>) => Promise<any>> = [];
+  static aroundServices: Array<
+    (ctx: ServiceContext, next: () => Promise<any>) => Promise<any>
+  > = [];
+  static aroundModels: Array<
+    (ctx: ModelContext, next: () => Promise<any>) => Promise<any>
+  > = [];
 
   // Before hooks
   beforeFeatureExecutes: Array<(ctx: FeatureContext) => Promise<void>> = [];
-  beforeControllerActions: Array<(ctx: ControllerContext) => Promise<void>> = [];
+  beforeControllerActions: Array<(ctx: ControllerContext) => Promise<void>> =
+    [];
   beforeServiceCalls: Array<(ctx: ServiceContext) => Promise<void>> = [];
   beforeModelSaves: Array<(ctx: ModelContext) => Promise<void>> = [];
 
   // After hooks
-  afterFeatureExecutes: Array<(ctx: FeatureContext, result: any) => Promise<void>> = [];
-  afterControllerActions: Array<(ctx: ControllerContext, result: any) => Promise<void>> = [];
-  afterServiceCalls: Array<(ctx: ServiceContext, result: any) => Promise<void>> = [];
-  afterModelSaves: Array<(ctx: ModelContext, result: any) => Promise<void>> = [];
+  afterFeatureExecutes: Array<
+    (ctx: FeatureContext, result: any) => Promise<void>
+  > = [];
+  afterControllerActions: Array<
+    (ctx: ControllerContext, result: any) => Promise<void>
+  > = [];
+  afterServiceCalls: Array<
+    (ctx: ServiceContext, result: any) => Promise<void>
+  > = [];
+  afterModelSaves: Array<(ctx: ModelContext, result: any) => Promise<void>> =
+    [];
 
   // Lifecycle
   async onInit(): Promise<void>; // Startup
   async onShutdown(): Promise<void>; // Cleanup
 
   // Around hooks (wrap execution)
-  async aroundFeature(ctx: FeatureContext, next: () => Promise<any>): Promise<any>;
-  async aroundController(ctx: ControllerContext, next: () => Promise<any>): Promise<any>;
-  async aroundService(ctx: ServiceContext, next: () => Promise<any>): Promise<any>;
+  async aroundFeature(
+    ctx: FeatureContext,
+    next: () => Promise<any>,
+  ): Promise<any>;
+  async aroundController(
+    ctx: ControllerContext,
+    next: () => Promise<any>,
+  ): Promise<any>;
+  async aroundService(
+    ctx: ServiceContext,
+    next: () => Promise<any>,
+  ): Promise<any>;
   async aroundModel(ctx: ModelContext, next: () => Promise<any>): Promise<any>;
 }
 ```
@@ -1310,7 +1391,10 @@ export class BaseGlobalPlugin {
 
 ```typescript
 // app/features/place-order/handler.ts
-export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, PlaceOrderOutput> {
+export class PlaceOrderHandler extends BaseFeatureHandler<
+  PlaceOrderInput,
+  PlaceOrderOutput
+> {
   // REFERENCES - multiple Rpc calls for orchestration
   protected ordersRpc!: BaseRpc<CreateOrderInput, Order>;
   protected paymentsRpc!: BaseRpc<ChargeInput, Charge>;
@@ -1334,15 +1418,23 @@ export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, Place
   async prepare(input: PlaceOrderInput): Promise<PreparedData> {
     // Gather data using multiple RPC calls
     const user = await this.usersRpc.dispatch("show", input.userId);
-    const products = await this.productsRpc.dispatch("findByIds", input.productIds);
+    const products = await this.productsRpc.dispatch(
+      "findByIds",
+      input.productIds,
+    );
     return { user, products };
   }
 
   async execute(prepared: PreparedData): PlaceOrderOutput {
     // Orchestrate multiple RCSM operations
     const order = await this.ordersRpc.dispatch("create", prepared);
-    await this.paymentsRpc.dispatch("charge", { orderId: order.id, amount: order.total });
-    await this.inventoryRpc.dispatch("decrement", { products: prepared.products });
+    await this.paymentsRpc.dispatch("charge", {
+      orderId: order.id,
+      amount: order.total,
+    });
+    await this.inventoryRpc.dispatch("decrement", {
+      products: prepared.products,
+    });
     return order;
   }
 
@@ -1354,7 +1446,7 @@ export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, Place
 
 ```typescript
 // app/controllers/posts.controller.ts
-import { BaseResourceController } from 'nomo/controllers';
+import { BaseResourceController } from 'nowarelabs/controllers';
 import { PostsValidator } from '../validators/posts';
 import { PostsNormalizer } from '../normalizers/posts';
 
@@ -1437,7 +1529,8 @@ export class BasePersistence {
   }
 
   // Static plugin points
-  static beforeQueries: Array<(sql: string, params: any[]) => Promise<any>> = [];
+  static beforeQueries: Array<(sql: string, params: any[]) => Promise<any>> =
+    [];
   static afterQueries: Array<(result: any) => Promise<any>> = [];
   static transactionLogs: Array<(fn: () => Promise<any>) => Promise<any>> = [];
 
@@ -1592,7 +1685,10 @@ export class OrdersRpcServer extends BaseRpcServer<Env, RouterContext> {
 
 ```typescript
 // app/contexts/sales/features/place-order/handler.ts
-export class PlaceOrderHandler extends BaseFeatureHandler<PlaceOrderInput, PlaceOrderOutput> {
+export class PlaceOrderHandler extends BaseFeatureHandler<
+  PlaceOrderInput,
+  PlaceOrderOutput
+> {
   async validate(input: PlaceOrderInput): Promise<void> {
     if (!input.items?.length) {
       throw new ValidationError("No items in order");
@@ -1767,7 +1863,10 @@ export class AuthPlugin extends BaseGlobalPlugin {
     this.registerHook("aroundFeature", this.authenticateFeature);
   }
 
-  private async authenticateFeature(ctx: FeatureContext, next: () => Promise<any>) {
+  private async authenticateFeature(
+    ctx: FeatureContext,
+    next: () => Promise<any>,
+  ) {
     // Verify auth
     return next();
   }
@@ -1834,7 +1933,10 @@ export interface IPaymentGateway {
 
 ```typescript
 // app/contexts/sales/infrastructure/gateways/stripe.adapter.ts
-export class StripeAdapter extends BaseInfrastructureAdapter implements IPaymentGateway {
+export class StripeAdapter
+  extends BaseInfrastructureAdapter
+  implements IPaymentGateway
+{
   async onConnect() {
     // Initialize Stripe
   }
@@ -1868,7 +1970,7 @@ export class StripeAdapter extends BaseInfrastructureAdapter implements IPayment
 
 ## Summary
 
-Nomo provides **Rails-like happiness** with **architectural escape hatches**:
+Nowarelabs provides **Rails-like happiness** with **architectural escape hatches**:
 
 ### Core Features
 

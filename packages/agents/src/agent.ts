@@ -5,7 +5,7 @@
  * - Agent files: `src/agents/<name>.ts`
  * - Tool files: `src/tools/<name>.ts`
  * - Skill files: `src/skills/<name>/SKILL.md`
- * - DO class name: `Nomo<PascalCase>Agent` (auto from agent name)
+ * - DO class name: `Nowarelabs<PascalCase>Agent` (auto from agent name)
  * - URL routing: `/agents/<name>/<conversationId>`
  * - Service bindings: `<NAME>_AGENT` env var (auto from agent name)
  */
@@ -41,10 +41,10 @@ export function screamingSnakeCase(name: string): string {
 
 /**
  * Generates the DO class name from an agent name.
- * `'coding'` → `'NomoCodingAgent'`
+ * `'coding'` → `'NowarelabsCodingAgent'`
  */
 export function agentClassName(name: string): string {
-  return `Nomo${pascalCase(name)}Agent`;
+  return `Nowarelabs${pascalCase(name)}Agent`;
 }
 
 /**
@@ -82,7 +82,9 @@ export function agentMountPath(name: string): string {
 export function defineAgent(
   name: string,
   fn: () => void,
-  overrides?: Partial<Pick<AgentDefinition, "className" | "model" | "modelOptions">>,
+  overrides?: Partial<
+    Pick<AgentDefinition, "className" | "model" | "modelOptions">
+  >,
 ): AgentDefinition {
   const ctx = createContext();
 

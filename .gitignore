@@ -144,7 +144,7 @@ vite.config.ts.timestamp-*
 node_modules
 .wrangler/
 dist/*
-.nomo/
+.nowarelabs/
 .turbo/*
 
 # Flax-specific

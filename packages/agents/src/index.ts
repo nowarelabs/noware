@@ -12,7 +12,7 @@
  * - Agent files: `src/agents/<name>.ts`
  * - Tool files: `src/tools/<name>.ts`
  * - Skill files: `src/skills/<name>/SKILL.md`
- * - DO class name: `Nomo<PascalCase>Agent` (auto from agent name)
+ * - DO class name: `Nowarelabs<PascalCase>Agent` (auto from agent name)
  * - URL routing: `/agents/<name>/<conversationId>`
  * - Service bindings: `<NAME>_AGENT` env var (auto from agent name)
  *

@@ -2,9 +2,9 @@
  * @nowarelabs/depends — Usage Examples
  *
  * This file shows every pattern in the library and how it composes
- * within the Nomo framework. Three layers:
+ * within the Nowarelabs framework. Three layers:
  *
- *   1. Framework plumbing   — what Nomo itself ships (developer never writes this)
+ *   1. Framework plumbing   — what Nowarelabs itself ships (developer never writes this)
  *   2. Developer app        — controllers, services, models (the user's code)
  *   3. Entry point          — export default { fetch } (Cloudflare Worker)
  *
@@ -23,7 +23,7 @@ import {
 import type { KeyedDependency } from "./index.ts";
 
 // =============================================================================
-// Layer 1 — Framework Plumbing (shipped by Nomo, developer never writes this)
+// Layer 1 — Framework Plumbing (shipped by Nowarelabs, developer never writes this)
 // =============================================================================
 
 // --- Platform Adapter (one per platform) ------------------------------------
@@ -34,7 +34,11 @@ interface PlatformAdapter<E = unknown> {
   bootstrap(env: E): ContainerConfig;
 }
 
-class CloudflareAdapter implements PlatformAdapter<{ DB: unknown; KV: unknown; AI: unknown }> {
+class CloudflareAdapter implements PlatformAdapter<{
+  DB: unknown;
+  KV: unknown;
+  AI: unknown;
+}> {
   bootstrap(env: { DB: unknown; KV: unknown; AI: unknown }): ContainerConfig {
     return {
       Database: () => new D1Database(env.DB),
@@ -178,7 +182,7 @@ class Router {
 // };
 
 function demo(): void {
-  console.log("=== Nomo + @nowarelabs/depends ===\n");
+  console.log("=== Nowarelabs + @nowarelabs/depends ===\n");
 
   const request = new Request("https://example.com/users");
   const cloudflareEnv = { DB: {}, KV: {}, AI: {} };
@@ -235,7 +239,10 @@ function primitivesDemo(): void {
     }
   }
 
-  class EmailService extends BaseDepends implements KeyedDependency<EmailService> {
+  class EmailService
+    extends BaseDepends
+    implements KeyedDependency<EmailService>
+  {
     static readonly key = DependencyKey.named<EmailService>("email");
     readonly dependencyKey = EmailService.key;
   }
