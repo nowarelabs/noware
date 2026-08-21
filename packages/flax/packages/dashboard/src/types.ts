@@ -121,7 +121,7 @@ export type ArtifactType =
   | "test_report"
   | "security_report"
   | "other";
-export type AgentStatus = "idle" | "active" | "error";
+export type AgentLifecycleStatus = "idle" | "active" | "error";
 
 export const STAGES = [
   "requirements",
@@ -213,7 +213,7 @@ export interface AgentRow {
   name: string;
   label: string;
   stage: string | null;
-  status: AgentStatus;
+  status: AgentLifecycleStatus;
   last_seen_at: number | null;
   last_error: string | null;
   updated_at: number | null;
@@ -278,4 +278,77 @@ export interface ResolveResult {
   hitl: HitlRow;
   merge: { merged: boolean } | null;
   unblocked: boolean;
+}
+
+// ---------------------------------------------------------------- Company Builder types
+
+export interface CompanyBuild {
+  id: string;
+  name: string;
+  description: string;
+  status: "parsing" | "building" | "deploying" | "deployed" | "failed";
+  cfourModelId: string | null;
+  orchestratorId: string | null;
+  systems: CompanySystem[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CompanySystem {
+  systemId: string;
+  name: string;
+  workerUrl: string;
+  databaseId: string;
+  status:
+    | "provisioning"
+    | "building"
+    | "deploying"
+    | "deployed"
+    | "healthy"
+    | "degraded"
+    | "failed"
+    | "rolled-back";
+}
+
+export interface OrchestratorNode {
+  id: string;
+  level: "root" | "ss" | "container" | "component";
+  elementId: string;
+  name: string;
+  description: string;
+  parentId?: string;
+  children: OrchestratorNode[];
+}
+
+export interface SystemHealth {
+  systemId: string;
+  endpoint: string;
+  status: number;
+  responseTime: number;
+  timestamp: number;
+  healthy: boolean;
+}
+
+export interface SystemMetric {
+  name: string;
+  value: number;
+  timestamp: number;
+}
+
+export interface AlertEvent {
+  ruleId: string;
+  condition: string;
+  action: string;
+  systemId: string;
+  timestamp: number;
+  details: string;
+}
+
+export interface StigmergicAgentStatus {
+  id: string;
+  atomDoId: string;
+  agentType: string;
+  status: "idle" | "reading" | "working" | "leaving-cue" | "waiting";
+  lastPheromoneCheck: number;
+  actionCount: number;
 }

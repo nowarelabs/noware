@@ -16,6 +16,9 @@ function parseHash(hash: string): Route {
   if (segments[0] === "conversations" && segments[1]) {
     params.id = segments[1];
   }
+  if (segments[0] === "systems" && segments[1]) {
+    params.id = segments[1];
+  }
 
   return {
     path: `/${segments.join("/")}`,

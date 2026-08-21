@@ -11,6 +11,11 @@ import type {
   ArtifactRow,
   StreamControl,
   StreamItem,
+  CompanyBuild,
+  CompanySystem,
+  OrchestratorNode,
+  SystemHealth,
+  StigmergicAgentStatus,
 } from "./types";
 
 export const AGENT_BASE: string =
@@ -248,4 +253,40 @@ export async function streamUpdates(
     if (connectTimer) clearTimeout(connectTimer);
     signal.removeEventListener("abort", onParentAbort);
   }
+}
+
+// ---------------------------------------------------------------- Company Builder API
+
+export async function buildCompany(description: string): Promise<CompanyBuild> {
+  return postJson("/api/company/build", { description });
+}
+
+export async function getCompanyBuild(id: string): Promise<CompanyBuild> {
+  return request<CompanyBuild>(`/api/company/${encodeURIComponent(id)}`);
+}
+
+export async function listCompanyBuilds(): Promise<CompanyBuild[]> {
+  const body = await request<{ builds: CompanyBuild[] }>("/api/company");
+  return body.builds ?? [];
+}
+
+export async function getCompanyHierarchy(id: string): Promise<OrchestratorNode> {
+  return request<OrchestratorNode>(`/api/company/${encodeURIComponent(id)}/hierarchy`);
+}
+
+export async function listSystems(): Promise<CompanySystem[]> {
+  const body = await request<{ systems: CompanySystem[] }>("/api/systems");
+  return body.systems ?? [];
+}
+
+export async function getSystemHealth(systemId: string): Promise<SystemHealth[]> {
+  const body = await request<{ health: SystemHealth[] }>(
+    `/api/systems/${encodeURIComponent(systemId)}/health`,
+  );
+  return body.health ?? [];
+}
+
+export async function listStigmergicAgents(): Promise<StigmergicAgentStatus[]> {
+  const body = await request<{ agents: StigmergicAgentStatus[] }>("/api/agents/status");
+  return body.agents ?? [];
 }

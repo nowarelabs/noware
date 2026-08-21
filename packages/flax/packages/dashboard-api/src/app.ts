@@ -359,6 +359,247 @@ app.all("/agents/*", async (c) => {
   return res;
 });
 
+// ---------------------------------------------------------------- Company Builder
+
+interface CompanyBuildRecord {
+  id: string;
+  name: string;
+  description: string;
+  status: "parsing" | "building" | "deploying" | "deployed" | "failed";
+  cfourModelId: string | null;
+  orchestratorId: string | null;
+  systems: Array<{
+    systemId: string;
+    name: string;
+    workerUrl: string;
+    databaseId: string;
+    status: string;
+  }>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// In-memory store (would be D1 in production)
+const companyBuilds = new Map<string, CompanyBuildRecord>();
+
+app.get("/api/company", (c) => {
+  const builds = [...companyBuilds.values()].sort((a, b) => b.createdAt - a.createdAt);
+  return c.json({ builds });
+});
+
+app.post("/api/company/build", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { description?: string } | null;
+  const description = body?.description?.trim();
+  if (!description) return c.json({ error: "description is required" }, 400);
+
+  const id = `build-${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  const now = Date.now();
+
+  // Parse description for company name
+  const nameMatch = description.match(/^(?:build|create|start)\s+(?:a\s+)?(.+?)(?:\s+company)?$/i);
+  const name = nameMatch ? nameMatch[1].trim() : "Unnamed Company";
+
+  // Extract departments/teams from description
+  const departments: Array<{ name: string; teams: Array<{ name: string; roles: string[] }> }> = [];
+  const lines = description
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  let currentDept: { name: string; teams: Array<{ name: string; roles: string[] }> } | null = null;
+  let currentTeam: { name: string; roles: string[] } | null = null;
+
+  for (const line of lines) {
+    const deptMatch = line.match(/^(?:department|division)[:\s]+(.+)/i);
+    if (deptMatch) {
+      currentDept = { name: deptMatch[1].trim(), teams: [] };
+      departments.push(currentDept);
+      currentTeam = null;
+      continue;
+    }
+    const teamMatch = line.match(/^(?:team)[:\s]+(.+)/i);
+    if (teamMatch && currentDept) {
+      currentTeam = { name: teamMatch[1].trim(), roles: [] };
+      currentDept.teams.push(currentTeam);
+      continue;
+    }
+    const roleMatch = line.match(/^(?:role)[:\s]+(.+)/i);
+    if (roleMatch && currentTeam) {
+      currentTeam.roles.push(roleMatch[1].trim());
+    }
+  }
+
+  // If no departments found, create a default one
+  if (departments.length === 0) {
+    departments.push({
+      name: "Engineering",
+      teams: [{ name: "Platform", roles: ["Engineer"] }],
+    });
+  }
+
+  // Create systems from teams
+  const systems: CompanyBuildRecord["systems"] = [];
+  for (const dept of departments) {
+    for (const team of dept.teams) {
+      const sysId = `sys-${team.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+      const sysName = `${team.name} API`;
+      systems.push({
+        systemId: sysId,
+        name: sysName,
+        workerUrl: `https://${sysName.toLowerCase().replace(/\s+/g, "-")}.workers.dev`,
+        databaseId: `db-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        status: "deployed",
+      });
+    }
+  }
+
+  const record: CompanyBuildRecord = {
+    id,
+    name,
+    description,
+    status: "deployed",
+    cfourModelId: `model-${Date.now()}`,
+    orchestratorId: `orch-root-${Date.now()}`,
+    systems,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  companyBuilds.set(id, record);
+  return c.json(record);
+});
+
+app.get("/api/company/:id", (c) => {
+  const id = c.req.param("id");
+  const record = companyBuilds.get(id);
+  if (!record) return c.json({ error: "not found" }, 404);
+  return c.json(record);
+});
+
+app.get("/api/company/:id/hierarchy", (c) => {
+  const id = c.req.param("id");
+  const record = companyBuilds.get(id);
+  if (!record) return c.json({ error: "not found" }, 404);
+
+  // Build hierarchy from the record
+  const root = {
+    id: record.orchestratorId ?? `orch-root`,
+    level: "root" as const,
+    elementId: record.cfourModelId ?? "model",
+    name: record.name,
+    description: record.description,
+    children: [] as Array<{
+      id: string;
+      level: "ss" | "container" | "component";
+      elementId: string;
+      name: string;
+      description: string;
+      parentId: string;
+      children: Array<{
+        id: string;
+        level: "container" | "component";
+        elementId: string;
+        name: string;
+        description: string;
+        parentId: string;
+        children: Array<{
+          id: string;
+          level: "component";
+          elementId: string;
+          name: string;
+          description: string;
+          parentId: string;
+          children: never[];
+        }>;
+      }>;
+    }>,
+  };
+
+  // Group systems by department (for now, all go under one SS)
+  const ssId = `ss-engineering`;
+  const ssNode = {
+    id: ssId,
+    level: "ss" as const,
+    elementId: ssId,
+    name: "Engineering",
+    description: "Engineering department",
+    parentId: root.id,
+    children: [] as (typeof root.children)[number]["children"],
+  };
+  root.children.push(ssNode);
+
+  for (const sys of record.systems) {
+    const containerId = sys.systemId;
+    ssNode.children.push({
+      id: containerId,
+      level: "container" as const,
+      elementId: containerId,
+      name: sys.name,
+      description: sys.workerUrl,
+      parentId: ssId,
+      children: [],
+    });
+  }
+
+  return c.json(root);
+});
+
+app.get("/api/systems", (c) => {
+  const systems: CompanyBuildRecord["systems"] = [];
+  for (const record of companyBuilds.values()) {
+    systems.push(...record.systems);
+  }
+  return c.json({ systems });
+});
+
+app.get("/api/systems/:id/health", (c) => {
+  const systemId = c.req.param("id");
+  // Generate mock health data
+  const health = Array.from({ length: 5 }, (_, i) => ({
+    systemId,
+    endpoint: "/health",
+    status: 200,
+    responseTime: Math.floor(Math.random() * 50) + 10,
+    timestamp: Date.now() - i * 60000,
+    healthy: true,
+  }));
+  return c.json({ health });
+});
+
+app.get("/api/agents/status", (c) => {
+  // Generate mock agent data based on company builds
+  const agents: Array<{
+    id: string;
+    atomDoId: string;
+    agentType: string;
+    status: string;
+    lastPheromoneCheck: number;
+    actionCount: number;
+  }> = [];
+
+  for (const record of companyBuilds.values()) {
+    for (const sys of record.systems) {
+      agents.push({
+        id: `agent-${sys.systemId}-coding`,
+        atomDoId: sys.systemId,
+        agentType: "coding",
+        status: "idle",
+        lastPheromoneCheck: Date.now(),
+        actionCount: Math.floor(Math.random() * 10),
+      });
+      agents.push({
+        id: `agent-${sys.systemId}-review`,
+        atomDoId: sys.systemId,
+        agentType: "code-review",
+        status: "idle",
+        lastPheromoneCheck: Date.now(),
+        actionCount: Math.floor(Math.random() * 5),
+      });
+    }
+  }
+
+  return c.json({ agents });
+});
+
 // ---------------------------------------------------------------- SPA + assets
 
 app.all("*", async (c) => {

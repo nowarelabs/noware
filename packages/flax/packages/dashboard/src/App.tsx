@@ -1,12 +1,15 @@
 import { Badge, Loader, Switch } from "@cloudflare/kumo";
-import { GithubLogo } from "@phosphor-icons/react";
+import { GithubLogo, BuildingOffice, Robot } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
 import { githubStatus } from "./api";
+import { AgentMonitorPage } from "./AgentMonitor";
+import { CompanyBuilderPage } from "./CompanyBuilder";
 import { Conversation } from "./Conversation";
 import { Inbox } from "./Inbox";
 import { navigate, useRoute } from "./router";
 import { Setup } from "./Setup";
+import { SystemDetailPage } from "./SystemDetail";
 import type { GithubStatus } from "./types";
 
 const THEME_KEY = "flax.dashboard.dark";
@@ -46,9 +49,15 @@ export function App() {
   }, [loadGithub]);
 
   const needsSetup = github !== null && !github.configured;
-  // Route: setup screen, conversation detail, else inbox (setup-gated).
+  // Route: company builder, system detail, agent monitor, setup, conversation, inbox
   let screen: React.ReactNode;
-  if (route.path === "/setup") {
+  if (route.path === "/company-builder") {
+    screen = <CompanyBuilderPage />;
+  } else if (route.path.startsWith("/systems/") && route.params.id) {
+    screen = <SystemDetailPage systemId={route.params.id} />;
+  } else if (route.path === "/agents") {
+    screen = <AgentMonitorPage />;
+  } else if (route.path === "/setup") {
     screen = (
       <Setup
         onReady={() => {
@@ -95,6 +104,54 @@ export function App() {
           <span className="tagline">Nowarelabs · Human interface dashboard</span>
         </div>
         <div className="right">
+          <div
+            className="nav-links"
+            style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
+          >
+            <button
+              onClick={() => navigate("/company-builder")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                padding: "0.3rem 0.6rem",
+                borderRadius: 6,
+                border:
+                  route.path === "/company-builder"
+                    ? "1px solid var(--color-kumo-blue-700)"
+                    : "1px solid var(--color-kumo-hairline)",
+                background:
+                  route.path === "/company-builder" ? "var(--color-kumo-blue-50)" : "transparent",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+                color: "var(--text-color-kumo-primary)",
+              }}
+            >
+              <BuildingOffice size={13} weight="duotone" />
+              Builder
+            </button>
+            <button
+              onClick={() => navigate("/agents")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                padding: "0.3rem 0.6rem",
+                borderRadius: 6,
+                border:
+                  route.path === "/agents"
+                    ? "1px solid var(--color-kumo-blue-700)"
+                    : "1px solid var(--color-kumo-hairline)",
+                background: route.path === "/agents" ? "var(--color-kumo-blue-50)" : "transparent",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+                color: "var(--text-color-kumo-primary)",
+              }}
+            >
+              <Robot size={13} weight="duotone" />
+              Agents
+            </button>
+          </div>
           {github === null ? (
             <Loader size={13} aria-label="loading" />
           ) : (
