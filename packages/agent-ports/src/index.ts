@@ -99,6 +99,7 @@ export interface HitlInput {
   question?: string;
   options?: string[];
   answer?: string;
+  hitlId?: string;
 }
 
 export interface HitlOutput {
